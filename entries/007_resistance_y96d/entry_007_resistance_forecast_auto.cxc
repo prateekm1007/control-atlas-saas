@@ -1,0 +1,54 @@
+# Atlas Entry #007 — The Resistance Forecast (Y96D)
+
+open https://files.rcsb.org/download/6OIM.pdb
+
+delete solvent
+delete ions
+
+########################################
+# CONTEXT
+########################################
+
+cartoon
+color slategray
+transparency 60
+
+########################################
+# DRUG
+########################################
+
+select #1 & ~protein & ~solvent
+color sel lime
+style sel sphere
+
+########################################
+# MUTATION: Y96 → D96
+########################################
+
+swapaa :96 D
+
+show :96 atoms
+style :96 sphere
+color :96 red
+
+########################################
+# FOCUS
+########################################
+
+view :96
+zoom :96 2.0
+
+########################################
+# LABELS
+########################################
+
+2dlabels create "Resistance Mutation: Y96D" xpos 0.5 ypos 0.9 color red size 30
+2dlabels create "Steric / Electrostatic Clash" xpos 0.5 ypos 0.1 color white size 20
+
+lighting soft
+set bgColor black
+wait 20
+
+save "C:\Users\Administrator\control-atlas\entries\007_resistance_y96d\Atlas_Entry_007_Resistance_Forecast.png" width 3840 height 2160 supersample 3
+
+exit

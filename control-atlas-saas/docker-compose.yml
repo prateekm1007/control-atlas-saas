@@ -1,0 +1,30 @@
+services:
+  brain:
+    build: ./backend
+    container_name: brain
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - PYTHONPATH=/app
+    ports: ["8000:8000"]
+    volumes: ["./nkg:/app/nkg"]
+    networks:
+      sovereign_net:
+        aliases:
+          - brain
+    restart: always
+
+  face:
+    build: ./dashboard
+    container_name: face
+    environment:
+      - BACKEND_URL=http://brain:8000
+    ports: ["8502:8501"]
+    depends_on:
+      - brain
+    networks:
+      - sovereign_net
+    restart: always
+
+networks:
+  sovereign_net:
+    driver: bridge

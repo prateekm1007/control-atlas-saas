@@ -1,0 +1,58 @@
+# Atlas Entry #010 — The Rescue (p53 Y220C)
+# Visualizing structural stabilization of a mutation-induced cavity
+
+# Load p53 Y220C + Ligand (PK11007 analog)
+open https://files.rcsb.org/download/6FKB.pdb
+
+delete solvent
+delete ions
+
+########################################
+# CONTEXT: The Beta-Sandwich
+########################################
+
+cartoon
+color silver
+transparency 60
+
+# Show the surface to emphasize the "Hole"
+surface
+transparency 80
+
+########################################
+# THE MUTATION: Cys 220
+########################################
+
+# Residue 220 is the site of the Y->C mutation
+select :220
+style sel sphere
+color sel red
+
+########################################
+# THE KEYSTONE DRUG (Hardened)
+########################################
+
+# Select ligand robustly (exclude protein/ions)
+select #1 & ~protein & ~ions
+style sel stick
+color sel cyan
+
+# Show it filling the pocket
+select :220 | ligand
+view sel
+zoom 1.5
+
+########################################
+# LABELS
+########################################
+
+2dlabels create "p53 Y220C (Destabilized)" xpos 0.5 ypos 0.9 color red size 30
+2dlabels create "Molecular Keystone (Stabilizer)" xpos 0.5 ypos 0.1 color cyan size 25
+
+lighting soft
+set bgColor black
+wait 20
+
+save "C:\Users\Administrator\control-atlas\entries\010_p53_rescue\Atlas_Entry_010_p53_Rescue.png" width 3840 height 2160 supersample 3
+
+exit

@@ -1,0 +1,17 @@
+ccs_version: v0.1
+
+thresholds:
+  min_ccs_render: 0.6
+  rigid_rmsf_ratio: 0.5
+  suspicious_ccs: 0.9
+
+contact_graph:
+  cutoff_angstrom: 8.0
+
+weights:
+  w_motion: 0.7
+  w_path: 0.3
+
+mutual_information:
+  bins: 20
+  shuffles: 10

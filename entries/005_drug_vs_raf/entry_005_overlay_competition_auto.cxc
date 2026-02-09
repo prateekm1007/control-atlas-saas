@@ -1,0 +1,46 @@
+# Atlas Entry #005 — Competition Overlay (Interactive/Safe)
+
+open https://files.rcsb.org/download/4G0N.pdb
+open https://files.rcsb.org/download/6OIM.pdb
+
+delete solvent
+delete ions
+
+# Align drug-bound Ras onto effector-bound Ras
+match #2/A to #1/A
+
+# MODEL 1: RAF only (The Ghost)
+hide #1/A models
+cartoon #1/B
+color #1/B tan
+surface #1/B
+transparency #1/B 40
+
+# MODEL 2: Drug-bound Ras (The Reality)
+cartoon #2/A
+color #2/A slategray
+surface #2/A
+transparency #2/A 60
+
+# Highlight drug (AMG 510)
+select #2/A:12
+select add #2 & ~protein & ~solvent
+color sel red
+style sel sphere
+
+# Interface / Clash Detection
+select #1/B & within 3.5 of #2/A
+color sel orange
+
+lighting soft
+set bgColor black
+view orient
+zoom 1.2
+
+# FORCE DRAW
+wait 20
+
+# SAVE TO ABSOLUTE WINDOWS PATH
+save "C:\Users\Administrator\control-atlas\entries\005_drug_vs_raf\Atlas_Entry_005_Competition_Overlay.png" width 3840 height 2160 supersample 3
+
+exit

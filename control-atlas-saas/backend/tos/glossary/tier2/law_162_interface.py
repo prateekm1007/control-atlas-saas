@@ -1,0 +1,1 @@
+EXPLANATION = {"title": "Interface Saturation", "tier": "ADVISORY", "cutoff": "≥3 H-bonds", "summary": "Stable interfaces require extensive hydrogen bonding", "rationale": "Stable interfaces typically exhibit ≥3 hydrogen bonds per 1000Å². <3 H-bonds → high dissociation risk."}

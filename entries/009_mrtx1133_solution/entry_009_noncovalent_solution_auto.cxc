@@ -1,0 +1,60 @@
+# Atlas Entry #009 — The Non-Covalent Solution (MRTX1133)
+
+open https://files.rcsb.org/download/7RPZ.pdb
+
+delete solvent
+delete ions
+
+########################################
+# CONTEXT
+########################################
+
+cartoon
+color slategray
+transparency 60
+surface
+transparency 80
+
+########################################
+# DRUG (robust selector)
+########################################
+
+select ligand
+color sel cyan
+style sel stick
+
+########################################
+# MUTATION ANCHOR (D12)
+########################################
+
+select :12
+style sel stick
+color sel red
+
+########################################
+# INTERACTION (safe hbond syntax)
+########################################
+
+hbonds :12 restrict ligand reveal true color yellow radius 0.2
+
+########################################
+# FOCUS
+########################################
+
+view :12 | ligand
+zoom 1.5
+
+########################################
+# LABELS
+########################################
+
+2dlabels create "MRTX1133 (Non-Covalent)" xpos 0.5 ypos 0.9 color cyan size 30
+2dlabels create "Salt Bridge to D12" xpos 0.5 ypos 0.1 color yellow size 25
+
+lighting soft
+set bgColor black
+wait 20
+
+save "C:\Users\Administrator\control-atlas\entries\009_mrtx1133_solution\Atlas_Entry_009_NonCovalent_Solution.png" width 3840 height 2160 supersample 3
+
+exit

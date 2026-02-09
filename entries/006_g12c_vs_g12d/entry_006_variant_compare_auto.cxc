@@ -1,0 +1,51 @@
+# Atlas Entry #006 — The Variant Gap (G12C vs G12D) [PATCHED]
+
+# Load G12C (The Solved Target)
+open https://files.rcsb.org/download/6OIM.pdb
+
+# Load G12D (The Hard Target)
+open https://files.rcsb.org/download/4DSN.pdb
+
+delete solvent
+delete ions
+
+########################################
+# ALIGNMENT
+########################################
+match #2 to #1
+
+########################################
+# STYLING
+########################################
+cartoon #1; color #1 slategray; transparency #1 80
+cartoon #2; color #2 cornflowerblue; transparency #2 60
+
+########################################
+# THE FOCUS: Residue 12
+########################################
+show #1:12 atoms
+show #2:12 atoms
+style :12 stick
+color byhetero
+
+2dlabels create "G12C (Sulfur)" xpos 0.3 ypos 0.8 color yellow size 25
+2dlabels create "G12D (Oxygen)" xpos 0.7 ypos 0.8 color red size 25
+
+########################################
+# SCENE (Safe Zoom)
+########################################
+lighting soft
+set bgColor black
+
+# Center on Residue 12 (Safe)
+select :12
+view sel
+
+# Pull back slightly for context (Safe)
+zoom 0.6
+
+wait 20
+
+save "C:\Users\Administrator\control-atlas\entries\006_g12c_vs_g12d\Atlas_Entry_006_Variant_Gap.png" width 3840 height 2160 supersample 3
+
+exit

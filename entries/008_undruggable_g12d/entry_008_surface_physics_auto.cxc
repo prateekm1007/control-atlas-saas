@@ -1,0 +1,48 @@
+# Atlas Entry #008 — The Undruggable Surface (G12D)
+# Visualizing surface physics (Hydrophobicity)
+
+# Load G12D
+open https://files.rcsb.org/download/4DSN.pdb
+
+delete solvent
+delete ions
+
+########################################
+# SURFACE GENERATION
+########################################
+
+# Show surface for the protein
+surface
+transparency 0
+
+########################################
+# PHYSICS MAPPING (Hydrophobicity)
+########################################
+
+# Color surface by hydrophobicity (kdHydrophobicity)
+# Range: -4.5 (Polar/Cyan) to 4.5 (Hydrophobic/Gold)
+color sample surface #1 attribute kdHydrophobicity palette cyan:white:goldenrod range -4.5,4.5
+
+########################################
+# FOCUS: The Missing Pocket
+########################################
+
+# Orient towards Switch II (approx residues 60-70)
+select :60-70
+view sel
+zoom 1.5
+
+########################################
+# LABELS & POLISH
+########################################
+
+2dlabels create "G12D Surface Physics" xpos 0.5 ypos 0.9 color white size 30
+2dlabels create "Shallow & Polar (Cyan)" xpos 0.5 ypos 0.1 color cyan size 25
+
+lighting soft
+set bgColor black
+wait 20
+
+save "C:\Users\Administrator\control-atlas\entries\008_undruggable_g12d\Atlas_Entry_008_Surface_Physics.png" width 3840 height 2160 supersample 3
+
+exit

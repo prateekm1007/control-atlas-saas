@@ -1,0 +1,1 @@
+EXPLANATION = {"title": "Disulfide Bond Geometry", "principle": "Covalent S-S crosslinks require precise 2.05A spacing.", "rationale": "Incorrect S-S geometry prevents proper folding and traps the design in non-functional states."}

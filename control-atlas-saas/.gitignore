@@ -1,0 +1,5 @@
+.env
+__pycache__/
+*.pyc
+nkg/*.jsonl
+.DS_Store

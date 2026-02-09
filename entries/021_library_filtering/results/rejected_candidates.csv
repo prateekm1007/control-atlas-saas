@@ -1,0 +1,10 @@
+id,smiles,reasons
+Benzene,c1ccccc1,MW 78.1 out of range; HBA 0 out of range; Missing electrophile warhead
+Aspirin,CC(=O)Oc1ccccc1C(=O)O,MW 180.2 out of range; Missing electrophile warhead
+Caffeine,CN1C=NC2=C1C(=O)N(C(=O)N2C)C,MW 194.2 out of range; Missing electrophile warhead
+Ibuprofen,CC(C)Cc1ccc(cc1)C(C)C(=O)O,MW 206.3 out of range; HBA 1 out of range; Missing electrophile warhead
+TestAcrylamide1,C1CC1NC(=O)C=Cc2ccc(cc2)F,MW 205.2 out of range; HBA 1 out of range
+SimpleAcrylamide,N1C=CC=C1C(=O)C=C,MW 121.1 out of range; HBA 1 out of range
+PiperidineAcrylamide,CC1=CC=C(C=C1)C(=O)C=CN2CCCCC2,MW 229.3 out of range; HBA 2 out of range
+Acridine,c1ccc2c(c1)cc3ccccc3n2,MW 179.2 out of range; HBA 1 out of range; Missing electrophile warhead
+Hexadecane,CCCCCCCCCCCCCCCC,MW 226.4 out of range; HBA 0 out of range; Missing electrophile warhead

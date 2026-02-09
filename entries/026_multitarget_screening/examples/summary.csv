@@ -1,0 +1,3 @@
+target,top_compound,confidence,status
+KRAS_G12C,Sotorasib,0.95,VALID
+TP53_Y220C,Sotorasib,0.95,VALID

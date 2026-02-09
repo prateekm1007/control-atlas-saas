@@ -1,0 +1,51 @@
+# Control Atlas Motif Library Index
+# Version: 0.4
+# Generated: 2024-12-29
+
+motifs:
+
+  M001_Switch_GTPase:
+    status: DEPRECATED
+    reason: composite_flattened_state_locked
+    source_pdb: 6OIM
+    replacement: [M001A, M001B]
+
+  M001A:
+    status: ACTIVE
+    composite_group: M001
+    region: Switch I
+    protein: KRAS
+    mutation: G12C
+    state: drug_bound
+    conformation: open
+    observed_ca_atoms: 8
+
+  M001B:
+    status: ACTIVE
+    composite_group: M001
+    region: Switch II
+    protein: KRAS
+    mutation: G12C
+    state: drug_bound
+    conformation: open
+    observed_ca_atoms: 16
+
+  M002A:
+    status: ACTIVE
+    composite_group: M002
+    region: Switch I
+    protein: HRAS
+    mutation: WT
+    state: native_gtp
+    conformation: closed
+    observed_ca_atoms: 8
+
+  M002B:
+    status: ACTIVE
+    composite_group: M002
+    region: Switch II
+    protein: HRAS
+    mutation: WT
+    state: native_gtp
+    conformation: closed
+    observed_ca_atoms: 16

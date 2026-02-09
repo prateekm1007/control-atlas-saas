@@ -1,0 +1,9 @@
+# GTPase Superfamily Test Set
+# Format: PDB_ID | Protein | Family
+1QRA | H-Ras | Ras
+5P21 | H-Ras GTP | Ras
+1A2B | Rab3A | Rab
+1YZN | Ran | Ran
+1HUR | Arf1 | Arf
+2RGN | RhoA | Rho
+4Q21 | p21-Ras | Ras

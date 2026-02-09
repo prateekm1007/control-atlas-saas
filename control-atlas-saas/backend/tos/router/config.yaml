@@ -1,0 +1,6 @@
+version: "1.0.0"
+thresholds:
+  low_plddt: 70.0
+  critical_pae: 10.0
+metadata:
+  ligand_confidence_policy: "ignored"  # Ligand pLDDT does not affect routing

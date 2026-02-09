@@ -1,0 +1,4 @@
+id,contacts,min_dist,status
+CAND_v4_0002_vs_KRAS,2,8.5,NON_BINDER
+CAND_v5_0001_vs_KRAS,12,4.2,BINDER (Geometric)
+CAND_v5_0003_vs_KRAS,8,5.1,WEAK_BINDER

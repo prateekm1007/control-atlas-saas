@@ -1,0 +1,23 @@
+# 🎼 Toscanini Control Circuit: PD-L1 Saturation
+# Cycle: v5.0 (Bipodal Era)
+
+target:
+  name: "Human PD-L1"
+  uniprot: "Q9NZQ7"
+  pocket: "IgV Domain Shelf"
+
+constraints:
+  geometric:
+    min_clearance: 2.5 # Å
+    max_clash: 1.8 # Å
+  kinetic:
+    energy_ceiling: -20000 # kJ/mol
+    temperature: 310 # K
+  governance:
+    mdi_compliance: "v3.6"
+    veto_laws: ["LAW-148", "LAW-151"]
+
+sieve:
+  tier_1: "native_audit.py"
+  tier_2: "md_pipeline.py"
+  tier_3: "forensic_triangulation"

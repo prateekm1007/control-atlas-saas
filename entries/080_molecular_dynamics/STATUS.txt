@@ -1,0 +1,1 @@
+ENTRY_080_ABORTED: KRAS-only structure detected (single chain, ~2k atoms)

@@ -1,0 +1,10 @@
+Efficiency Benchmark Report
+===========================
+
+Total library size: 10
+Dock-all workload: 10
+Gatekeeper survivors: 1
+
+Docking reduction: 90.0%
+Active recovery: 100% (Sotorasib)
+False positives removed pre-docking

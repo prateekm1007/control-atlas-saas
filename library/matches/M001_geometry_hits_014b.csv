@@ -1,0 +1,6 @@
+pdb_id,chain,best_rmsd,start_index,status
+5P21,A,5.316,84,REJECT
+2RGN,A,4.119,89,REJECT
+1YZN,A,4.901,95,REJECT
+1HUR,A,5.068,94,REJECT
+1UBQ,A,6.285,17,REJECT

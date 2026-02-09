@@ -1,0 +1,1 @@
+EXPLANATION = {"title": "Backbone Continuity", "principle": "Consistent Cα–Cα spacing (~3.8A).", "rationale": "Deviations > 4.5A indicate a torn or hallucinated chain, physically impossible in a continuous polymer."}

@@ -1,0 +1,4 @@
+compound_id,smiles,status,confidence,reason,volume,exposure,hydrophobic_pct
+Sotorasib,CC(C)(C)NC1=NC=NC2=C1N=CN2,VALID,0.95,,412.3,0.31,0.67
+RandomPhenol,CC1=CC=CC=C1O,REJECT,0.1,fragment_too_small,412.3,0.31,0.67
+LinearAlkane,CCCCCCCC,REJECT,0.1,fragment_too_small,412.3,0.31,0.67
