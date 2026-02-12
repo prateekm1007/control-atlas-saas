@@ -1,0 +1,90 @@
+# ============================================================
+# Atlas Entry #011 — The Control Motif (The Switch)
+# FINAL HARDENED VERSION
+# ============================================================
+
+########################################
+# LOAD STRUCTURES
+########################################
+
+open https://files.rcsb.org/download/6OIM.pdb
+open https://files.rcsb.org/download/1AZS.pdb
+
+delete solvent
+delete ions
+
+########################################
+# CONSERVED G-DOMAIN CORE (ALIGNMENT)
+########################################
+
+# KRAS conserved core
+select #1:10-17,32-38,57-59,116-120
+
+# Gαs conserved core
+select #2:40-47,201-207,226-228,267-271
+
+########################################
+# CONSTRAINED STRUCTURAL ALIGNMENT
+########################################
+
+match sel #2 to sel #1
+
+select clear
+
+########################################
+# GHOSTED SCAFFOLD
+########################################
+
+cartoon #1
+color #1 slategray
+transparency #1 85
+
+cartoon #2
+color #2 lightgray
+transparency #2 85
+
+########################################
+# CONTROL MOTIF — SWITCH REGIONS
+########################################
+
+# KRAS Switch I + II
+select #1:30-38
+select add #1:60-76
+style sel stick
+color sel hotpink
+transparency sel 0
+
+# Gαs Switch I + II (validated)
+select #2:199-210
+select add #2:227-242
+style sel stick
+color sel cyan
+transparency sel 0
+
+########################################
+# CAMERA
+########################################
+
+view sel
+zoom 1.25
+
+########################################
+# LABELS
+########################################
+
+2dlabels create "KRAS Switch Motif" xpos 0.18 ypos 0.82 color hotpink size 24
+2dlabels create "Gαs Switch Motif" xpos 0.82 ypos 0.82 color cyan size 24
+2dlabels create "Conserved Control Architecture" xpos 0.5 ypos 0.08 color white size 22
+
+########################################
+# RENDER + EXPORT
+########################################
+
+lighting soft
+set bgColor black
+wait 20
+
+save "C:/Users/Administrator/control-atlas/entries/011_motif_switch/Atlas_Entry_011_Control_Motif.png" \
+    width 3840 height 2160 supersample 3
+
+exit

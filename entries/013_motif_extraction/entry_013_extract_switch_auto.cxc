@@ -1,0 +1,54 @@
+# Atlas Entry #013 — Motif Extraction (Atomic, Hardened)
+
+# Load source (KRAS G12C)
+open https://files.rcsb.org/download/6OIM.pdb
+
+delete solvent
+delete ions
+
+########################################
+# MOTIF DEFINITION (Explicit, Model-Agnostic)
+########################################
+
+# Select Switch I and II on ANY chain named A
+select :30-38
+select add :60-76
+
+########################################
+# PERSISTENCE STEP 1 — SAVE THE ASSET
+########################################
+
+# Save ONLY the selected atoms (no deletion required)
+save "C:\Users\Administrator\control-atlas\library\motifs\M001_Switch_GTPase.pdb" \
+     format pdb selectedOnly true
+
+########################################
+# VISUALIZATION (SAFE PATH)
+########################################
+
+# Hide everything
+hide all
+
+# Show only the selected motif
+show sel
+
+cartoon
+style stick
+color carbon lime
+surface
+transparency 80
+color lime
+
+view orient
+zoom 1.2
+
+wait 20
+
+########################################
+# PERSISTENCE STEP 2 — SAVE THE PROOF
+########################################
+
+save "C:\Users\Administrator\control-atlas\entries\013_motif_extraction\Atlas_Entry_013_Motif_Extraction.png" \
+     width 3840 height 2160 supersample 3
+
+exit

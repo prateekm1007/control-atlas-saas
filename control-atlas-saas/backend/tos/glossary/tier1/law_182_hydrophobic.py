@@ -1,0 +1,1 @@
+EXPLANATION = {"title": "Hydrophobic Burial", "principle": "Core residues must be sequestered from solvent.", "rationale": "The hydrophobic effect is the dominant driving force in folding. >30% surface exposure triggers VETO as the design is unstable."}

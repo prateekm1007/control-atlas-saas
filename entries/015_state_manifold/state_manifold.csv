@@ -1,0 +1,5 @@
+pdb_id,state,n_atoms,spread,max_extent,z_range
+4OBE,GDP_closed,16,2.523,10.041,12.937
+6GOD,GTP_intermediate,16,2.705,10.619,11.391
+6OIM,Drug_open,16,2.54,10.57,11.716
+5P21,Native_GTP,16,2.716,10.664,19.524

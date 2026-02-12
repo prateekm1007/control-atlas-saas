@@ -1,0 +1,385 @@
+scaffold_name,core,anchor,warhead,tail,mw_est,status,reasons
+Quinazoline-Isopropyl-Acrylamide-MethylPiperazine,Quinazoline,Isopropyl,Acrylamide,MethylPiperazine,394,VALID,
+Quinazoline-Isopropyl-Acrylamide-Morpholine,Quinazoline,Isopropyl,Acrylamide,Morpholine,381,VALID,
+Quinazoline-Isopropyl-Acrylamide-Dimethylamine,Quinazoline,Isopropyl,Acrylamide,Dimethylamine,339,REJECT,MW 339: Out of range 350-600
+Quinazoline-Isopropyl-Acrylamide-t-Butyl,Quinazoline,Isopropyl,Acrylamide,t-Butyl,351,REJECT,Tail: Too hydrophobic; Tail: Must be polar
+Quinazoline-Isopropyl-VinylSulfonamide-MethylPiperazine,Quinazoline,Isopropyl,VinylSulfonamide,MethylPiperazine,430,VALID,
+Quinazoline-Isopropyl-VinylSulfonamide-Morpholine,Quinazoline,Isopropyl,VinylSulfonamide,Morpholine,417,VALID,
+Quinazoline-Isopropyl-VinylSulfonamide-Dimethylamine,Quinazoline,Isopropyl,VinylSulfonamide,Dimethylamine,375,VALID,
+Quinazoline-Isopropyl-VinylSulfonamide-t-Butyl,Quinazoline,Isopropyl,VinylSulfonamide,t-Butyl,387,REJECT,Tail: Too hydrophobic; Tail: Must be polar
+Quinazoline-Isopropyl-Chloroacetamide-MethylPiperazine,Quinazoline,Isopropyl,Chloroacetamide,MethylPiperazine,416,VALID,
+Quinazoline-Isopropyl-Chloroacetamide-Morpholine,Quinazoline,Isopropyl,Chloroacetamide,Morpholine,403,VALID,
+Quinazoline-Isopropyl-Chloroacetamide-Dimethylamine,Quinazoline,Isopropyl,Chloroacetamide,Dimethylamine,361,VALID,
+Quinazoline-Isopropyl-Chloroacetamide-t-Butyl,Quinazoline,Isopropyl,Chloroacetamide,t-Butyl,373,REJECT,Tail: Too hydrophobic; Tail: Must be polar
+Quinazoline-Isopropyl-Propyl-MethylPiperazine,Quinazoline,Isopropyl,Propyl,MethylPiperazine,366,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile
+Quinazoline-Isopropyl-Propyl-Morpholine,Quinazoline,Isopropyl,Propyl,Morpholine,353,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile
+Quinazoline-Isopropyl-Propyl-Dimethylamine,Quinazoline,Isopropyl,Propyl,Dimethylamine,311,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 311: Out of range 350-600
+Quinazoline-Isopropyl-Propyl-t-Butyl,Quinazoline,Isopropyl,Propyl,t-Butyl,323,REJECT,Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Tail: Must be polar; MW 323: Out of range 350-600
+Quinazoline-Methyl-Acrylamide-MethylPiperazine,Quinazoline,Methyl,Acrylamide,MethylPiperazine,366,VALID,
+Quinazoline-Methyl-Acrylamide-Morpholine,Quinazoline,Methyl,Acrylamide,Morpholine,353,VALID,
+Quinazoline-Methyl-Acrylamide-Dimethylamine,Quinazoline,Methyl,Acrylamide,Dimethylamine,311,REJECT,MW 311: Out of range 350-600
+Quinazoline-Methyl-Acrylamide-t-Butyl,Quinazoline,Methyl,Acrylamide,t-Butyl,323,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 323: Out of range 350-600
+Quinazoline-Methyl-VinylSulfonamide-MethylPiperazine,Quinazoline,Methyl,VinylSulfonamide,MethylPiperazine,402,VALID,
+Quinazoline-Methyl-VinylSulfonamide-Morpholine,Quinazoline,Methyl,VinylSulfonamide,Morpholine,389,VALID,
+Quinazoline-Methyl-VinylSulfonamide-Dimethylamine,Quinazoline,Methyl,VinylSulfonamide,Dimethylamine,347,REJECT,MW 347: Out of range 350-600
+Quinazoline-Methyl-VinylSulfonamide-t-Butyl,Quinazoline,Methyl,VinylSulfonamide,t-Butyl,359,REJECT,Tail: Too hydrophobic; Tail: Must be polar
+Quinazoline-Methyl-Chloroacetamide-MethylPiperazine,Quinazoline,Methyl,Chloroacetamide,MethylPiperazine,388,VALID,
+Quinazoline-Methyl-Chloroacetamide-Morpholine,Quinazoline,Methyl,Chloroacetamide,Morpholine,375,VALID,
+Quinazoline-Methyl-Chloroacetamide-Dimethylamine,Quinazoline,Methyl,Chloroacetamide,Dimethylamine,333,REJECT,MW 333: Out of range 350-600
+Quinazoline-Methyl-Chloroacetamide-t-Butyl,Quinazoline,Methyl,Chloroacetamide,t-Butyl,345,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 345: Out of range 350-600
+Quinazoline-Methyl-Propyl-MethylPiperazine,Quinazoline,Methyl,Propyl,MethylPiperazine,338,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 338: Out of range 350-600
+Quinazoline-Methyl-Propyl-Morpholine,Quinazoline,Methyl,Propyl,Morpholine,325,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 325: Out of range 350-600
+Quinazoline-Methyl-Propyl-Dimethylamine,Quinazoline,Methyl,Propyl,Dimethylamine,283,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 283: Out of range 350-600
+Quinazoline-Methyl-Propyl-t-Butyl,Quinazoline,Methyl,Propyl,t-Butyl,295,REJECT,Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Tail: Must be polar; MW 295: Out of range 350-600
+Quinazoline-Fluorine-Acrylamide-MethylPiperazine,Quinazoline,Fluorine,Acrylamide,MethylPiperazine,370,VALID,
+Quinazoline-Fluorine-Acrylamide-Morpholine,Quinazoline,Fluorine,Acrylamide,Morpholine,357,VALID,
+Quinazoline-Fluorine-Acrylamide-Dimethylamine,Quinazoline,Fluorine,Acrylamide,Dimethylamine,315,REJECT,MW 315: Out of range 350-600
+Quinazoline-Fluorine-Acrylamide-t-Butyl,Quinazoline,Fluorine,Acrylamide,t-Butyl,327,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 327: Out of range 350-600
+Quinazoline-Fluorine-VinylSulfonamide-MethylPiperazine,Quinazoline,Fluorine,VinylSulfonamide,MethylPiperazine,406,VALID,
+Quinazoline-Fluorine-VinylSulfonamide-Morpholine,Quinazoline,Fluorine,VinylSulfonamide,Morpholine,393,VALID,
+Quinazoline-Fluorine-VinylSulfonamide-Dimethylamine,Quinazoline,Fluorine,VinylSulfonamide,Dimethylamine,351,VALID,
+Quinazoline-Fluorine-VinylSulfonamide-t-Butyl,Quinazoline,Fluorine,VinylSulfonamide,t-Butyl,363,REJECT,Tail: Too hydrophobic; Tail: Must be polar
+Quinazoline-Fluorine-Chloroacetamide-MethylPiperazine,Quinazoline,Fluorine,Chloroacetamide,MethylPiperazine,392,VALID,
+Quinazoline-Fluorine-Chloroacetamide-Morpholine,Quinazoline,Fluorine,Chloroacetamide,Morpholine,379,VALID,
+Quinazoline-Fluorine-Chloroacetamide-Dimethylamine,Quinazoline,Fluorine,Chloroacetamide,Dimethylamine,337,REJECT,MW 337: Out of range 350-600
+Quinazoline-Fluorine-Chloroacetamide-t-Butyl,Quinazoline,Fluorine,Chloroacetamide,t-Butyl,349,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 349: Out of range 350-600
+Quinazoline-Fluorine-Propyl-MethylPiperazine,Quinazoline,Fluorine,Propyl,MethylPiperazine,342,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 342: Out of range 350-600
+Quinazoline-Fluorine-Propyl-Morpholine,Quinazoline,Fluorine,Propyl,Morpholine,329,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 329: Out of range 350-600
+Quinazoline-Fluorine-Propyl-Dimethylamine,Quinazoline,Fluorine,Propyl,Dimethylamine,287,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 287: Out of range 350-600
+Quinazoline-Fluorine-Propyl-t-Butyl,Quinazoline,Fluorine,Propyl,t-Butyl,299,REJECT,Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Tail: Must be polar; MW 299: Out of range 350-600
+Quinazoline-Phenyl-Acrylamide-MethylPiperazine,Quinazoline,Phenyl,Acrylamide,MethylPiperazine,428,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Quinazoline-Phenyl-Acrylamide-Morpholine,Quinazoline,Phenyl,Acrylamide,Morpholine,415,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Quinazoline-Phenyl-Acrylamide-Dimethylamine,Quinazoline,Phenyl,Acrylamide,Dimethylamine,373,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Quinazoline-Phenyl-Acrylamide-t-Butyl,Quinazoline,Phenyl,Acrylamide,t-Butyl,385,REJECT,Anchor: Steric clash w/ GLY60; Tail: Too hydrophobic; Anchor: Steric violation (GLY60); Tail: Must be polar
+Quinazoline-Phenyl-VinylSulfonamide-MethylPiperazine,Quinazoline,Phenyl,VinylSulfonamide,MethylPiperazine,464,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Quinazoline-Phenyl-VinylSulfonamide-Morpholine,Quinazoline,Phenyl,VinylSulfonamide,Morpholine,451,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Quinazoline-Phenyl-VinylSulfonamide-Dimethylamine,Quinazoline,Phenyl,VinylSulfonamide,Dimethylamine,409,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Quinazoline-Phenyl-VinylSulfonamide-t-Butyl,Quinazoline,Phenyl,VinylSulfonamide,t-Butyl,421,REJECT,Anchor: Steric clash w/ GLY60; Tail: Too hydrophobic; Anchor: Steric violation (GLY60); Tail: Must be polar
+Quinazoline-Phenyl-Chloroacetamide-MethylPiperazine,Quinazoline,Phenyl,Chloroacetamide,MethylPiperazine,450,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Quinazoline-Phenyl-Chloroacetamide-Morpholine,Quinazoline,Phenyl,Chloroacetamide,Morpholine,437,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Quinazoline-Phenyl-Chloroacetamide-Dimethylamine,Quinazoline,Phenyl,Chloroacetamide,Dimethylamine,395,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Quinazoline-Phenyl-Chloroacetamide-t-Butyl,Quinazoline,Phenyl,Chloroacetamide,t-Butyl,407,REJECT,Anchor: Steric clash w/ GLY60; Tail: Too hydrophobic; Anchor: Steric violation (GLY60); Tail: Must be polar
+Quinazoline-Phenyl-Propyl-MethylPiperazine,Quinazoline,Phenyl,Propyl,MethylPiperazine,400,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Warhead: Must be electrophile; Anchor: Steric violation (GLY60)
+Quinazoline-Phenyl-Propyl-Morpholine,Quinazoline,Phenyl,Propyl,Morpholine,387,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Warhead: Must be electrophile; Anchor: Steric violation (GLY60)
+Quinazoline-Phenyl-Propyl-Dimethylamine,Quinazoline,Phenyl,Propyl,Dimethylamine,345,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Warhead: Must be electrophile; Anchor: Steric violation (GLY60); MW 345: Out of range 350-600
+Quinazoline-Phenyl-Propyl-t-Butyl,Quinazoline,Phenyl,Propyl,t-Butyl,357,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Anchor: Steric violation (GLY60); Tail: Must be polar
+Pyridopyrimidine-Isopropyl-Acrylamide-MethylPiperazine,Pyridopyrimidine,Isopropyl,Acrylamide,MethylPiperazine,395,VALID,
+Pyridopyrimidine-Isopropyl-Acrylamide-Morpholine,Pyridopyrimidine,Isopropyl,Acrylamide,Morpholine,382,VALID,
+Pyridopyrimidine-Isopropyl-Acrylamide-Dimethylamine,Pyridopyrimidine,Isopropyl,Acrylamide,Dimethylamine,340,REJECT,MW 340: Out of range 350-600
+Pyridopyrimidine-Isopropyl-Acrylamide-t-Butyl,Pyridopyrimidine,Isopropyl,Acrylamide,t-Butyl,352,REJECT,Tail: Too hydrophobic; Tail: Must be polar
+Pyridopyrimidine-Isopropyl-VinylSulfonamide-MethylPiperazine,Pyridopyrimidine,Isopropyl,VinylSulfonamide,MethylPiperazine,431,VALID,
+Pyridopyrimidine-Isopropyl-VinylSulfonamide-Morpholine,Pyridopyrimidine,Isopropyl,VinylSulfonamide,Morpholine,418,VALID,
+Pyridopyrimidine-Isopropyl-VinylSulfonamide-Dimethylamine,Pyridopyrimidine,Isopropyl,VinylSulfonamide,Dimethylamine,376,VALID,
+Pyridopyrimidine-Isopropyl-VinylSulfonamide-t-Butyl,Pyridopyrimidine,Isopropyl,VinylSulfonamide,t-Butyl,388,REJECT,Tail: Too hydrophobic; Tail: Must be polar
+Pyridopyrimidine-Isopropyl-Chloroacetamide-MethylPiperazine,Pyridopyrimidine,Isopropyl,Chloroacetamide,MethylPiperazine,417,VALID,
+Pyridopyrimidine-Isopropyl-Chloroacetamide-Morpholine,Pyridopyrimidine,Isopropyl,Chloroacetamide,Morpholine,404,VALID,
+Pyridopyrimidine-Isopropyl-Chloroacetamide-Dimethylamine,Pyridopyrimidine,Isopropyl,Chloroacetamide,Dimethylamine,362,VALID,
+Pyridopyrimidine-Isopropyl-Chloroacetamide-t-Butyl,Pyridopyrimidine,Isopropyl,Chloroacetamide,t-Butyl,374,REJECT,Tail: Too hydrophobic; Tail: Must be polar
+Pyridopyrimidine-Isopropyl-Propyl-MethylPiperazine,Pyridopyrimidine,Isopropyl,Propyl,MethylPiperazine,367,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile
+Pyridopyrimidine-Isopropyl-Propyl-Morpholine,Pyridopyrimidine,Isopropyl,Propyl,Morpholine,354,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile
+Pyridopyrimidine-Isopropyl-Propyl-Dimethylamine,Pyridopyrimidine,Isopropyl,Propyl,Dimethylamine,312,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 312: Out of range 350-600
+Pyridopyrimidine-Isopropyl-Propyl-t-Butyl,Pyridopyrimidine,Isopropyl,Propyl,t-Butyl,324,REJECT,Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Tail: Must be polar; MW 324: Out of range 350-600
+Pyridopyrimidine-Methyl-Acrylamide-MethylPiperazine,Pyridopyrimidine,Methyl,Acrylamide,MethylPiperazine,367,VALID,
+Pyridopyrimidine-Methyl-Acrylamide-Morpholine,Pyridopyrimidine,Methyl,Acrylamide,Morpholine,354,VALID,
+Pyridopyrimidine-Methyl-Acrylamide-Dimethylamine,Pyridopyrimidine,Methyl,Acrylamide,Dimethylamine,312,REJECT,MW 312: Out of range 350-600
+Pyridopyrimidine-Methyl-Acrylamide-t-Butyl,Pyridopyrimidine,Methyl,Acrylamide,t-Butyl,324,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 324: Out of range 350-600
+Pyridopyrimidine-Methyl-VinylSulfonamide-MethylPiperazine,Pyridopyrimidine,Methyl,VinylSulfonamide,MethylPiperazine,403,VALID,
+Pyridopyrimidine-Methyl-VinylSulfonamide-Morpholine,Pyridopyrimidine,Methyl,VinylSulfonamide,Morpholine,390,VALID,
+Pyridopyrimidine-Methyl-VinylSulfonamide-Dimethylamine,Pyridopyrimidine,Methyl,VinylSulfonamide,Dimethylamine,348,REJECT,MW 348: Out of range 350-600
+Pyridopyrimidine-Methyl-VinylSulfonamide-t-Butyl,Pyridopyrimidine,Methyl,VinylSulfonamide,t-Butyl,360,REJECT,Tail: Too hydrophobic; Tail: Must be polar
+Pyridopyrimidine-Methyl-Chloroacetamide-MethylPiperazine,Pyridopyrimidine,Methyl,Chloroacetamide,MethylPiperazine,389,VALID,
+Pyridopyrimidine-Methyl-Chloroacetamide-Morpholine,Pyridopyrimidine,Methyl,Chloroacetamide,Morpholine,376,VALID,
+Pyridopyrimidine-Methyl-Chloroacetamide-Dimethylamine,Pyridopyrimidine,Methyl,Chloroacetamide,Dimethylamine,334,REJECT,MW 334: Out of range 350-600
+Pyridopyrimidine-Methyl-Chloroacetamide-t-Butyl,Pyridopyrimidine,Methyl,Chloroacetamide,t-Butyl,346,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 346: Out of range 350-600
+Pyridopyrimidine-Methyl-Propyl-MethylPiperazine,Pyridopyrimidine,Methyl,Propyl,MethylPiperazine,339,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 339: Out of range 350-600
+Pyridopyrimidine-Methyl-Propyl-Morpholine,Pyridopyrimidine,Methyl,Propyl,Morpholine,326,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 326: Out of range 350-600
+Pyridopyrimidine-Methyl-Propyl-Dimethylamine,Pyridopyrimidine,Methyl,Propyl,Dimethylamine,284,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 284: Out of range 350-600
+Pyridopyrimidine-Methyl-Propyl-t-Butyl,Pyridopyrimidine,Methyl,Propyl,t-Butyl,296,REJECT,Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Tail: Must be polar; MW 296: Out of range 350-600
+Pyridopyrimidine-Fluorine-Acrylamide-MethylPiperazine,Pyridopyrimidine,Fluorine,Acrylamide,MethylPiperazine,371,VALID,
+Pyridopyrimidine-Fluorine-Acrylamide-Morpholine,Pyridopyrimidine,Fluorine,Acrylamide,Morpholine,358,VALID,
+Pyridopyrimidine-Fluorine-Acrylamide-Dimethylamine,Pyridopyrimidine,Fluorine,Acrylamide,Dimethylamine,316,REJECT,MW 316: Out of range 350-600
+Pyridopyrimidine-Fluorine-Acrylamide-t-Butyl,Pyridopyrimidine,Fluorine,Acrylamide,t-Butyl,328,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 328: Out of range 350-600
+Pyridopyrimidine-Fluorine-VinylSulfonamide-MethylPiperazine,Pyridopyrimidine,Fluorine,VinylSulfonamide,MethylPiperazine,407,VALID,
+Pyridopyrimidine-Fluorine-VinylSulfonamide-Morpholine,Pyridopyrimidine,Fluorine,VinylSulfonamide,Morpholine,394,VALID,
+Pyridopyrimidine-Fluorine-VinylSulfonamide-Dimethylamine,Pyridopyrimidine,Fluorine,VinylSulfonamide,Dimethylamine,352,VALID,
+Pyridopyrimidine-Fluorine-VinylSulfonamide-t-Butyl,Pyridopyrimidine,Fluorine,VinylSulfonamide,t-Butyl,364,REJECT,Tail: Too hydrophobic; Tail: Must be polar
+Pyridopyrimidine-Fluorine-Chloroacetamide-MethylPiperazine,Pyridopyrimidine,Fluorine,Chloroacetamide,MethylPiperazine,393,VALID,
+Pyridopyrimidine-Fluorine-Chloroacetamide-Morpholine,Pyridopyrimidine,Fluorine,Chloroacetamide,Morpholine,380,VALID,
+Pyridopyrimidine-Fluorine-Chloroacetamide-Dimethylamine,Pyridopyrimidine,Fluorine,Chloroacetamide,Dimethylamine,338,REJECT,MW 338: Out of range 350-600
+Pyridopyrimidine-Fluorine-Chloroacetamide-t-Butyl,Pyridopyrimidine,Fluorine,Chloroacetamide,t-Butyl,350,REJECT,Tail: Too hydrophobic; Tail: Must be polar
+Pyridopyrimidine-Fluorine-Propyl-MethylPiperazine,Pyridopyrimidine,Fluorine,Propyl,MethylPiperazine,343,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 343: Out of range 350-600
+Pyridopyrimidine-Fluorine-Propyl-Morpholine,Pyridopyrimidine,Fluorine,Propyl,Morpholine,330,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 330: Out of range 350-600
+Pyridopyrimidine-Fluorine-Propyl-Dimethylamine,Pyridopyrimidine,Fluorine,Propyl,Dimethylamine,288,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 288: Out of range 350-600
+Pyridopyrimidine-Fluorine-Propyl-t-Butyl,Pyridopyrimidine,Fluorine,Propyl,t-Butyl,300,REJECT,Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Tail: Must be polar; MW 300: Out of range 350-600
+Pyridopyrimidine-Phenyl-Acrylamide-MethylPiperazine,Pyridopyrimidine,Phenyl,Acrylamide,MethylPiperazine,429,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Pyridopyrimidine-Phenyl-Acrylamide-Morpholine,Pyridopyrimidine,Phenyl,Acrylamide,Morpholine,416,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Pyridopyrimidine-Phenyl-Acrylamide-Dimethylamine,Pyridopyrimidine,Phenyl,Acrylamide,Dimethylamine,374,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Pyridopyrimidine-Phenyl-Acrylamide-t-Butyl,Pyridopyrimidine,Phenyl,Acrylamide,t-Butyl,386,REJECT,Anchor: Steric clash w/ GLY60; Tail: Too hydrophobic; Anchor: Steric violation (GLY60); Tail: Must be polar
+Pyridopyrimidine-Phenyl-VinylSulfonamide-MethylPiperazine,Pyridopyrimidine,Phenyl,VinylSulfonamide,MethylPiperazine,465,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Pyridopyrimidine-Phenyl-VinylSulfonamide-Morpholine,Pyridopyrimidine,Phenyl,VinylSulfonamide,Morpholine,452,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Pyridopyrimidine-Phenyl-VinylSulfonamide-Dimethylamine,Pyridopyrimidine,Phenyl,VinylSulfonamide,Dimethylamine,410,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Pyridopyrimidine-Phenyl-VinylSulfonamide-t-Butyl,Pyridopyrimidine,Phenyl,VinylSulfonamide,t-Butyl,422,REJECT,Anchor: Steric clash w/ GLY60; Tail: Too hydrophobic; Anchor: Steric violation (GLY60); Tail: Must be polar
+Pyridopyrimidine-Phenyl-Chloroacetamide-MethylPiperazine,Pyridopyrimidine,Phenyl,Chloroacetamide,MethylPiperazine,451,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Pyridopyrimidine-Phenyl-Chloroacetamide-Morpholine,Pyridopyrimidine,Phenyl,Chloroacetamide,Morpholine,438,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Pyridopyrimidine-Phenyl-Chloroacetamide-Dimethylamine,Pyridopyrimidine,Phenyl,Chloroacetamide,Dimethylamine,396,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Pyridopyrimidine-Phenyl-Chloroacetamide-t-Butyl,Pyridopyrimidine,Phenyl,Chloroacetamide,t-Butyl,408,REJECT,Anchor: Steric clash w/ GLY60; Tail: Too hydrophobic; Anchor: Steric violation (GLY60); Tail: Must be polar
+Pyridopyrimidine-Phenyl-Propyl-MethylPiperazine,Pyridopyrimidine,Phenyl,Propyl,MethylPiperazine,401,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Warhead: Must be electrophile; Anchor: Steric violation (GLY60)
+Pyridopyrimidine-Phenyl-Propyl-Morpholine,Pyridopyrimidine,Phenyl,Propyl,Morpholine,388,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Warhead: Must be electrophile; Anchor: Steric violation (GLY60)
+Pyridopyrimidine-Phenyl-Propyl-Dimethylamine,Pyridopyrimidine,Phenyl,Propyl,Dimethylamine,346,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Warhead: Must be electrophile; Anchor: Steric violation (GLY60); MW 346: Out of range 350-600
+Pyridopyrimidine-Phenyl-Propyl-t-Butyl,Pyridopyrimidine,Phenyl,Propyl,t-Butyl,358,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Anchor: Steric violation (GLY60); Tail: Must be polar
+Indole-Isopropyl-Acrylamide-MethylPiperazine,Indole,Isopropyl,Acrylamide,MethylPiperazine,381,VALID,
+Indole-Isopropyl-Acrylamide-Morpholine,Indole,Isopropyl,Acrylamide,Morpholine,368,VALID,
+Indole-Isopropyl-Acrylamide-Dimethylamine,Indole,Isopropyl,Acrylamide,Dimethylamine,326,REJECT,MW 326: Out of range 350-600
+Indole-Isopropyl-Acrylamide-t-Butyl,Indole,Isopropyl,Acrylamide,t-Butyl,338,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 338: Out of range 350-600
+Indole-Isopropyl-VinylSulfonamide-MethylPiperazine,Indole,Isopropyl,VinylSulfonamide,MethylPiperazine,417,VALID,
+Indole-Isopropyl-VinylSulfonamide-Morpholine,Indole,Isopropyl,VinylSulfonamide,Morpholine,404,VALID,
+Indole-Isopropyl-VinylSulfonamide-Dimethylamine,Indole,Isopropyl,VinylSulfonamide,Dimethylamine,362,VALID,
+Indole-Isopropyl-VinylSulfonamide-t-Butyl,Indole,Isopropyl,VinylSulfonamide,t-Butyl,374,REJECT,Tail: Too hydrophobic; Tail: Must be polar
+Indole-Isopropyl-Chloroacetamide-MethylPiperazine,Indole,Isopropyl,Chloroacetamide,MethylPiperazine,403,VALID,
+Indole-Isopropyl-Chloroacetamide-Morpholine,Indole,Isopropyl,Chloroacetamide,Morpholine,390,VALID,
+Indole-Isopropyl-Chloroacetamide-Dimethylamine,Indole,Isopropyl,Chloroacetamide,Dimethylamine,348,REJECT,MW 348: Out of range 350-600
+Indole-Isopropyl-Chloroacetamide-t-Butyl,Indole,Isopropyl,Chloroacetamide,t-Butyl,360,REJECT,Tail: Too hydrophobic; Tail: Must be polar
+Indole-Isopropyl-Propyl-MethylPiperazine,Indole,Isopropyl,Propyl,MethylPiperazine,353,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile
+Indole-Isopropyl-Propyl-Morpholine,Indole,Isopropyl,Propyl,Morpholine,340,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 340: Out of range 350-600
+Indole-Isopropyl-Propyl-Dimethylamine,Indole,Isopropyl,Propyl,Dimethylamine,298,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 298: Out of range 350-600
+Indole-Isopropyl-Propyl-t-Butyl,Indole,Isopropyl,Propyl,t-Butyl,310,REJECT,Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Tail: Must be polar; MW 310: Out of range 350-600
+Indole-Methyl-Acrylamide-MethylPiperazine,Indole,Methyl,Acrylamide,MethylPiperazine,353,VALID,
+Indole-Methyl-Acrylamide-Morpholine,Indole,Methyl,Acrylamide,Morpholine,340,REJECT,MW 340: Out of range 350-600
+Indole-Methyl-Acrylamide-Dimethylamine,Indole,Methyl,Acrylamide,Dimethylamine,298,REJECT,MW 298: Out of range 350-600
+Indole-Methyl-Acrylamide-t-Butyl,Indole,Methyl,Acrylamide,t-Butyl,310,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 310: Out of range 350-600
+Indole-Methyl-VinylSulfonamide-MethylPiperazine,Indole,Methyl,VinylSulfonamide,MethylPiperazine,389,VALID,
+Indole-Methyl-VinylSulfonamide-Morpholine,Indole,Methyl,VinylSulfonamide,Morpholine,376,VALID,
+Indole-Methyl-VinylSulfonamide-Dimethylamine,Indole,Methyl,VinylSulfonamide,Dimethylamine,334,REJECT,MW 334: Out of range 350-600
+Indole-Methyl-VinylSulfonamide-t-Butyl,Indole,Methyl,VinylSulfonamide,t-Butyl,346,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 346: Out of range 350-600
+Indole-Methyl-Chloroacetamide-MethylPiperazine,Indole,Methyl,Chloroacetamide,MethylPiperazine,375,VALID,
+Indole-Methyl-Chloroacetamide-Morpholine,Indole,Methyl,Chloroacetamide,Morpholine,362,VALID,
+Indole-Methyl-Chloroacetamide-Dimethylamine,Indole,Methyl,Chloroacetamide,Dimethylamine,320,REJECT,MW 320: Out of range 350-600
+Indole-Methyl-Chloroacetamide-t-Butyl,Indole,Methyl,Chloroacetamide,t-Butyl,332,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 332: Out of range 350-600
+Indole-Methyl-Propyl-MethylPiperazine,Indole,Methyl,Propyl,MethylPiperazine,325,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 325: Out of range 350-600
+Indole-Methyl-Propyl-Morpholine,Indole,Methyl,Propyl,Morpholine,312,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 312: Out of range 350-600
+Indole-Methyl-Propyl-Dimethylamine,Indole,Methyl,Propyl,Dimethylamine,270,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 270: Out of range 350-600
+Indole-Methyl-Propyl-t-Butyl,Indole,Methyl,Propyl,t-Butyl,282,REJECT,Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Tail: Must be polar; MW 282: Out of range 350-600
+Indole-Fluorine-Acrylamide-MethylPiperazine,Indole,Fluorine,Acrylamide,MethylPiperazine,357,VALID,
+Indole-Fluorine-Acrylamide-Morpholine,Indole,Fluorine,Acrylamide,Morpholine,344,REJECT,MW 344: Out of range 350-600
+Indole-Fluorine-Acrylamide-Dimethylamine,Indole,Fluorine,Acrylamide,Dimethylamine,302,REJECT,MW 302: Out of range 350-600
+Indole-Fluorine-Acrylamide-t-Butyl,Indole,Fluorine,Acrylamide,t-Butyl,314,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 314: Out of range 350-600
+Indole-Fluorine-VinylSulfonamide-MethylPiperazine,Indole,Fluorine,VinylSulfonamide,MethylPiperazine,393,VALID,
+Indole-Fluorine-VinylSulfonamide-Morpholine,Indole,Fluorine,VinylSulfonamide,Morpholine,380,VALID,
+Indole-Fluorine-VinylSulfonamide-Dimethylamine,Indole,Fluorine,VinylSulfonamide,Dimethylamine,338,REJECT,MW 338: Out of range 350-600
+Indole-Fluorine-VinylSulfonamide-t-Butyl,Indole,Fluorine,VinylSulfonamide,t-Butyl,350,REJECT,Tail: Too hydrophobic; Tail: Must be polar
+Indole-Fluorine-Chloroacetamide-MethylPiperazine,Indole,Fluorine,Chloroacetamide,MethylPiperazine,379,VALID,
+Indole-Fluorine-Chloroacetamide-Morpholine,Indole,Fluorine,Chloroacetamide,Morpholine,366,VALID,
+Indole-Fluorine-Chloroacetamide-Dimethylamine,Indole,Fluorine,Chloroacetamide,Dimethylamine,324,REJECT,MW 324: Out of range 350-600
+Indole-Fluorine-Chloroacetamide-t-Butyl,Indole,Fluorine,Chloroacetamide,t-Butyl,336,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 336: Out of range 350-600
+Indole-Fluorine-Propyl-MethylPiperazine,Indole,Fluorine,Propyl,MethylPiperazine,329,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 329: Out of range 350-600
+Indole-Fluorine-Propyl-Morpholine,Indole,Fluorine,Propyl,Morpholine,316,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 316: Out of range 350-600
+Indole-Fluorine-Propyl-Dimethylamine,Indole,Fluorine,Propyl,Dimethylamine,274,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 274: Out of range 350-600
+Indole-Fluorine-Propyl-t-Butyl,Indole,Fluorine,Propyl,t-Butyl,286,REJECT,Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Tail: Must be polar; MW 286: Out of range 350-600
+Indole-Phenyl-Acrylamide-MethylPiperazine,Indole,Phenyl,Acrylamide,MethylPiperazine,415,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Indole-Phenyl-Acrylamide-Morpholine,Indole,Phenyl,Acrylamide,Morpholine,402,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Indole-Phenyl-Acrylamide-Dimethylamine,Indole,Phenyl,Acrylamide,Dimethylamine,360,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Indole-Phenyl-Acrylamide-t-Butyl,Indole,Phenyl,Acrylamide,t-Butyl,372,REJECT,Anchor: Steric clash w/ GLY60; Tail: Too hydrophobic; Anchor: Steric violation (GLY60); Tail: Must be polar
+Indole-Phenyl-VinylSulfonamide-MethylPiperazine,Indole,Phenyl,VinylSulfonamide,MethylPiperazine,451,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Indole-Phenyl-VinylSulfonamide-Morpholine,Indole,Phenyl,VinylSulfonamide,Morpholine,438,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Indole-Phenyl-VinylSulfonamide-Dimethylamine,Indole,Phenyl,VinylSulfonamide,Dimethylamine,396,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Indole-Phenyl-VinylSulfonamide-t-Butyl,Indole,Phenyl,VinylSulfonamide,t-Butyl,408,REJECT,Anchor: Steric clash w/ GLY60; Tail: Too hydrophobic; Anchor: Steric violation (GLY60); Tail: Must be polar
+Indole-Phenyl-Chloroacetamide-MethylPiperazine,Indole,Phenyl,Chloroacetamide,MethylPiperazine,437,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Indole-Phenyl-Chloroacetamide-Morpholine,Indole,Phenyl,Chloroacetamide,Morpholine,424,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Indole-Phenyl-Chloroacetamide-Dimethylamine,Indole,Phenyl,Chloroacetamide,Dimethylamine,382,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Indole-Phenyl-Chloroacetamide-t-Butyl,Indole,Phenyl,Chloroacetamide,t-Butyl,394,REJECT,Anchor: Steric clash w/ GLY60; Tail: Too hydrophobic; Anchor: Steric violation (GLY60); Tail: Must be polar
+Indole-Phenyl-Propyl-MethylPiperazine,Indole,Phenyl,Propyl,MethylPiperazine,387,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Warhead: Must be electrophile; Anchor: Steric violation (GLY60)
+Indole-Phenyl-Propyl-Morpholine,Indole,Phenyl,Propyl,Morpholine,374,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Warhead: Must be electrophile; Anchor: Steric violation (GLY60)
+Indole-Phenyl-Propyl-Dimethylamine,Indole,Phenyl,Propyl,Dimethylamine,332,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Warhead: Must be electrophile; Anchor: Steric violation (GLY60); MW 332: Out of range 350-600
+Indole-Phenyl-Propyl-t-Butyl,Indole,Phenyl,Propyl,t-Butyl,344,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Anchor: Steric violation (GLY60); Tail: Must be polar; MW 344: Out of range 350-600
+Purine-Isopropyl-Acrylamide-MethylPiperazine,Purine,Isopropyl,Acrylamide,MethylPiperazine,384,VALID,
+Purine-Isopropyl-Acrylamide-Morpholine,Purine,Isopropyl,Acrylamide,Morpholine,371,VALID,
+Purine-Isopropyl-Acrylamide-Dimethylamine,Purine,Isopropyl,Acrylamide,Dimethylamine,329,REJECT,MW 329: Out of range 350-600
+Purine-Isopropyl-Acrylamide-t-Butyl,Purine,Isopropyl,Acrylamide,t-Butyl,341,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 341: Out of range 350-600
+Purine-Isopropyl-VinylSulfonamide-MethylPiperazine,Purine,Isopropyl,VinylSulfonamide,MethylPiperazine,420,VALID,
+Purine-Isopropyl-VinylSulfonamide-Morpholine,Purine,Isopropyl,VinylSulfonamide,Morpholine,407,VALID,
+Purine-Isopropyl-VinylSulfonamide-Dimethylamine,Purine,Isopropyl,VinylSulfonamide,Dimethylamine,365,VALID,
+Purine-Isopropyl-VinylSulfonamide-t-Butyl,Purine,Isopropyl,VinylSulfonamide,t-Butyl,377,REJECT,Tail: Too hydrophobic; Tail: Must be polar
+Purine-Isopropyl-Chloroacetamide-MethylPiperazine,Purine,Isopropyl,Chloroacetamide,MethylPiperazine,406,VALID,
+Purine-Isopropyl-Chloroacetamide-Morpholine,Purine,Isopropyl,Chloroacetamide,Morpholine,393,VALID,
+Purine-Isopropyl-Chloroacetamide-Dimethylamine,Purine,Isopropyl,Chloroacetamide,Dimethylamine,351,VALID,
+Purine-Isopropyl-Chloroacetamide-t-Butyl,Purine,Isopropyl,Chloroacetamide,t-Butyl,363,REJECT,Tail: Too hydrophobic; Tail: Must be polar
+Purine-Isopropyl-Propyl-MethylPiperazine,Purine,Isopropyl,Propyl,MethylPiperazine,356,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile
+Purine-Isopropyl-Propyl-Morpholine,Purine,Isopropyl,Propyl,Morpholine,343,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 343: Out of range 350-600
+Purine-Isopropyl-Propyl-Dimethylamine,Purine,Isopropyl,Propyl,Dimethylamine,301,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 301: Out of range 350-600
+Purine-Isopropyl-Propyl-t-Butyl,Purine,Isopropyl,Propyl,t-Butyl,313,REJECT,Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Tail: Must be polar; MW 313: Out of range 350-600
+Purine-Methyl-Acrylamide-MethylPiperazine,Purine,Methyl,Acrylamide,MethylPiperazine,356,VALID,
+Purine-Methyl-Acrylamide-Morpholine,Purine,Methyl,Acrylamide,Morpholine,343,REJECT,MW 343: Out of range 350-600
+Purine-Methyl-Acrylamide-Dimethylamine,Purine,Methyl,Acrylamide,Dimethylamine,301,REJECT,MW 301: Out of range 350-600
+Purine-Methyl-Acrylamide-t-Butyl,Purine,Methyl,Acrylamide,t-Butyl,313,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 313: Out of range 350-600
+Purine-Methyl-VinylSulfonamide-MethylPiperazine,Purine,Methyl,VinylSulfonamide,MethylPiperazine,392,VALID,
+Purine-Methyl-VinylSulfonamide-Morpholine,Purine,Methyl,VinylSulfonamide,Morpholine,379,VALID,
+Purine-Methyl-VinylSulfonamide-Dimethylamine,Purine,Methyl,VinylSulfonamide,Dimethylamine,337,REJECT,MW 337: Out of range 350-600
+Purine-Methyl-VinylSulfonamide-t-Butyl,Purine,Methyl,VinylSulfonamide,t-Butyl,349,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 349: Out of range 350-600
+Purine-Methyl-Chloroacetamide-MethylPiperazine,Purine,Methyl,Chloroacetamide,MethylPiperazine,378,VALID,
+Purine-Methyl-Chloroacetamide-Morpholine,Purine,Methyl,Chloroacetamide,Morpholine,365,VALID,
+Purine-Methyl-Chloroacetamide-Dimethylamine,Purine,Methyl,Chloroacetamide,Dimethylamine,323,REJECT,MW 323: Out of range 350-600
+Purine-Methyl-Chloroacetamide-t-Butyl,Purine,Methyl,Chloroacetamide,t-Butyl,335,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 335: Out of range 350-600
+Purine-Methyl-Propyl-MethylPiperazine,Purine,Methyl,Propyl,MethylPiperazine,328,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 328: Out of range 350-600
+Purine-Methyl-Propyl-Morpholine,Purine,Methyl,Propyl,Morpholine,315,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 315: Out of range 350-600
+Purine-Methyl-Propyl-Dimethylamine,Purine,Methyl,Propyl,Dimethylamine,273,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 273: Out of range 350-600
+Purine-Methyl-Propyl-t-Butyl,Purine,Methyl,Propyl,t-Butyl,285,REJECT,Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Tail: Must be polar; MW 285: Out of range 350-600
+Purine-Fluorine-Acrylamide-MethylPiperazine,Purine,Fluorine,Acrylamide,MethylPiperazine,360,VALID,
+Purine-Fluorine-Acrylamide-Morpholine,Purine,Fluorine,Acrylamide,Morpholine,347,REJECT,MW 347: Out of range 350-600
+Purine-Fluorine-Acrylamide-Dimethylamine,Purine,Fluorine,Acrylamide,Dimethylamine,305,REJECT,MW 305: Out of range 350-600
+Purine-Fluorine-Acrylamide-t-Butyl,Purine,Fluorine,Acrylamide,t-Butyl,317,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 317: Out of range 350-600
+Purine-Fluorine-VinylSulfonamide-MethylPiperazine,Purine,Fluorine,VinylSulfonamide,MethylPiperazine,396,VALID,
+Purine-Fluorine-VinylSulfonamide-Morpholine,Purine,Fluorine,VinylSulfonamide,Morpholine,383,VALID,
+Purine-Fluorine-VinylSulfonamide-Dimethylamine,Purine,Fluorine,VinylSulfonamide,Dimethylamine,341,REJECT,MW 341: Out of range 350-600
+Purine-Fluorine-VinylSulfonamide-t-Butyl,Purine,Fluorine,VinylSulfonamide,t-Butyl,353,REJECT,Tail: Too hydrophobic; Tail: Must be polar
+Purine-Fluorine-Chloroacetamide-MethylPiperazine,Purine,Fluorine,Chloroacetamide,MethylPiperazine,382,VALID,
+Purine-Fluorine-Chloroacetamide-Morpholine,Purine,Fluorine,Chloroacetamide,Morpholine,369,VALID,
+Purine-Fluorine-Chloroacetamide-Dimethylamine,Purine,Fluorine,Chloroacetamide,Dimethylamine,327,REJECT,MW 327: Out of range 350-600
+Purine-Fluorine-Chloroacetamide-t-Butyl,Purine,Fluorine,Chloroacetamide,t-Butyl,339,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 339: Out of range 350-600
+Purine-Fluorine-Propyl-MethylPiperazine,Purine,Fluorine,Propyl,MethylPiperazine,332,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 332: Out of range 350-600
+Purine-Fluorine-Propyl-Morpholine,Purine,Fluorine,Propyl,Morpholine,319,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 319: Out of range 350-600
+Purine-Fluorine-Propyl-Dimethylamine,Purine,Fluorine,Propyl,Dimethylamine,277,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 277: Out of range 350-600
+Purine-Fluorine-Propyl-t-Butyl,Purine,Fluorine,Propyl,t-Butyl,289,REJECT,Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Tail: Must be polar; MW 289: Out of range 350-600
+Purine-Phenyl-Acrylamide-MethylPiperazine,Purine,Phenyl,Acrylamide,MethylPiperazine,418,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Purine-Phenyl-Acrylamide-Morpholine,Purine,Phenyl,Acrylamide,Morpholine,405,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Purine-Phenyl-Acrylamide-Dimethylamine,Purine,Phenyl,Acrylamide,Dimethylamine,363,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Purine-Phenyl-Acrylamide-t-Butyl,Purine,Phenyl,Acrylamide,t-Butyl,375,REJECT,Anchor: Steric clash w/ GLY60; Tail: Too hydrophobic; Anchor: Steric violation (GLY60); Tail: Must be polar
+Purine-Phenyl-VinylSulfonamide-MethylPiperazine,Purine,Phenyl,VinylSulfonamide,MethylPiperazine,454,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Purine-Phenyl-VinylSulfonamide-Morpholine,Purine,Phenyl,VinylSulfonamide,Morpholine,441,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Purine-Phenyl-VinylSulfonamide-Dimethylamine,Purine,Phenyl,VinylSulfonamide,Dimethylamine,399,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Purine-Phenyl-VinylSulfonamide-t-Butyl,Purine,Phenyl,VinylSulfonamide,t-Butyl,411,REJECT,Anchor: Steric clash w/ GLY60; Tail: Too hydrophobic; Anchor: Steric violation (GLY60); Tail: Must be polar
+Purine-Phenyl-Chloroacetamide-MethylPiperazine,Purine,Phenyl,Chloroacetamide,MethylPiperazine,440,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Purine-Phenyl-Chloroacetamide-Morpholine,Purine,Phenyl,Chloroacetamide,Morpholine,427,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Purine-Phenyl-Chloroacetamide-Dimethylamine,Purine,Phenyl,Chloroacetamide,Dimethylamine,385,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Purine-Phenyl-Chloroacetamide-t-Butyl,Purine,Phenyl,Chloroacetamide,t-Butyl,397,REJECT,Anchor: Steric clash w/ GLY60; Tail: Too hydrophobic; Anchor: Steric violation (GLY60); Tail: Must be polar
+Purine-Phenyl-Propyl-MethylPiperazine,Purine,Phenyl,Propyl,MethylPiperazine,390,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Warhead: Must be electrophile; Anchor: Steric violation (GLY60)
+Purine-Phenyl-Propyl-Morpholine,Purine,Phenyl,Propyl,Morpholine,377,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Warhead: Must be electrophile; Anchor: Steric violation (GLY60)
+Purine-Phenyl-Propyl-Dimethylamine,Purine,Phenyl,Propyl,Dimethylamine,335,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Warhead: Must be electrophile; Anchor: Steric violation (GLY60); MW 335: Out of range 350-600
+Purine-Phenyl-Propyl-t-Butyl,Purine,Phenyl,Propyl,t-Butyl,347,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Anchor: Steric violation (GLY60); Tail: Must be polar; MW 347: Out of range 350-600
+Benzene-Isopropyl-Acrylamide-MethylPiperazine,Benzene,Isopropyl,Acrylamide,MethylPiperazine,342,REJECT,MW 342: Out of range 350-600
+Benzene-Isopropyl-Acrylamide-Morpholine,Benzene,Isopropyl,Acrylamide,Morpholine,329,REJECT,MW 329: Out of range 350-600
+Benzene-Isopropyl-Acrylamide-Dimethylamine,Benzene,Isopropyl,Acrylamide,Dimethylamine,287,REJECT,MW 287: Out of range 350-600
+Benzene-Isopropyl-Acrylamide-t-Butyl,Benzene,Isopropyl,Acrylamide,t-Butyl,299,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 299: Out of range 350-600
+Benzene-Isopropyl-VinylSulfonamide-MethylPiperazine,Benzene,Isopropyl,VinylSulfonamide,MethylPiperazine,378,VALID,
+Benzene-Isopropyl-VinylSulfonamide-Morpholine,Benzene,Isopropyl,VinylSulfonamide,Morpholine,365,VALID,
+Benzene-Isopropyl-VinylSulfonamide-Dimethylamine,Benzene,Isopropyl,VinylSulfonamide,Dimethylamine,323,REJECT,MW 323: Out of range 350-600
+Benzene-Isopropyl-VinylSulfonamide-t-Butyl,Benzene,Isopropyl,VinylSulfonamide,t-Butyl,335,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 335: Out of range 350-600
+Benzene-Isopropyl-Chloroacetamide-MethylPiperazine,Benzene,Isopropyl,Chloroacetamide,MethylPiperazine,364,VALID,
+Benzene-Isopropyl-Chloroacetamide-Morpholine,Benzene,Isopropyl,Chloroacetamide,Morpholine,351,VALID,
+Benzene-Isopropyl-Chloroacetamide-Dimethylamine,Benzene,Isopropyl,Chloroacetamide,Dimethylamine,309,REJECT,MW 309: Out of range 350-600
+Benzene-Isopropyl-Chloroacetamide-t-Butyl,Benzene,Isopropyl,Chloroacetamide,t-Butyl,321,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 321: Out of range 350-600
+Benzene-Isopropyl-Propyl-MethylPiperazine,Benzene,Isopropyl,Propyl,MethylPiperazine,314,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 314: Out of range 350-600
+Benzene-Isopropyl-Propyl-Morpholine,Benzene,Isopropyl,Propyl,Morpholine,301,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 301: Out of range 350-600
+Benzene-Isopropyl-Propyl-Dimethylamine,Benzene,Isopropyl,Propyl,Dimethylamine,259,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 259: Out of range 350-600
+Benzene-Isopropyl-Propyl-t-Butyl,Benzene,Isopropyl,Propyl,t-Butyl,271,REJECT,Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Tail: Must be polar; MW 271: Out of range 350-600
+Benzene-Methyl-Acrylamide-MethylPiperazine,Benzene,Methyl,Acrylamide,MethylPiperazine,314,REJECT,MW 314: Out of range 350-600
+Benzene-Methyl-Acrylamide-Morpholine,Benzene,Methyl,Acrylamide,Morpholine,301,REJECT,MW 301: Out of range 350-600
+Benzene-Methyl-Acrylamide-Dimethylamine,Benzene,Methyl,Acrylamide,Dimethylamine,259,REJECT,MW 259: Out of range 350-600
+Benzene-Methyl-Acrylamide-t-Butyl,Benzene,Methyl,Acrylamide,t-Butyl,271,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 271: Out of range 350-600
+Benzene-Methyl-VinylSulfonamide-MethylPiperazine,Benzene,Methyl,VinylSulfonamide,MethylPiperazine,350,VALID,
+Benzene-Methyl-VinylSulfonamide-Morpholine,Benzene,Methyl,VinylSulfonamide,Morpholine,337,REJECT,MW 337: Out of range 350-600
+Benzene-Methyl-VinylSulfonamide-Dimethylamine,Benzene,Methyl,VinylSulfonamide,Dimethylamine,295,REJECT,MW 295: Out of range 350-600
+Benzene-Methyl-VinylSulfonamide-t-Butyl,Benzene,Methyl,VinylSulfonamide,t-Butyl,307,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 307: Out of range 350-600
+Benzene-Methyl-Chloroacetamide-MethylPiperazine,Benzene,Methyl,Chloroacetamide,MethylPiperazine,336,REJECT,MW 336: Out of range 350-600
+Benzene-Methyl-Chloroacetamide-Morpholine,Benzene,Methyl,Chloroacetamide,Morpholine,323,REJECT,MW 323: Out of range 350-600
+Benzene-Methyl-Chloroacetamide-Dimethylamine,Benzene,Methyl,Chloroacetamide,Dimethylamine,281,REJECT,MW 281: Out of range 350-600
+Benzene-Methyl-Chloroacetamide-t-Butyl,Benzene,Methyl,Chloroacetamide,t-Butyl,293,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 293: Out of range 350-600
+Benzene-Methyl-Propyl-MethylPiperazine,Benzene,Methyl,Propyl,MethylPiperazine,286,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 286: Out of range 350-600
+Benzene-Methyl-Propyl-Morpholine,Benzene,Methyl,Propyl,Morpholine,273,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 273: Out of range 350-600
+Benzene-Methyl-Propyl-Dimethylamine,Benzene,Methyl,Propyl,Dimethylamine,231,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 231: Out of range 350-600
+Benzene-Methyl-Propyl-t-Butyl,Benzene,Methyl,Propyl,t-Butyl,243,REJECT,Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Tail: Must be polar; MW 243: Out of range 350-600
+Benzene-Fluorine-Acrylamide-MethylPiperazine,Benzene,Fluorine,Acrylamide,MethylPiperazine,318,REJECT,MW 318: Out of range 350-600
+Benzene-Fluorine-Acrylamide-Morpholine,Benzene,Fluorine,Acrylamide,Morpholine,305,REJECT,MW 305: Out of range 350-600
+Benzene-Fluorine-Acrylamide-Dimethylamine,Benzene,Fluorine,Acrylamide,Dimethylamine,263,REJECT,MW 263: Out of range 350-600
+Benzene-Fluorine-Acrylamide-t-Butyl,Benzene,Fluorine,Acrylamide,t-Butyl,275,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 275: Out of range 350-600
+Benzene-Fluorine-VinylSulfonamide-MethylPiperazine,Benzene,Fluorine,VinylSulfonamide,MethylPiperazine,354,VALID,
+Benzene-Fluorine-VinylSulfonamide-Morpholine,Benzene,Fluorine,VinylSulfonamide,Morpholine,341,REJECT,MW 341: Out of range 350-600
+Benzene-Fluorine-VinylSulfonamide-Dimethylamine,Benzene,Fluorine,VinylSulfonamide,Dimethylamine,299,REJECT,MW 299: Out of range 350-600
+Benzene-Fluorine-VinylSulfonamide-t-Butyl,Benzene,Fluorine,VinylSulfonamide,t-Butyl,311,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 311: Out of range 350-600
+Benzene-Fluorine-Chloroacetamide-MethylPiperazine,Benzene,Fluorine,Chloroacetamide,MethylPiperazine,340,REJECT,MW 340: Out of range 350-600
+Benzene-Fluorine-Chloroacetamide-Morpholine,Benzene,Fluorine,Chloroacetamide,Morpholine,327,REJECT,MW 327: Out of range 350-600
+Benzene-Fluorine-Chloroacetamide-Dimethylamine,Benzene,Fluorine,Chloroacetamide,Dimethylamine,285,REJECT,MW 285: Out of range 350-600
+Benzene-Fluorine-Chloroacetamide-t-Butyl,Benzene,Fluorine,Chloroacetamide,t-Butyl,297,REJECT,Tail: Too hydrophobic; Tail: Must be polar; MW 297: Out of range 350-600
+Benzene-Fluorine-Propyl-MethylPiperazine,Benzene,Fluorine,Propyl,MethylPiperazine,290,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 290: Out of range 350-600
+Benzene-Fluorine-Propyl-Morpholine,Benzene,Fluorine,Propyl,Morpholine,277,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 277: Out of range 350-600
+Benzene-Fluorine-Propyl-Dimethylamine,Benzene,Fluorine,Propyl,Dimethylamine,235,REJECT,Warhead: Not electrophile; Warhead: Must be electrophile; MW 235: Out of range 350-600
+Benzene-Fluorine-Propyl-t-Butyl,Benzene,Fluorine,Propyl,t-Butyl,247,REJECT,Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Tail: Must be polar; MW 247: Out of range 350-600
+Benzene-Phenyl-Acrylamide-MethylPiperazine,Benzene,Phenyl,Acrylamide,MethylPiperazine,376,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Benzene-Phenyl-Acrylamide-Morpholine,Benzene,Phenyl,Acrylamide,Morpholine,363,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Benzene-Phenyl-Acrylamide-Dimethylamine,Benzene,Phenyl,Acrylamide,Dimethylamine,321,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60); MW 321: Out of range 350-600
+Benzene-Phenyl-Acrylamide-t-Butyl,Benzene,Phenyl,Acrylamide,t-Butyl,333,REJECT,Anchor: Steric clash w/ GLY60; Tail: Too hydrophobic; Anchor: Steric violation (GLY60); Tail: Must be polar; MW 333: Out of range 350-600
+Benzene-Phenyl-VinylSulfonamide-MethylPiperazine,Benzene,Phenyl,VinylSulfonamide,MethylPiperazine,412,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Benzene-Phenyl-VinylSulfonamide-Morpholine,Benzene,Phenyl,VinylSulfonamide,Morpholine,399,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Benzene-Phenyl-VinylSulfonamide-Dimethylamine,Benzene,Phenyl,VinylSulfonamide,Dimethylamine,357,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Benzene-Phenyl-VinylSulfonamide-t-Butyl,Benzene,Phenyl,VinylSulfonamide,t-Butyl,369,REJECT,Anchor: Steric clash w/ GLY60; Tail: Too hydrophobic; Anchor: Steric violation (GLY60); Tail: Must be polar
+Benzene-Phenyl-Chloroacetamide-MethylPiperazine,Benzene,Phenyl,Chloroacetamide,MethylPiperazine,398,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Benzene-Phenyl-Chloroacetamide-Morpholine,Benzene,Phenyl,Chloroacetamide,Morpholine,385,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60)
+Benzene-Phenyl-Chloroacetamide-Dimethylamine,Benzene,Phenyl,Chloroacetamide,Dimethylamine,343,REJECT,Anchor: Steric clash w/ GLY60; Anchor: Steric violation (GLY60); MW 343: Out of range 350-600
+Benzene-Phenyl-Chloroacetamide-t-Butyl,Benzene,Phenyl,Chloroacetamide,t-Butyl,355,REJECT,Anchor: Steric clash w/ GLY60; Tail: Too hydrophobic; Anchor: Steric violation (GLY60); Tail: Must be polar
+Benzene-Phenyl-Propyl-MethylPiperazine,Benzene,Phenyl,Propyl,MethylPiperazine,348,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Warhead: Must be electrophile; Anchor: Steric violation (GLY60); MW 348: Out of range 350-600
+Benzene-Phenyl-Propyl-Morpholine,Benzene,Phenyl,Propyl,Morpholine,335,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Warhead: Must be electrophile; Anchor: Steric violation (GLY60); MW 335: Out of range 350-600
+Benzene-Phenyl-Propyl-Dimethylamine,Benzene,Phenyl,Propyl,Dimethylamine,293,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Warhead: Must be electrophile; Anchor: Steric violation (GLY60); MW 293: Out of range 350-600
+Benzene-Phenyl-Propyl-t-Butyl,Benzene,Phenyl,Propyl,t-Butyl,305,REJECT,Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Tail: Too hydrophobic; Warhead: Must be electrophile; Anchor: Steric violation (GLY60); Tail: Must be polar; MW 305: Out of range 350-600
+Piperidine-Isopropyl-Acrylamide-MethylPiperazine,Piperidine,Isopropyl,Acrylamide,MethylPiperazine,349,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 349: Out of range 350-600
+Piperidine-Isopropyl-Acrylamide-Morpholine,Piperidine,Isopropyl,Acrylamide,Morpholine,336,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 336: Out of range 350-600
+Piperidine-Isopropyl-Acrylamide-Dimethylamine,Piperidine,Isopropyl,Acrylamide,Dimethylamine,294,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 294: Out of range 350-600
+Piperidine-Isopropyl-Acrylamide-t-Butyl,Piperidine,Isopropyl,Acrylamide,t-Butyl,306,REJECT,Core: Not aromatic; Tail: Too hydrophobic; Core: Must be aromatic; Tail: Must be polar; MW 306: Out of range 350-600
+Piperidine-Isopropyl-VinylSulfonamide-MethylPiperazine,Piperidine,Isopropyl,VinylSulfonamide,MethylPiperazine,385,REJECT,Core: Not aromatic; Core: Must be aromatic
+Piperidine-Isopropyl-VinylSulfonamide-Morpholine,Piperidine,Isopropyl,VinylSulfonamide,Morpholine,372,REJECT,Core: Not aromatic; Core: Must be aromatic
+Piperidine-Isopropyl-VinylSulfonamide-Dimethylamine,Piperidine,Isopropyl,VinylSulfonamide,Dimethylamine,330,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 330: Out of range 350-600
+Piperidine-Isopropyl-VinylSulfonamide-t-Butyl,Piperidine,Isopropyl,VinylSulfonamide,t-Butyl,342,REJECT,Core: Not aromatic; Tail: Too hydrophobic; Core: Must be aromatic; Tail: Must be polar; MW 342: Out of range 350-600
+Piperidine-Isopropyl-Chloroacetamide-MethylPiperazine,Piperidine,Isopropyl,Chloroacetamide,MethylPiperazine,371,REJECT,Core: Not aromatic; Core: Must be aromatic
+Piperidine-Isopropyl-Chloroacetamide-Morpholine,Piperidine,Isopropyl,Chloroacetamide,Morpholine,358,REJECT,Core: Not aromatic; Core: Must be aromatic
+Piperidine-Isopropyl-Chloroacetamide-Dimethylamine,Piperidine,Isopropyl,Chloroacetamide,Dimethylamine,316,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 316: Out of range 350-600
+Piperidine-Isopropyl-Chloroacetamide-t-Butyl,Piperidine,Isopropyl,Chloroacetamide,t-Butyl,328,REJECT,Core: Not aromatic; Tail: Too hydrophobic; Core: Must be aromatic; Tail: Must be polar; MW 328: Out of range 350-600
+Piperidine-Isopropyl-Propyl-MethylPiperazine,Piperidine,Isopropyl,Propyl,MethylPiperazine,321,REJECT,Core: Not aromatic; Warhead: Not electrophile; Core: Must be aromatic; Warhead: Must be electrophile; MW 321: Out of range 350-600
+Piperidine-Isopropyl-Propyl-Morpholine,Piperidine,Isopropyl,Propyl,Morpholine,308,REJECT,Core: Not aromatic; Warhead: Not electrophile; Core: Must be aromatic; Warhead: Must be electrophile; MW 308: Out of range 350-600
+Piperidine-Isopropyl-Propyl-Dimethylamine,Piperidine,Isopropyl,Propyl,Dimethylamine,266,REJECT,Core: Not aromatic; Warhead: Not electrophile; Core: Must be aromatic; Warhead: Must be electrophile; MW 266: Out of range 350-600
+Piperidine-Isopropyl-Propyl-t-Butyl,Piperidine,Isopropyl,Propyl,t-Butyl,278,REJECT,Core: Not aromatic; Warhead: Not electrophile; Tail: Too hydrophobic; Core: Must be aromatic; Warhead: Must be electrophile; Tail: Must be polar; MW 278: Out of range 350-600
+Piperidine-Methyl-Acrylamide-MethylPiperazine,Piperidine,Methyl,Acrylamide,MethylPiperazine,321,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 321: Out of range 350-600
+Piperidine-Methyl-Acrylamide-Morpholine,Piperidine,Methyl,Acrylamide,Morpholine,308,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 308: Out of range 350-600
+Piperidine-Methyl-Acrylamide-Dimethylamine,Piperidine,Methyl,Acrylamide,Dimethylamine,266,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 266: Out of range 350-600
+Piperidine-Methyl-Acrylamide-t-Butyl,Piperidine,Methyl,Acrylamide,t-Butyl,278,REJECT,Core: Not aromatic; Tail: Too hydrophobic; Core: Must be aromatic; Tail: Must be polar; MW 278: Out of range 350-600
+Piperidine-Methyl-VinylSulfonamide-MethylPiperazine,Piperidine,Methyl,VinylSulfonamide,MethylPiperazine,357,REJECT,Core: Not aromatic; Core: Must be aromatic
+Piperidine-Methyl-VinylSulfonamide-Morpholine,Piperidine,Methyl,VinylSulfonamide,Morpholine,344,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 344: Out of range 350-600
+Piperidine-Methyl-VinylSulfonamide-Dimethylamine,Piperidine,Methyl,VinylSulfonamide,Dimethylamine,302,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 302: Out of range 350-600
+Piperidine-Methyl-VinylSulfonamide-t-Butyl,Piperidine,Methyl,VinylSulfonamide,t-Butyl,314,REJECT,Core: Not aromatic; Tail: Too hydrophobic; Core: Must be aromatic; Tail: Must be polar; MW 314: Out of range 350-600
+Piperidine-Methyl-Chloroacetamide-MethylPiperazine,Piperidine,Methyl,Chloroacetamide,MethylPiperazine,343,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 343: Out of range 350-600
+Piperidine-Methyl-Chloroacetamide-Morpholine,Piperidine,Methyl,Chloroacetamide,Morpholine,330,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 330: Out of range 350-600
+Piperidine-Methyl-Chloroacetamide-Dimethylamine,Piperidine,Methyl,Chloroacetamide,Dimethylamine,288,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 288: Out of range 350-600
+Piperidine-Methyl-Chloroacetamide-t-Butyl,Piperidine,Methyl,Chloroacetamide,t-Butyl,300,REJECT,Core: Not aromatic; Tail: Too hydrophobic; Core: Must be aromatic; Tail: Must be polar; MW 300: Out of range 350-600
+Piperidine-Methyl-Propyl-MethylPiperazine,Piperidine,Methyl,Propyl,MethylPiperazine,293,REJECT,Core: Not aromatic; Warhead: Not electrophile; Core: Must be aromatic; Warhead: Must be electrophile; MW 293: Out of range 350-600
+Piperidine-Methyl-Propyl-Morpholine,Piperidine,Methyl,Propyl,Morpholine,280,REJECT,Core: Not aromatic; Warhead: Not electrophile; Core: Must be aromatic; Warhead: Must be electrophile; MW 280: Out of range 350-600
+Piperidine-Methyl-Propyl-Dimethylamine,Piperidine,Methyl,Propyl,Dimethylamine,238,REJECT,Core: Not aromatic; Warhead: Not electrophile; Core: Must be aromatic; Warhead: Must be electrophile; MW 238: Out of range 350-600
+Piperidine-Methyl-Propyl-t-Butyl,Piperidine,Methyl,Propyl,t-Butyl,250,REJECT,Core: Not aromatic; Warhead: Not electrophile; Tail: Too hydrophobic; Core: Must be aromatic; Warhead: Must be electrophile; Tail: Must be polar; MW 250: Out of range 350-600
+Piperidine-Fluorine-Acrylamide-MethylPiperazine,Piperidine,Fluorine,Acrylamide,MethylPiperazine,325,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 325: Out of range 350-600
+Piperidine-Fluorine-Acrylamide-Morpholine,Piperidine,Fluorine,Acrylamide,Morpholine,312,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 312: Out of range 350-600
+Piperidine-Fluorine-Acrylamide-Dimethylamine,Piperidine,Fluorine,Acrylamide,Dimethylamine,270,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 270: Out of range 350-600
+Piperidine-Fluorine-Acrylamide-t-Butyl,Piperidine,Fluorine,Acrylamide,t-Butyl,282,REJECT,Core: Not aromatic; Tail: Too hydrophobic; Core: Must be aromatic; Tail: Must be polar; MW 282: Out of range 350-600
+Piperidine-Fluorine-VinylSulfonamide-MethylPiperazine,Piperidine,Fluorine,VinylSulfonamide,MethylPiperazine,361,REJECT,Core: Not aromatic; Core: Must be aromatic
+Piperidine-Fluorine-VinylSulfonamide-Morpholine,Piperidine,Fluorine,VinylSulfonamide,Morpholine,348,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 348: Out of range 350-600
+Piperidine-Fluorine-VinylSulfonamide-Dimethylamine,Piperidine,Fluorine,VinylSulfonamide,Dimethylamine,306,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 306: Out of range 350-600
+Piperidine-Fluorine-VinylSulfonamide-t-Butyl,Piperidine,Fluorine,VinylSulfonamide,t-Butyl,318,REJECT,Core: Not aromatic; Tail: Too hydrophobic; Core: Must be aromatic; Tail: Must be polar; MW 318: Out of range 350-600
+Piperidine-Fluorine-Chloroacetamide-MethylPiperazine,Piperidine,Fluorine,Chloroacetamide,MethylPiperazine,347,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 347: Out of range 350-600
+Piperidine-Fluorine-Chloroacetamide-Morpholine,Piperidine,Fluorine,Chloroacetamide,Morpholine,334,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 334: Out of range 350-600
+Piperidine-Fluorine-Chloroacetamide-Dimethylamine,Piperidine,Fluorine,Chloroacetamide,Dimethylamine,292,REJECT,Core: Not aromatic; Core: Must be aromatic; MW 292: Out of range 350-600
+Piperidine-Fluorine-Chloroacetamide-t-Butyl,Piperidine,Fluorine,Chloroacetamide,t-Butyl,304,REJECT,Core: Not aromatic; Tail: Too hydrophobic; Core: Must be aromatic; Tail: Must be polar; MW 304: Out of range 350-600
+Piperidine-Fluorine-Propyl-MethylPiperazine,Piperidine,Fluorine,Propyl,MethylPiperazine,297,REJECT,Core: Not aromatic; Warhead: Not electrophile; Core: Must be aromatic; Warhead: Must be electrophile; MW 297: Out of range 350-600
+Piperidine-Fluorine-Propyl-Morpholine,Piperidine,Fluorine,Propyl,Morpholine,284,REJECT,Core: Not aromatic; Warhead: Not electrophile; Core: Must be aromatic; Warhead: Must be electrophile; MW 284: Out of range 350-600
+Piperidine-Fluorine-Propyl-Dimethylamine,Piperidine,Fluorine,Propyl,Dimethylamine,242,REJECT,Core: Not aromatic; Warhead: Not electrophile; Core: Must be aromatic; Warhead: Must be electrophile; MW 242: Out of range 350-600
+Piperidine-Fluorine-Propyl-t-Butyl,Piperidine,Fluorine,Propyl,t-Butyl,254,REJECT,Core: Not aromatic; Warhead: Not electrophile; Tail: Too hydrophobic; Core: Must be aromatic; Warhead: Must be electrophile; Tail: Must be polar; MW 254: Out of range 350-600
+Piperidine-Phenyl-Acrylamide-MethylPiperazine,Piperidine,Phenyl,Acrylamide,MethylPiperazine,383,REJECT,Core: Not aromatic; Anchor: Steric clash w/ GLY60; Core: Must be aromatic; Anchor: Steric violation (GLY60)
+Piperidine-Phenyl-Acrylamide-Morpholine,Piperidine,Phenyl,Acrylamide,Morpholine,370,REJECT,Core: Not aromatic; Anchor: Steric clash w/ GLY60; Core: Must be aromatic; Anchor: Steric violation (GLY60)
+Piperidine-Phenyl-Acrylamide-Dimethylamine,Piperidine,Phenyl,Acrylamide,Dimethylamine,328,REJECT,Core: Not aromatic; Anchor: Steric clash w/ GLY60; Core: Must be aromatic; Anchor: Steric violation (GLY60); MW 328: Out of range 350-600
+Piperidine-Phenyl-Acrylamide-t-Butyl,Piperidine,Phenyl,Acrylamide,t-Butyl,340,REJECT,Core: Not aromatic; Anchor: Steric clash w/ GLY60; Tail: Too hydrophobic; Core: Must be aromatic; Anchor: Steric violation (GLY60); Tail: Must be polar; MW 340: Out of range 350-600
+Piperidine-Phenyl-VinylSulfonamide-MethylPiperazine,Piperidine,Phenyl,VinylSulfonamide,MethylPiperazine,419,REJECT,Core: Not aromatic; Anchor: Steric clash w/ GLY60; Core: Must be aromatic; Anchor: Steric violation (GLY60)
+Piperidine-Phenyl-VinylSulfonamide-Morpholine,Piperidine,Phenyl,VinylSulfonamide,Morpholine,406,REJECT,Core: Not aromatic; Anchor: Steric clash w/ GLY60; Core: Must be aromatic; Anchor: Steric violation (GLY60)
+Piperidine-Phenyl-VinylSulfonamide-Dimethylamine,Piperidine,Phenyl,VinylSulfonamide,Dimethylamine,364,REJECT,Core: Not aromatic; Anchor: Steric clash w/ GLY60; Core: Must be aromatic; Anchor: Steric violation (GLY60)
+Piperidine-Phenyl-VinylSulfonamide-t-Butyl,Piperidine,Phenyl,VinylSulfonamide,t-Butyl,376,REJECT,Core: Not aromatic; Anchor: Steric clash w/ GLY60; Tail: Too hydrophobic; Core: Must be aromatic; Anchor: Steric violation (GLY60); Tail: Must be polar
+Piperidine-Phenyl-Chloroacetamide-MethylPiperazine,Piperidine,Phenyl,Chloroacetamide,MethylPiperazine,405,REJECT,Core: Not aromatic; Anchor: Steric clash w/ GLY60; Core: Must be aromatic; Anchor: Steric violation (GLY60)
+Piperidine-Phenyl-Chloroacetamide-Morpholine,Piperidine,Phenyl,Chloroacetamide,Morpholine,392,REJECT,Core: Not aromatic; Anchor: Steric clash w/ GLY60; Core: Must be aromatic; Anchor: Steric violation (GLY60)
+Piperidine-Phenyl-Chloroacetamide-Dimethylamine,Piperidine,Phenyl,Chloroacetamide,Dimethylamine,350,REJECT,Core: Not aromatic; Anchor: Steric clash w/ GLY60; Core: Must be aromatic; Anchor: Steric violation (GLY60)
+Piperidine-Phenyl-Chloroacetamide-t-Butyl,Piperidine,Phenyl,Chloroacetamide,t-Butyl,362,REJECT,Core: Not aromatic; Anchor: Steric clash w/ GLY60; Tail: Too hydrophobic; Core: Must be aromatic; Anchor: Steric violation (GLY60); Tail: Must be polar
+Piperidine-Phenyl-Propyl-MethylPiperazine,Piperidine,Phenyl,Propyl,MethylPiperazine,355,REJECT,Core: Not aromatic; Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Core: Must be aromatic; Warhead: Must be electrophile; Anchor: Steric violation (GLY60)
+Piperidine-Phenyl-Propyl-Morpholine,Piperidine,Phenyl,Propyl,Morpholine,342,REJECT,Core: Not aromatic; Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Core: Must be aromatic; Warhead: Must be electrophile; Anchor: Steric violation (GLY60); MW 342: Out of range 350-600
+Piperidine-Phenyl-Propyl-Dimethylamine,Piperidine,Phenyl,Propyl,Dimethylamine,300,REJECT,Core: Not aromatic; Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Core: Must be aromatic; Warhead: Must be electrophile; Anchor: Steric violation (GLY60); MW 300: Out of range 350-600
+Piperidine-Phenyl-Propyl-t-Butyl,Piperidine,Phenyl,Propyl,t-Butyl,312,REJECT,Core: Not aromatic; Anchor: Steric clash w/ GLY60; Warhead: Not electrophile; Tail: Too hydrophobic; Core: Must be aromatic; Warhead: Must be electrophile; Anchor: Steric violation (GLY60); Tail: Must be polar; MW 312: Out of range 350-600

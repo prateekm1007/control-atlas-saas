@@ -1,0 +1,17 @@
+open https://files.rcsb.org/download/4LPK.pdb
+delete solvent
+delete ions
+style cartoon
+color bychain
+select :30-38, :60-76
+color hotpink sel
+show ligand
+color ligand gold
+surface
+transparency surface 60
+lighting soft
+set bgColor black
+view orient
+view all
+save Atlas_Entry_002_WT_GDP.png width 3840 height 2160 supersample 3
+exit

@@ -1,0 +1,10 @@
+CC(C)N1CCN(CC1)C2=NC=NC3=C2C(=CN3C4=C(C=C(C=C4F)F)C5=C(C=CC=N5)F)N6CCC(CC6)C(=O)C=C,Sotorasib
+c1ccccc1,Benzene
+CC(=O)Oc1ccccc1C(=O)O,Aspirin
+CN1C=NC2=C1C(=O)N(C(=O)N2C)C,Caffeine
+CC(C)Cc1ccc(cc1)C(C)C(=O)O,Ibuprofen
+C1CC1NC(=O)C=Cc2ccc(cc2)F,TestAcrylamide1
+N1C=CC=C1C(=O)C=C,SimpleAcrylamide
+CC1=CC=C(C=C1)C(=O)C=CN2CCCCC2,PiperidineAcrylamide
+c1ccc2c(c1)cc3ccccc3n2,Acridine
+CCCCCCCCCCCCCCCC,Hexadecane

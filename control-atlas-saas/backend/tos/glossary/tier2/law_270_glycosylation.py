@@ -1,0 +1,1 @@
+EXPLANATION = {"title": "Glycosylation Site Risk", "tier": "ADVISORY", "cutoff": "N-X-S/T", "summary": "Detects sequons that cause expression problems", "rationale": "N-X-S/T sequons (X≠P) can cause unwanted glycosylation or aggregation in bacteria."}

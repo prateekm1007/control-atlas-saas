@@ -1,0 +1,5 @@
+pdb_id,state,exposure_mean,volume,hydrophobic_pct
+4OBE,GDP_closed,7.23,1933.8,18.8
+6GOD,GTP_intermediate,29.39,1736.8,18.8
+6OIM,Drug_open,36.63,2231.4,18.8
+5P21,Native_GTP,28.27,1674.8,18.8

@@ -1,0 +1,37 @@
+# ===============================
+# Atlas Entry #001 — KRAS G12C
+# Fully Automated ChimeraX Script
+# ===============================
+
+# Clean start
+close all
+
+# Open structure
+open C:/Users/Administrator/Downloads/Atlas_Entry_001_Render_Package/data/raw/kras.pdb
+
+# Protein as "Statue"
+surface
+surface transparency 80
+surface color #444444
+lighting soft
+
+# Show structure cleanly
+hide atoms
+show cartoons
+cartoon color tan
+
+# Ghost Circuit (Cys12 -> Switch II)
+shape cylinder start #1:12@CA end #1:62@CA radius 0.6 color #ff0033
+shape cylinder start #1:12@CA end #1:62@CA radius 1.2 color #ff003366
+
+# Label
+2dlabels create "CCS: 0.82" xpos 0.62 ypos 0.18 color white size 28
+
+# Environment
+set bgColor black
+
+# Save high-res render
+save C:/Users/Administrator/Downloads/Atlas_Entry_001.png width 3840 height 2160
+
+# Exit ChimeraX
+exit

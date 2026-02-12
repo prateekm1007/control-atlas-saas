@@ -1,0 +1,1 @@
+EXPLANATION = {"title": "Isoelectric Point (pI) Balance", "tier": "ADVISORY", "cutoff": "pI 6-8", "summary": "Proteins with pI near neutral pH often precipitate", "rationale": "At pH = pI, proteins have zero net charge and lack repulsion, turning into industrial sludge."}

@@ -1,0 +1,13 @@
+motif_id: M002A
+composite_group: M002
+region: Switch I
+protein: HRAS
+mutation: WT
+source_pdb: 5P21
+chain: A
+residue_range: [30, 38]
+observed_ca_atoms: 8
+state: native_gtp
+conformation: closed
+ligand: GppNHp
+version: 1.0

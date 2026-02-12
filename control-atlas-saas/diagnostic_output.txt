@@ -1,0 +1,1 @@
+/home/prateekm1/diagnostic.sh: line 1: [paste: command not found

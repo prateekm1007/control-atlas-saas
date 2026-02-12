@@ -1,0 +1,7 @@
+compound_id,smiles,pocket,status,confidence,reason
+Sotorasib,CC(C)(C)NC1=NC=NC2=C1N=CN2,pocket_2,VALID,0.261,
+RandomPhenol,CC1=CC=CC=C1O,pocket_2,REJECT,0.027,fragment_too_small
+LinearAlkane,CCCCCCCC,pocket_2,REJECT,0.027,fragment_too_small
+Sotorasib,CC(C)(C)NC1=NC=NC2=C1N=CN2,pocket_1,VALID,0.0,
+RandomPhenol,CC1=CC=CC=C1O,pocket_1,REJECT,0.0,fragment_too_small
+LinearAlkane,CCCCCCCC,pocket_1,REJECT,0.0,fragment_too_small

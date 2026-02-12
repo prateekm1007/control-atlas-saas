@@ -1,0 +1,57 @@
+# Atlas Entry #004 — Ras–RAF Effector Coupling
+# The Handshake (Functional Complex)
+
+open https://files.rcsb.org/download/4G0N.pdb
+
+delete solvent
+delete ions
+
+########################################
+# Ras — Ghost Circuit (Chain A)
+########################################
+
+cartoon #1/A
+color #1/A slategray
+
+surface #1/A
+transparency #1/A 70
+
+# Switch I & II (additive selection)
+select #1/A:30-38
+select add #1/A:60-76
+color sel hotpink
+
+########################################
+# RAF-RBD — Solid Effector (Chain B)
+########################################
+
+cartoon #1/B
+color #1/B tan
+
+surface #1/B
+transparency #1/B 20
+
+########################################
+# Interface Detection
+########################################
+
+interfaces #1/A #1/B
+select interface
+color sel orange
+
+########################################
+# Scene
+########################################
+
+lighting soft
+set bgColor black
+
+view orient
+view all
+
+########################################
+# Save Artifact
+########################################
+
+save Atlas_Entry_004_RAS_RAF_Coupling.png width 3840 height 2160 supersample 3
+exit

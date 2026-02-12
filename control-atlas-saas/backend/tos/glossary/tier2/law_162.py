@@ -1,0 +1,1 @@
+EXPLANATION = {"title": "Interface Saturation", "principle": "Binding requires donor-acceptor handshake.", "rationale": "Stable interfaces exhibit >=3 H-bonds per 1000A^2. Sparse interfaces are unlikely to bind in solution."}

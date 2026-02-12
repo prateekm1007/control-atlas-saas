@@ -1,0 +1,9 @@
+compound_id,smiles,target,status,confidence,reason,volume,exposure,hydrophobic_pct
+Sotorasib,CC(C)(C)NC1=NC=NC2=C1N=CN2,KRAS_G12C,VALID,0.95,,412.3,0.31,0.67
+Sotorasib,CC(C)(C)NC1=NC=NC2=C1N=CN2,TP53_Y220C,VALID,0.95,,380.1,0.4,0.55
+Phenol_Decoy,CC1=CC=CC=C1O,KRAS_G12C,REJECT,0.1,fragment_too_small,412.3,0.31,0.67
+Phenol_Decoy,CC1=CC=CC=C1O,TP53_Y220C,REJECT,0.1,fragment_too_small,380.1,0.4,0.55
+Stearic_Acid,CCCCCCCCCCCCCCCCCC,KRAS_G12C,CANDIDATE,0.6,,412.3,0.31,0.67
+Stearic_Acid,CCCCCCCCCCCCCCCCCC,TP53_Y220C,CANDIDATE,0.6,,380.1,0.4,0.55
+Caffeine,CN1C=NC2=C1C(=O)N(C(=O)N2C)C,KRAS_G12C,CANDIDATE,0.6,,412.3,0.31,0.67
+Caffeine,CN1C=NC2=C1C(=O)N(C(=O)N2C)C,TP53_Y220C,CANDIDATE,0.6,,380.1,0.4,0.55

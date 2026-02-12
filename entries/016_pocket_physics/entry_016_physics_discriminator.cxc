@@ -1,0 +1,33 @@
+# Entry 016 — Pocket Physics Discrimination (HARDENED)
+
+open 5P21
+open 1UBQ
+
+delete solvent
+delete ions
+hide all
+
+# H-Ras Switch II
+show #1/A:60-76
+surface #1/A:60-76
+
+# Ubiquitin RMSD region
+show #2/A:44-56
+surface #2/A:44-56
+
+# Color surfaces manually (avoid attribute issues)
+color #1/A:60-76 goldenrod
+color #2/A:44-56 cyan
+
+tile
+lighting soft
+set bgColor black
+
+# HARD WAIT — force render completion
+wait 60
+
+# SAVE BEFORE EXIT
+save "C:\Users\Administrator\control-atlas\entries\016_pocket_physics\Atlas_Entry_016_Physics_Discrimination.png" width 3840 height 2160 supersample 3
+
+wait 5
+exit

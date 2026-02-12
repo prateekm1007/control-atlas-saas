@@ -1,0 +1,10 @@
+Control Atlas v2.4-MDIA
+Session Checkpoint
+
+- LAW-105 enforced via planner_gate.py
+- KRAS_G12D / CHAI-1 permanently vetoed
+- PD_L1 / CHAI-1 allowed
+- MDI enforcement verified (negative + positive test)
+- System-of-intelligence loop confirmed operational
+
+State: STABLE

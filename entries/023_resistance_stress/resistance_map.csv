@@ -1,0 +1,13 @@
+scaffold,mutation,outcome,reason
+Sotorasib,R68S,ROBUST,-
+Sotorasib,Y96D,ROBUST,-
+Sotorasib,Q99L,ROBUST,-
+Sotorasib,G60W,VULNERABLE,Steric clash at Trp60
+Novel_Scaffold_A,R68S,ROBUST,-
+Novel_Scaffold_A,Y96D,ROBUST,-
+Novel_Scaffold_A,Q99L,ROBUST,-
+Novel_Scaffold_A,G60W,VULNERABLE,Steric clash at Trp60
+Small_Frag_B,R68S,ROBUST,-
+Small_Frag_B,Y96D,ROBUST,-
+Small_Frag_B,Q99L,ROBUST,-
+Small_Frag_B,G60W,ROBUST,-

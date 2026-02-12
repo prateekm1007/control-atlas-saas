@@ -1,0 +1,13 @@
+motif_id: M001B
+composite_group: M001
+region: Switch II
+protein: KRAS
+mutation: G12C
+source_pdb: 6OIM
+chain: A
+residue_range: [60, 76]
+observed_ca_atoms: 16
+state: drug_bound
+conformation: open
+ligand: AMG-510 (Sotorasib)
+version: 1.0

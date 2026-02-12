@@ -1,0 +1,2 @@
+REAL_RF2_PDB_PENDING_HIGH_VRAM
+Simulation used for Entry 071 logic lock. Real inference deferred to A100/CPU.
