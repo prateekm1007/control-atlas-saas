@@ -1,0 +1,45 @@
+{
+  "project": "Control Atlas - Validated Leads",
+  "date": "2026-01-16",
+  "validation_protocol": "Tier 1 + Energy Minimization (Amber14/OBC2)",
+  "leads": {
+    "champ005": {
+      "sequence": "KAWAKKAAAKAEAAKAEAAKYWPTG",
+      "pre_minimization": {
+        "min_distance": 1.63,
+        "clashes": 7,
+        "rho": 199,
+        "status": "CLASH_VETO"
+      },
+      "post_minimization": {
+        "min_distance": 2.86,
+        "clashes": 0,
+        "rho": 147,
+        "status": "SOVEREIGN_PASS"
+      },
+      "note": "Clashes resolved but 26% contact loss indicates repositioning"
+    },
+    "twinrod_v2": {
+      "sequence": "KAWAKKAAAKAEAAKAEAAKYWPTG-PAEAAKP-KAWAKKAAAKAEAAKAEAAKYWPTG",
+      "pre_minimization": {
+        "min_distance": 2.32,
+        "clashes": 1,
+        "rho": 336,
+        "status": "CLASH_VETO"
+      },
+      "post_minimization": {
+        "min_distance": 2.8,
+        "clashes": 0,
+        "rho": 334,
+        "status": "SOVEREIGN_PASS"
+      },
+      "note": "Marginal clash resolved with minimal structural change"
+    }
+  },
+  "avidity_ratio": {
+    "pre_minimization": 1.69,
+    "post_minimization": 2.27,
+    "claimed": 2.7,
+    "note": "Post-minimization ratio closer to claim due to CHAMP-005 contact loss"
+  }
+}

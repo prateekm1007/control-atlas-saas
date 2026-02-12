@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "METAL": {
+      "requires": ["LAW-162:PASS"],
+      "penalty_if_missing": 25,
+      "reason": "Metal coordination requires verified H-bond/chemical coherency."
+    },
+    "MULTIVALENT": {
+      "requires": ["LAW-152:PASS"],
+      "penalty_if_missing": 20,
+      "reason": "Avidity benefits are negated by unstable interface energetics."
+    }
+  }
+}

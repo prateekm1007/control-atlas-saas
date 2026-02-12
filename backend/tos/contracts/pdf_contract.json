@@ -1,0 +1,42 @@
+{
+  "$schema": "toscanini://v21.2.4/pdf_contract",
+  "version": "21.2.4",
+  "pages": {
+    "page_1_executive": {
+      "title": "FORENSIC DECISION CERTIFICATE",
+      "sections": ["verdict_banner", "score_row", "provenance_block", "executive_summary"]
+    },
+    "page_2_architecture": {
+      "title": "ARCHITECTURE ANALYSIS",
+      "sections": ["arch_metadata", "arch_rationale", "arch_deep_dive"]
+    },
+    "page_3_physics": {
+      "title": "TIER-1 PHYSICS LEDGER",
+      "sections": ["law_summary", "law_table"]
+    },
+    "page_4_rejection": {
+      "title": "REJECTION RATIONALE",
+      "condition": "verdict.binary == VETO",
+      "sections": ["failed_laws_detail"]
+    },
+    "page_5_attestation": {
+      "title": "ATTESTATION & LEGAL SCOPE",
+      "sections": ["legal_scope", "nkg_note", "signature_block"]
+    }
+  },
+  "templates": {
+    "EXEC_SUMMARY_TEMPLATE": {
+      "PASS": "The structure PASSES all Tier-1 physical invariant checks with {physical_score}% integrity. Model confidence of {confidence_score}% indicates {confidence_level} certainty in predicted coordinates. This structure may proceed to downstream analysis.",
+      "VETO": "The structure is VETOED due to violations of fundamental physical laws. Physical integrity of {physical_score}% indicates {violation_severity} violations. See Tier-1 Ledger for specific failures."
+    }
+  },
+  "static_content": {
+    "LEGAL_SCOPE_TEXT": "THIS DOCUMENT CONFIRMS PHYSICAL PLAUSIBILITY ONLY. IT DOES NOT PREDICT BIOLOGICAL ACTIVITY, SAFETY, OR EFFICACY. ALL PROBABILITY VALUES ARE STRATEGIC PRIORITIZATION METRICS.",
+    "NKG_RECORDING_NOTE": "All outcomes from this audit have been recorded in the Negative Knowledge Graph (NKG). Failures are valuable data that inform future design decisions."
+  },
+  "constraints": {
+    "no_novel_claims": true,
+    "no_probability_modification": true,
+    "no_verdict_override": true
+  }
+}

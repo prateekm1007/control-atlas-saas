@@ -1,0 +1,18 @@
+{
+  "interactions": [
+    {
+      "if": ["LAW-155:PASS", "LAW-152:FAIL"],
+      "meaning": "Geometrically valid interface with poor thermodynamics.",
+      "effect": "DOWNGRADE_PROBABILITY",
+      "penalty": 15,
+      "severity": "WARNING"
+    },
+    {
+      "if": ["LAW-170:FAIL", "LAW-175:FAIL"],
+      "meaning": "Critical aggregation risk via surface exposure.",
+      "effect": "SOFT_VETO_ELIGIBLE",
+      "penalty": 30,
+      "severity": "CRITICAL"
+    }
+  ]
+}

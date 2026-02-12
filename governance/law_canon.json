@@ -1,0 +1,16 @@
+{
+  "version": "12.0.0",
+  "doctrine": "Universal Physical Invariants",
+  "laws": {
+    "LAW-155": {"name": "Steric Clash", "tier": "HARD", "cutoff": 2.5},
+    "LAW-160": {"name": "Backbone Continuity", "tier": "HARD", "cutoff": 4.2},
+    "LAW-120": {"name": "Peptide Bond Sanity", "tier": "HARD", "cutoff": 1.5},
+    "LAW-182": {"name": "Hydrophobic Burial", "tier": "HARD", "cutoff": 30.0},
+    "LAW-190": {"name": "Ring Planarity", "tier": "HARD", "cutoff": 0.2},
+    "LAW-195": {"name": "Disulfide Geometry", "tier": "HARD", "cutoff": 2.1},
+    "LAW-200": {"name": "Cavity Collapse", "tier": "HARD", "cutoff": 100.0},
+    "LAW-210": {"name": "Helix Crossing", "tier": "HARD", "cutoff": 20.0},
+    "LAW-220": {"name": "Strand Registry", "tier": "HARD", "cutoff": 0.5},
+    "LAW-230": {"name": "Atomic Valence", "tier": "HARD", "cutoff": 0.0}
+  }
+}

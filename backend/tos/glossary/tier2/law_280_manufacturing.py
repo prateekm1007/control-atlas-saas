@@ -1,0 +1,1 @@
+EXPLANATION = {"title": "Manufacturing Complexity", "tier": "ADVISORY", "cutoff": "Combined risk", "summary": "Holistic assessment of manufacturing challenges", "rationale": "Combines expression, purification, and stability into a single risk score."}

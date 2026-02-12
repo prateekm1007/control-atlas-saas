@@ -1,0 +1,1 @@
+EXPLANATION = {"title": "Surface Charge Patches", "tier": "ADVISORY", "cutoff": ">500Å²", "summary": "Extreme charge clustering can cause non-specific binding", "rationale": "Large contiguous charged surface patches cause aggregation via charge-charge interactions."}

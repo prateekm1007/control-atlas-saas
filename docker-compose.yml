@@ -1,0 +1,21 @@
+services:
+  brain:
+    build: ./backend
+    container_name: brain
+    ports: ["8000:8000"]
+    volumes: ["nkg_data:/app/nkg"]
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  face:
+    build: ./dashboard
+    container_name: face
+    ports: ["8502:8501"]
+    environment:
+      - BACKEND_URL=http://brain:8000
+    depends_on: ["brain"]
+    restart: unless-stopped
+
+volumes:
+  nkg_data:

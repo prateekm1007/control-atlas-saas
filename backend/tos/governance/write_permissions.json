@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "LAW-120": {"nkg_write": true, "min_repetition": 1},
+    "LAW-155": {"nkg_write": true, "min_repetition": 1},
+    "LAW-160": {"nkg_write": true, "min_repetition": 1},
+    "LAW-175": {"nkg_write": true, "min_repetition": 3},
+    "LAW-152": {"nkg_write": false},
+    "LAW-162": {"nkg_write": false}
+  }
+}

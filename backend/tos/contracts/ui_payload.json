@@ -1,0 +1,14 @@
+{
+  "$schema": "toscanini://v21.2.4/ui_payload",
+  "version": "21.2.4",
+  "required_fields": [
+    "verdict.binary", "verdict.physical_score", "verdict.confidence_score",
+    "governance.program_id", "governance.state", "governance.decision_hash",
+    "tier1.laws", "tier1.passed", "tier1.total",
+    "tier3.probability", "tier3.certainty",
+    "architecture.derived_category", "architecture.user_intent"
+  ],
+  "parity_check": {
+    "pdf_must_match": ["verdict", "tier1", "tier3", "architecture", "governance"]
+  }
+}

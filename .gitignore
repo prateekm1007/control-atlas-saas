@@ -1,0 +1,30 @@
+# --- SECRETS (SHIELD) ---
+.env
+*.env
+secrets.py
+keys.json
+
+# --- DATA (MOAT) ---
+nkg_data/
+backend/nkg/piu_moat.jsonl
+*.jsonl
+*.pdb
+*.cif
+*.mmcif
+
+# --- PYTHON HYGIENE ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv
+env/
+venv/
+build/
+dist/
+
+# --- SYSTEM & IDE ---
+.DS_Store
+.vscode/
+.idea/
+*.swp

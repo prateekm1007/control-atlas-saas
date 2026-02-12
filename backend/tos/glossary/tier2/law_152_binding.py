@@ -1,0 +1,1 @@
+EXPLANATION = {"title": "Binding Energy Estimate", "tier": "CALIBRATED", "cutoff": "ΔG < -10 kcal/mol", "summary": "Estimated free energy predicts interface stability", "rationale": "Binding free energy (ΔG) quantifies stability. Stable interfaces require ΔG < -10 kcal/mol."}

@@ -1,0 +1,18 @@
+{
+  "min_distance_A": 1.63,
+  "rho": 199,
+  "clashes": 7,
+  "clash_threshold_A": 2.5,
+  "target_atoms": 935,
+  "binder_atoms": 185,
+  "status": "CLASH_VETO",
+  "reason": "7 atom pairs < 2.5\u00c5",
+  "artifact_sha256": "8c0e283004eda5a18f711fc0c3e5e59ea26d49571af1a8516e4136386002e131",
+  "sequence_match": true,
+  "expected_sequence": "KAWAKKAAAKAEAAKAEAAKYWPTG",
+  "predicted_sequence": "KAWAKKAAAKAEAAKAEAAKYWPTG",
+  "chai_score": 0.3632,
+  "chai_ptm": 0.8351,
+  "chai_iptm": 0.2452,
+  "audit_date": "2026-01-16"
+}

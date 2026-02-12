@@ -1,0 +1,1 @@
+EXPLANATION = {"title": "Beta Strand Registry", "principle": "Beta-sheets require precise H-bond alignment.", "rationale": "Registry shifts destroy the H-bond network, causing the sheet to unfold in solution."}

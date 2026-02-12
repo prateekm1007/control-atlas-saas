@@ -1,0 +1,15 @@
+{
+  "pre": {
+    "min_distance": 2.317580369112761,
+    "clashes_25": 1,
+    "clashes_19": 0,
+    "rho": 336
+  },
+  "post": {
+    "min_distance": 2.7962411126341657,
+    "clashes_25": 0,
+    "clashes_19": 0,
+    "rho": 334
+  },
+  "verdict": "SOVEREIGN_PASS"
+}

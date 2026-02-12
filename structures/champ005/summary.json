@@ -1,0 +1,28 @@
+{
+  "project": "Control Atlas - CHAMP-005 Validation",
+  "date": "2026-01-16",
+  "status": "GEOMETRIC_AUDIT_FAILED",
+  "findings": {
+    "champ005_monovalent": {
+      "sequence": "KAWAKKAAAKAEAAKAEAAKYWPTG",
+      "rho": 199,
+      "min_distance_A": 1.63,
+      "clashes": 7,
+      "status": "CLASH_VETO",
+      "sha256": "8c0e283004eda5a18f711fc0c3e5e59ea26d49571af1a8516e4136386002e131"
+    },
+    "twinrod_v2_bipodal": {
+      "rho": 336,
+      "min_distance_A": 2.32,
+      "clashes": 1,
+      "status": "CLASH_VETO",
+      "sha256": "4530118486fd8a746a6cf8cc32a22f8952fbc88c89c5dd3b15bdb22dc4938271"
+    },
+    "avidity_ratio": {
+      "measured": 1.69,
+      "claimed": 2.7,
+      "verdict": "CLAIM_FALSIFIED"
+    }
+  },
+  "interpretation": "Both monovalent and bipodal designs fail Tier 1 geometric audit. Requires structure refinement before wet-lab progression."
+}

@@ -1,0 +1,1 @@
+EXPLANATION = {"title": "Atomic Valence Consistency", "principle": "Atoms must satisfy quantum valence rules (C=4, N=3, O=2).", "rationale": "Impossible coordination numbers indicate a total breakdown of chemical logic."}

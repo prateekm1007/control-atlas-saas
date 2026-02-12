@@ -1,0 +1,12 @@
+{
+  "contract_version": "21.0.0",
+  "required_states": ["DECIDED", "SEALED"],
+  "required_pages": 7,
+  "parity_requirements": {
+    "verdict": ["binary", "physical_score"],
+    "tier3": ["probability"],
+    "provenance": ["hash"]
+  },
+  "narrative_policy": "OPTIONAL_POST_SEAL",
+  "seal_mechanism": "SHA256_COORDINATE_ANCHOR"
+}

@@ -1,0 +1,13 @@
+{
+  "min_distance_A": 2.32,
+  "rho": 336,
+  "clashes": 1,
+  "clash_threshold_A": 2.5,
+  "target_atoms": 1924,
+  "binder_atoms": 417,
+  "status": "CLASH_VETO",
+  "artifact_sha256": "4530118486fd8a746a6cf8cc32a22f8952fbc88c89c5dd3b15bdb22dc4938271",
+  "audit_date": "2026-01-16",
+  "auditor": "standard_physics_audit v1.0",
+  "note": "TwinRod-v2 fails Tier 1 geometric audit due to single steric clash at 2.32Å"
+}
