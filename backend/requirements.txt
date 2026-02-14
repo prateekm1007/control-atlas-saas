@@ -1,9 +1,10 @@
-fastapi>=0.104.0
-uvicorn>=0.24.0
+# TOSCANINI Backend Dependencies — v22.4.0
+# Only packages verified as imported in backend/
+fastapi>=0.104.0,<1.0
+uvicorn>=0.24.0,<1.0
 python-multipart>=0.0.6
-requests>=2.31.0
+requests>=2.31.0,<3.0
 google-generativeai>=0.3.0
 fpdf2>=2.7.4
-numpy>=1.24.0
-gemmi>=0.6.2
-scipy>=1.11.0
+numpy>=1.24.0,<2.0
+scipy>=1.10.0,<2.0
