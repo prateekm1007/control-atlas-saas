@@ -18,6 +18,7 @@ from tos.governance.station_sop import (
 from tos.generation.dispatcher import GenerationDispatcher
 from tos.enrichment.gemini_compiler import get_compiler
 from tos.utils.type_guards import force_bytes
+from tos.nkg.manager import get_nkg
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("toscanini.brain")
@@ -190,6 +191,12 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
     except Exception as e:
         logger.error(f"PDF generation failed: {e}")
         payload["pdf_b64"] = ""
+
+    # NKG: Record every audit (successes AND failures)
+    try:
+        get_nkg().record_audit(payload)
+    except Exception as e:
+        logger.warning(f"NKG recording failed: {e}")
 
     return payload
 

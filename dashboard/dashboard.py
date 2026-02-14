@@ -24,25 +24,23 @@ def api(method, path, **kwargs):
 
 
 def render_3d_viewer(pdb_b64):
-    """Render 3D protein structure from base64-encoded PDB."""
+    """Render 3D protein structure using py3Dmol HTML embed."""
     try:
-        import py3Dmol
-        import stmol
         pdb_str = base64.b64decode(pdb_b64).decode("utf-8", errors="ignore")
         if len(pdb_str.strip()) < 50:
             st.warning("Structure too small for 3D rendering")
             return
+        import py3Dmol
+        import streamlit.components.v1 as components
         view = py3Dmol.view(width=700, height=500)
         view.addModel(pdb_str, "pdb")
         view.setStyle({"cartoon": {"color": "spectrum"}})
         view.setBackgroundColor("#0a0a0a")
         view.zoomTo()
-        stmol.showmol(view, height=500, width=700)
-    except ImportError:
-        st.info("3D viewer requires py3Dmol and stmol packages")
+        html_str = view._make_html()
+        components.html(html_str, height=520, width=720, scrolling=False)
     except Exception as e:
-        st.warning(f"3D render failed: {e}")
-
+        st.warning(f"3D rendering unavailable: {e}")
 
 # ── Session State ──────────────────────────────────────────
 for key, default in [
@@ -368,17 +366,43 @@ with t_work:
 #  TAB 2: KNOWLEDGE GRAPH
 # ══════════════════════════════════════════════════════════
 with t_nkg:
-    st.subheader("🧠 Negative Knowledge Graph")
-    st.info(
-        "NKG records accumulate as structures are audited. "
-        "Historical failure patterns will appear here as the system processes more structures."
-    )
-    st.caption("Database: /app/nkg/piu_moat.jsonl")
+    st.subheader("🧠 Knowledge Graph")
+    nkg_data = api("GET", "/nkg")
+    if nkg_data:
+        total_v = nkg_data.get("total_vetoes", 0)
+        total_s = nkg_data.get("total_successes", 0)
+        total = total_v + total_s
 
+        col_tot, col_pass, col_veto = st.columns(3)
+        col_tot.metric("Total Audits", total)
+        col_pass.metric("Successes", total_s)
+        col_veto.metric("Vetoes", total_v)
 
-# ══════════════════════════════════════════════════════════
-#  TAB 3: LAW CANON
-# ══════════════════════════════════════════════════════════
+        if total == 0:
+            st.info("Knowledge graph is empty. Audit structures to populate it.")
+        else:
+            if nkg_data.get("vetoes"):
+                st.markdown("**🛑 Recent Vetoes**")
+                for rec in reversed(nkg_data["vetoes"][-10:]):
+                    with st.expander(
+                        f"{rec.get('timestamp', '?')[:19]} | "
+                        f"{rec.get('failure_class', '?')} | "
+                        f"Phys: {rec.get('physical_score', 0)}%"
+                    ):
+                        st.json(rec)
+
+            if nkg_data.get("successes"):
+                st.markdown("**✅ Recent Successes**")
+                for rec in reversed(nkg_data["successes"][-10:]):
+                    with st.expander(
+                        f"{rec.get('timestamp', '?')[:19]} | "
+                        f"Phys: {rec.get('physical_score', 0)}% | "
+                        f"EPI: {rec.get('epi_index', 0)}%"
+                    ):
+                        st.json(rec)
+    else:
+        st.warning("Could not connect to Knowledge Graph backend")
+
 with t_laws:
     st.subheader("📜 Toscanini Law Canon")
     laws_data = api("GET", "/laws")
