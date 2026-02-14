@@ -1,11 +1,10 @@
-<<<<<<< HEAD
-# --- SECRETS (SHIELD) ---
+# --- SECRETS ---
 .env
 *.env
 secrets.py
 keys.json
 
-# --- DATA (MOAT) ---
+# --- DATA ---
 nkg_data/
 backend/nkg/piu_moat.jsonl
 *.jsonl
@@ -13,7 +12,7 @@ backend/nkg/piu_moat.jsonl
 *.cif
 *.mmcif
 
-# --- PYTHON HYGIENE ---
+# --- PYTHON ---
 __pycache__/
 *.py[cod]
 *$py.class
@@ -29,70 +28,7 @@ dist/
 .vscode/
 .idea/
 *.swp
-=======
-# --- Control Atlas Governance ---
 
-# Python
-__pycache__/
-*.pyc
-
-# Experimental workbenches (not canonical)
-RoseTTAFold/
-entries/060_generative_discovery/
-entries/091_enforcement/
-entries/092_ml_integration/
-entries/093_triangulation/
-entries/094_contrastive_learning/
-entries/095_active_learning/
-entries/096_advancement/
-entries/097_experimental_interface/
-entries/098_portfolio/
-entries/099_compute/
-entries/100_archive/
-entries/101_escape_anticipation/
-entries/102_multimodal/
-entries/103_external_collab/
-entries/104_sentinel/
-
-# Live negative knowledge stream (commit only on sync)
-entries/090_negative_knowledge/nkg_database.json
-
-# Generated data
-*.json
-*.npz
-*.cif
-*.pdb
-
-# --- Runtime artifacts ---
-artifacts/
-data/raw/
-*.xtc
-*.dcd
-*.log
-
-# --- MD outputs ---
-entries/**/outputs/
-
-# --- NKG tooling (scripts, not ledger) ---
-entries/090_negative_knowledge/*.py
-entries/090_negative_knowledge/*.sh
-
-# --- Virtual environments ---
-venv/
-.env/
-
-# Retired RFdiffusion artifacts (v2.3 purge)
-rfdiffusion/
-rfdiffusion_depcheck.py
-se3-transformer-public/
-runs/
-
-# --- TOSCANINI PHYSICAL EVIDENCE EXCEPTION ---
+# --- TOSCANINI EVIDENCE EXCEPTIONS ---
 !ledger/assets/**/*.cif
 !ledger/assets/**/*.pdb
-
-# --- TOSCANINI PHYSICAL EVIDENCE EXCEPTION ---
-!ledger/assets/**/*.cif
-!ledger/assets/**/*.pdb
->>>>>>> b89b7dc4f67845cb3ac6acddf1d37bcd5806995b
-probe_models.py
