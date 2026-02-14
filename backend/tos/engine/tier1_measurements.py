@@ -294,9 +294,18 @@ class Tier1Measurements:
             if r["_name"] == "GLY":
                 continue
             if "N" in r["_atoms"] and "CA" in r["_atoms"] and "C" in r["_atoms"] and "CB" in r["_atoms"]:
-                # Improper dihedral N-CA-C-CB: positive for L, negative for D
-                imp = _dihedral(r["_atoms"]["N"], r["_atoms"]["CA"], r["_atoms"]["C"], r["_atoms"]["CB"])
-                if imp is not None and imp < 0:
+                # Chirality via signed volume: V = (CA->N) . ((CA->C) x (CA->CB))
+                # L-amino acids have NEGATIVE signed volume in standard PDB convention
+                ca = r["_atoms"]["CA"]
+                v_n = r["_atoms"]["N"] - ca
+                v_c = r["_atoms"]["C"] - ca
+                v_cb = r["_atoms"]["CB"] - ca
+                signed_vol = float(np.dot(v_n, np.cross(v_c, v_cb)))
+                # L-amino: signed_vol < 0; D-amino: signed_vol > 0
+                # Threshold: |vol| < 0.1 means degenerate (skip)
+                if abs(signed_vol) < 0.1:
+                    continue
+                if signed_vol > 0:
                     d_amino += 1
         if d_amino > 0 and fringe:
             fatal_fringe = True
