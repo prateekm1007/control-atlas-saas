@@ -262,3 +262,18 @@ async def search(query: str = Form(...)):
     from tos.discovery.resolver import DiscoveryResolver
     results = DiscoveryResolver.resolve(query)
     return {"results": results, "count": len(results)}
+
+
+@app.get("/nkg")
+def get_nkg_records():
+    try:
+        nkg = get_nkg()
+        records = nkg.read_records(limit=50)
+        return {
+            "vetoes": records.get("vetoes", []),
+            "successes": records.get("successes", []),
+            "total_vetoes": len(records.get("vetoes", [])),
+            "total_successes": len(records.get("successes", [])),
+        }
+    except Exception as e:
+        return {"vetoes": [], "successes": [], "error": str(e)}
