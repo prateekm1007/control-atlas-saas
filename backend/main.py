@@ -37,6 +37,8 @@ def _sanitize_for_json(obj):
         return int(obj)
     elif isinstance(obj, (_np.floating,)):
         return float(obj)
+    elif isinstance(obj, (_np.bool_,)):
+        return bool(obj)
     elif isinstance(obj, _np.ndarray):
         return obj.tolist()
     return obj
