@@ -294,7 +294,12 @@ class Tier1Measurements:
             if r["_name"] == "GLY":
                 continue
             if "N" in r["_atoms"] and "CA" in r["_atoms"] and "C" in r["_atoms"] and "CB" in r["_atoms"]:
-                # Chirality via signed volume: V = (CA->N) . ((CA->C) x (CA->CB))
+                # SIGN CONVENTION LOCK:
+                # Using ordering (CA->N) . ((CA->C) x (CA->CB))
+                # In PDB standard orientation, L-amino acids yield NEGATIVE signed volume.
+                # D-amino acids yield POSITIVE signed volume.
+                # Do not reorder vectors without updating sign logic.
+                # Threshold |vol| < 0.1 = degenerate geometry, skip.
                 # L-amino acids have NEGATIVE signed volume in standard PDB convention
                 ca = r["_atoms"]["CA"]
                 v_n = r["_atoms"]["N"] - ca
