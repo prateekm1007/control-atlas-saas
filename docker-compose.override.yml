@@ -1,0 +1,12 @@
+version: "3.9"
+services:
+  brain:
+    environment:
+      - TOSCANINI_API_KEY=${TOSCANINI_API_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://face:8502,http://localhost:8502}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+  face:
+    environment:
+      - TOSCANINI_API_KEY=${TOSCANINI_API_KEY}
+      - BACKEND_URL=http://brain:8000
+      - STATION_VERSION=21.38.0

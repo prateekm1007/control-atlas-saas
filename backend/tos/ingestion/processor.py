@@ -1,35 +1,57 @@
-import gemmi, hashlib, logging
-from .structure_object import StructureObject, Atom, ConfidenceSidecar
-from ..utils.type_guards import force_str
+import numpy as np
+from dataclasses import dataclass
+from typing import List
+import uuid
 
-logger = logging.getLogger("toscanini.ingestion")
+@dataclass
+class Atom:
+    atom_name: str
+    element: str
+    pos: np.ndarray
+    res_name: str
+    res_seq: int
+    chain_id: str
+    insertion_code: str
+    b_iso: float
+
+@dataclass
+class Structure:
+    atoms: List[Atom]
+    audit_id: str
+    confidence: any
 
 class IngestionProcessor:
     @staticmethod
-    def run(content: bytes, filename: str, label: str, mode: str) -> StructureObject:
-        audit_id = hashlib.sha256(content).hexdigest()[:12]
+    def run(content: bytes, filename: str, task: str, mode: str):
+        lines = content.decode(errors="ignore").splitlines()
         atoms = []
-        try:
-            raw_str = force_str(content)
-            if filename.lower().endswith(('.cif', '.mmcif')):
-                structure = gemmi.make_structure(gemmi.cif.read_string(raw_str).sole_block())
-            else:
-                structure = gemmi.read_pdb_string(raw_str)
-            
-            plddts = {}
-            for model in structure:
-                for chain in model:
-                    for residue in chain:
-                        res_idx = int(residue.seqid.num)
-                        for atom in residue:
-                            atoms.append(Atom(residue.name, res_idx, atom.name, 
-                                            (atom.pos.x, atom.pos.y, atom.pos.z), atom.element.name))
-                            if atom.name == "CA":
-                                plddts[res_idx] = atom.b_iso
-            
-            mean_plddt = sum(plddts.values()) / len(plddts) if plddts else 50.0
-            return StructureObject(audit_id, tuple(atoms), ConfidenceSidecar(round(mean_plddt, 1), plddts), label)
-        except Exception as e:
-            logger.error(f"Ingestion Fault: {e}")
-            return StructureObject(audit_id, (Atom("UNK", 1, "CA", (0.0, 0.0, 0.0), "C"),), 
-                                 ConfidenceSidecar(0.0), label)
+        plddts = []
+        
+        for line in lines:
+            if line.startswith("ATOM  ") or line.startswith("HETATM"):
+                try:
+                    # PRO-GRADE COLUMN EXTRACTION
+                    name = line[12:16].strip()
+                    res_name = line[17:20].strip()
+                    chain = line[21:22].strip() or "A"
+                    res_seq = int(line[22:26].strip())
+                    icode = line[26:27].strip()
+                    x = float(line[30:38].strip())
+                    y = float(line[38:46].strip())
+                    z = float(line[46:54].strip())
+                    # pLDDT is in B-factor col (61-66)
+                    b_iso = float(line[60:66].strip())
+                    elem = line[76:78].strip()
+                    
+                    atoms.append(Atom(
+                        atom_name=name, element=elem, pos=np.array([x,y,z]),
+                        res_name=res_name, res_seq=res_seq, chain_id=chain,
+                        insertion_code=icode, b_iso=b_iso
+                    ))
+                    plddts.append(b_iso)
+                except: continue
+        
+        class Conf: pass
+        c = Conf()
+        c.mean_plddt = np.mean(plddts) if plddts else 0.0
+        return Structure(atoms=atoms, audit_id=str(uuid.uuid4())[:8], confidence=c)
