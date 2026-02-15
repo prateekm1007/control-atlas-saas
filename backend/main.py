@@ -121,10 +121,14 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
     # 3-state verdict
     verdict = _compute_verdict(res_t1, coverage, fatal_fringe)
 
-    # Simplified composite for pilot
-    s6_composite = (det_score / 100.0) * 0.85
-    if conf_val > 0:
-        s6_composite += (conf_val / 100.0) * 0.15
+    # EPI composite — coverage-aware
+    # If coverage gate fails, EPI is suppressed (not inflated)
+    if coverage < float(LAW_CANON["LAW-105"]["threshold"]):
+        s6_composite = 0.0  # Cannot prioritize what we cannot trust
+    else:
+        s6_composite = (det_score / 100.0) * 0.85
+        if conf_val > 0:
+            s6_composite += (conf_val / 100.0) * 0.15
 
     # AI narratives — best-effort, never crash the audit
     try:

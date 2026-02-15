@@ -172,8 +172,9 @@ class Tier1Measurements:
 
         # ════════════════════════════════════════════════════
         # LAW-105: Reliability Coverage
+        # Threshold pulled dynamically from LAW_CANON
         # ════════════════════════════════════════════════════
-        cov_thresh = 30.0
+        cov_thresh = float(LAW_CANON["LAW-105"]["threshold"])
         results["LAW-105"] = (
             "PASS" if coverage >= cov_thresh else "FAIL",
             f"Coverage: {round(coverage, 1)}% (threshold: {cov_thresh}%)",
@@ -236,7 +237,7 @@ class Tier1Measurements:
 
         mean_angle_dev = float(np.mean(angle_deviations)) if angle_deviations else 0.0
         results["LAW-120"] = (
-            "PASS" if mean_angle_dev < 4.6 else "VETO",
+            "PASS" if mean_angle_dev < float(LAW_CANON["LAW-120"]["threshold"]) else "VETO",
             f"Mean deviation: {round(mean_angle_dev, 2)} deg",
             "THRESH:4.6deg", "deterministic",
         )
@@ -267,7 +268,7 @@ class Tier1Measurements:
         if f_tot > 0 and f_out > (f_tot * 0.2):
             fatal_fringe = True
         results["LAW-125"] = (
-            "PASS" if rama_pct <= 5.0 else "VETO",
+            "PASS" if rama_pct <= float(LAW_CANON["LAW-125"]["threshold"]) else "VETO",
             f"{round(rama_pct, 1)}% core outliers ({c_out}/{c_tot})",
             "THRESH:5%", "deterministic",
         )
@@ -298,7 +299,7 @@ class Tier1Measurements:
                 logger.warning("scipy not available for clash detection")
         clash_pct = (clash_count / max(len(all_coords), 1)) * 100
         results["LAW-130"] = (
-            "PASS" if clash_pct < 0.4 else "VETO",
+            "PASS" if clash_pct < float(LAW_CANON["LAW-130"]["threshold"]) else "VETO",
             f"{clash_count} clashes ({round(clash_pct, 2)}%)",
             "THRESH:0.4%", "deterministic",
         )
@@ -321,7 +322,7 @@ class Tier1Measurements:
                         omega_outliers += 1
         omega_pct = (omega_outliers / omega_total * 100) if omega_total > 0 else 0
         results["LAW-135"] = (
-            "PASS" if omega_pct < 3.0 else "VETO",
+            "PASS" if omega_pct < float(LAW_CANON["LAW-135"]["threshold"]) else "VETO",
             f"{round(omega_pct, 1)}% non-planar ({omega_outliers}/{omega_total})",
             "THRESH:3%", "deterministic",
         )
@@ -387,7 +388,7 @@ class Tier1Measurements:
                             chi1_outliers += 1
         chi1_pct = (chi1_outliers / chi1_total * 100) if chi1_total > 0 else 0
         results["LAW-150"] = (
-            "PASS" if chi1_pct < 20.0 else "VETO",
+            "PASS" if chi1_pct < float(LAW_CANON["LAW-150"]["threshold"]) else "VETO",
             f"{round(chi1_pct, 1)}% outliers ({chi1_outliers}/{chi1_total})",
             "THRESH:20%", "deterministic",
         )
@@ -466,7 +467,7 @@ class Tier1Measurements:
         else:
             ratio = 0.5  # Small structures: assume OK
         results["LAW-182"] = (
-            "PASS" if ratio > 0.3 else "FAIL",
+            "PASS" if ratio > float(LAW_CANON["LAW-182"]["threshold"]) else "FAIL",
             f"Burial ratio: {round(ratio, 2)}",
             "THRESH:0.3", "heuristic",
         )
