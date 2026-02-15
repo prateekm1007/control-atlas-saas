@@ -124,22 +124,40 @@ class Tier1Measurements:
 
         # ════════════════════════════════════════════════════
         # LAW-100: Bond Integrity (4-sigma Engh-Huber)
+        # INTRA-residue bonds: N-CA, CA-C, C-O, CA-CB, C-S, S-S
+        # INTER-residue bond: C-N (peptide bond: C[i] to N[i+1])
         # ════════════════════════════════════════════════════
+        # Bonds that are INTRA-residue (both atoms in same residue)
+        INTRA_BONDS = {"N-CA", "CA-C", "C-O", "CA-CB", "C-S", "S-S"}
+        # Bonds that are INTER-residue (span two sequential residues)
+        INTER_BONDS = {"C-N"}  # C of residue i to N of residue i+1
+
         def _count_bond_fails(r_list):
             cnt = 0
+            # Check intra-residue bonds
             for r in r_list:
-                for b, ideal in IDEAL_TABLE.items():
-                    parts = b.split('-')
-                    if len(parts) != 2:
+                for b in INTRA_BONDS:
+                    if b not in IDEAL_TABLE:
                         continue
-                    a1, a2 = parts
+                    a1, a2 = b.split('-')
                     if a1 in r["_atoms"] and a2 in r["_atoms"]:
                         d = _dist(r["_atoms"][a1], r["_atoms"][a2])
                         sigma = SIGMA_TABLE.get(b, 0.02)
-                        z = abs(d - ideal) / sigma if sigma > 0 else 0
+                        z = abs(d - IDEAL_TABLE[b]) / sigma if sigma > 0 else 0
                         if z > 4.0:
                             cnt += 1
                             break
+            # Check inter-residue bonds (peptide C-N)
+            for i in range(len(r_list) - 1):
+                r1, r2 = r_list[i], r_list[i + 1]
+                if not Tier1Measurements._is_sequential(r1, r2):
+                    continue
+                if "C" in r1["_atoms"] and "N" in r2["_atoms"]:
+                    d = _dist(r1["_atoms"]["C"], r2["_atoms"]["N"])
+                    sigma = SIGMA_TABLE.get("C-N", 0.014)
+                    z = abs(d - IDEAL_TABLE["C-N"]) / sigma if sigma > 0 else 0
+                    if z > 4.0:
+                        cnt += 1
             return cnt
 
         c_bond = _count_bond_fails(core)
@@ -182,18 +200,40 @@ class Tier1Measurements:
 
         # ════════════════════════════════════════════════════
         # LAW-120: Bond Angle Deviation
+        # INTRA-residue angles: N-CA-C (all in same residue)
+        # INTER-residue angles: CA-C-N, O-C-N (N from next residue)
         # ════════════════════════════════════════════════════
+        INTRA_ANGLES = {"N-CA-C"}
+        INTER_ANGLES = {"CA-C-N", "O-C-N"}  # Third atom (N) is from next residue
+
         angle_deviations = []
+        # Intra-residue angles
         for r in core:
-            for b, ideal in IDEAL_TABLE.items():
-                parts = b.split('-')
-                if len(parts) != 3:
+            for b in INTRA_ANGLES:
+                if b not in IDEAL_TABLE:
                     continue
-                a1, a2, a3 = parts
+                a1, a2, a3 = b.split('-')
                 if a1 in r["_atoms"] and a2 in r["_atoms"] and a3 in r["_atoms"]:
                     ang = _angle(r["_atoms"][a1], r["_atoms"][a2], r["_atoms"][a3])
                     if ang is not None:
-                        angle_deviations.append(abs(ang - ideal))
+                        angle_deviations.append(abs(ang - IDEAL_TABLE[b]))
+
+        # Inter-residue angles (last atom from next residue)
+        for i in range(len(core) - 1):
+            r1, r2 = core[i], core[i + 1]
+            if not Tier1Measurements._is_sequential(r1, r2):
+                continue
+            for b in INTER_ANGLES:
+                if b not in IDEAL_TABLE:
+                    continue
+                parts = b.split('-')
+                a1, a2 = parts[0], parts[1]  # From current residue
+                a3 = parts[2]                  # From next residue
+                if a1 in r1["_atoms"] and a2 in r1["_atoms"] and a3 in r2["_atoms"]:
+                    ang = _angle(r1["_atoms"][a1], r1["_atoms"][a2], r2["_atoms"][a3])
+                    if ang is not None:
+                        angle_deviations.append(abs(ang - IDEAL_TABLE[b]))
+
         mean_angle_dev = float(np.mean(angle_deviations)) if angle_deviations else 0.0
         results["LAW-120"] = (
             "PASS" if mean_angle_dev < 4.6 else "VETO",
@@ -310,7 +350,10 @@ class Tier1Measurements:
                 # Threshold: |vol| < 0.1 means degenerate (skip)
                 if abs(signed_vol) < 0.1:
                     continue
-                if signed_vol > 0:
+                # With ordering (CA->N) . ((CA->C) x (CA->CB)):
+                # L-amino acids yield POSITIVE signed volume (~2.5)
+                # D-amino acids yield NEGATIVE signed volume (~-2.5)
+                if signed_vol < 0:
                     d_amino += 1
         if d_amino > 0 and fringe:
             fatal_fringe = True
