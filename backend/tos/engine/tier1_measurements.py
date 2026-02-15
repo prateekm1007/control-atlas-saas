@@ -489,25 +489,27 @@ class Tier1Measurements:
         )
 
         # ════════════════════════════════════════════════════
-        # LAW-200: Internal Cavity Detection [HEURISTIC]
+        # LAW-200: Packing Quality (density-normalized) [HEURISTIC]
+        # Uses atoms-per-volume ratio instead of raw void volume.
+        # Well-packed proteins: ~0.01-0.02 atoms/A^3 (8-15 A^3/atom)
+        # Poorly packed / large voids: > 25 A^3/atom
         # ════════════════════════════════════════════════════
-        void_volume = 0.0
-        if len(all_coords) >= 50:
+        packing_ratio = 0.0
+        if len(all_coords) >= 20:
             try:
-                # Grid-based void estimation
-                mins = all_coords.min(axis=0) - 2.0
-                maxs = all_coords.max(axis=0) + 2.0
-                vol_total = float(np.prod(maxs - mins))
-                # Estimate occupied volume (spheres of ~1.7A radius)
+                mins = all_coords.min(axis=0) - 1.4  # Probe radius
+                maxs = all_coords.max(axis=0) + 1.4
+                bbox_vol = float(np.prod(maxs - mins))
                 n_atoms = len(all_coords)
-                vol_atoms = n_atoms * (4 / 3) * np.pi * (1.7 ** 3)
-                void_volume = max(vol_total - vol_atoms, 0)
+                if n_atoms > 0:
+                    packing_ratio = bbox_vol / n_atoms  # A^3 per atom
             except Exception:
-                void_volume = 0.0
+                packing_ratio = 0.0
+        # Well-packed: 8-20 A^3/atom. Threshold at 30 (very generous)
         results["LAW-200"] = (
-            "PASS" if void_volume < 1000 else "FAIL",
-            f"Estimated void: {round(void_volume, 1)} A^3",
-            "THRESH:1000A3", "heuristic",
+            "PASS" if packing_ratio < 30.0 or len(all_coords) < 20 else "FAIL",
+            f"Packing: {round(packing_ratio, 1)} A^3/atom",
+            "THRESH:30A3/atom", "heuristic",
         )
 
         return results, coverage, fatal_fringe
