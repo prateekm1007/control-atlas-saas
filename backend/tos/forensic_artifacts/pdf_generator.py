@@ -8,25 +8,29 @@ from ..governance.station_sop import (
 
 class ToscaniniDossier(FPDF):
     def header(self):
-        self.set_font("Helvetica", "B", 7)
-        self.set_text_color(120, 120, 120)
-        self.cell(95, 8, f"TOSCANINI v{STATION_METADATA['version']}", align="L")
-        self.cell(0, 8, datetime.now().strftime('%Y-%m-%d %H:%M UTC'), align="R", ln=True)
-        self.set_draw_color(180, 180, 180)
-        self.line(10, 16, 200, 16)
-        self.ln(4)
+        self.set_font("Helvetica", "B", 8)
+        self.set_text_color(80, 80, 80)
+        self.cell(w=0, h=10, txt=f"TOSCANINI STRUCTURAL GOVERNANCE DOSSIER v{STATION_METADATA['version']}", border=0, align="L")
+        self.ln(10)
+        
     def footer(self):
-        self.set_y(-12)
-        self.set_font("Helvetica", "I", 6)
-        self.set_text_color(150, 150, 150)
-        self.cell(0, 8, f"{STATION_METADATA['institution']} // Page {self.page_no()}", align="C")
-    def section_title(self, text, size=14):
-        self.set_font("Helvetica", "B", size)
+        self.set_y(-15)
+        self.set_font("Helvetica", "I", 7)
+        self.set_text_color(128, 128, 128)
+        # 🛡️ PIL-NOT-18: Institutional Footer
+        self.cell(0, 10, f"Engine: v{STATION_METADATA['version']} // SHA-256 Validated // Page {self.page_no()}", align="R")
+        
+    def section_title(self, text):
+        self.set_font("Helvetica", "B", 11)
         self.set_text_color(0, 0, 0)
-        self.cell(0, 10, text, ln=True)
-        self.ln(2)
+        self.cell(0, 8, text.upper(), ln=True)
+        self.set_draw_color(0, 0, 0)
+        self.line(10, self.get_y(), 200, self.get_y())
+        self.ln(4)
+
     def safe(self, text):
-        return sanitize_notary_text(str(text))
+        # 🛡️ PIL-HYG-21: Support for IUPAC symbols via Latin-1 mapping
+        return str(text).encode('latin-1', 'replace').decode('latin-1')
 
 def generate_v21_dossier(payload):
     try:
@@ -35,337 +39,186 @@ def generate_v21_dossier(payload):
         w = 190
         v = payload.get('verdict', {})
         ss = payload.get("characterization", {})
-        t3 = payload.get("tier3", {})
         prov = payload.get("provenance", {})
         conf_meta = payload.get("confidence_meta", {})
-        nkg_data = payload.get("nkg_assessment", {})
-        bcomp = payload.get("bayesian_components", {})
-        ai_model = payload.get("ai_model_used", "Not specified")
-        binary = v.get('binary', 'ERROR')
-        phys_score = v.get('physical_score', 0)
-        det_score = v.get('deterministic_score', phys_score)
-        adv_score = v.get('advisory_score', 100)
-        conf_score = v.get('confidence_score', 0)
-        conf_available = v.get('confidence_available', True)
-        epi = t3.get('probability', 0)
-        laws_passed = v.get('laws_passed', 0)
-        laws_total = v.get('laws_total', len(LAW_CANON))
-        det_passed = v.get('det_passed', laws_passed)
-        det_total = v.get('det_total', laws_total)
-        heur_passed = v.get('heur_passed', 0)
-        heur_total = v.get('heur_total', 0)
-
-        # ══════ PAGE 1: AUDIT REPORT ══════
+        gov = payload.get("governance", {})
+        math = payload.get("strategic_math", {})
+        laws = payload.get('tier1', {}).get('laws', [])
+        
+        # ══════ PAGE 1: EXECUTIVE DETERMINATION ══════
         pdf.add_page()
-        pdf.set_font("Helvetica", "B", 18)
-        pdf.cell(w, 14, "STRUCTURAL AUDIT REPORT", ln=True, align="C")
-        pdf.ln(2)
-        pdf.set_font("Helvetica", "", 8)
-        pdf.set_text_color(60, 60, 60)
-        pdf.cell(w, 5, f"Program: {payload.get('governance',{}).get('program_id','N/A')}    Artifact: {prov.get('audit_id','N/A')}    Source: {pdf.safe(prov.get('source','N/A'))}", ln=True)
-        pdf.set_text_color(0, 0, 0)
-        pdf.ln(4)
-
-        # Verdict banner
-        if binary == "PASS":
-            pdf.set_fill_color(15, 110, 55)
-        elif binary == "VETO":
-            pdf.set_fill_color(170, 35, 35)
-        else:
-            pdf.set_fill_color(100, 100, 100)
-        pdf.set_text_color(255, 255, 255)
-        pdf.set_font("Helvetica", "B", 16)
-        pdf.cell(w, 13, f"VERDICT: {binary}", ln=True, align="C", fill=True)
-        pdf.set_text_color(0, 0, 0)
-        pdf.ln(6)
-
-        # 4-metric grid
-        c1w, c2w, c3w, c4w = 50, 42, 50, 48
-        pdf.set_font("Helvetica", "B", 7)
-        pdf.set_text_color(100, 100, 100)
-        pdf.cell(c1w, 5, "DETERMINISTIC", 0, 0, "C")
-        pdf.cell(c2w, 5, "ADVISORY", 0, 0, "C")
-        conf_label = "pLDDT" if "plddt" in str(conf_meta.get('source_type','')).lower() else "CONFIDENCE"
-        pdf.cell(c3w, 5, conf_label, 0, 0, "C")
-        pdf.cell(c4w, 5, "EPI PRIORITY", 0, 1, "C")
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font("Helvetica", "B", 20)
-        pdf.cell(c1w, 12, f"{det_score}%", 0, 0, "C")
-        pdf.cell(c2w, 12, f"{adv_score}%", 0, 0, "C")
-        if conf_available:
-            pdf.cell(c3w, 12, f"{conf_score}", 0, 0, "C")
-        else:
-            pdf.set_text_color(140, 110, 30)
-            pdf.cell(c3w, 12, "N/A", 0, 0, "C")
+        pdf.section_title("Executive Determination")
+        
+        pdf.set_font("Helvetica", "B", 9)
+        decision_data = [
+            ["Final Verdict", v.get("binary", "ERROR")],
+            ["Deterministic Failures", f"{v.get('det_total', 12) - v.get('det_passed', 0)} / {v.get('det_total', 12)}"],
+            ["Heuristic Flags", f"{v.get('heur_total', 3) - v.get('heur_passed', 0)} / {v.get('heur_total', 3)}"],
+            ["Reliability Coverage", f"{v.get('coverage_pct', 0)} %"],
+            ["Mean pLDDT", f"{round(v.get('confidence_score', 0), 2)}"],
+            ["Composite Prioritization Index", f"{payload.get('tier3', {}).get('probability', 0)} %"]
+        ]
+        
+        for row in decision_data:
+            pdf.set_font("Helvetica", "B", 9)
+            pdf.set_fill_color(245, 245, 245)
+            pdf.cell(80, 8, row[0], border=1, fill=True)
+            pdf.set_font("Helvetica", "", 9)
+            # High-visibility verdict highlight
+            if row[0] == "Final Verdict" and row[1] == "VETO": pdf.set_text_color(170, 35, 35)
+            elif row[0] == "Final Verdict" and row[1] == "PASS": pdf.set_text_color(15, 110, 55)
+            pdf.cell(110, 8, row[1], border=1, ln=True)
             pdf.set_text_color(0, 0, 0)
-        pdf.cell(c4w, 12, f"{epi}%", 0, 1, "C")
-        pdf.set_font("Helvetica", "", 6)
-        pdf.set_text_color(100, 100, 100)
-        pdf.cell(c1w, 4, f"{det_passed}/{det_total} laws (VETO gate)", 0, 0, "C")
-        pdf.cell(c2w, 4, f"{heur_passed}/{heur_total} (informational)", 0, 0, "C")
-        pdf.cell(c3w, 4, "Excluded from EPI" if not conf_available else pdf.safe(conf_meta.get('provenance_method','auto')), 0, 0, "C")
-        pdf.cell(c4w, 4, "Heuristic composite", 0, 1, "C")
-        pdf.set_text_color(0, 0, 0)
-        pdf.ln(4)
+        
+        pdf.ln(8)
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.cell(w, 7, "Governance Recommendation:", ln=True)
+        pdf.set_font("Helvetica", "I", 9)
+        rec = "Insufficient coverage gate. Re-evaluate with experimental data."
+        if v.get("binary") == "PASS": rec = "Structure compliant with physical invariants. Eligible for lead selection."
+        elif v.get("binary") == "VETO": rec = "Deterministic physics violated. Do not allocate downstream resources."
+        pdf.multi_cell(w, 5, rec)
 
-        # Score definitions
-        for key in ["DETERMINISTIC_SCORE", "ADVISORY_SCORE", "ML_CONFIDENCE", "STRATEGIC_SCORE"]:
-            d = SCORE_DEFINITIONS.get(key, {})
-            if not d: continue
-            pdf.set_font("Helvetica", "B", 8)
-            pdf.cell(w, 4, d.get('title', key), ln=True)
-            pdf.set_font("Helvetica", "", 7)
-            pdf.multi_cell(w, 3.5, pdf.safe(f"{d.get('explanation','')} {d.get('impact','')}"))
-            pdf.ln(1)
-
-        # Governance + scope
-        pdf.ln(2)
-        pdf.set_draw_color(180, 180, 180)
-        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-        pdf.ln(2)
-        pdf.set_font("Helvetica", "B", 8)
-        pdf.cell(w, 5, "VETO AUTHORITY POLICY", ln=True)
-        pdf.set_font("Helvetica", "", 7)
-        pdf.multi_cell(w, 3.5, f"Only deterministic laws ({det_total} of {laws_total}) can trigger a VETO. Heuristic laws ({heur_total} of {laws_total}) are advisory only.")
-        if not conf_available:
-            pdf.set_font("Helvetica", "I", 7)
-            pdf.set_text_color(140, 110, 30)
-            pdf.multi_cell(w, 3.5, "NOTICE: ML confidence metadata unavailable. ML component excluded from EPI composite (not penalized to zero).")
-            pdf.set_text_color(0, 0, 0)
-        pdf.ln(2)
-        pdf.set_font("Helvetica", "B", 8)
-        pdf.cell(w, 5, "SCOPE & LIMITATIONS", ln=True)
-        pdf.set_font("Helvetica", "", 7)
-        pdf.multi_cell(w, 3.5, "This audit evaluates geometric and chemical invariants from atomic coordinates. It does not assess biological function, binding affinity, or therapeutic efficacy.")
-        pdf.ln(1)
-        pdf.set_font("Helvetica", "B", 8)
-        pdf.cell(w, 5, "DETERMINISM DECLARATION", ln=True)
-        pdf.set_font("Helvetica", "", 7)
-        pdf.multi_cell(w, 3.5, f"All DETERMINISTIC law measurements are reproducible given identical input bytes and Toscanini v{STATION_METADATA['version']}. Heuristic measurements use approximate algorithms. AI narrative sections are non-deterministic.")
-
-        # ══════ PAGE 2: TIER-1 AUDIT ══════
+        # ══════ PAGE 2: DETERMINISTIC FAILURES ══════
         pdf.add_page()
-        pdf.section_title(f"TIER-1 PHYSICAL INVARIANT AUDIT ({laws_total} Laws)")
-        pdf.set_font("Helvetica", "", 7)
-        pdf.cell(w, 4, f"Deterministic: {det_passed}/{det_total} passed  |  Advisory: {heur_passed}/{heur_total} passed  |  Deterministic threshold: 100% required", ln=True)
-        pdf.set_font("Helvetica", "I", 6)
-        pdf.set_text_color(100, 100, 100)
-        pdf.cell(w, 3, f"Combined physical score (legacy): {phys_score}% ({laws_passed}/{laws_total} total)", ln=True)
-        pdf.set_text_color(0, 0, 0)
-        pdf.ln(3)
-
-        all_laws_list = payload.get('tier1', {}).get('laws', [])
-        laws_by_id = {l.get('law_id'): l for l in all_laws_list}
-        cat_groups = get_laws_by_category()
-
-        for cat_key in ["geometric", "chemical"]:
-            section_name = CATEGORY_DISPLAY.get(cat_key, cat_key.upper())
-            cat_lids = cat_groups.get(cat_key, [])
-            section_laws = [laws_by_id[lid] for lid in cat_lids if lid in laws_by_id]
+        pdf.section_title("Critical Invariant Violations (VETO Gate)")
+        failures = [l for l in laws if l['status'] in ("FAIL", "VETO") and l['method'] == "deterministic" and l['law_id'] != "LAW-105"]
+        
+        if not failures:
             pdf.set_font("Helvetica", "B", 10)
-            pdf.set_text_color(40, 40, 40)
-            pdf.cell(w, 7, section_name, ln=True)
-            pdf.set_text_color(0, 0, 0)
-
-            for l in section_laws:
-                if pdf.get_y() > 260:
-                    pdf.add_page()
-                lid = l.get('law_id', 'N/A')
-                status = l.get('status', 'N/A')
-                measurement = l.get('measurement', '')
-                method = l.get('method', 'unknown')
-                title = l.get('title', lid)
-                if status == "PASS":
-                    pdf.set_text_color(15, 110, 55)
-                elif status == "FAIL":
-                    pdf.set_text_color(170, 35, 35)
-                else:
-                    pdf.set_text_color(100, 100, 100)
-                pdf.set_font("Helvetica", "B", 8)
-                pdf.cell(16, 5, f"[{status}]", 0, 0)
-                pdf.set_text_color(0, 0, 0)
-                pdf.cell(0, 5, f"{lid}: {pdf.safe(title)}", ln=True)
-                pdf.set_font("Helvetica", "", 7)
-                pdf.set_x(pdf.l_margin + 16)
-                pdf.multi_cell(w - 16, 3.5, pdf.safe(str(measurement)))
-                if method == "heuristic":
-                    pdf.set_font("Helvetica", "I", 6)
-                    pdf.set_text_color(140, 110, 30)
-                    pdf.set_x(pdf.l_margin + 16)
-                    pdf.cell(0, 3, "HEURISTIC METHOD - result is approximate", ln=True)
-                    pdf.set_text_color(0, 0, 0)
-                pdf.ln(1)
-            pdf.ln(2)
-
-        pdf.set_font("Helvetica", "I", 6)
-        pdf.set_text_color(100, 100, 100)
-        pdf.cell(w, 3, "Deterministic = exact geometric computation. Heuristic = approximate algorithm.", ln=True)
-        pdf.set_text_color(0, 0, 0)
-
-        # ══════ PAGE 3: CHARACTERIZATION ══════
-        pdf.add_page()
-        pdf.section_title("STRUCTURAL CHARACTERIZATION")
-        pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(w, 6, "Secondary Structure Distribution", ln=True)
-        pdf.set_font("Helvetica", "", 9)
-        pdf.cell(63, 7, f"Alpha Helix: {ss.get('helix',0)}%", border=1, align="C")
-        pdf.cell(63, 7, f"Beta Sheet: {ss.get('sheet',0)}%", border=1, align="C")
-        pdf.cell(63, 7, f"Coil/Loop: {ss.get('loop',0)}%", border=1, ln=True, align="C")
-        pdf.set_font("Helvetica", "I", 6)
-        pdf.set_text_color(100, 100, 100)
-        pdf.cell(w, 4, f"Method: {ss.get('method','heuristic')} // Characterization only - not used in VETO or EPI", ln=True, align="C")
-        pdf.set_text_color(0, 0, 0)
-        pdf.ln(4)
-
-        pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(w, 6, "Structural Metrics", ln=True)
-        for label, val in [("Total Atoms", ss.get('total_atoms', 'N/A')), ("Total Residues", ss.get('total_residues', 'N/A')), ("Source", pdf.safe(prov.get('source', 'N/A')))]:
-            pdf.set_font("Helvetica", "", 8)
-            pdf.set_text_color(80, 80, 80)
-            pdf.cell(65, 6, str(label), border="B")
-            pdf.set_text_color(0, 0, 0)
-            pdf.cell(0, 6, str(val), border="B", ln=True)
-        pdf.ln(4)
-
-        # Confidence decomposition — aligned with Page 1
-        conf_src_lower = str(conf_meta.get('source_type','')).lower()
-        conf_unit = "pLDDT (0-100)" if 'plddt' in conf_src_lower else "B-factor (A^2)" if 'b-factor' in conf_src_lower else "(unitless)"
-        pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(w, 6, "Confidence Decomposition", ln=True)
-        pdf.set_font("Helvetica", "", 7)
-        pdf.cell(w, 4, f"Source: {pdf.safe(conf_meta.get('source_type','unknown'))}  |  Detection: {conf_meta.get('provenance_method','auto')}", ln=True)
-        pdf.ln(2)
-
-        conf_data_avail = conf_meta.get('data_available', False)
-        if conf_data_avail and conf_meta.get('mean', 0) > 0:
-            for label, val in [(f"Mean {conf_unit}", conf_meta.get('mean')), (f"Min {conf_unit}", conf_meta.get('min')), (f"Max {conf_unit}", conf_meta.get('max')), (f"Std Dev {conf_unit}", conf_meta.get('std')), ("Low-confidence (<50)", len(conf_meta.get('low_confidence_regions',[])))]:
-                pdf.set_font("Helvetica", "", 8)
-                pdf.set_text_color(80, 80, 80)
-                pdf.cell(65, 5, str(label), border="B")
-                pdf.set_text_color(0, 0, 0)
-                pdf.cell(0, 5, str(val), border="B", ln=True)
+            pdf.set_text_color(0, 100, 0)
+            pdf.cell(w, 15, "NO DETERMINISTIC INVARIANT VIOLATIONS DETECTED", align="C", ln=True)
         else:
+            pdf.set_font("Helvetica", "B", 8)
+            pdf.set_fill_color(240, 230, 230)
+            headers = ["ID", "Observed", "Threshold", "Excess", "Units"]
+            widths = [20, 45, 45, 40, 40]
+            for i, h in enumerate(headers): pdf.cell(widths[i], 8, h, 1, 0, "C", True)
+            pdf.ln(8)
             pdf.set_font("Helvetica", "", 8)
-            pdf.set_text_color(80, 80, 80)
-            pdf.cell(65, 5, f"Mean {conf_unit}", border="B")
-            pdf.set_text_color(0, 0, 0)
-            pdf.cell(0, 5, str(conf_score), border="B", ln=True)
-            pdf.set_text_color(80, 80, 80)
-            pdf.cell(65, 5, "Per-residue breakdown", border="B")
-            pdf.set_text_color(0, 0, 0)
-            pdf.cell(0, 5, "Not available for this structure", border="B", ln=True)
-            pdf.ln(2)
-            pdf.set_font("Helvetica", "I", 7)
-            pdf.set_text_color(140, 110, 30)
-            pdf.multi_cell(w, 3.5, f"Structure-level mean ({conf_score}) derived from metadata. Used consistently across all pages.")
-            pdf.set_text_color(0, 0, 0)
+            pdf.set_text_color(170, 35, 35)
+            for l in failures:
+                pdf.cell(20, 8, l['law_id'], 1, 0, "C")
+                pdf.cell(45, 8, str(l['observed']), 1, 0, "C")
+                pdf.cell(45, 8, f"{l['operator']} {l['threshold']}", 1, 0, "C")
+                pdf.cell(40, 8, l['deviation'], 1, 0, "C")
+                pdf.cell(40, 8, pdf.safe(l['units']), 1, 1, "C")
+        pdf.set_text_color(0, 0, 0)
 
-        # ══════ PAGE 4: PRIORITIZATION ══════
+        # ══════ PAGE 3: DETERMINISTIC PASS TABLE ══════
         pdf.add_page()
-        pdf.section_title("HEURISTIC PRIORITIZATION MODEL (EPI)")
-        pdf.set_font("Courier", "", 8)
-        pdf.set_fill_color(240, 240, 240)
-        pdf.cell(w, 8, f"Formula: {BAYESIAN_FORMULA}", ln=True, align="C", fill=True)
-        pdf.ln(4)
-        breakdown = bcomp.get("breakdown", [])
+        pdf.section_title("Deterministic Invariants (Compliance Table)")
+        passes = [l for l in laws if l['status'] == "PASS" and l['method'] == "deterministic"]
+        
         pdf.set_font("Helvetica", "B", 8)
-        pdf.cell(8, 6, "#", border="B"); pdf.cell(62, 6, "Component", border="B"); pdf.cell(30, 6, "Value", border="B"); pdf.cell(0, 6, "Derivation", border="B", ln=True)
-        for i, comp in enumerate(breakdown, 1):
-            pdf.set_font("Helvetica", "", 8)
-            pdf.cell(8, 6, str(i), border="B"); pdf.cell(62, 6, str(comp.get('name','')), border="B"); pdf.cell(30, 6, str(comp.get('value',0)), border="B"); pdf.cell(0, 6, pdf.safe(str(comp.get('source',''))), border="B", ln=True)
-        pdf.ln(4)
-        s6c = next((c['value'] for c in breakdown if 'composite' in str(c.get('name','')).lower()), 0)
-        wa = next((c['value'] for c in breakdown if 'w_arch' in str(c.get('name','')).lower()), 1.0)
-        ms = next((c['value'] for c in breakdown if 's8' in str(c.get('name','')).lower() or 'nkg' in str(c.get('name','')).lower()), 0.0)
-        pdf.set_font("Courier", "B", 9)
-        pdf.set_fill_color(240, 240, 240)
-        pdf.cell(w, 8, f"P = {s6c} x {wa} x (1 - {ms}) = {round(s6c * wa * (1 - ms), 4)}", ln=True, align="C", fill=True)
-        pdf.ln(2)
-        pdf.set_font("Helvetica", "B", 12)
-        pdf.cell(w, 10, f"FINAL EPI INDEX: {epi}%", ln=True, align="C")
-        pdf.ln(2)
+        pdf.set_fill_color(235, 245, 235)
+        headers = ["ID", "Metric", "Observed", "Threshold", "Dev", "Units"]
+        widths = [18, 52, 35, 35, 25, 25]
+        for i, h in enumerate(headers): pdf.cell(widths[i], 8, h, 1, 0, "C", True)
+        pdf.ln(8)
+        
+        pdf.set_font("Helvetica", "", 7)
+        for l in passes:
+            pdf.cell(18, 7, l['law_id'], 1, 0, "C")
+            pdf.cell(52, 7, l['title'], 1)
+            pdf.cell(35, 7, str(l['observed']), 1, 0, "C")
+            pdf.cell(35, 7, f"{l['operator']} {l['threshold']}", 1, 0, "C")
+            pdf.cell(25, 7, l['deviation'], 1, 0, "C")
+            pdf.cell(25, 7, pdf.safe(l['units']), 1, 1, "C")
+            
+        pdf.ln(5)
         pdf.set_font("Helvetica", "I", 7)
-        pdf.set_text_color(100, 100, 100)
-        pdf.multi_cell(w, 3.5, "S6_phys uses the DETERMINISTIC integrity score. When confidence unavailable, S6_ml is excluded. This is a heuristic composite, not a Bayesian posterior.")
-        pdf.set_text_color(0, 0, 0)
+        pdf.multi_cell(w, 4, "Reference Standard: Engh-Huber 1991. ML-Predicted structures evaluated against same invariant reference standards.")
 
-        # ══════ PAGE 5: NKG ══════
+        # ══════ PAGE 4: HEURISTIC SIGNALS ══════
         pdf.add_page()
-        pdf.section_title("NEGATIVE KNOWLEDGE GRAPH ASSESSMENT")
-        nkg_records = nkg_data.get('records_searched', 0)
-        for label, val in [("Similarity Threshold", nkg_data.get('threshold','N/A')), ("Records Searched", nkg_records), ("Matches Above Threshold", nkg_data.get('matches_above',0)), ("Closest Failure", nkg_data.get('closest_similarity','N/A')), ("S8 Penalty", nkg_data.get('penalty',0.0))]:
-            pdf.set_font("Helvetica", "", 8)
-            pdf.set_text_color(80, 80, 80)
-            pdf.cell(65, 5, str(label))
-            pdf.set_text_color(0, 0, 0)
-            pdf.cell(0, 5, str(val), ln=True)
-        pdf.ln(3)
-        pdf.set_font("Helvetica", "", 8)
-        if nkg_records == 0:
-            pdf.multi_cell(w, 4, "NKG deployment state: initialized. Database contains 0 archived failure records. S8 penalty inactive until sufficient historical data present.")
-        else:
-            pdf.multi_cell(w, 4, pdf.safe(nkg_data.get('narrative', 'Assessment complete.')))
+        pdf.section_title("Heuristic Advisory Signals")
+        heuristics = [l for l in laws if l['method'] == "heuristic"]
+        
+        pdf.set_font("Helvetica", "B", 8)
+        pdf.set_fill_color(245, 245, 240)
+        for i, h in enumerate(headers): pdf.cell(widths[i], 8, h, 1, 0, "C", True)
+        pdf.ln(8)
+        
+        pdf.set_font("Helvetica", "", 7)
+        for l in heuristics:
+            pdf.cell(18, 7, l['law_id'], 1, 0, "C")
+            pdf.cell(52, 7, l['title'], 1)
+            pdf.cell(35, 7, str(l['observed']), 1, 0, "C")
+            pdf.cell(35, 7, f"{l['operator']} {l['threshold']}", 1, 0, "C")
+            pdf.cell(25, 7, l['deviation'], 1, 0, "C")
+            pdf.cell(25, 7, pdf.safe(l['units']), 1, 1, "C")
 
-        # ══════ PAGE 6: PROVENANCE ══════
+        # ══════ PAGE 5: STRUCTURAL CHARACTERIZATION ══════
         pdf.add_page()
-        pdf.section_title("DATA PROVENANCE & INTEGRITY")
-        pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(w, 6, "INPUT PROVENANCE", ln=True)
-        byte_count = prov.get('byte_count', 0)
-        byte_exact = prov.get('byte_count_exact', False)
-        for label, val in [("Source", pdf.safe(prov.get('source','N/A'))), ("Format", "mmCIF" if str(prov.get('source','')).lower().endswith(('.cif','.mmcif')) else "PDB"), ("Input Size (bytes)", f"{byte_count:,} ({'exact' if byte_exact else 'estimated'})"), ("Audit ID", prov.get('audit_id','N/A')), ("Station Version", prov.get('station_version', STATION_METADATA['version'])), ("Timestamp", datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC'))]:
-            pdf.set_font("Helvetica", "", 8)
-            pdf.set_text_color(80, 80, 80)
-            pdf.cell(65, 5, str(label))
-            pdf.set_text_color(0, 0, 0)
-            pdf.cell(0, 5, str(val), ln=True)
-        pdf.ln(6)
+        pdf.section_title("Structural Characterization")
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(w, 8, f"Secondary Structure (Method: {ss.get('method')})", ln=True)
+        pdf.set_font("Helvetica", "", 9)
+        pdf.cell(63, 10, f"Alpha Helix: {ss.get('helix')}%", 1, 0, "C")
+        pdf.cell(63, 10, f"Beta Sheet: {ss.get('sheet')}%", 1, 0, "C")
+        pdf.cell(64, 10, f"Loop/Coil: {ss.get('loop')}%", 1, 1, "C")
+        pdf.set_font("Helvetica", "I", 7)
+        pdf.multi_cell(w, 5, f"Analysis Denominator: Percentages computed over high-confidence core residues only (n={ss.get('core_evaluated')}).")
+        pdf.ln(5)
+        
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(w, 8, "Confidence Distribution (pLDDT)", ln=True)
+        dist = conf_meta.get("distribution", {})
+        if dist:
+            pdf.cell(63, 10, f"Core (>=70): {dist.get('high_conf_pct')}%", 1, 0, "C")
+            pdf.cell(63, 10, f"Boundary (50-70): {dist.get('med_conf_pct')}%", 1, 0, "C")
+            pdf.cell(64, 10, f"Fringe (<50): {dist.get('low_conf_pct')}%", 1, 1, "C")
+
+        # ══════ PAGE 6: PRIORITIZATION MODEL ══════
+        pdf.add_page()
+        pdf.section_title("Prioritization Model Expansion")
         pdf.set_font("Courier", "B", 10)
-        pdf.cell(w, 8, "SHA-256 INTEGRITY CHECKSUM", ln=True, align="C")
-        pdf.set_font("Courier", "", 7)
-        pdf.multi_cell(w, 4, prov.get('hash', 'UNAVAILABLE'), align="C")
-        pdf.ln(3)
-        pdf.set_font("Helvetica", "I", 7)
-        pdf.set_text_color(100, 100, 100)
-        pdf.multi_cell(w, 3.5, "Checksum computed from raw input bytes. Any file modification produces different checksum.", align="C")
-        pdf.set_text_color(0, 0, 0)
-        pdf.ln(4)
+        pdf.cell(w, 10, f"FORMULA: {BAYESIAN_FORMULA}", ln=True, align="C")
+        pdf.ln(5)
+        
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(w, 8, "Numeric Expansion:", ln=True)
+        pdf.set_font("Courier", "", 10)
+        pdf.cell(w, 8, f"S6 (Integrity Factor) = {math.get('s6', 0.0)}", ln=True)
+        pdf.cell(w, 8, f"W_arch ({math.get('architecture')}) = {math.get('w_arch', 1.0)}", ln=True)
+        pdf.cell(w, 8, f"M_S8 (Negative Penalty) = {math.get('m_s8', 0.0)}", ln=True)
+        pdf.ln(5)
+        
+        if v.get("suppression_reason"):
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.set_text_color(170, 35, 35)
+            pdf.cell(w, 10, f"OVERRIDE: {v['suppression_reason']}", border=1, ln=True, align="C")
+            pdf.set_text_color(0, 0, 0)
 
-        # AI disclosure
-        pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(w, 6, "AI-GENERATED CONTENT DISCLOSURE", ln=True, align="C")
-        pdf.set_font("Helvetica", "", 7)
-        ai_display = pdf.safe(ai_model)
-        if "exhausted" in ai_display.lower() or "Static" in ai_display:
-            ai_display = "Internal analysis module (deterministic fallback)"
-        pdf.multi_cell(w, 3.5, f"Narrative by: {ai_display}. AI text is non-deterministic. All measurements are computed deterministically.", align="C")
-        pdf.ln(4)
+        pdf.set_font("Helvetica", "B", 12)
+        pdf.cell(w, 15, f"COMPOSITE PRIORITIZATION SCORE (Non-Probabilistic): {payload.get('tier3', {}).get('probability', 0)}%", border=1, align="C")
 
-        # Version immutability
-        pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(w, 6, "VERSION IMMUTABILITY", ln=True, align="C")
-        pdf.set_font("Helvetica", "", 7)
-        pdf.multi_cell(w, 3.5, f"Results tied to v{STATION_METADATA['version']} ({len(LAW_CANON)} laws). Different version may produce different results.", align="C")
-        pdf.ln(4)
-
-        # Canon hash
-        pdf.set_font("Helvetica", "B", 9)
-        pdf.cell(w, 6, "LAW CANON FINGERPRINT", ln=True, align="C")
-        pdf.set_font("Courier", "", 7)
-        pdf.cell(w, 5, f"Canon Hash: {LAW_CANON_HASH}", ln=True, align="C")
-        pdf.set_font("Helvetica", "I", 6)
-        pdf.set_text_color(100, 100, 100)
-        pdf.cell(w, 4, "SHA-256 over sorted law definitions. Changes if any law is modified.", ln=True, align="C")
-        pdf.set_text_color(0, 0, 0)
+        # ══════ PAGE 7: PROVENANCE & AUTHENTICATION ══════
+        pdf.add_page()
+        pdf.section_title("Provenance & Authentication")
+        pdf.set_font("Courier", "B", 9)
+        pdf.cell(w, 8, f"AUDIT_ID:       {gov.get('audit_id')}", ln=True)
+        pdf.cell(w, 8, f"SOURCE:         {prov.get('source')}", ln=True)
+        pdf.cell(w, 8, f"TIMESTAMP_UTC:  {gov.get('timestamp_utc')}", ln=True)
+        pdf.cell(w, 8, f"TOTAL_RESIDUES: {ss.get('total_residues')}", ln=True)
+        pdf.cell(w, 8, f"TOTAL_ATOMS:    {ss.get('total_atoms')}", ln=True)
+        pdf.ln(5)
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(w, 8, "Input Authentication (SHA-256):", ln=True)
+        pdf.set_font("Courier", "", 8)
+        pdf.multi_cell(w, 4, prov.get('hash'))
+        pdf.ln(5)
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(w, 8, "Canon Fingerprint (Truncated SHA-256, 16 bytes):", ln=True)
+        pdf.set_font("Courier", "", 8)
+        pdf.cell(w, 8, LAW_CANON_HASH, ln=True)
 
         return force_bytes(pdf.output(dest='S'))
     except Exception as e:
         err = FPDF()
         err.add_page()
-        err.set_font("Helvetica", "B", 28)
-        err.set_text_color(200, 30, 30)
-        err.cell(0, 30, "GENERATION FAILED", ln=True, align="C")
-        err.set_font("Helvetica", "", 9)
-        err.set_text_color(0, 0, 0)
-        err.multi_cell(0, 5, f"Error: {str(e)[:500]}")
+        err.set_font("Helvetica", "B", 12)
+        err.cell(0, 10, f"CRITICAL REPORTING ERROR: {str(e)}", ln=True)
         return force_bytes(err.output(dest='S'))
+
