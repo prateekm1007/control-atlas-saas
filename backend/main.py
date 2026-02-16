@@ -59,12 +59,22 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
 
     full_t1, coverage, fatal_fringe = Tier1Measurements.run_full_audit(structure, user_intent=t3_category)
 
+    # PIL-CAL-02: Detect experimental source for LAW-100 advisory classification
+    _is_exp_source = getattr(structure.confidence, "is_experimental", False) if hasattr(structure, 'confidence') else False
+
     res_t1, failing_det = [], []
     for lid in sorted(LAW_CANON.keys()):
         m = full_t1.get(lid, {"observed": 0, "deviation": "0.0", "sample": 0, "status": "FAIL"})
+        method = LAW_METHOD_CLASSIFICATIONS.get(lid, "unknown")
+
+        # PIL-CAL-02: For experimental structures, LAW-100 is advisory
+        # It reports RMSZ but does not count toward deterministic score
+        if lid == "LAW-100" and _is_exp_source:
+            method = "advisory_experimental"
+
         row = {
             "law_id": lid, "title": LAW_CANON[lid]["title"], "status": m["status"],
-            "method": LAW_METHOD_CLASSIFICATIONS.get(lid, "unknown"),
+            "method": method,
             "observed": m["observed"], "threshold": LAW_CANON[lid]["threshold"],
             "operator": LAW_CANON[lid]["operator"], "units": LAW_CANON[lid]["unit"],
             "deviation": m["deviation"], "sample_size": m["sample"],
