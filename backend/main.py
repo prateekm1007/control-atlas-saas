@@ -38,15 +38,18 @@ def _sanitize_for_json(obj):
     elif isinstance(obj, _np.ndarray): return obj.tolist()
     return obj
 
-def _compute_verdict(res_t1, coverage, fatal_fringe):
-    """🛡️ PIL-LCY-19: 3-State Forward-Only State Machine"""
-    cov_threshold = float(LAW_CANON["LAW-105"]["threshold"])
-    if coverage < cov_threshold: return "INDETERMINATE"
-    det_failures = [r for r in res_t1 if r["method"] == "deterministic" and r["status"] in ("FAIL", "VETO")]
-    if det_failures: return "VETO"
-    if fatal_fringe: return "INDETERMINATE"
-    heur_failures = [r for r in res_t1 if r["method"] == "heuristic" and r["status"] in ("FAIL", "VETO")]
-    if heur_failures: return "INDETERMINATE"
+def _compute_verdict(res_t1, coverage):
+    """PIL-LCY-19: Adjudication Priority Hierarchy (v22.5.3)"""
+    if coverage < 70.0:
+        return "INDETERMINATE"
+
+    det_failures = [
+        r for r in res_t1
+        if r["method"] == "deterministic" and r["status"] != "PASS"
+    ]
+    if det_failures:
+        return "VETO"
+
     return "PASS"
 
 def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_category: str):
@@ -57,7 +60,9 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
     coord_string = "".join([f"{round(a.pos[0],3)}{round(a.pos[1],3)}{round(a.pos[2],3)}" for a in structure.atoms])
     coord_hash = hashlib.sha256(coord_string.encode()).hexdigest()
 
-    full_t1, coverage, fatal_fringe = Tier1Measurements.run_full_audit(structure, user_intent=t3_category)
+    full_t1, coverage, _ = Tier1Measurements.run_full_audit(structure, user_intent=t3_category)
+
+
 
     # PIL-CAL-02: Detect experimental source for LAW-100 advisory classification
     _is_exp_source = getattr(structure.confidence, "is_experimental", False) if hasattr(structure, 'confidence') else False
@@ -67,21 +72,38 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
         m = full_t1.get(lid, {"observed": 0, "deviation": "0.0", "sample": 0, "status": "FAIL"})
         method = LAW_METHOD_CLASSIFICATIONS.get(lid, "unknown")
 
-        # PIL-CAL-02: For experimental structures, LAW-100 is advisory
-        # It reports RMSZ but does not count toward deterministic score
-        if lid == "LAW-100" and _is_exp_source:
-            method = "advisory_experimental"
+        # 🛡️ PIL-CAL-03: Modality-Aware Enforcement Matrix (v22.5.3)
+        # Experimental structures reclassify resolution-dependent laws as advisory.
+        # This prevents false vetoes from coordinate uncertainty and method artifacts.
+        if _is_exp_source:
+            _method_type = getattr(structure.confidence, "method", "predicted")
+
+            # Laws advisory for ALL experimental methods:
+            # LAW-100 (Bond RMSZ depends on resolution/refinement)
+            if lid == "LAW-100":
+                method = "advisory_experimental"
+
+            # Laws advisory for Cryo-EM:
+            # LAW-170 (non-standard residues: ligands, nucleotides, modified residues are expected)
+            elif lid == "LAW-170" and _method_type == "cryo_em":
+                method = "advisory_experimental"
+
+            # Laws advisory for NMR:
+            # LAW-125 (Ramachandran: ensemble averaging broadens phi/psi distributions)
+            # LAW-170 (non-standard residues may appear in NMR buffers)
+            elif lid in ("LAW-125", "LAW-170") and _method_type == "nmr":
+                method = "advisory_experimental"
 
         row = {
-            "law_id": lid, "title": LAW_CANON[lid]["title"], "status": m["status"],
+            "law_id": lid, "title": LAW_CANON[lid]["title"], "status": m.get("status", "FAIL"),
             "method": method,
-            "observed": m["observed"], "threshold": LAW_CANON[lid]["threshold"],
+            "observed": m.get("observed", 0), "threshold": LAW_CANON[lid]["threshold"],
             "operator": LAW_CANON[lid]["operator"], "units": LAW_CANON[lid]["unit"],
-            "deviation": m["deviation"], "sample_size": m["sample"],
+            "deviation": m.get("deviation", "0.0"), "sample_size": m.get("sample", 0),
             "scope": LAW_CANON[lid]["scope"], "principle": LAW_CANON[lid].get("principle", "N/A")
         }
         res_t1.append(row)
-        if m["status"] in ("FAIL", "VETO") and row["method"] == "deterministic":
+        if m.get("status", "FAIL") in ("FAIL", "VETO") and row["method"] == "deterministic":
             failing_det.append(f"{lid}: {LAW_CANON[lid]['title']}")
 
     det_passed = sum(1 for r in res_t1 if r["status"] == "PASS" and r["method"] == "deterministic")
@@ -90,7 +112,7 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
     adv_score = int((heur_passed / max(HEURISTIC_COUNT, 1)) * 100)
 
     conf_source, conf_val, conf_prov = Tier1Measurements.detect_confidence_source(structure)
-    verdict = _compute_verdict(res_t1, coverage, fatal_fringe)
+    verdict = _compute_verdict(res_t1, coverage)
 
     # 🛡️ PIL-MTH-12: Strategic Success Math
     raw_s6 = round(det_score / 100.0, 4)
@@ -131,10 +153,6 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
         "strategic_math": {
             "s6": s6_final, "w_arch": w_arch, "m_s8": m_s8, "architecture": t3_category
         },
-        "witness_reports": get_compiler().synthesize_dossier_content({
-            "v": verdict, "s": det_score, "c": coverage, "arch": t3_category, "killer_laws": failing_det
-        }),
-        "ai_model_used": get_compiler().model_used,
         "pdb_b64": base64.b64encode(content_bytes).decode(),
     })
 

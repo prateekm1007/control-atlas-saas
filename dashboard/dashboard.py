@@ -28,7 +28,9 @@ BENCHMARK_CRYSTALS = [
     {"pdb_id": "1CRN", "name": "Crambin", "resolution": 1.50, "method": "X-ray", "af_id": "AF-P01542-F1"},
     {"pdb_id": "4HHB", "name": "Hemoglobin (Deoxy)", "resolution": 1.74, "method": "X-ray", "af_id": "AF-P69905-F1"},
     {"pdb_id": "1UBQ", "name": "Ubiquitin", "resolution": 1.80, "method": "X-ray", "af_id": "AF-P0CG47-F1"},
-    {"pdb_id": "6LZG", "name": "SARS-CoV-2 Spike RBD", "resolution": 2.50, "method": "X-ray", "af_id": "AF-P0DTC2-F1"},
+    {"pdb_id": "6LZG", "name": "SARS-CoV-2 RBD", "resolution": 2.50, "method": "X-ray", "af_id": "AF-P0DTC2-F1"},
+    {"pdb_id": "7BV2", "name": "RdRp Complex (Cryo-EM)", "resolution": 2.50, "method": "Cryo-EM", "af_id": None},
+    {"pdb_id": "1G03", "name": "Protein G (NMR)", "resolution": 0.00, "method": "NMR", "af_id": "AF-P06654-F1"},
 ]
 
 
@@ -276,8 +278,19 @@ with t_work:
 
         laws = res.get("tier1", {}).get("laws", [])
         for law in laws:
+            # 🛡️ PIL-CAL-02: Advisory-aware Badge Logic
+            method = law.get("method", "deterministic")
+            if method == "advisory_experimental":
+                m_icon, m_label = "🟡", "Advisory (Experimental)"
+                m_help = "Reported for transparency but excluded from deterministic adjudication."
+            elif method == "deterministic":
+                m_icon, m_label = "🟢", "Deterministic"
+                m_help = "Core physical invariant. Failure triggers a VETO."
+            else:
+                m_icon, m_label = "🔵", "Heuristic"
+                m_help = "Statistical proxy for structural plausibility."
             icon, badge, badge_help = render_law_badge(law)
-            with st.expander(f"{icon} {law['law_id']}: {law['title']} — {law['status']}  [{badge}]"):
+            with st.expander(f"{icon} {law['law_id']}: {law['title']} — {law['status']} [{m_icon} {m_label}]", help=m_help):
                 if badge_help:
                     st.caption(f"ℹ️ {badge_help}")
                 st.write(f"**Observed:** {law['observed']} {law['units']}")

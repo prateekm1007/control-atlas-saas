@@ -1,7 +1,7 @@
 import hashlib as _hashlib
 
 STATION_METADATA = {
-    "version": "22.5.2",
+    "version": "22.5.3",
     "institution": "TOSCANINI Structural Governance",
     "posture": "CONSERVATIVE",
     "min_coverage_pass": 70.0,
