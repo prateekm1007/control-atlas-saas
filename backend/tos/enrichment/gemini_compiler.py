@@ -1,85 +1,219 @@
+"""
+TOSCANINI Narrative Compiler — Gemini Smart Cascade (v22.5.3)
+PIL-NAR-07: Non-blocking narrative synthesis with intelligent model rotation.
+
+Cascade Strategy:
+- 7 models in priority order
+- 1-second delay between model attempts (anti-spam)
+- Per-model cooldown tracking (skip exhausted models)
+- 60-second cooldown per model on 429
+- Global fallback if all exhausted
+"""
 import os
 import logging
 import time
 
 logger = logging.getLogger("toscanini.gemini")
 
+# Priority-ordered cascade: best quality first, then fallbacks
+MODEL_CASCADE = [
+    # Tier 1: Best quality (text generation capable, non-deprecated)
+    "gemini-2.5-pro",
+    "gemini-2.5-flash",
+    # Tier 2: Fast and reliable
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    # Tier 3: Experimental (may rotate availability)
+    "gemini-2.5-flash-lite-preview",
+]
+
+FALLBACK_RESPONSE = {
+    "executive": "Narrative layer unavailable. Physics audit complete.",
+    "deep_dive": "All Gemini models quota-exhausted. Physics laws evaluated independently.",
+    "recommendation": "Human review recommended. Deterministic verdict is authoritative."
+}
+
+
 class GeminiCompiler:
     def __init__(self):
-        self.api_key = os.getenv("GEMINI_API_KEY")
-        self.client = None
-        self.model_used = "none"
-        
-        # 🛡️ PIL-NAR-11: PhD Narrative Engine (16-Tier Hierarchy)
-        # Optimized for provided RPD/Availability
-        self.shield_tiers = [
-            "models/gemini-2.0-pro-exp-02-05",  # Tier 1: Apex Reasoning
-            "models/gemini-2.0-flash-exp",      # Tier 2: Experimental Logic
-            "models/gemini-2.5-pro",            # Tier 3: Stable Pro
-            "models/gemini-2.0-flash",          # Tier 4: Speed Apex
-            "models/gemini-2.5-flash",          # Tier 5: Speed Guard
-            "models/gemini-2.0-flash-lite",     # Tier 6: Low Latency
-            "models/gemini-2.5-flash-lite",     # Tier 7: Efficient Volume
-            "models/gemma-3-27b-it",            # Tier 8: Distilled Logic
-            "models/gemini-1.5-pro",            # Tier 9: Legacy Stable Pro
-            "models/gemini-1.5-flash",          # Tier 10: Legacy Stable Flash
-            "models/gemini-2.0-pro-exp-02-05",  # Tier 11: (Rotation Re-entry)
-            "models/gemini-2.0-flash-exp",      # Tier 12: (Rotation Re-entry)
-            "models/gemini-2.5-pro",            # Tier 13: (Rotation Re-entry)
-            "models/gemini-2.5-flash",          # Tier 14: (Rotation Re-entry)
-            "models/gemini-2.5-flash-lite",     # Tier 15: (Rotation Re-entry)
-            "models/gemini-2.0-flash-lite"      # Tier 16: Final AI Tier
-        ]
+        self._api_key = os.environ.get("GEMINI_API_KEY", "")
+        self._model_used = "Internal Fallback"
+        self._client = None
+        # Per-model cooldown tracking: {model_name: resume_timestamp}
+        self._model_cooldowns = {}
+        self._cascade_delay = 1.0  # seconds between model attempts (anti-spam)
 
-        if self.api_key and self.api_key != "dummy":
+        if self._api_key:
             try:
-                import google.generativeai as genai
-                genai.configure(api_key=self.api_key)
-                self.client = genai
-                logger.info("Apex Shield: 16-tier hierarchy initialized.")
+                from google import genai
+                self._client = genai.Client(api_key=self._api_key)
+                logger.info(f"Gemini API configured (google-genai SDK) — {len(MODEL_CASCADE)} models in cascade")
+            except ImportError:
+                logger.warning("google-genai not installed. Run: pip install google-genai")
             except Exception as e:
-                logger.error(f"Gemini SDK load failure: {e}")
+                logger.warning(f"Gemini config failed: {e}")
 
-    def _ask(self, prompt):
-        if not self.client: return None
-        for i, model_name in enumerate(self.shield_tiers, 1):
-            try:
-                model = self.client.GenerativeModel(model_name)
-                res = model.generate_content(prompt, request_options={"timeout": 8})
-                if res and res.text:
-                    self.model_used = model_name
-                    return res.text
-            except Exception as e:
-                logger.warning(f"✘ [CASCADE] Tier {i} ({model_name}) exhausted: {str(e)[:40]}")
-                time.sleep(2) # Mandatory Paced Cascade Algorithm
+    @property
+    def model_used(self) -> str:
+        return self._model_used
+
+    def _is_model_available(self, model_name: str) -> bool:
+        """Check if a model's cooldown has expired."""
+        cooldown_until = self._model_cooldowns.get(model_name, 0)
+        if time.time() < cooldown_until:
+            remaining = int(cooldown_until - time.time())
+            logger.debug(f"[SKIP] {model_name} on cooldown ({remaining}s remaining)")
+            return False
+        return True
+
+    def _set_model_cooldown(self, model_name: str, seconds: int = 60):
+        """Set a cooldown period for a rate-limited model."""
+        self._model_cooldowns[model_name] = time.time() + seconds
+        logger.info(f"[COOLDOWN] {model_name} paused for {seconds}s")
+
+    def synthesize_dossier_content(self, context: dict) -> dict:
+        """Non-blocking narrative synthesis with smart cascade."""
+        if not self._client or not self._api_key:
+            self._model_used = "Internal Fallback (No API Key)"
+            return self._build_fallback(context)
+
+        # Check if ALL models are on cooldown
+        available = [m for m in MODEL_CASCADE if self._is_model_available(m)]
+        if not available:
+            earliest = min(self._model_cooldowns.values()) if self._model_cooldowns else 0
+            remaining = max(0, int(earliest - time.time()))
+            self._model_used = f"Internal Fallback (All models cooling down — {remaining}s)"
+            return self._build_fallback(context)
+
+        prompt = self._build_prompt(context)
+        attempted = 0
+
+        for model_name in MODEL_CASCADE:
+            # Skip models on cooldown
+            if not self._is_model_available(model_name):
                 continue
-        return None
 
-    def synthesize_dossier_content(self, ctx):
-        intent = ctx.get('arch', 'NONE')
-        failing_det = ctx.get('killer_laws', [])
-        fail_str = "; ".join(failing_det[:3]) if failing_det else "None"
-        prompt = (f"PhD-level Forensic Audit. Verdict: {ctx.get('v','?')}. Integrity: {ctx.get('s',0)}%. "
-                  f"Coverage: {ctx.get('c',0)}%. Intent: {intent}. Violations: {fail_str}. "
-                  f"Write 3 technical paragraphs (Executive, Deep Dive, Recommendation). ASCII only.")
-        raw = self._ask(prompt)
-        if raw:
-            parts = raw.split("\n\n")
-            return {"executive": parts[0], "deep_dive": parts[1] if len(parts)>1 else "Analysis verified.", 
-                    "recommendation": parts[2] if len(parts)>2 else "Proceed per metrics."}
-        self.model_used = "Internal Analysis Module (Deterministic Fallback)"
-        return self._internal_analysis_module(ctx, fail_str)
+            # Anti-spam delay between attempts (skip for first attempt)
+            if attempted > 0:
+                time.sleep(self._cascade_delay)
 
-    def _internal_analysis_module(self, ctx, fail_str):
-        v, s = ctx.get('v', '?'), ctx.get('s', 0)
-        if v == "VETO":
-            return {"executive": f"VETOED. Critical violations in {fail_str}.", 
-                    "deep_dive": f"Integrity score {s}%. Geometric impossibilities detected.", "recommendation": "Reject immediately."}
-        return {"executive": f"INDETERMINATE. Reliability gate failed.", 
-                "deep_dive": "Insufficient high-confidence backbone data.", "recommendation": "Re-model structure."}
+            attempted += 1
 
-_compiler = None
-def get_compiler():
-    global _compiler
-    if _compiler is None: _compiler = GeminiCompiler()
-    return _compiler
+            try:
+                response = self._client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config={"temperature": 0.3, "max_output_tokens": 1024}
+                )
+                text = response.text.strip()
+                self._model_used = model_name
+                logger.info(f"Narrative generated by {model_name} (attempt #{attempted})")
+                return self._parse_response(text, context)
+
+            except Exception as e:
+                err_str = str(e)
+                reason = err_str[:120]
+
+                if "429" in err_str or "quota" in err_str.lower() or "RESOURCE_EXHAUSTED" in err_str:
+                    # Rate limited — cooldown this specific model
+                    self._set_model_cooldown(model_name, 120)
+                    logger.warning(f"[CASCADE] {model_name}: quota exhausted — 120s cooldown")
+
+                elif "404" in err_str or "not found" in err_str.lower():
+                    # Model doesn't exist — permanent cooldown (1 hour)
+                    self._set_model_cooldown(model_name, 3600)
+                    logger.warning(f"[CASCADE] {model_name}: not found — 1hr cooldown")
+
+                else:
+                    # Other error — short cooldown
+                    self._set_model_cooldown(model_name, 30)
+                    logger.warning(f"[CASCADE] {model_name}: {reason}")
+
+                continue
+
+        self._model_used = f"Internal Fallback (Cascade exhausted — {attempted} models tried)"
+        return self._build_fallback(context)
+
+    def _build_prompt(self, ctx: dict) -> str:
+        verdict = ctx.get("v", "UNKNOWN")
+        score = ctx.get("s", 0)
+        coverage = ctx.get("c", 0)
+        arch = ctx.get("arch", "NONE")
+        killers = ctx.get("killer_laws", [])
+
+        return f"""You are a structural biology expert reviewing a protein structure governance audit from the Toscanini Structural Governance Engine.
+
+Audit Results:
+- Verdict: {verdict}
+- Deterministic Score: {score}%
+- Reliability Coverage: {coverage}%
+- Architecture Class: {arch}
+- Failing Deterministic Laws: {', '.join(killers) if killers else 'None'}
+
+Write a concise expert report with exactly three sections:
+
+EXECUTIVE SUMMARY:
+(2-3 sentences on overall structural quality and what the verdict means)
+
+DEEP DIVE:
+(Technical analysis of the physics law results, what passed and what failed)
+
+RECOMMENDATION:
+(What the researcher should do next — be specific and actionable)
+
+Be precise and scientific. Do not invent data not provided above."""
+
+    def _parse_response(self, text: str, ctx: dict) -> dict:
+        sections = {"executive": "", "deep_dive": "", "recommendation": ""}
+        current = "executive"
+
+        for line in text.split("\n"):
+            upper = line.upper().strip()
+            if "EXECUTIVE" in upper and ("SUMMARY" in upper or ":" in upper):
+                current = "executive"
+                continue
+            elif "DEEP DIVE" in upper or ("DEEP" in upper and "DIVE" in upper):
+                current = "deep_dive"
+                continue
+            elif "RECOMMENDATION" in upper:
+                current = "recommendation"
+                continue
+            if line.strip().startswith("#") or line.strip().startswith("**"):
+                cleaned = line.strip().lstrip("#*").strip()
+                if cleaned:
+                    sections[current] += cleaned + " "
+                continue
+            sections[current] += line.strip() + " "
+
+        for k in sections:
+            sections[k] = sections[k].strip()
+            if not sections[k]:
+                sections[k] = FALLBACK_RESPONSE[k]
+
+        return sections
+
+    def _build_fallback(self, ctx: dict) -> dict:
+        verdict = ctx.get("v", "UNKNOWN")
+        score = ctx.get("s", 0)
+        coverage = ctx.get("c", 0)
+        killers = ctx.get("killer_laws", [])
+        arch = ctx.get("arch", "NONE")
+        return {
+            "executive": f"Deterministic audit complete. Verdict: {verdict}. "
+                         f"Score: {score}% with {coverage}% coverage.",
+            "deep_dive": f"Architecture class: {arch}. "
+                         + (f"Failing laws: {', '.join(killers)}."
+                            if killers else "No deterministic failures detected."),
+            "recommendation": "Narrative layer unavailable (API quota exceeded). "
+                              "Human review recommended. The deterministic verdict "
+                              "is authoritative regardless of narrative availability."
+        }
+
+
+_instance = None
+
+def get_compiler() -> GeminiCompiler:
+    global _instance
+    if _instance is None:
+        _instance = GeminiCompiler()
+    return _instance

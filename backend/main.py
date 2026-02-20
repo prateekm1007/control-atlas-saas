@@ -153,6 +153,10 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
         "strategic_math": {
             "s6": s6_final, "w_arch": w_arch, "m_s8": m_s8, "architecture": t3_category
         },
+        "witness_reports": get_compiler().synthesize_dossier_content({
+            "v": verdict, "s": det_score, "c": coverage, "arch": t3_category, "killer_laws": failing_det
+        }),
+        "ai_model_used": get_compiler().model_used,
         "pdb_b64": base64.b64encode(content_bytes).decode(),
     })
 

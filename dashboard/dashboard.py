@@ -23,13 +23,13 @@ WARHEADS = [
 ]
 
 BENCHMARK_CRYSTALS = [
-    {"pdb_id": "3NIR", "name": "Endothiapepsin (Ultra-High)", "resolution": 0.48, "method": "X-ray", "af_id": None},
+    {"pdb_id": "3NIR", "name": "Endothiapepsin (Ultra-High)", "resolution": 0.48, "method": "X-ray", "af_id": "AF-P11838-F1"},
     {"pdb_id": "2VB1", "name": "Insulin (Atomic)", "resolution": 0.65, "method": "X-ray", "af_id": "AF-P01308-F1"},
     {"pdb_id": "1CRN", "name": "Crambin", "resolution": 1.50, "method": "X-ray", "af_id": "AF-P01542-F1"},
     {"pdb_id": "4HHB", "name": "Hemoglobin (Deoxy)", "resolution": 1.74, "method": "X-ray", "af_id": "AF-P69905-F1"},
     {"pdb_id": "1UBQ", "name": "Ubiquitin", "resolution": 1.80, "method": "X-ray", "af_id": "AF-P0CG47-F1"},
     {"pdb_id": "6LZG", "name": "SARS-CoV-2 RBD", "resolution": 2.50, "method": "X-ray", "af_id": "AF-P0DTC2-F1"},
-    {"pdb_id": "7BV2", "name": "RdRp Complex (Cryo-EM)", "resolution": 2.50, "method": "Cryo-EM", "af_id": None},
+    {"pdb_id": "7BV2", "name": "RdRp Complex (Cryo-EM)", "resolution": 2.50, "method": "Cryo-EM", "af_id": "AF-P0DTD1-F1"},
     {"pdb_id": "1G03", "name": "Protein G (NMR)", "resolution": 0.00, "method": "NMR", "af_id": "AF-P06654-F1"},
 ]
 
@@ -82,6 +82,9 @@ def run_benchmark_audit(candidate_id):
 
 
 def render_law_comparison_table(crystal_laws, af_laws):
+    """Render side-by-side law comparison. Tolerates empty/None inputs."""
+    crystal_laws = crystal_laws or []
+    af_laws = af_laws or []
     t = get_active_theme()
     header = (
         f'<tr style="background:{t["surface"]};border-bottom:2px solid {t["border"]};">'
@@ -290,7 +293,7 @@ with t_work:
                 m_icon, m_label = "🔵", "Heuristic"
                 m_help = "Statistical proxy for structural plausibility."
             icon, badge, badge_help = render_law_badge(law)
-            with st.expander(f"{icon} {law['law_id']}: {law['title']} — {law['status']} [{m_icon} {m_label}]", help=m_help):
+            with st.expander(f"{icon} {law['law_id']}: {law['title']} — {law['status']} [{m_icon} {m_label}]"):
                 if badge_help:
                     st.caption(f"ℹ️ {badge_help}")
                 st.write(f"**Observed:** {law['observed']} {law['units']}")
@@ -339,13 +342,17 @@ with t_bench:
             has_af = cached.get("alphafold") is not None
 
             if not has_crystal:
-                if st.button(f"⚡ Audit {pdb_id}" + (f" + {af_id}" if af_id else ""), key=f"bench_{key}"):
-                    with st.spinner(f"Auditing {pdb_id}..."):
+                if st.button(f"⚡ Audit {pdb_id} + {af_id}", key=f"bench_{key}"):
+                    with st.spinner(f"Auditing {pdb_id} (Crystal)..."):
                         crystal_res = run_benchmark_audit(pdb_id)
                     af_res = None
-                    if af_id:
-                        with st.spinner(f"Auditing {af_id}..."):
+                    try:
+                        with st.spinner(f"Auditing {af_id} (AlphaFold)..."):
                             af_res = run_benchmark_audit(af_id)
+                        if af_res and "verdict" not in af_res:
+                            af_res = None
+                    except Exception:
+                        af_res = None
                     st.session_state.benchmark_results[key] = {"crystal": crystal_res, "alphafold": af_res}
                     st.rerun()
             else:
@@ -353,21 +360,26 @@ with t_bench:
                 ar = cached.get("alphafold")
                 cv = cr.get("verdict", {})
 
-                c1, c2 = st.columns(2) if ar else (st.container(), None)
+                # ═══ BENCHMARK UNIFORMITY: Always render dual panel ═══
+                c1, c2 = st.columns(2)
                 with c1:
                     st.markdown(f"**🔵 Crystal: {pdb_id}**")
                     binary_c = cv.get("binary", "ERROR")
                     det_laws_c = [l for l in cr.get("tier1", {}).get("laws", []) if l["method"] == "deterministic"]
+                    adv_laws_c = [l for l in cr.get("tier1", {}).get("laws", []) if "advisory" in l.get("method", "")]
                     det_pass_c = sum(1 for l in det_laws_c if l["status"] == "PASS")
                     if binary_c == "PASS":
-                        st.success(f"✅ {binary_c} — {det_pass_c}/{len(det_laws_c)} Det + 1 Advisory")
-                    else:
+                        st.success(f"✅ {binary_c} — {det_pass_c}/{len(det_laws_c)} Det" + (f" + {len(adv_laws_c)} Advisory" if adv_laws_c else ""))
+                    elif binary_c == "VETO":
                         st.error(f"🛑 {binary_c}")
+                    else:
+                        st.warning(f"⚠️ {binary_c}")
                     st.metric("Coverage", f"{cv.get('coverage_pct', 0)}%")
+                    st.caption(f"Method: {entry['method']} | Resolution: {entry['resolution']}Å")
 
-                if c2 and ar:
-                    av = ar.get("verdict", {})
-                    with c2:
+                with c2:
+                    if ar:
+                        av = ar.get("verdict", {})
                         st.markdown(f"**🟠 AlphaFold: {af_id}**")
                         binary_a = av.get("binary", "ERROR")
                         if binary_a == "PASS":
@@ -377,31 +389,35 @@ with t_bench:
                         else:
                             st.warning(f"⚠️ {binary_a}")
                         st.metric("pLDDT", f"{round(av.get('confidence_score', 0), 1)}")
+                    else:
+                        st.markdown(f"**🟠 AlphaFold: {af_id}**")
+                        st.warning("⚠️ No predicted counterpart resolved")
+                        st.caption("AlphaFold model unavailable for this target.")
 
-                # Side-by-side 3D
+                # ═══ BENCHMARK UNIFORMITY: Always render 3D comparison ═══
                 if cr.get("pdb_b64"):
                     st.divider()
-                    if ar and ar.get("pdb_b64"):
-                        st.markdown("**3D Structural Comparison**")
-                        v3d_l, v3d_r = st.columns(2)
-                        with v3d_l:
-                            st.caption(f"Crystal: {pdb_id}")
-                            render_3d_viewer(cr["pdb_b64"], cv.get("binary", "ERROR"), height=400, width=420)
-                        with v3d_r:
-                            st.caption(f"AlphaFold: {af_id}")
-                            render_3d_viewer(ar["pdb_b64"], av.get("binary", "ERROR"), height=400, width=420)
-                    else:
+                    st.markdown("**3D Structural Comparison**")
+                    v3d_l, v3d_r = st.columns(2)
+                    with v3d_l:
                         st.caption(f"Crystal: {pdb_id}")
-                        render_3d_viewer(cr["pdb_b64"], cv.get("binary", "ERROR"), height=400, width=600)
+                        render_3d_viewer(cr["pdb_b64"], cv.get("binary", "ERROR"), height=400, width=420)
+                    with v3d_r:
+                        if ar and ar.get("pdb_b64"):
+                            av_3d = ar.get("verdict", {})
+                            st.caption(f"AlphaFold: {af_id}")
+                            render_3d_viewer(ar["pdb_b64"], av_3d.get("binary", "ERROR"), height=400, width=420)
+                        else:
+                            st.caption(f"AlphaFold: {af_id}")
+                            st.info("Predicted structure not available for 3D comparison.")
 
-                # Comparison table
-                if ar:
-                    st.divider()
-                    st.markdown("**Deterministic Law Comparison**")
-                    render_law_comparison_table(
-                        cr.get("tier1", {}).get("laws", []),
-                        ar.get("tier1", {}).get("laws", []),
-                    )
+                # ═══ BENCHMARK UNIFORMITY: Always render comparison table ═══
+                st.divider()
+                st.markdown("**Deterministic Law Comparison**")
+                render_law_comparison_table(
+                    cr.get("tier1", {}).get("laws", []),
+                    ar.get("tier1", {}).get("laws", []) if ar else [],
+                )
 
 # ═══════════════════════════════════════════════════════════════
 # TAB 3: VALIDATION DATASET
