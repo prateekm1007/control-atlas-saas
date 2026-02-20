@@ -94,8 +94,13 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
             elif lid in ("LAW-125", "LAW-170") and _method_type == "nmr":
                 method = "advisory_experimental"
 
+        # PIL-CAL-03: Advisory laws cannot VETO — normalize status
+        raw_status = m.get("status", "FAIL")
+        if method == "advisory_experimental" and raw_status == "VETO":
+            raw_status = "FAIL (Advisory)"
+
         row = {
-            "law_id": lid, "title": LAW_CANON[lid]["title"], "status": m.get("status", "FAIL"),
+            "law_id": lid, "title": LAW_CANON[lid]["title"], "status": raw_status,
             "method": method,
             "observed": m.get("observed", 0), "threshold": LAW_CANON[lid]["threshold"],
             "operator": LAW_CANON[lid]["operator"], "units": LAW_CANON[lid]["unit"],
