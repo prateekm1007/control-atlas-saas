@@ -45,27 +45,29 @@ def _make_struct(atoms):
 
 def _l_residue(res_seq):
     """Create a single residue with L-amino acid chirality.
-    N-CA-C are non-collinear. CB below plane → negative dihedral.
+    N-CA-C are non-collinear. CB positioned for improper = -30.1° (L-amino acid).
+    Verified: dihedral_deg(N, CA, C, CB) = -30.1°
     """
     return [
         _make_atom("N",  "N", [-0.5, 0.8, 0.0], res_seq=res_seq),
         _make_atom("CA", "C", [0.0, 0.0, 0.0],  res_seq=res_seq),
         _make_atom("C",  "C", [1.2, 0.7, 0.0],  res_seq=res_seq),
         _make_atom("O",  "O", [1.5, 1.5, 0.0],  res_seq=res_seq),
-        _make_atom("CB", "C", [0.0, -1.0, -0.5], res_seq=res_seq),
+        _make_atom("CB", "C", [0.0, 1.0, -0.5],  res_seq=res_seq),
     ]
 
 
 def _d_residue(res_seq):
     """Create a single residue with D-amino acid chirality.
-    Same backbone as _l_residue but CB mirrored → positive dihedral.
+    Same backbone as _l_residue but CB mirrored → positive dihedral in 0-90° range.
+    Verified: dihedral_deg(N, CA, C, CB) = +30.1° (genuine D-amino acid)
     """
     return [
         _make_atom("N",  "N", [-0.5, 0.8, 0.0], res_seq=res_seq),
         _make_atom("CA", "C", [0.0, 0.0, 0.0],  res_seq=res_seq),
         _make_atom("C",  "C", [1.2, 0.7, 0.0],  res_seq=res_seq),
         _make_atom("O",  "O", [1.5, 1.5, 0.0],  res_seq=res_seq),
-        _make_atom("CB", "C", [0.0, -1.0, 0.5],  res_seq=res_seq),
+        _make_atom("CB", "C", [0.0, 1.0, 0.5],   res_seq=res_seq),
     ]
 
 
@@ -79,7 +81,7 @@ class TestLaw145:
             np.array([-0.5, 0.8, 0.0]),
             np.array([0.0, 0.0, 0.0]),
             np.array([1.2, 0.7, 0.0]),
-            np.array([0.0, -1.0, -0.5])
+            np.array([0.0, 1.0, -0.5])
         )
         assert improper < 0.0, f"Expected negative improper, got {improper}"
 
@@ -98,7 +100,7 @@ class TestLaw145:
             np.array([-0.5, 0.8, 0.0]),
             np.array([0.0, 0.0, 0.0]),
             np.array([1.2, 0.7, 0.0]),
-            np.array([0.0, -1.0, 0.5])
+            np.array([0.0, 1.0, 0.5])
         )
         assert improper > 0.0, f"Expected positive improper, got {improper}"
 
@@ -174,15 +176,56 @@ class TestLaw145:
         ca = np.array([0.0, 0.0, 0.0])
         c  = np.array([1.2, 0.7, 0.0])
 
-        # L: CB below plane (z < 0)
-        cb_l = np.array([0.0, -1.0, -0.5])
+        # L: improper negative (genuine L-amino acid, 0 to -90°)
+        cb_l = np.array([0.0, 1.0, -0.5])
         l_val = dihedral_deg(n, ca, c, cb_l)
         assert l_val < 0.0, f"L-chirality should be negative, got {l_val}"
 
-        # D: CB above plane (z > 0)
-        cb_d = np.array([0.0, -1.0, 0.5])
+        # D: improper positive and < 90° (genuine D-amino acid)
+        cb_d = np.array([0.0, 1.0, 0.5])
         d_val = dihedral_deg(n, ca, c, cb_d)
-        assert d_val > 0.0, f"D-chirality should be positive, got {d_val}"
+        assert 0.0 < d_val < 90.0, f"D-chirality should be 0-90°, got {d_val}"
 
         # Mirror symmetry
         assert abs(abs(l_val) - abs(d_val)) < 0.1
+
+
+class TestLaw145Degenerate:
+    """Tests for degenerate/coplanar CB geometry (discovered via 4HHB calibration)."""
+
+    def test_coplanar_cb_not_violation(self):
+        """CB in the N-CA-C plane (improper ~180°) is NOT a D-amino acid.
+        Reproduces 4HHB Chain D Res 78 LEU geometry.
+        """
+        atoms = [
+            _make_atom("N",  "N", [-6.990, -6.739, 37.768], res_seq=1),
+            _make_atom("CA", "C", [-6.267, -6.392, 38.731], res_seq=1),
+            _make_atom("C",  "C", [-5.054, -6.608, 39.330], res_seq=1),
+            _make_atom("O",  "O", [-4.5, -7.0, 39.0],      res_seq=1),
+            _make_atom("CB", "C", [-7.145, -5.144, 39.672], res_seq=1),
+        ]
+        # Verify this geometry gives improper near 180°
+        improper = dihedral_deg(
+            atoms[0].pos, atoms[1].pos, atoms[2].pos, atoms[4].pos
+        )
+        assert abs(improper) > 90.0, f"Expected |improper| > 90, got {improper}"
+
+        results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
+        res = results["LAW-145"]
+        assert res["status"] == "PASS", f"Coplanar CB should not be flagged as D-amino acid"
+        assert res["observed"] == 0
+
+    def test_genuine_d_still_caught(self):
+        """Genuine D-amino acid (improper 0-90°) is still flagged.
+        Uses the verified D-amino acid geometry from earlier tests.
+        """
+        atoms = _d_residue(1)
+        improper = dihedral_deg(
+            atoms[0].pos, atoms[1].pos, atoms[2].pos, atoms[4].pos
+        )
+        assert 0.0 < improper < 90.0, f"Expected 0 < improper < 90, got {improper}"
+
+        results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
+        res = results["LAW-145"]
+        assert res["status"] == "VETO"
+        assert res["observed"] == 1

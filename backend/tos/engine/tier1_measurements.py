@@ -283,7 +283,12 @@ class Tier1Measurements:
             improper = dihedral_deg(
                 atoms["N"], atoms["CA"], atoms["C"], atoms["CB"]
             )
-            if improper > 0.0:
+            # Genuine D-amino acid: improper between 0° and 90°
+            # Values near ±180° indicate degenerate/coplanar geometry
+            # (CB in the N-CA-C plane) — refinement artifact, not chirality error.
+            # Reference: 4HHB Chain D Res 78 LEU has improper=179.7° with
+            # CB only 0.009Å from the N-CA-C plane.
+            if 0.0 < improper < 90.0:
                 chiral_violations += 1
 
         results["LAW-145"] = {

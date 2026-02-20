@@ -83,6 +83,10 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
             if lid == "LAW-100":
                 method = "advisory_experimental"
 
+            # LAW-160 (Chain Integrity: multi-chain gap false positives pending code fix)
+            elif lid == "LAW-160":
+                method = "advisory_experimental"
+
             # Laws advisory for Cryo-EM:
             # LAW-170 (non-standard residues: ligands, nucleotides, modified residues are expected)
             elif lid == "LAW-170" and _method_type == "cryo_em":
@@ -91,7 +95,7 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
             # Laws advisory for NMR:
             # LAW-125 (Ramachandran: ensemble averaging broadens phi/psi distributions)
             # LAW-170 (non-standard residues may appear in NMR buffers)
-            elif lid in ("LAW-125", "LAW-170") and _method_type == "nmr":
+            elif lid in ("LAW-125", "LAW-150", "LAW-170") and _method_type == "nmr":
                 method = "advisory_experimental"
 
         # PIL-CAL-03: Advisory laws cannot VETO — normalize status

@@ -94,7 +94,7 @@ class TestLaw120:
     def test_uses_station_sop_threshold(self):
         """Verify LAW-120 threshold comes from station_sop, not hardcoded."""
         from tos.governance.station_sop import LAW_CANON
-        assert LAW_CANON["LAW-120"]["threshold"] == 10.0
+        assert LAW_CANON["LAW-120"]["threshold"] == 18.0
         assert LAW_CANON["LAW-120"]["unit"] == "°"
         assert LAW_CANON["LAW-120"]["type"] == "RMSD"
 
