@@ -22,6 +22,7 @@ from tos.enrichment.gemini_compiler import get_compiler
 from tos.utils.type_guards import force_bytes
 from tos.nkg.manager import get_nkg
 from tos.governance.modality_matrix import resolve_method, compute_matrix_hash
+from tos.engine.adjudicator import adjudicate_laws, AdjudicationInput
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("toscanini.brain")
@@ -39,90 +40,53 @@ def _sanitize_for_json(obj):
     elif isinstance(obj, _np.ndarray): return obj.tolist()
     return obj
 
-def _compute_verdict(res_t1, coverage):
-    """PIL-LCY-19: Adjudication Priority Hierarchy (v22.5.3)"""
-    if coverage < 70.0:
-        return "INDETERMINATE"
 
-    det_failures = [
-        r for r in res_t1
-        if r["method"] == "deterministic" and r["status"] != "PASS"
-    ]
-    if det_failures:
-        return "VETO"
+def _compute_coord_hash(structure) -> str:
+    """PIL-NOT-18: Coordinate-Only Hashing (Institutional Standard)."""
+    coord_string = "".join(
+        f"{round(a.pos[0],3)}{round(a.pos[1],3)}{round(a.pos[2],3)}"
+        for a in structure.atoms
+    )
+    return hashlib.sha256(coord_string.encode()).hexdigest()
 
-    return "PASS"
 
 def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_category: str):
     # 🛡️ PIL-IMM-20: Immutable Ingestion
     structure = IngestionProcessor.run(force_bytes(content_bytes), "origin.pdb", "Audit", mode)
     
     # 🛡️ PIL-NOT-18: Coordinate-Only Hashing (Institutional Standard)
-    coord_string = "".join([f"{round(a.pos[0],3)}{round(a.pos[1],3)}{round(a.pos[2],3)}" for a in structure.atoms])
-    coord_hash = hashlib.sha256(coord_string.encode()).hexdigest()
+    coord_hash = _compute_coord_hash(structure)
 
     full_t1, coverage, _ = Tier1Measurements.run_full_audit(structure, user_intent=t3_category)
 
 
 
-    # PIL-CAL-02: Detect experimental source for LAW-100 advisory classification
+    # PIL-CAL-02: Detect experimental source
     _is_exp_source = getattr(structure.confidence, "is_experimental", False) if hasattr(structure, 'confidence') else False
+    _method_type = getattr(structure.confidence, "method", "predicted") if _is_exp_source else "predicted"
 
-    res_t1, failing_det = [], []
-    for lid in sorted(LAW_CANON.keys()):
-        m = full_t1.get(lid, {"observed": 0, "deviation": "0.0", "sample": 0, "status": "FAIL"})
-        method = LAW_METHOD_CLASSIFICATIONS.get(lid, "unknown")
+    # Stages 3+4: Adjudication (delegated to pure function)
+    adj_result = adjudicate_laws(AdjudicationInput(
+        raw_measurements=full_t1,
+        coverage=coverage,
+        is_experimental=_is_exp_source,
+        method_type=_method_type,
+        architecture=t3_category,
+    ))
 
-        # PIL-CAL-03: Modality-Aware Enforcement Matrix (v22.5.3)
-        # Delegated to modality_matrix.json — see modality_matrix.py for loader.
-        _method_type = getattr(structure.confidence, "method", "predicted") if _is_exp_source else "predicted"
-        method = resolve_method(
-            law_id=lid,
-            is_experimental=_is_exp_source,
-            method_type=_method_type,
-            default_method=method,
-        )
-
-        # PIL-CAL-03: Advisory laws cannot VETO — normalize status
-        raw_status = m.get("status", "FAIL")
-        if method == "advisory_experimental" and raw_status == "VETO":
-            raw_status = "FAIL (Advisory)"
-
-        row = {
-            "law_id": lid, "title": LAW_CANON[lid]["title"], "status": raw_status,
-            "method": method,
-            "observed": m.get("observed", 0), "threshold": LAW_CANON[lid]["threshold"],
-            "operator": LAW_CANON[lid]["operator"], "units": LAW_CANON[lid]["unit"],
-            "deviation": m.get("deviation", "0.0"), "sample_size": m.get("sample", 0),
-            "scope": LAW_CANON[lid]["scope"], "principle": LAW_CANON[lid].get("principle", "N/A")
-        }
-        res_t1.append(row)
-        if m.get("status", "FAIL") in ("FAIL", "VETO") and row["method"] == "deterministic":
-            failing_det.append(f"{lid}: {LAW_CANON[lid]['title']}")
-
-    det_passed = sum(1 for r in res_t1 if r["status"] == "PASS" and r["method"] == "deterministic")
-    det_score = int((det_passed / max(DETERMINISTIC_COUNT, 1)) * 100)
-    heur_passed = sum(1 for r in res_t1 if r["status"] == "PASS" and r["method"] == "heuristic")
-    adv_score = int((heur_passed / max(HEURISTIC_COUNT, 1)) * 100)
+    # Unpack result for payload assembly
+    res_t1 = adj_result.law_rows
+    failing_det = adj_result.failing_deterministic
+    verdict = adj_result.verdict
+    det_score = adj_result.deterministic_score
+    adv_score = adj_result.advisory_score
+    det_passed = adj_result.det_passed
+    heur_passed = adj_result.heur_passed
+    sm = adj_result.strategic_math
+    s6_final, w_arch, m_s8 = sm.s6, sm.w_arch, sm.m_s8
+    p_score, suppression = sm.p_score, sm.suppression
 
     conf_source, conf_val, conf_prov = Tier1Measurements.detect_confidence_source(structure)
-    verdict = _compute_verdict(res_t1, coverage)
-
-    # 🛡️ PIL-MTH-12: Strategic Success Math
-    raw_s6 = round(det_score / 100.0, 4)
-    w_arch = ARCHITECTURE_WEIGHTS.get(t3_category, 1.0)
-    m_s8 = 0.0 # NKG Penalty
-    
-    # Coverage Gate Logic (Review Item 5: Explicitly zero index and integrity on failure)
-    cov_threshold = float(LAW_CANON["LAW-105"]["threshold"])
-    if coverage < cov_threshold:
-        s6_final = 0.0
-        p_score = 0
-        suppression = "Coverage gate enforces zeroing of prioritization index."
-    else:
-        s6_final = raw_s6
-        p_score = int(s6_final * w_arch * (1.0 - m_s8) * 100)
-        suppression = None
 
     payload = _sanitize_for_json({
         "verdict": {
