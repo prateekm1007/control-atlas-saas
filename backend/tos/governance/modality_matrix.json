@@ -1,0 +1,48 @@
+{
+  "_meta": {
+    "schema_version": "1.0.0",
+    "policy_ref": "PIL-CAL-03",
+    "policy_title": "Modality-Aware Enforcement Matrix",
+    "policy_version": "v22.5.3",
+    "description": "Defines which laws are reclassified as advisory_experimental based on acquisition method. Advisory laws cannot issue VETO verdicts.",
+    "locked_by": "Phase 2 Calibration Audit (50 structures)"
+  },
+  "rules": [
+    {
+      "law_id": "LAW-100",
+      "applies_to_methods": ["x_ray", "cryo_em", "nmr", "all_experimental"],
+      "reclassify_as": "advisory_experimental",
+      "rationale": "Bond RMSZ depends on resolution and refinement protocol. False vetoes expected across all experimental methods."
+    },
+    {
+      "law_id": "LAW-160",
+      "applies_to_methods": ["x_ray", "cryo_em", "nmr", "all_experimental"],
+      "reclassify_as": "advisory_experimental",
+      "rationale": "Chain Integrity: multi-chain gap false positives pending coordinate discontinuity fix."
+    },
+    {
+      "law_id": "LAW-170",
+      "applies_to_methods": ["cryo_em"],
+      "reclassify_as": "advisory_experimental",
+      "rationale": "Non-standard residues (ligands, nucleotides, modified residues) are expected in Cryo-EM maps."
+    },
+    {
+      "law_id": "LAW-125",
+      "applies_to_methods": ["nmr"],
+      "reclassify_as": "advisory_experimental",
+      "rationale": "Ramachandran: ensemble averaging broadens phi/psi distributions in NMR."
+    },
+    {
+      "law_id": "LAW-150",
+      "applies_to_methods": ["nmr"],
+      "reclassify_as": "advisory_experimental",
+      "rationale": "Rotamer Audit: ensemble averaging in NMR produces non-rotameric side-chain snapshots."
+    },
+    {
+      "law_id": "LAW-170",
+      "applies_to_methods": ["nmr"],
+      "reclassify_as": "advisory_experimental",
+      "rationale": "Non-standard residues may appear in NMR buffer conditions."
+    }
+  ]
+}

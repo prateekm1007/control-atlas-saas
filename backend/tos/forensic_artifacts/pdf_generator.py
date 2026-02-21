@@ -4,6 +4,7 @@ from ..utils.type_guards import force_bytes
 from ..governance.station_sop import (
     STATION_METADATA, BAYESIAN_FORMULA, LAW_CANON_HASH
 )
+from ..governance.modality_matrix import compute_matrix_hash
 
 
 class ToscaniniDossier(FPDF):
@@ -17,7 +18,7 @@ class ToscaniniDossier(FPDF):
         self.set_y(-15)
         self.set_font("Helvetica", "I", 7)
         self.set_text_color(128, 128, 128)
-        self.cell(0, 10, f"Engine: v{STATION_METADATA['version']} // SHA-256 Validated // Page {self.page_no()}", align="R")
+        self.cell(0, 10, f"Engine: v{STATION_METADATA['version']} // Canon: {LAW_CANON_HASH[:12]}... // Matrix: {compute_matrix_hash()[:12]}... // Page {self.page_no()}", align="R")
 
     def section_title(self, text):
         self.set_font("Helvetica", "B", 11)
@@ -310,6 +311,11 @@ def generate_v21_dossier(payload):
         pdf.cell(w, 8, f"AUDIT_ID: {gov.get('audit_id', 'N/A')}", ln=True)
         pdf.cell(w, 8, f"TIMESTAMP_UTC: {gov.get('timestamp_utc', 'N/A')}", ln=True)
         pdf.cell(w, 8, f"CANON_HASH: {LAW_CANON_HASH}", ln=True)
+        pdf.cell(w, 8, f"MATRIX_HASH: {compute_matrix_hash()}", ln=True)
+        fp = gov.get("governance_fingerprint", {})
+        if fp:
+            pdf.cell(w, 8, f"MATRIX_SCHEMA: {fp.get('matrix_schema_version', 'N/A')}", ln=True)
+            pdf.cell(w, 8, f"POLICY_REF: {fp.get('policy_ref', 'N/A')}", ln=True)
         pdf.cell(w, 8, f"ENGINE_VERSION: v{STATION_METADATA['version']}", ln=True)
         pdf.ln(5)
 

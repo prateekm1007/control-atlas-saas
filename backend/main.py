@@ -21,6 +21,7 @@ from tos.generation.dispatcher import GenerationDispatcher
 from tos.enrichment.gemini_compiler import get_compiler
 from tos.utils.type_guards import force_bytes
 from tos.nkg.manager import get_nkg
+from tos.governance.modality_matrix import resolve_method, compute_matrix_hash
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("toscanini.brain")
@@ -72,31 +73,15 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
         m = full_t1.get(lid, {"observed": 0, "deviation": "0.0", "sample": 0, "status": "FAIL"})
         method = LAW_METHOD_CLASSIFICATIONS.get(lid, "unknown")
 
-        # 🛡️ PIL-CAL-03: Modality-Aware Enforcement Matrix (v22.5.3)
-        # Experimental structures reclassify resolution-dependent laws as advisory.
-        # This prevents false vetoes from coordinate uncertainty and method artifacts.
-        if _is_exp_source:
-            _method_type = getattr(structure.confidence, "method", "predicted")
-
-            # Laws advisory for ALL experimental methods:
-            # LAW-100 (Bond RMSZ depends on resolution/refinement)
-            if lid == "LAW-100":
-                method = "advisory_experimental"
-
-            # LAW-160 (Chain Integrity: multi-chain gap false positives pending code fix)
-            elif lid == "LAW-160":
-                method = "advisory_experimental"
-
-            # Laws advisory for Cryo-EM:
-            # LAW-170 (non-standard residues: ligands, nucleotides, modified residues are expected)
-            elif lid == "LAW-170" and _method_type == "cryo_em":
-                method = "advisory_experimental"
-
-            # Laws advisory for NMR:
-            # LAW-125 (Ramachandran: ensemble averaging broadens phi/psi distributions)
-            # LAW-170 (non-standard residues may appear in NMR buffers)
-            elif lid in ("LAW-125", "LAW-150", "LAW-170") and _method_type == "nmr":
-                method = "advisory_experimental"
+        # PIL-CAL-03: Modality-Aware Enforcement Matrix (v22.5.3)
+        # Delegated to modality_matrix.json — see modality_matrix.py for loader.
+        _method_type = getattr(structure.confidence, "method", "predicted") if _is_exp_source else "predicted"
+        method = resolve_method(
+            law_id=lid,
+            is_experimental=_is_exp_source,
+            method_type=_method_type,
+            default_method=method,
+        )
 
         # PIL-CAL-03: Advisory laws cannot VETO — normalize status
         raw_status = m.get("status", "FAIL")
@@ -150,7 +135,13 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
         "governance": {
             "audit_id": str(hashlib.md5(coord_hash.encode()).hexdigest()[:8]).upper(),
             "station_version": STATION_METADATA["version"],
-            "timestamp_utc": datetime.now(timezone.utc).isoformat()
+            "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+            "governance_fingerprint": {
+                "canon_hash": LAW_CANON_HASH,
+                "matrix_hash": compute_matrix_hash(),
+                "matrix_schema_version": get_matrix_meta()["schema_version"],
+                "policy_ref": get_matrix_meta()["policy_ref"],
+            },
         },
         "provenance": {"source": candidate_id, "hash": coord_hash, "byte_count": len(content_bytes)},
         "tier1": {"laws": res_t1}, "tier3": {"probability": p_score},
