@@ -1,0 +1,3 @@
+# Benchmark PDBs downloaded at runtime — not committed
+*.pdb
+!.gitignore

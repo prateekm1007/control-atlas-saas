@@ -12,7 +12,7 @@ from tos.ingestion.processor import IngestionProcessor
 from tos.engine.tier1_measurements import Tier1Measurements
 from tos.forensic_artifacts.pdf_generator import generate_v21_dossier
 from tos.governance.station_sop import (
-    LAW_CANON, STATION_METADATA, TOTAL_LAWS,
+    LAW_CANON, LAW_CANON_HASH, STATION_METADATA, TOTAL_LAWS,
     DETERMINISTIC_COUNT, HEURISTIC_COUNT,
     LAW_METHOD_CLASSIFICATIONS, SCORE_DEFINITIONS,
     ARCHITECTURE_WEIGHTS, BAYESIAN_FORMULA
@@ -21,7 +21,7 @@ from tos.generation.dispatcher import GenerationDispatcher
 from tos.enrichment.gemini_compiler import get_compiler
 from tos.utils.type_guards import force_bytes
 from tos.nkg.manager import get_nkg
-from tos.governance.modality_matrix import resolve_method, compute_matrix_hash
+from tos.governance.modality_matrix import resolve_method, compute_matrix_hash, get_matrix_meta
 from tos.engine.adjudicator import adjudicate_laws, AdjudicationInput
 
 logging.basicConfig(level=logging.INFO)
