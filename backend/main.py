@@ -24,6 +24,8 @@ from tos.nkg.manager import get_nkg
 from tos.governance.modality_matrix import resolve_method, compute_matrix_hash, get_matrix_meta
 from tos.engine.adjudicator import adjudicate_laws, AdjudicationInput
 from tos.schemas.response_v1 import ToscaniniResponse
+from tos.engine.batch_processor import process_batch
+from tos.schemas.batch_v1 import BatchResponse, BatchStructureResult, BatchSummary, FailingLawCount
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("toscanini.brain")
@@ -140,6 +142,53 @@ async def ingest(mode: str = Form(...), candidate_id: str = Form(...), t3_catego
     if file: content = await file.read()
     else: content, _, _ = GenerationDispatcher.acquire(candidate_id, None)
     return await asyncio.get_event_loop().run_in_executor(None, partial(_run_physics_sync, content, candidate_id, mode, t3_category))
+
+
+
+@app.post("/v1/batch", response_model=BatchResponse)
+async def batch_ingest(
+    mode: str = Form("Audit"),
+    t3_category: str = Form("NONE"),
+    file: UploadFile = File(...),
+):
+    """
+    Process a ZIP of PDB files and return per-structure verdicts with summary.
+    Synchronous execution — results returned directly.
+    """
+    zip_bytes = await file.read()
+
+    try:
+        batch_result = await asyncio.get_event_loop().run_in_executor(
+            None,
+            partial(process_batch, zip_bytes, _run_physics_sync, mode, t3_category),
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Convert dataclass results to Pydantic response
+    response_results = []
+    for r in batch_result.results:
+        response_results.append(BatchStructureResult(
+            filename=r.filename,
+            candidate_id=r.candidate_id,
+            success=r.success,
+            response=r.payload if r.success else None,
+            error=r.error,
+        ))
+
+    summary = BatchSummary(
+        total=batch_result.summary.total,
+        passed=batch_result.summary.passed,
+        vetoed=batch_result.summary.vetoed,
+        indeterminate=batch_result.summary.indeterminate,
+        errors=batch_result.summary.errors,
+        mean_deterministic_score=batch_result.summary.mean_deterministic_score,
+        common_failing_laws=[
+            FailingLawCount(**fl) for fl in batch_result.summary.common_failing_laws
+        ],
+    )
+
+    return BatchResponse(results=response_results, summary=summary)
 
 @app.get("/health")
 def health(): return {"status": "operational", "version": STATION_METADATA["version"]}
