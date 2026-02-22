@@ -2,7 +2,7 @@ import sys, os, base64, json, traceback, logging, asyncio, hashlib
 from pathlib import Path
 from functools import partial
 from datetime import datetime, timezone
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -26,6 +26,7 @@ from tos.engine.adjudicator import adjudicate_laws, AdjudicationInput
 from tos.schemas.response_v1 import ToscaniniResponse
 from tos.engine.batch_processor import process_batch
 from tos.schemas.batch_v1 import BatchResponse, BatchStructureResult, BatchSummary, FailingLawCount
+from tos.security.auth import verify_api_key, validate_upload, validate_batch_upload
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("toscanini.brain")
@@ -138,7 +139,7 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
     return payload
 
 @app.post("/ingest", response_model=ToscaniniResponse)
-async def ingest(mode: str = Form(...), candidate_id: str = Form(...), t3_category: str = Form("NONE"), file: UploadFile = File(None)):
+async def ingest(mode: str = Form(...), candidate_id: str = Form(...), t3_category: str = Form("NONE"), file: UploadFile = File(None), _auth=Depends(verify_api_key)):
     if file: content = await file.read()
     else: content, _, _ = GenerationDispatcher.acquire(candidate_id, None)
     return await asyncio.get_event_loop().run_in_executor(None, partial(_run_physics_sync, content, candidate_id, mode, t3_category))
@@ -150,6 +151,7 @@ async def batch_ingest(
     mode: str = Form("Audit"),
     t3_category: str = Form("NONE"),
     file: UploadFile = File(...),
+    _auth=Depends(verify_api_key),
 ):
     """
     Process a ZIP of PDB files and return per-structure verdicts with summary.
