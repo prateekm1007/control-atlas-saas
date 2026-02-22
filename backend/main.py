@@ -23,6 +23,7 @@ from tos.utils.type_guards import force_bytes
 from tos.nkg.manager import get_nkg
 from tos.governance.modality_matrix import resolve_method, compute_matrix_hash, get_matrix_meta
 from tos.engine.adjudicator import adjudicate_laws, AdjudicationInput
+from tos.schemas.response_v1 import ToscaniniResponse
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("toscanini.brain")
@@ -134,7 +135,7 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
     except: pass
     return payload
 
-@app.post("/ingest")
+@app.post("/ingest", response_model=ToscaniniResponse)
 async def ingest(mode: str = Form(...), candidate_id: str = Form(...), t3_category: str = Form("NONE"), file: UploadFile = File(None)):
     if file: content = await file.read()
     else: content, _, _ = GenerationDispatcher.acquire(candidate_id, None)
