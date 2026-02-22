@@ -26,7 +26,7 @@ from tos.engine.adjudicator import adjudicate_laws, AdjudicationInput
 from tos.schemas.response_v1 import ToscaniniResponse
 from tos.engine.batch_processor import process_batch
 from tos.schemas.batch_v1 import BatchResponse, BatchStructureResult, BatchSummary, FailingLawCount
-from tos.security.auth import verify_api_key, validate_upload, validate_batch_upload
+from tos.security.auth import verify_api_key, validate_upload, validate_batch_upload, enforce_size_limit
 from tos.telemetry.usage_logger import log_usage as log_usage_telemetry
 
 logging.basicConfig(level=logging.INFO)
@@ -143,7 +143,10 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
 
 @app.post("/ingest", response_model=ToscaniniResponse)
 async def ingest(mode: str = Form(...), candidate_id: str = Form(...), t3_category: str = Form("NONE"), file: UploadFile = File(None), _auth=Depends(verify_api_key)):
-    if file: content = await file.read()
+    if file:
+        validate_upload(file)
+        content = await file.read()
+        await enforce_size_limit(content)
     else: content, _, _ = GenerationDispatcher.acquire(candidate_id, None)
     return await asyncio.get_event_loop().run_in_executor(None, partial(_run_physics_sync, content, candidate_id, mode, t3_category))
 
@@ -160,7 +163,9 @@ async def batch_ingest(
     Process a ZIP of PDB files and return per-structure verdicts with summary.
     Synchronous execution — results returned directly.
     """
+    validate_batch_upload(file)
     zip_bytes = await file.read()
+    await enforce_size_limit(zip_bytes)
 
     try:
         batch_result = await asyncio.get_event_loop().run_in_executor(
