@@ -27,6 +27,7 @@ from tos.schemas.response_v1 import ToscaniniResponse
 from tos.engine.batch_processor import process_batch
 from tos.schemas.batch_v1 import BatchResponse, BatchStructureResult, BatchSummary, FailingLawCount
 from tos.security.auth import verify_api_key, validate_upload, validate_batch_upload
+from tos.telemetry.usage_logger import log_usage as log_usage_telemetry
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("toscanini.brain")
@@ -136,6 +137,8 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
 
     try: get_nkg().record_audit(payload)
     except: pass
+    try: log_usage_telemetry(get_nkg(), payload, "/ingest")
+    except: pass
     return payload
 
 @app.post("/ingest", response_model=ToscaniniResponse)
@@ -189,6 +192,14 @@ async def batch_ingest(
             FailingLawCount(**fl) for fl in batch_result.summary.common_failing_laws
         ],
     )
+
+    # Log usage per structure
+    try:
+        nkg = get_nkg()
+        for r in batch_result.results:
+            if r.success and r.payload:
+                log_usage_telemetry(nkg, r.payload, "/v1/batch")
+    except: pass
 
     return BatchResponse(results=response_results, summary=summary)
 

@@ -60,6 +60,44 @@ class NKGManager:
             "successes": [r for r in records if r.get("outcome_category") == "SUCCESS"][-limit:]
         }
 
+    def log_usage(self, record: dict):
+        """
+        Append a usage telemetry record.
+        Separate from record_audit to avoid contaminating the existing NKG format.
+        Writes to a dedicated usage log file.
+        Failure is swallowed — telemetry must never break adjudication.
+        """
+        usage_path = self.path.parent / "usage_log.jsonl"
+        try:
+            line = json.dumps(record) + "\n"
+            with open(usage_path, "a") as f:
+                fcntl.flock(f, fcntl.LOCK_EX)
+                try:
+                    f.write(line)
+                    f.flush()
+                    os.fsync(f.fileno())
+                finally:
+                    fcntl.flock(f, fcntl.LOCK_UN)
+        except Exception as e:
+            logger.warning(f"Usage log write failed (non-fatal): {e}")
+
+    def read_usage(self, limit=50):
+        """Read recent usage records."""
+        usage_path = self.path.parent / "usage_log.jsonl"
+        if not usage_path.exists():
+            return []
+        records = []
+        with open(usage_path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        records.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
+        return records[-limit:]
+
+
 _nkg = None
 def get_nkg():
     global _nkg
