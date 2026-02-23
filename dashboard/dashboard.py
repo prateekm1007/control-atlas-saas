@@ -1,91 +1,443 @@
+"""
+dashboard/dashboard.py
+Toscanini Dashboard v2 — Forensic Structural Validation UI
+
+Replaces legacy dashboard.py (Arena/Warhead edition).
+All backend contracts verified against live API before writing.
+
+LOCKED INVARIANTS:
+  - /ingest      POST  Form(mode, candidate_id, t3_category) + File(optional)
+  - /v1/batch    POST  Form(mode, t3_category) + File(zip, required)
+  - /search      POST  Form(query)
+  - /laws        GET   -> {"laws": {law_id: {title,threshold,unit,operator,scope,type}}}
+  - /nkg         GET   -> {"vetoes": [], "successes": [], "total_vetoes": int, "total_successes": int}
+  - /definitions GET   -> {score_key: {title, explanation}}
+
+RESPONSE SHAPE (ToscaniniResponse):
+  verdict.binary                    -> "PASS" | "VETO" | "INDETERMINATE"
+  verdict.deterministic_score       -> int 0-100  [HERO METRIC]
+  verdict.advisory_score            -> int 0-100
+  verdict.physical_score            -> int 0-100
+  verdict.confidence_score          -> float
+  verdict.det_passed / det_total    -> int
+  verdict.heur_passed / heur_total  -> int
+  verdict.coverage_pct              -> float
+  verdict.suppression_reason        -> str | None
+  governance.audit_id               -> str
+  governance.station_version        -> str
+  governance.timestamp_utc          -> str
+  governance.governance_fingerprint.canon_hash
+  governance.governance_fingerprint.matrix_hash
+  tier1.laws[]                      -> law_id, title, status, method, observed,
+                                       threshold, operator, units, deviation,
+                                       sample_size, scope, principle
+  tier3.probability                 -> int 0-100
+  characterization.total_atoms      -> int
+  characterization.total_residues   -> int
+  characterization.source_type      -> str
+  characterization.resolution       -> float | None
+  witness_reports.executive         -> str
+  witness_reports.deep_dive         -> str
+  witness_reports.recommendation    -> str
+  ai_model_used                     -> str | None
+  pdf_b64                           -> str
+  pdb_b64                           -> str
+
+BATCH SHAPE (BatchResponse):
+  summary.total / passed / vetoed / indeterminate / errors -> int
+  summary.mean_deterministic_score  -> float
+  summary.common_failing_laws[]     -> {law_id: str, count: int}
+  results[]                         -> filename, candidate_id, success,
+                                       response (ToscaniniResponse|None), error
+
+STYLE:
+  apply_arena_theme()               -> injects CSS
+  get_active_theme()                -> dict of color tokens
+  get_active_theme_name()           -> str
+  score_color(value, max_val=100)   -> hex color str
+  render_lifecycle_header(state)    -> renders chip strip
+  THEMES                            -> {"Biotech Noir": {...}, "Clinical White": {...}}
+
+DEPENDENCIES (requirements.txt unchanged):
+  streamlit>=1.29.0
+  requests>=2.31.0
+  py3Dmol>=2.0.4
+"""
+
 import streamlit as st
-import requests, base64, json, os
+import requests
+import base64
+import os
+import hashlib
+import zipfile
+import io
+from datetime import datetime, timezone
+
 from style_utils import (
-    apply_arena_theme, render_lifecycle_header, score_color,
-    THEMES, get_active_theme, get_active_theme_name,
+    apply_arena_theme,
+    get_active_theme,
+    get_active_theme_name,
+    score_color,
+    render_lifecycle_header,
+    THEMES,
 )
 
-st.set_page_config(page_title="TOSCANINI OS", layout="wide", page_icon="🛡️")
-
-if "noir_toggle" in st.session_state:
-    st.session_state.toscanini_theme = (
-        "Biotech Noir" if st.session_state.noir_toggle else "Clinical White"
-    )
-
-apply_arena_theme()
+# ===============================================================
+# CONFIGURATION
+# ===============================================================
 
 BACKEND = os.getenv("BACKEND_URL", "http://brain:8000")
 API_KEY = os.getenv("TOSCANINI_API_KEY", "")
 
-WARHEADS = [
+T3_CATEGORIES = [
     "NONE", "LINEAR", "MULTIVALENT", "ENGAGEMENT",
     "MOTIFS", "LINKERS", "CONFORMATIONAL", "METAL",
 ]
 
 BENCHMARK_CRYSTALS = [
-    {"pdb_id": "3NIR", "name": "Endothiapepsin (Ultra-High)", "resolution": 0.48, "method": "X-ray", "af_id": "AF-P11838-F1"},
-    {"pdb_id": "2VB1", "name": "Insulin (Atomic)", "resolution": 0.65, "method": "X-ray", "af_id": "AF-P01308-F1"},
-    {"pdb_id": "1CRN", "name": "Crambin", "resolution": 1.50, "method": "X-ray", "af_id": "AF-P01542-F1"},
-    {"pdb_id": "4HHB", "name": "Hemoglobin (Deoxy)", "resolution": 1.74, "method": "X-ray", "af_id": "AF-P69905-F1"},
-    {"pdb_id": "1UBQ", "name": "Ubiquitin", "resolution": 1.80, "method": "X-ray", "af_id": "AF-P0CG47-F1"},
-    {"pdb_id": "6LZG", "name": "SARS-CoV-2 RBD", "resolution": 2.50, "method": "X-ray", "af_id": "AF-P0DTC2-F1"},
-    {"pdb_id": "7BV2", "name": "RdRp Complex (Cryo-EM)", "resolution": 2.50, "method": "Cryo-EM", "af_id": "AF-P0DTD1-F1"},
-    {"pdb_id": "1G03", "name": "Protein G (NMR)", "resolution": 0.00, "method": "NMR", "af_id": "AF-P06654-F1"},
+    {"pdb_id": "3NIR", "name": "Endothiapepsin (Ultra-High)", "resolution": 0.48, "method": "X-ray",   "af_id": "AF-P11838-F1"},
+    {"pdb_id": "2VB1", "name": "Insulin (Atomic)",            "resolution": 0.65, "method": "X-ray",   "af_id": "AF-P01308-F1"},
+    {"pdb_id": "1CRN", "name": "Crambin",                     "resolution": 1.50, "method": "X-ray",   "af_id": "AF-P01542-F1"},
+    {"pdb_id": "4HHB", "name": "Hemoglobin (Deoxy)",          "resolution": 1.74, "method": "X-ray",   "af_id": "AF-P69905-F1"},
+    {"pdb_id": "1UBQ", "name": "Ubiquitin",                   "resolution": 1.80, "method": "X-ray",   "af_id": "AF-P0CG47-F1"},
+    {"pdb_id": "6LZG", "name": "SARS-CoV-2 RBD",              "resolution": 2.50, "method": "X-ray",   "af_id": "AF-P0DTC2-F1"},
+    {"pdb_id": "7BV2", "name": "RdRp Complex (Cryo-EM)",      "resolution": 2.50, "method": "Cryo-EM", "af_id": "AF-P0DTD1-F1"},
+    {"pdb_id": "1G03", "name": "Protein G (NMR)",             "resolution": 0.00, "method": "NMR",     "af_id": "AF-P06654-F1"},
 ]
 
+# ===============================================================
+# PAGE CONFIG — must be first Streamlit call
+# ===============================================================
 
-def api(method, path, **kwargs):
+st.set_page_config(
+    page_title="Toscanini · Structural Validation",
+    layout="wide",
+    page_icon="🔬",
+)
+
+# ===============================================================
+# THEME BOOTSTRAP
+# noir_toggle must exist in session_state before apply_arena_theme()
+# ===============================================================
+
+if "noir_toggle" not in st.session_state:
+    st.session_state.noir_toggle = True
+
+apply_arena_theme()
+
+# ===============================================================
+# SESSION STATE INITIALISATION
+# ===============================================================
+
+if "audit_result" not in st.session_state:
+    st.session_state.audit_result = None
+if "candidates" not in st.session_state:
+    st.session_state.candidates = []
+if "benchmark_results" not in st.session_state:
+    st.session_state.benchmark_results = {}
+
+
+# ===============================================================
+# §0  THE SINGLE API CONDUIT
+# Every outbound call passes through here.
+# Injects X-API-Key. Returns parsed JSON or None on failure.
+# No physics. No scoring. Transport only.
+# ===============================================================
+
+def api(method: str, path: str, **kwargs):
     headers = kwargs.pop("headers", {})
     if API_KEY:
         headers["X-API-Key"] = API_KEY
     try:
         r = requests.request(
-            method, f"{BACKEND}{path}", timeout=180, headers=headers, **kwargs
+            method,
+            f"{BACKEND}{path}",
+            timeout=180,
+            headers=headers,
+            **kwargs,
         )
         r.raise_for_status()
         return r.json()
-    except Exception as e:
-        st.error(f"Backend Link Error ({path}): {e}")
+    except requests.exceptions.ConnectionError:
+        st.error(f"**Connection refused** -> `{BACKEND}{path}`\n\nIs the backend container running?")
+        return None
+    except requests.exceptions.HTTPError as exc:
+        code = exc.response.status_code
+        try:
+            detail = exc.response.json().get("detail", exc.response.text[:300])
+        except Exception:
+            detail = exc.response.text[:300]
+        st.error(f"**API {code}** on `{path}`: {detail}")
+        return None
+    except Exception as exc:
+        st.error(f"**Unexpected error** on `{path}`: {exc}")
         return None
 
 
-def render_3d_viewer(pdb_b64, verdict, height=500, width=None):
-    try:
-        pdb_str = base64.decodebytes(pdb_b64.encode()).decode("utf-8", errors="ignore")
-        if len(pdb_str.strip()) < 50:
-            return
-        import py3Dmol
-        import streamlit.components.v1 as components
+# ===============================================================
+# §1  SHARED RENDERING HELPERS
+# Display only. No math, no logic, no scoring.
+# ===============================================================
 
-        t = get_active_theme()
-        w = width or 700
-        view = py3Dmol.view(width=w, height=height)
-        view.addModel(pdb_str, "pdb")
-        if verdict == "PASS":
-            view.setStyle({"cartoon": {"color": "spectrum"}})
-        else:
-            view.setStyle(
-                {"stick": {"colorscheme": "orangeCarbon"}, "sphere": {"radius": 0.5}}
-            )
-        view.setBackgroundColor(t["viz_bg"])
-        view.zoomTo()
-        components.html(view._make_html(), height=height + 20, width=w + 20, scrolling=False)
-    except Exception as e:
-        st.warning(f"Visualizer Unavailable: {e}")
+def _binary_color(binary: str) -> str:
+    return {"PASS": "#00CC66", "VETO": "#FF4444"}.get(binary, "#FFB833")
 
 
-def run_benchmark_audit(candidate_id):
-    return api(
-        "POST", "/ingest",
-        data={"mode": "Benchmark", "candidate_id": candidate_id, "t3_category": "NONE"},
+def render_verdict_banner(binary: str, det_score: int, det_passed: int, det_total: int) -> None:
+    t = get_active_theme()
+    color = _binary_color(binary)
+    label = {"PASS": "PASS", "VETO": "VETO"}.get(binary, binary)
+    icon  = {"PASS": "✅", "VETO": "🛑"}.get(binary, "⚠️")
+    st.markdown(
+        f"""
+        <div style="
+            background:linear-gradient(135deg,{color}1A,{color}08);
+            border-left:4px solid {color};
+            padding:1rem 1.5rem;
+            border-radius:4px;
+            margin-bottom:1rem;
+            font-family:'Courier New',monospace;
+        ">
+            <span style="font-size:1.5rem;font-weight:800;color:{color};">
+                {icon} {label}
+            </span>
+            <span style="margin-left:2rem;font-size:1rem;color:{t['text']};">
+                Deterministic: <strong>{det_score}%</strong>
+            </span>
+            <span style="margin-left:1.5rem;font-size:0.85rem;color:{t['muted']};">
+                {det_passed}/{det_total} laws satisfied
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
 
-def render_law_comparison_table(crystal_laws, af_laws):
-    """Render side-by-side law comparison. Tolerates empty/None inputs."""
-    crystal_laws = crystal_laws or []
-    af_laws = af_laws or []
-    t = get_active_theme()
+def render_score_row(verdict: dict) -> None:
+    det  = verdict.get("deterministic_score", 0)
+    adv  = verdict.get("advisory_score", 0)
+    phys = verdict.get("physical_score", 0)
+    conf = verdict.get("confidence_score", 0.0)
+    t    = get_active_theme()
+    det_color = score_color(det)
+
+    st.markdown(
+        f"""
+        <div style="
+            background:{det_color}18;
+            border:1px solid {det_color}55;
+            border-radius:6px;
+            padding:0.8rem 1.2rem;
+            margin-bottom:0.75rem;
+            font-family:'Courier New',monospace;
+        ">
+            <div style="font-size:0.7rem;color:{t['muted']};letter-spacing:0.08em;">
+                DETERMINISTIC INTEGRITY
+            </div>
+            <div style="font-size:2.2rem;font-weight:800;color:{det_color};line-height:1.1;">
+                {det}%
+            </div>
+            <div style="font-size:0.72rem;color:{t['muted']};margin-top:2px;">
+                Physical law compliance relative to crystallographic ideals
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Advisory Score", f"{adv}%",        help="Statistical proxies for structural plausibility.")
+    c2.metric("Physical Score", f"{phys}%",        help="Same basis as deterministic; present for traceability.")
+    c3.metric("ML Confidence",  f"{round(conf,1)}", help="Model-reported mean pLDDT.")
+
+
+def render_law_ledger(laws: list) -> None:
+    if not laws:
+        st.info("No law evaluations returned.")
+        return
+
+    METHOD_META = {
+        "deterministic":         ("🟢", "Deterministic",           "Core physical invariant. Failure triggers a VETO."),
+        "advisory_experimental": ("🟡", "Advisory (Experimental)", "Reported for transparency. Excluded from deterministic score."),
+        "heuristic":             ("🔵", "Heuristic",               "Statistical proxy. Does not trigger VETO."),
+    }
+
+    for law in laws:
+        status    = law.get("status", "UNKNOWN")
+        method    = law.get("method", "deterministic")
+        law_id    = law.get("law_id", "?")
+        title     = law.get("title", law_id)
+        observed  = law.get("observed", "—")
+        threshold = law.get("threshold", "—")
+        operator  = law.get("operator", "")
+        units     = law.get("units", "")
+        deviation = law.get("deviation", "—")
+        scope     = law.get("scope", "—")
+        size      = law.get("sample_size", "—")
+        principle = law.get("principle", "N/A")
+
+        status_icon           = "✅" if status == "PASS" else "🛑"
+        m_icon, m_label, m_help = METHOD_META.get(method, ("⚪", method, ""))
+
+        with st.expander(
+            f"{status_icon} {law_id}: {title} — {status} [{m_icon} {m_label}]",
+            expanded=False,
+        ):
+            if m_help:
+                st.caption(f"ℹ️ {m_help}")
+            col_a, col_b = st.columns(2)
+            col_a.markdown(f"**Observed:** `{observed} {units}`")
+            col_a.markdown(f"**Threshold:** `{operator} {threshold} {units}`")
+            col_a.markdown(f"**Deviation:** {deviation}")
+            col_b.markdown(f"**Scope:** {scope}")
+            col_b.markdown(f"**Sample Size:** {size}")
+            if principle and principle != "N/A":
+                st.caption(f"Principle: {principle}")
+
+
+def render_governance_fingerprint(governance: dict) -> None:
+    with st.expander("🛡️ Governance Fingerprint", expanded=False):
+        fp = governance.get("governance_fingerprint", {})
+        c1, c2 = st.columns(2)
+        c1.code(f"Canon Hash  : {fp.get('canon_hash', 'n/a')}")
+        matrix_hash = fp.get('matrix_hash', 'n/a')
+        c2.code(f"Matrix Hash : {matrix_hash[:32]}...")
+        st.caption(
+            f"Audit ID: `{governance.get('audit_id', 'n/a')}` · "
+            f"Engine: v{governance.get('station_version', '?')} · "
+            f"{governance.get('timestamp_utc', '')[:19].replace('T', ' ')} UTC"
+        )
+        st.caption(
+            f"Schema: {fp.get('matrix_schema_version', '?')} · "
+            f"Policy: {fp.get('policy_ref', '?')}"
+        )
+
+
+def render_characterization(char: dict) -> None:
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Total Atoms",    char.get("total_atoms",    "—"))
+    c2.metric("Total Residues", char.get("total_residues", "—"))
+    c3.metric("Source Type",    char.get("source_type",    "—"))
+    res = char.get("resolution")
+    c4.metric("Resolution", f"{res:.2f} Å" if res else "N/A (NMR/Predicted)")
+
+
+def render_3d_viewer(pdb_b64: str, binary: str, height: int = 500, width: int = 700) -> None:
+    try:
+        pdb_str = base64.decodebytes(pdb_b64.encode()).decode("utf-8", errors="ignore")
+        if len(pdb_str.strip()) < 50:
+            st.warning("3D viewer: PDB payload too small to render.")
+            return
+        import py3Dmol
+        import streamlit.components.v1 as components
+        t = get_active_theme()
+        view = py3Dmol.view(width=width, height=height)
+        view.addModel(pdb_str, "pdb")
+        if binary == "PASS":
+            view.setStyle({"cartoon": {"color": "spectrum"}})
+        else:
+            view.setStyle({
+                "stick":  {"colorscheme": "orangeCarbon"},
+                "sphere": {"radius": 0.5},
+            })
+        view.setBackgroundColor(t["viz_bg"])
+        view.zoomTo()
+        components.html(view._make_html(), height=height + 20, width=width + 20, scrolling=False)
+    except ImportError:
+        st.warning("py3Dmol not installed — 3D viewer unavailable.")
+    except Exception as exc:
+        st.warning(f"Visualizer unavailable: {exc}")
+
+
+def render_witness_reports(witness: dict, ai_model: str | None) -> None:
+    with st.expander("🤖 AI Witness Analysis", expanded=False):
+        executive = witness.get("executive", "")
+        if executive:
+            st.info(executive)
+        else:
+            st.caption("Executive summary unavailable.")
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown("**Deep Dive Analysis**")
+            st.write(witness.get("deep_dive", "Analysis pending."))
+        with col_b:
+            st.markdown("**Governance Recommendation**")
+            st.write(witness.get("recommendation", "Awaiting human review."))
+        if ai_model:
+            st.caption(f"Narrative Model: {ai_model}")
+
+
+def render_pdf_download(pdf_b64: str, audit_id: str) -> None:
+    if pdf_b64:
+        pdf_bytes = base64.b64decode(pdf_b64)
+        st.download_button(
+            label="📄 Download Forensic Dossier (PDF)",
+            data=pdf_bytes,
+            file_name=f"TOSCANINI_DOSSIER_{audit_id}.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+        )
+    else:
+        st.error("PIL-PAR-14 VIOLATION: PDF byte-stream not found in payload.")
+
+
+def render_full_audit_result(res: dict) -> None:
+    v       = res.get("verdict", {})
+    binary  = v.get("binary", "UNKNOWN")
+    gov     = res.get("governance", {})
+    char    = res.get("characterization", {})
+    witness = res.get("witness_reports") or {}
+    laws    = res.get("tier1", {}).get("laws", [])
+
+    render_verdict_banner(
+        binary,
+        v.get("deterministic_score", 0),
+        v.get("det_passed", 0),
+        v.get("det_total", 0),
+    )
+    render_score_row(v)
+
+    st.divider()
+    st.subheader("Structure Characterization")
+    render_characterization(char)
+
+    st.divider()
+    st.subheader("📋 Tier-1 Diagnostic Ledger")
+    st.caption(
+        "🟢 Deterministic = governs PASS/VETO  |  "
+        "🟡 Advisory = reported only, not scored  |  "
+        "🔵 Heuristic = statistical proxy"
+    )
+    render_law_ledger(laws)
+
+    st.divider()
+    if witness:
+        render_witness_reports(witness, res.get("ai_model_used"))
+
+    render_governance_fingerprint(gov)
+
+    st.divider()
+    st.subheader("🧬 Forensic 3D Reconstruction")
+    pdb_b64 = res.get("pdb_b64", "")
+    if pdb_b64:
+        render_3d_viewer(pdb_b64, binary, height=550, width=780)
+    else:
+        st.info("No PDB payload returned.")
+
+    st.divider()
+    render_pdf_download(res.get("pdf_b64", ""), gov.get("audit_id", "ARTIFACT"))
+
+
+def render_law_comparison_table(crystal_laws: list, af_laws: list) -> None:
+    t     = get_active_theme()
+    c_map = {l["law_id"]: l for l in (crystal_laws or [])}
+    a_map = {l["law_id"]: l for l in (af_laws or [])}
+    all_ids = sorted(set(list(c_map.keys()) + list(a_map.keys())))
+
+    if not all_ids:
+        st.info("No laws to compare.")
+        return
+
     header = (
         f'<tr style="background:{t["surface"]};border-bottom:2px solid {t["border"]};">'
         f'<th style="padding:8px;color:{t["text"]};text-align:left;">Law</th>'
@@ -95,323 +447,432 @@ def render_law_comparison_table(crystal_laws, af_laws):
         f'<th style="padding:8px;color:{t["text"]};text-align:right;">Threshold</th>'
         f'</tr>'
     )
-    c_map = {l["law_id"]: l for l in crystal_laws} if crystal_laws else {}
-    a_map = {l["law_id"]: l for l in af_laws} if af_laws else {}
-    all_ids = sorted(set(list(c_map.keys()) + list(a_map.keys())))
+
+    def _cell(law_row):
+        if not law_row:
+            return f'<span style="color:{t["muted"]};">—</span>'
+        s     = law_row.get("status", "?")
+        val   = law_row.get("observed", "?")
+        units = law_row.get("units", "")
+        color = "#00CC66" if s == "PASS" else "#FF4444"
+        badge = ""
+        if law_row.get("method") == "advisory_experimental":
+            badge = (
+                ' <span style="font-size:0.65rem;color:#D4A017;background:#3a3000;'
+                'padding:1px 4px;border-radius:3px;">ADV</span>'
+            )
+        return f'<span style="color:{color};font-weight:bold;">{val} {units}</span> ({s}){badge}'
+
     rows = ""
     for lid in all_ids:
-        c = c_map.get(lid)
-        a = a_map.get(lid)
-        if c and c.get("method") not in ("deterministic", "advisory_experimental"):
-            continue
-        if a and a.get("method") not in ("deterministic", "advisory_experimental"):
-            continue
-        title = (c or a or {}).get("title", lid)
-        thresh = (c or a or {}).get("threshold", "—")
-        op = (c or a or {}).get("operator", "")
-        units = (c or a or {}).get("units", "")
-
-        def _cell(law_row):
-            if not law_row:
-                return f'<span style="color:{t["muted"]};">—</span>'
-            s = law_row["status"]
-            val = law_row["observed"]
-            color = "#00CC66" if s == "PASS" else "#FF4444"
-            method_badge = ""
-            if law_row.get("method") == "advisory_experimental":
-                method_badge = f' <span style="font-size:0.65rem;color:#D4A017;background:#3a3000;padding:1px 4px;border-radius:3px;">ADV</span>'
-            return f'<span style="color:{color};font-weight:bold;">{val} {units}</span> ({s}){method_badge}'
-
+        c        = c_map.get(lid)
+        a        = a_map.get(lid)
+        row_data = c or a or {}
+        title    = row_data.get("title", lid)
+        thresh   = row_data.get("threshold", "—")
+        op       = row_data.get("operator", "")
+        units    = row_data.get("units", "")
         rows += (
             f'<tr style="border-bottom:1px solid {t["border"]};">'
             f'<td style="padding:6px;color:{t["text"]};font-family:monospace;">{lid}</td>'
             f'<td style="padding:6px;color:{t["text"]};">{title}</td>'
             f'<td style="padding:6px;text-align:center;">{_cell(c)}</td>'
             f'<td style="padding:6px;text-align:center;">{_cell(a)}</td>'
-            f'<td style="padding:6px;text-align:right;color:{t["muted"]};font-family:monospace;">{op} {thresh} {units}</td>'
+            f'<td style="padding:6px;text-align:right;color:{t["muted"]};font-family:monospace;">'
+            f'{op} {thresh} {units}</td>'
             f'</tr>'
         )
+
     st.markdown(
-        f'<table style="width:100%;border-collapse:collapse;margin-top:10px;">{header}{rows}</table>',
+        f'<table style="width:100%;border-collapse:collapse;">{header}{rows}</table>',
         unsafe_allow_html=True,
     )
 
 
-def render_law_badge(law):
-    """Render a single law with method-aware badge (Task 1)."""
-    method = law.get("method", "unknown")
-    status = law["status"]
+# ===============================================================
+# §2  SIDEBAR
+# ===============================================================
 
-    if status == "PASS":
-        icon = "✅"
-    else:
-        icon = "🛑"
-
-    if method == "advisory_experimental":
-        badge = "🟡 Advisory (Experimental)"
-        badge_help = "Reported for transparency. Excluded from deterministic score."
-    elif method == "deterministic":
-        badge = "🟢 Deterministic"
-        badge_help = "Counts toward deterministic governance score."
-    elif method == "heuristic":
-        badge = "🔵 Heuristic"
-        badge_help = "Statistical proxy. Does not trigger VETO."
-    else:
-        badge = f"⚪ {method}"
-        badge_help = ""
-
-    return icon, badge, badge_help
-
-
-# ── Session State ───────────────────────────────────────────
-if "audit_result" not in st.session_state:
-    st.session_state.audit_result = None
-if "candidates" not in st.session_state:
-    st.session_state.candidates = []
-if "benchmark_results" not in st.session_state:
-    st.session_state.benchmark_results = {}
-
-# ═══════════════════════════════════════════════════════════════
-# SIDEBAR
-# ═══════════════════════════════════════════════════════════════
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/1042/1042307.png", width=80)
+    st.image("https://cdn-icons-png.flaticon.com/512/1042/1042307.png", width=72)
     st.title("STATION CONFIG")
-    st.markdown(
-        '<div style="display:flex;align-items:center;gap:6px;margin:4px 0 8px 0;">'
-        '<span style="font-size:1.1rem;">☀️</span>'
-        '</div>',
-        unsafe_allow_html=True,
-    )
-    st.toggle("🌙", value=True, key="noir_toggle", label_visibility="visible")
-    st.divider()
-    warhead = st.radio(
-        "🎯 ARCHITECTURE WARHEAD", WARHEADS, index=0,
-        help="Selects therapeutic class weighting.",
-    )
-    st.divider()
-    st.caption(f"Engine: v22.5.x | Theme: {get_active_theme_name()}")
-    st.caption("Status: ONLINE")
 
-# ── Header ──────────────────────────────────────────────────
+    st.toggle("Dark Mode", key="noir_toggle")
+    apply_arena_theme()
+
+    st.divider()
+
+    t3_category = st.radio(
+        "⚙️ Tier-3 Strategic Weighting",
+        T3_CATEGORIES,
+        index=0,
+        help="Selects therapeutic class weighting. NONE = canonical physics only.",
+    )
+
+    st.divider()
+    st.caption(f"Theme: {get_active_theme_name()}")
+
+    try:
+        health = requests.get(f"{BACKEND}/health", timeout=3).json()
+        st.caption(f"Engine: v{health.get('version', '?')} · {health.get('status', '?').upper()}")
+    except Exception:
+        st.caption("⚠️ Backend unreachable")
+
+
+# ===============================================================
+# §3  HEADER + LIFECYCLE STRIP
+# ===============================================================
+
 t = get_active_theme()
 st.markdown(
     f'<h1 style="color:{t["accent"]};text-align:center;font-family:Courier New;'
-    f'margin-bottom:0px;">🛡️ TOSCANINI</h1>',
+    f'margin-bottom:0px;">🔬 TOSCANINI</h1>',
     unsafe_allow_html=True,
 )
-current_state = "INSTANTIATED"
-if st.session_state.audit_result:
-    current_state = "AUDITED"
-elif st.session_state.candidates:
-    current_state = "ACQUIRING"
-render_lifecycle_header(current_state)
-
-t_work, t_bench, t_valid, t_nkg, t_laws = st.tabs(
-    ["⚡ Resolve", "🔬 Benchmark", "📊 Validation Dataset", "🧠 Knowledge Graph", "📜 Law Canon"]
+st.markdown(
+    f'<p style="text-align:center;color:{t["muted"]};font-size:0.8rem;'
+    f'margin-top:0;font-family:Courier New;">Forensic Structural Validation Engine</p>',
+    unsafe_allow_html=True,
 )
 
-# ═══════════════════════════════════════════════════════════════
-# TAB 1: RESOLVE
-# ═══════════════════════════════════════════════════════════════
-with t_work:
-    if not st.session_state.audit_result:
-        st.subheader("🔍 Structure Discovery")
-        q = st.text_input("UNIPROT / ALPHAFOLD RESOLUTION", placeholder="e.g. insulin, EGFR, p53...")
-        if st.button("EXECUTE EXHAUSTIVE RESOLUTION", type="primary", use_container_width=True):
-            if q.strip():
-                with st.spinner("Searching Global Repositories..."):
-                    resp = api("POST", "/search", data={"query": q})
-                    if resp and "results" in resp:
-                        st.session_state.candidates = resp["results"]
-                    else:
-                        st.warning("Resolution returned 0 isoforms.")
-        if st.session_state.candidates:
-            st.divider()
-            for i, c in enumerate(st.session_state.candidates):
-                col_label, col_btn = st.columns([5, 1])
-                with col_label:
-                    st.markdown(f"**{c.get('id')}** - {c.get('label')}")
-                with col_btn:
-                    if st.button("⚡ AUDIT", key=f"audit_{i}"):
-                        with st.spinner("Executing Refusal Engine..."):
-                            res = api("POST", "/ingest", data={"mode": "Discovery", "candidate_id": c["id"], "t3_category": warhead})
-                            if res:
-                                st.session_state.audit_result = res
-                                st.rerun()
-    else:
+if st.session_state.audit_result:
+    _lifecycle_state = "AUDITED"
+elif st.session_state.candidates:
+    _lifecycle_state = "ACQUIRING"
+else:
+    _lifecycle_state = "INSTANTIATED"
+
+render_lifecycle_header(_lifecycle_state)
+
+
+# ===============================================================
+# §4  TAB LAYOUT
+# ===============================================================
+
+tab_audit, tab_batch, tab_bench, tab_ref = st.tabs(
+    ["⚡ Audit", "📦 Batch", "🔬 Benchmark", "📜 Reference"]
+)
+
+
+# ===============================================================
+# TAB 1 — AUDIT (Single Structure)
+# ===============================================================
+
+with tab_audit:
+    if st.session_state.audit_result:
         res = st.session_state.audit_result
-        v = res.get("verdict", {})
-        binary = v.get("binary", "ERROR")
-        if binary == "PASS":
-            st.success("✅ STRUCTURE PASSED: ALL DETERMINISTIC INVARIANTS SATISFIED")
-        elif binary == "VETO":
-            st.error(f"🛑 DETERMINISTIC VETO: {', '.join(v.get('killer_laws', []))}")
-        else:
-            st.warning(f"⚠️ VERDICT: {binary}")
 
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("DETERMINISTIC", f"{v.get('deterministic_score', 0)}%")
-        m2.metric("ADVISORY", f"{v.get('advisory_score', 0)}%")
-        m3.metric("pLDDT (CORE)", f"{round(v.get('confidence_score', 0), 1)}")
-        m4.metric("EPI PRIORITY", f"{res.get('tier3', {}).get('probability', 0)}%")
-
-        st.divider()
-        st.subheader("🤖 PhD Witness Report")
-        witness = res.get("witness_reports", {})
-        st.info(witness.get("executive", "Executive Summary Unreachable."))
-        col_a, col_b = st.columns(2)
-        with col_a:
-            with st.expander("🔬 Deep Dive Analysis", expanded=True):
-                st.write(witness.get("deep_dive", "Analysis pending."))
-        with col_b:
-            with st.expander("💡 Governance Recommendation", expanded=True):
-                st.write(witness.get("recommendation", "Awaiting human review."))
-        st.caption(f"Narrative Model: {res.get('ai_model_used', 'Internal Fallback')}")
-
-        st.divider()
-        st.subheader("🧬 Forensic 3D Reconstruction")
-        if res.get("pdb_b64"):
-            render_3d_viewer(res["pdb_b64"], binary, height=600, width=800)
-
-        # ── TASK 1: Advisory-aware Diagnostic Ledger ────────────
-        st.divider()
-        st.subheader("📋 Tier-1 Diagnostic Ledger")
-        st.caption("🟢 Deterministic = counts toward score | 🟡 Advisory = reported only, not scored | 🔵 Heuristic = statistical proxy")
-
-        laws = res.get("tier1", {}).get("laws", [])
-        for law in laws:
-            # 🛡️ PIL-CAL-02: Advisory-aware Badge Logic
-            method = law.get("method", "deterministic")
-            if method == "advisory_experimental":
-                m_icon, m_label = "🟡", "Advisory (Experimental)"
-                m_help = "Reported for transparency but excluded from deterministic adjudication."
-            elif method == "deterministic":
-                m_icon, m_label = "🟢", "Deterministic"
-                m_help = "Core physical invariant. Failure triggers a VETO."
-            else:
-                m_icon, m_label = "🔵", "Heuristic"
-                m_help = "Statistical proxy for structural plausibility."
-            icon, badge, badge_help = render_law_badge(law)
-            with st.expander(f"{icon} {law['law_id']}: {law['title']} — {law['status']} [{m_icon} {m_label}]"):
-                if badge_help:
-                    st.caption(f"ℹ️ {badge_help}")
-                st.write(f"**Observed:** {law['observed']} {law['units']}")
-                st.write(f"**Threshold:** {law['operator']} {law['threshold']} {law['units']}")
-                st.write(f"**Deviation:** {law['deviation']}")
-                st.write(f"**Evaluation Scope:** {law['sample_size']} {law['scope']}")
-                st.write(f"**Classification:** {badge}")
-
-        st.divider()
-        if res.get("pdf_b64"):
-            pdf_bytes = base64.b64decode(res["pdf_b64"])
-            st.download_button(
-                label="📄 DOWNLOAD FORENSIC DOSSIER (PDF)", data=pdf_bytes,
-                file_name=f"TOSCANINI_DOSSIER_{res.get('governance', {}).get('audit_id', 'ARTIFACT')}.pdf",
-                mime="application/pdf", use_container_width=True,
-            )
-        else:
-            st.error("PIL-PAR-14 VIOLATION: PDF byte-stream not found in payload.")
-
-        if st.button("🔄 RETURN TO COMMAND CENTER", use_container_width=True):
+        if st.button("🔄 Return to Command Center", use_container_width=True):
             st.session_state.audit_result = None
+            st.session_state.candidates   = []
             st.rerun()
 
-# ═══════════════════════════════════════════════════════════════
-# TAB 2: BENCHMARK (Task 3 — expanded dataset)
-# ═══════════════════════════════════════════════════════════════
-with t_bench:
-    st.subheader("🔬 Benchmark Mode — Experimental vs Predicted")
+        st.divider()
+        render_full_audit_result(res)
+
+    else:
+        st.subheader("Upload Structure for Audit")
+        uploaded_file = st.file_uploader(
+            "Upload a PDB or CIF file",
+            type=["pdb", "cif"],
+            key="audit_file_upload",
+            help="File is validated deterministically through the full 15-law canon.",
+        )
+
+        if uploaded_file is not None:
+            raw_name = uploaded_file.name
+            stem = raw_name.rsplit(".", 1)[0] if "." in raw_name else raw_name
+            if stem.strip():
+                candidate_id = stem.strip()
+            else:
+                candidate_id = "UPLOAD_" + hashlib.md5(uploaded_file.getvalue()).hexdigest()[:8].upper()
+
+            st.caption(f"Candidate ID: `{candidate_id}` · Weighting: `{t3_category}`")
+
+            if st.button("⚡ Run Audit", type="primary", use_container_width=True):
+                with st.spinner(f"Validating `{candidate_id}` through 15-law canon…"):
+                    res = api(
+                        "POST", "/ingest",
+                        data={"mode": "Audit", "candidate_id": candidate_id, "t3_category": t3_category},
+                        files={"file": (uploaded_file.name, uploaded_file.getvalue(), "application/octet-stream")},
+                    )
+                if res:
+                    st.session_state.audit_result = res
+                    st.rerun()
+
+        st.divider()
+
+        with st.expander("🔍 Or fetch by protein name / UniProt / AlphaFold ID", expanded=False):
+            q = st.text_input(
+                "Search query",
+                placeholder="e.g. insulin, EGFR, p53, AF-P01308-F1",
+                label_visibility="collapsed",
+            )
+            if st.button("Search Global Repositories", type="secondary", use_container_width=True):
+                if q.strip():
+                    with st.spinner("Searching…"):
+                        resp = api("POST", "/search", data={"query": q.strip()})
+                    if resp and resp.get("results"):
+                        st.session_state.candidates = resp["results"]
+                    else:
+                        st.warning("No results returned.")
+                        st.session_state.candidates = []
+
+            if st.session_state.candidates:
+                st.divider()
+                for i, c in enumerate(st.session_state.candidates):
+                    col_label, col_btn = st.columns([5, 1])
+                    col_label.markdown(f"**{c.get('id', '?')}** — {c.get('label', '')}")
+                    if col_btn.button("Audit", key=f"audit_candidate_{i}"):
+                        with st.spinner(f"Fetching and auditing `{c['id']}`…"):
+                            res = api(
+                                "POST", "/ingest",
+                                data={
+                                    "mode":         "Discovery",
+                                    "candidate_id": c["id"],
+                                    "t3_category":  t3_category,
+                                },
+                            )
+                        if res:
+                            st.session_state.audit_result = res
+                            st.rerun()
+
+
+# ===============================================================
+# TAB 2 — BATCH (Industrial Validation)
+# ===============================================================
+
+with tab_batch:
+    st.subheader("Batch Industrial Validation")
+    st.caption(
+        "Upload a ZIP archive containing PDB files. "
+        "Each structure is validated independently through the full deterministic canon. "
+        "Maximum 100 structures per batch."
+    )
+
+    zip_file = st.file_uploader(
+        "Upload ZIP archive",
+        type=["zip"],
+        key="batch_zip_upload",
+        help="Each file inside the ZIP must be a valid .pdb file.",
+    )
+
+    if zip_file is not None:
+        try:
+            with zipfile.ZipFile(io.BytesIO(zip_file.getvalue())) as zf:
+                pdb_names = [
+                    n for n in zf.namelist()
+                    if n.lower().endswith(".pdb") and not n.startswith("__")
+                ]
+            struct_count = len(pdb_names)
+            if struct_count > 100:
+                st.warning(
+                    f"⚠️ Archive contains {struct_count} PDB files. "
+                    "Backend enforces a maximum of 100. The first 100 will be processed."
+                )
+            else:
+                st.info(f"Detected **{struct_count}** PDB file(s) in archive.")
+        except Exception:
+            st.warning("Could not inspect ZIP contents client-side.")
+
+        if st.button("🚀 Run Batch Validation", type="primary", use_container_width=True):
+            with st.spinner("Processing batch — this may take several minutes…"):
+                batch_res = api(
+                    "POST", "/v1/batch",
+                    data={"mode": "Audit", "t3_category": t3_category},
+                    files={"file": (zip_file.name, zip_file.getvalue(), "application/zip")},
+                )
+
+            if batch_res:
+                summary = batch_res.get("summary", {})
+                results = batch_res.get("results", [])
+
+                st.divider()
+                st.subheader("Batch Summary")
+                s1, s2, s3, s4, s5 = st.columns(5)
+                s1.metric("Total",             summary.get("total", "—"))
+                s2.metric("✅ Passed",         summary.get("passed", "—"))
+                s3.metric("🛑 Vetoed",         summary.get("vetoed", "—"))
+                s4.metric("⚠️ Indeterminate",  summary.get("indeterminate", "—"))
+                s5.metric("❌ Errors",         summary.get("errors", "—"))
+
+                mean_score = summary.get("mean_deterministic_score", 0)
+                mean_color = score_color(mean_score)
+                t_ = get_active_theme()
+                st.markdown(
+                    f'<div style="margin:0.5rem 0;font-family:Courier New;">'
+                    f'Mean Deterministic Score: '
+                    f'<span style="color:{mean_color};font-weight:700;font-size:1.1rem;">'
+                    f'{mean_score:.1f}%</span></div>',
+                    unsafe_allow_html=True,
+                )
+
+                failing = summary.get("common_failing_laws", [])
+                if failing:
+                    st.markdown("**Most Common Failing Laws:**")
+                    total_structs = max(summary.get("total", 1), 1)
+                    for fl in failing[:5]:
+                        law_id  = fl.get("law_id", "?")
+                        count   = fl.get("count", 0)
+                        bar_pct = int(count / total_structs * 100)
+                        st.markdown(
+                            f'<div style="margin:3px 0;font-family:monospace;font-size:0.85rem;">'
+                            f'<span style="color:{t_["text"]};">{law_id}</span>'
+                            f'<div style="background:{t_["border"]};border-radius:3px;height:8px;margin-top:2px;">'
+                            f'<div style="background:#FF4444;width:{bar_pct}%;height:8px;border-radius:3px;"></div>'
+                            f'</div>'
+                            f'<span style="color:{t_["muted"]};font-size:0.75rem;">{count} failures</span>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+
+                if results:
+                    st.divider()
+                    st.subheader("Per-Structure Results")
+
+                    table_rows = []
+                    for r in results:
+                        if r.get("success") and r.get("response"):
+                            v      = r["response"].get("verdict", {})
+                            binary = v.get("binary", "ERROR")
+                            det    = v.get("deterministic_score", 0)
+                            cov    = v.get("coverage_pct", 0)
+                        else:
+                            binary = "ERROR"
+                            det    = 0
+                            cov    = 0
+
+                        table_rows.append({
+                            "Filename":       r.get("filename", "?"),
+                            "Candidate ID":   r.get("candidate_id", "?"),
+                            "Verdict":        binary,
+                            "Det. Score (%)": det,
+                            "Coverage (%)":   round(cov, 1),
+                            "Error":          r.get("error") or "",
+                        })
+
+                    st.dataframe(table_rows, use_container_width=True)
+
+                    keys = ["Filename", "Candidate ID", "Verdict", "Det. Score (%)", "Coverage (%)", "Error"]
+                    csv_lines = [",".join(keys)]
+                    for row in table_rows:
+                        csv_lines.append(",".join(str(row.get(k, "")) for k in keys))
+                    csv_bytes = "\n".join(csv_lines).encode("utf-8")
+
+                    st.download_button(
+                        "⬇️ Download Results as CSV",
+                        data=csv_bytes,
+                        file_name=f"toscanini_batch_{datetime.now(timezone.utc):%Y%m%d_%H%M%S}.csv",
+                        mime="text/csv",
+                    )
+
+
+# ===============================================================
+# TAB 3 — BENCHMARK (Experimental vs Predicted)
+# ===============================================================
+
+def _run_benchmark_audit(candidate_id: str) -> dict | None:
+    return api(
+        "POST", "/ingest",
+        data={"mode": "Benchmark", "candidate_id": candidate_id, "t3_category": "NONE"},
+    )
+
+
+with tab_bench:
+    st.subheader("Benchmark — Experimental vs. Predicted")
     st.markdown(
-        "Each structure is audited through the **identical** deterministic pipeline. "
-        "Crystal structures **must** PASS to prove the engine is calibrated to biological reality."
+        "Each structure passes through the **identical** deterministic pipeline. "
+        "Crystal structures at high resolution must PASS to confirm engine calibration."
     )
     st.divider()
 
     for entry in BENCHMARK_CRYSTALS:
         pdb_id = entry["pdb_id"]
-        af_id = entry.get("af_id")
-        key = pdb_id
+        af_id  = entry["af_id"]
 
         with st.expander(
-            f"**{entry['name']}** — {pdb_id} ({entry['resolution']} Å, {entry['method']})",
+            f"**{entry['name']}** — {pdb_id} "
+            f"({'%.2f' % entry['resolution']} Å, {entry['method']})",
             expanded=False,
         ):
-            cached = st.session_state.benchmark_results.get(key, {})
-            has_crystal = cached.get("crystal") is not None
-            has_af = cached.get("alphafold") is not None
+            cached = st.session_state.benchmark_results.get(pdb_id, {})
 
-            if not has_crystal:
-                if st.button(f"⚡ Audit {pdb_id} + {af_id}", key=f"bench_{key}"):
-                    with st.spinner(f"Auditing {pdb_id} (Crystal)..."):
-                        crystal_res = run_benchmark_audit(pdb_id)
+            if not cached.get("crystal"):
+                if st.button(f"⚡ Audit {pdb_id} + {af_id}", key=f"bench_{pdb_id}"):
+                    with st.spinner(f"Auditing {pdb_id} (crystal)…"):
+                        crystal_res = _run_benchmark_audit(pdb_id)
+
                     af_res = None
-                    try:
-                        with st.spinner(f"Auditing {af_id} (AlphaFold)..."):
-                            af_res = run_benchmark_audit(af_id)
+                    if crystal_res:
+                        with st.spinner(f"Auditing {af_id} (AlphaFold)…"):
+                            af_res = _run_benchmark_audit(af_id)
                         if af_res and "verdict" not in af_res:
                             af_res = None
-                    except Exception:
-                        af_res = None
-                    st.session_state.benchmark_results[key] = {"crystal": crystal_res, "alphafold": af_res}
-                    st.rerun()
-            else:
-                cr = cached["crystal"]
-                ar = cached.get("alphafold")
-                cv = cr.get("verdict", {})
 
-                # ═══ BENCHMARK UNIFORMITY: Always render dual panel ═══
-                c1, c2 = st.columns(2)
-                with c1:
+                    st.session_state.benchmark_results[pdb_id] = {
+                        "crystal":   crystal_res,
+                        "alphafold": af_res,
+                    }
+                    st.rerun()
+
+            else:
+                cr       = cached["crystal"]
+                ar       = cached.get("alphafold")
+                cv       = cr.get("verdict", {})
+                binary_c = cv.get("binary", "ERROR")
+
+                col_c, col_a = st.columns(2)
+
+                with col_c:
                     st.markdown(f"**🔵 Crystal: {pdb_id}**")
-                    binary_c = cv.get("binary", "ERROR")
-                    det_laws_c = [l for l in cr.get("tier1", {}).get("laws", []) if l["method"] == "deterministic"]
+                    det_laws_c = [l for l in cr.get("tier1", {}).get("laws", []) if l.get("method") == "deterministic"]
                     adv_laws_c = [l for l in cr.get("tier1", {}).get("laws", []) if "advisory" in l.get("method", "")]
-                    det_pass_c = sum(1 for l in det_laws_c if l["status"] == "PASS")
+                    det_pass_c = sum(1 for l in det_laws_c if l.get("status") == "PASS")
                     if binary_c == "PASS":
-                        st.success(f"✅ {binary_c} — {det_pass_c}/{len(det_laws_c)} Det" + (f" + {len(adv_laws_c)} Advisory" if adv_laws_c else ""))
+                        st.success(
+                            f"✅ {binary_c} — {det_pass_c}/{len(det_laws_c)} Det"
+                            + (f" + {len(adv_laws_c)} Advisory" if adv_laws_c else "")
+                        )
                     elif binary_c == "VETO":
                         st.error(f"🛑 {binary_c}")
                     else:
                         st.warning(f"⚠️ {binary_c}")
-                    st.metric("Coverage", f"{cv.get('coverage_pct', 0)}%")
-                    st.caption(f"Method: {entry['method']} | Resolution: {entry['resolution']}Å")
+                    st.metric("Deterministic Score", f"{cv.get('deterministic_score', 0)}%")
+                    st.metric("Coverage",            f"{cv.get('coverage_pct', 0):.1f}%")
+                    st.caption(f"Method: {entry['method']} | Resolution: {entry['resolution']} Å")
 
-                with c2:
+                with col_a:
+                    st.markdown(f"**🟠 AlphaFold: {af_id}**")
                     if ar:
-                        av = ar.get("verdict", {})
-                        st.markdown(f"**🟠 AlphaFold: {af_id}**")
+                        av       = ar.get("verdict", {})
                         binary_a = av.get("binary", "ERROR")
                         if binary_a == "PASS":
-                            st.success(f"✅ {binary_a} — {av.get('det_passed', '?')}/{av.get('det_total', '?')} Det")
+                            st.success(f"✅ {binary_a} — {av.get('det_passed','?')}/{av.get('det_total','?')} Det")
                         elif binary_a == "VETO":
                             st.error(f"🛑 {binary_a}")
                         else:
                             st.warning(f"⚠️ {binary_a}")
-                        st.metric("pLDDT", f"{round(av.get('confidence_score', 0), 1)}")
+                        st.metric("Deterministic Score", f"{av.get('deterministic_score', 0)}%")
+                        st.metric("pLDDT (Core)",        f"{round(av.get('confidence_score', 0), 1)}")
                     else:
-                        st.markdown(f"**🟠 AlphaFold: {af_id}**")
-                        st.warning("⚠️ No predicted counterpart resolved")
-                        st.caption("AlphaFold model unavailable for this target.")
+                        st.warning("⚠️ AlphaFold model unavailable for this target.")
 
-                # ═══ BENCHMARK UNIFORMITY: Always render 3D comparison ═══
                 if cr.get("pdb_b64"):
                     st.divider()
                     st.markdown("**3D Structural Comparison**")
                     v3d_l, v3d_r = st.columns(2)
                     with v3d_l:
                         st.caption(f"Crystal: {pdb_id}")
-                        render_3d_viewer(cr["pdb_b64"], cv.get("binary", "ERROR"), height=400, width=420)
+                        render_3d_viewer(cr["pdb_b64"], binary_c, height=380, width=420)
                     with v3d_r:
                         if ar and ar.get("pdb_b64"):
-                            av_3d = ar.get("verdict", {})
+                            binary_a_3d = ar.get("verdict", {}).get("binary", "ERROR")
                             st.caption(f"AlphaFold: {af_id}")
-                            render_3d_viewer(ar["pdb_b64"], av_3d.get("binary", "ERROR"), height=400, width=420)
+                            render_3d_viewer(ar["pdb_b64"], binary_a_3d, height=380, width=420)
                         else:
                             st.caption(f"AlphaFold: {af_id}")
                             st.info("Predicted structure not available for 3D comparison.")
 
-                # ═══ BENCHMARK UNIFORMITY: Always render comparison table ═══
                 st.divider()
                 st.markdown("**Deterministic Law Comparison**")
                 render_law_comparison_table(
@@ -419,85 +880,71 @@ with t_bench:
                     ar.get("tier1", {}).get("laws", []) if ar else [],
                 )
 
-# ═══════════════════════════════════════════════════════════════
-# TAB 3: VALIDATION DATASET
-# ═══════════════════════════════════════════════════════════════
-with t_valid:
-    st.subheader("📊 Validation Dataset — Statistical Trust Summary")
-    st.markdown(
-        "Aggregate calibration metrics across all benchmarked experimental structures. "
-        "A false veto rate >0% against high-resolution crystals indicates engine miscalibration."
+                if cr.get("pdf_b64"):
+                    st.divider()
+                    audit_id = cr.get("governance", {}).get("audit_id", pdb_id)
+                    render_pdf_download(cr["pdf_b64"], audit_id)
+
+
+# ===============================================================
+# TAB 4 — REFERENCE (Unified Source of Truth)
+# ===============================================================
+
+with tab_ref:
+    st.subheader("Reference — Structural Law Canon & Knowledge Graph")
+
+    ref_laws, ref_nkg, ref_defs = st.tabs(
+        ["📐 Law Canon", "🧠 Knowledge Graph", "📖 Definitions"]
     )
-    st.divider()
 
-    bench = st.session_state.benchmark_results
-    if not bench:
-        st.info("No benchmark data yet. Run comparative audits in the **Benchmark** tab first.")
-    else:
-        n_tested = len(bench)
-        crystal_pass = 0
-        crystal_total = 0
-        all_clash = []
-        resolution_range = []
+    with ref_laws:
+        with st.spinner("Loading Law Canon…"):
+            canon = api("GET", "/laws")
 
-        for key, data in bench.items():
-            cr = data.get("crystal")
-            if not cr:
-                continue
-            crystal_total += 1
-            cv = cr.get("verdict", {})
-            if cv.get("binary") == "PASS":
-                crystal_pass += 1
-            for entry in BENCHMARK_CRYSTALS:
-                if entry["pdb_id"] == key:
-                    resolution_range.append(entry["resolution"])
-                    break
-            for law in cr.get("tier1", {}).get("laws", []):
-                if law["law_id"] == "LAW-130":
-                    try:
-                        all_clash.append(float(law["observed"]))
-                    except (ValueError, TypeError):
-                        pass
-
-        false_veto_rate = round((crystal_total - crystal_pass) / crystal_total * 100, 1) if crystal_total > 0 else 0.0
-
-        s1, s2, s3, s4 = st.columns(4)
-        s1.metric("Structures Tested", n_tested)
-        s2.metric("Crystal Pass Rate", f"{round(crystal_pass / max(crystal_total, 1) * 100, 1)}%")
-        s3.metric("False Veto Rate", f"{false_veto_rate}%")
-        s4.metric("Resolution Range", f"{min(resolution_range, default=0):.2f}–{max(resolution_range, default=0):.2f} Å")
-
-        if all_clash:
-            import numpy as np
+        if canon:
+            laws_dict = canon.get("laws", {})
+            c1, c2 = st.columns(2)
+            c1.metric("Total Laws",          canon.get("total_laws", len(laws_dict)))
+            c2.metric("Deterministic Count", canon.get("deterministic_count", "?"))
             st.divider()
-            st.metric("Mean Clashscore (Crystal)", f"{round(float(np.mean(all_clash)), 2)} clashes/1000 atoms")
+            for lid, info in laws_dict.items():
+                with st.expander(f"**{lid}** — {info.get('title', '?')}", expanded=False):
+                    col_a, col_b, col_c = st.columns(3)
+                    col_a.metric(
+                        "Threshold",
+                        f"{info.get('operator','')} {info.get('threshold','?')} {info.get('unit','')}",
+                    )
+                    col_b.metric("Type",  info.get("type",  "?"))
+                    col_c.metric("Scope", info.get("scope", "?"))
 
-        st.divider()
-        if false_veto_rate == 0.0 and crystal_total > 0:
-            st.success(
-                f"✅ Toscanini deterministic invariants benchmarked against {crystal_total} "
-                f"experimental crystal structures (resolution: {min(resolution_range):.2f}–{max(resolution_range):.2f} Å). "
-                f"**No false veto events observed** (n={crystal_total})."
-            )
-        elif crystal_total > 0:
-            st.error(f"🛑 CALIBRATION ALERT: {crystal_total - crystal_pass} false veto(es).")
+    with ref_nkg:
+        with st.spinner("Loading Knowledge Graph…"):
+            nkg = api("GET", "/nkg")
 
-with t_nkg:
-    st.subheader("🧠 Knowledge Graph (NKG)")
-    nkg_data = api("GET", "/nkg")
-    if nkg_data:
-        st.metric("Total System Vetoes", nkg_data.get("total_vetoes", 0))
-        if nkg_data.get("vetoes"):
-            st.json(nkg_data["vetoes"])
-    else:
-        st.info("Knowledge Graph initialized. Moat is empty.")
+        if nkg:
+            c1, c2 = st.columns(2)
+            c1.metric("Total Vetoes",    nkg.get("total_vetoes",    0))
+            c2.metric("Total Successes", nkg.get("total_successes", 0))
+            st.divider()
+            vetoes    = nkg.get("vetoes",    [])
+            successes = nkg.get("successes", [])
+            if vetoes:
+                with st.expander(f"🛑 Veto Records ({len(vetoes)})", expanded=False):
+                    st.json(vetoes)
+            else:
+                st.info("No veto records. Knowledge graph is empty.")
+            if successes:
+                with st.expander(f"✅ Success Records ({len(successes)})", expanded=False):
+                    st.json(successes)
 
-with t_laws:
-    st.subheader("📜 Structural Law Canon")
-    laws_data = api("GET", "/laws")
-    if laws_data:
-        for lid, info in laws_data.get("laws", {}).items():
-            with st.expander(f"{lid}: {info['title']}"):
-                st.write(f"**Principle:** {info.get('principle', 'N/A')}")
-                st.write(f"**Metric Type:** {info.get('type')}")
-                st.write(f"**Threshold:** {info.get('operator')} {info.get('threshold')} {info.get('unit')}")
+    with ref_defs:
+        with st.spinner("Loading Definitions…"):
+            defs = api("GET", "/definitions")
+
+        if defs:
+            for key, info in defs.items():
+                with st.expander(f"**{info.get('title', key)}**", expanded=False):
+                    st.write(info.get("explanation", "No explanation."))
+                    st.caption(f"Key: `{key}`")
+        else:
+            st.info("Definitions unavailable.")

@@ -12,6 +12,8 @@ services:
     build: ./dashboard
     container_name: face
     ports: ["8502:8501"]
+    env_file:
+      - .env
     environment:
       - BACKEND_URL=http://brain:8000
     depends_on: ["brain"]
