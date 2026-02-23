@@ -131,10 +131,10 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
 
     try:
         payload["pdf_b64"] = base64.b64encode(generate_v21_dossier(payload)).decode()
-    except Exception:
-        logger.error(f"PDF FAILED: {traceback.format_exc()}")
+    except Exception as e:
+        logger.error(f"PDF generation failed for audit_id={payload.get('governance', {}).get('audit_id', 'UNKNOWN')}: {str(e)}")
         payload["pdf_b64"] = ""
-
+        payload["pdf_error"] = "PDF_GENERATION_FAILED"
     try: get_nkg().record_audit(payload)
     except: pass
     try: log_usage_telemetry(get_nkg(), payload, "/ingest")

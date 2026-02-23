@@ -1,5 +1,7 @@
 from fpdf import FPDF
 from datetime import datetime
+from .pdf_theme import PDF_COLORS, PDF_LAYOUT
+from ..governance.constants import LAW_105_THRESHOLD
 from ..utils.type_guards import force_bytes
 from ..governance.station_sop import (
     STATION_METADATA, BAYESIAN_FORMULA, LAW_CANON_HASH
@@ -63,12 +65,20 @@ def generate_v21_dossier(payload):
     try:
         pdf = ToscaniniDossier()
         pdf.set_auto_page_break(True, margin=15)
+        pdf.set_compression(True)
         w = 190
         v = payload.get('verdict', {})
         ss = payload.get("characterization", {})
         prov = payload.get("provenance", {})
         conf_meta = payload.get("confidence_meta", {})
         gov = payload.get("governance", {})
+        
+        # PDF Metadata for searchability and institutional indexing
+        audit_id = gov.get("audit_id", "UNKNOWN")
+        pdf.set_title(f"Toscanini Structural Governance Certification - {audit_id}")
+        pdf.set_author("Toscanini Structural Governance Engine")
+        pdf.set_subject("Deterministic Structural Admissibility Report")
+        pdf.set_keywords("protein structure, governance, certification, forensic, AlphaFold")
         math_data = payload.get("strategic_math", {})
         laws = payload.get('tier1', {}).get('laws', [])
 
@@ -96,22 +106,22 @@ def generate_v21_dossier(payload):
 
         for row in decision_data:
             pdf.set_font("Helvetica", "B", 9)
-            pdf.set_fill_color(250, 250, 250)
-            pdf.cell(80, 8, row[0], border=1, fill=True)
+            pdf.set_fill_color(*PDF_COLORS["LIGHT_GREY"])
+            pdf.cell(80, 8, row[0], border=0, fill=True)
             pdf.set_font("Helvetica", "", 9)
             if row[1] == "VETO":
-                pdf.set_text_color(170, 35, 35)
+                pdf.set_text_color(*PDF_COLORS["VETO"])
             elif row[1] == "PASS":
-                pdf.set_text_color(15, 110, 55)
+                pdf.set_text_color(*PDF_COLORS["PASS"])
             elif row[1] == "INDETERMINATE":
-                pdf.set_text_color(180, 120, 0)
-            pdf.cell(110, 8, row[1], border=1, ln=True)
+                pdf.set_text_color(*PDF_COLORS["ALERT"])
+            pdf.cell(110, 8, row[1], border=0, ln=True)
             pdf.set_text_color(0, 0, 0)
 
         pdf.ln(3)
 
         # ═══ REGULATOR FIX #1: Coverage failure high-contrast warning ═══
-        if coverage < 70.0:
+        if coverage < LAW_105_THRESHOLD:
             pdf.red_banner(f"ADJUDICATION SUSPENDED -- Evidence Scope Below Threshold (LAW-105: {coverage}%)")
             pdf.set_font("Helvetica", "I", 8)
             pdf.multi_cell(w, 4, "The engine cannot certify structural compliance when reliability "
@@ -132,7 +142,7 @@ def generate_v21_dossier(payload):
         pdf.set_font("Helvetica", "", 8)
 
         pdf.set_font("Helvetica", "B", 8); pdf.write(5, "PASS: "); pdf.set_font("Helvetica", "", 8)
-        pdf.write(5, "Physically compliant. All deterministic invariants satisfied. Coverage >= 70%.\n")
+        pdf.write(5, f"Physically compliant. All deterministic invariants satisfied. Coverage >= {LAW_105_THRESHOLD}%.\n")
         pdf.set_font("Helvetica", "B", 8); pdf.write(5, "VETO: "); pdf.set_font("Helvetica", "", 8)
         pdf.write(5, "Physically incompatible. Non-negotiable invariant violation detected.\n")
         pdf.set_font("Helvetica", "B", 8); pdf.write(5, "INDETERMINATE: "); pdf.set_font("Helvetica", "", 8)
@@ -158,15 +168,13 @@ def generate_v21_dossier(payload):
                        "For experimental structures, modality-specific reclassifications apply per PIL-CAL-03.")
         pdf.ln(2)
         pdf.set_font("Helvetica", "B", 8)
-        pdf.set_text_color(100, 50, 0)
-        pdf.multi_cell(w, 4, "Adjudication Hierarchy: Coverage gate (LAW-105 >= 70%) precedes deterministic incompatibility checks. If coverage is insufficient, verdict is INDETERMINATE regardless of individual law compliance. This reflects epistemic insufficiency, not structural failure.")
+        pdf.set_text_color(*PDF_COLORS["ALERT"])
+        # CANONICAL ADJUDICATION HIERARCHY — DO NOT DUPLICATE ANYWHERE
+        pdf.multi_cell(w, 4, f"Adjudication Hierarchy: Coverage gate (LAW-105 >= {LAW_105_THRESHOLD}%) precedes deterministic incompatibility checks. If coverage is insufficient, verdict is INDETERMINATE regardless of individual law compliance. This reflects epistemic insufficiency, not structural failure.")
         pdf.set_text_color(0, 0, 0)
         pdf.ln(2)
         pdf.set_font("Helvetica", "B", 8)
-        pdf.set_text_color(100, 50, 0)
-        pdf.multi_cell(w, 4, "Adjudication Hierarchy: Coverage gate (LAW-105 >= 70%) precedes deterministic incompatibility checks. If coverage is insufficient, verdict is INDETERMINATE regardless of individual law compliance. This reflects epistemic insufficiency, not structural failure.")
-        pdf.set_text_color(0, 0, 0)
-        pdf.ln(4)
+        pdf.set_text_color(*PDF_COLORS["ALERT"])
 
         det_laws = [l for l in laws if l.get('method') == 'deterministic']
         violations = [l for l in det_laws if l['status'] != 'PASS']
@@ -177,11 +185,11 @@ def generate_v21_dossier(payload):
 
         if violations:
             pdf.set_font("Helvetica", "B", 9)
-            pdf.set_text_color(170, 35, 35)
+            pdf.set_text_color(*PDF_COLORS["VETO"])
             pdf.cell(w, 8, f"DETECTION: {len(violations)} DETERMINISTIC VIOLATION(S)", ln=True)
             pdf.set_text_color(0, 0, 0)
             pdf.set_font("Helvetica", "B", 8)
-            pdf.set_fill_color(245, 230, 230)
+            pdf.set_fill_color(245, 230, 230)  # Veto table background
             for i, h in enumerate(headers):
                 pdf.cell(widths[i], 8, h, 1, 0, "C", True)
             pdf.ln(8)
@@ -196,7 +204,7 @@ def generate_v21_dossier(payload):
         pdf.set_font("Helvetica", "B", 9)
         pdf.cell(w, 8, "DETERMINISTIC COMPLIANCE LEDGER", ln=True)
         pdf.set_font("Helvetica", "B", 8)
-        pdf.set_fill_color(230, 245, 230)
+        pdf.set_fill_color(230, 245, 230)  # Pass table background
         for i, h in enumerate(headers):
             pdf.cell(widths[i], 8, h, 1, 0, "C", True)
         pdf.ln(8)
@@ -250,7 +258,7 @@ def generate_v21_dossier(payload):
 
         adv_laws = [l for l in laws if l.get('method') != 'deterministic']
         pdf.set_font("Helvetica", "B", 8)
-        pdf.set_fill_color(255, 245, 220)
+        pdf.set_fill_color(255, 245, 220)  # Advisory table background
         for i, h in enumerate(headers):
             pdf.cell(widths[i], 8, h, 1, 0, "C", True)
         pdf.ln(8)
@@ -281,10 +289,10 @@ def generate_v21_dossier(payload):
         pdf.set_font("Helvetica", "", 9)
 
         if helix is None and sheet is None and loop is None:
-            if coverage < 70.0:
+            if coverage < LAW_105_THRESHOLD:
                 pdf.set_font("Helvetica", "I", 9)
-                pdf.set_text_color(140, 40, 40)
-                pdf.multi_cell(w, 6, "Secondary structure not computable: reliability coverage below 70% "
+                pdf.set_text_color(*PDF_COLORS["VETO"])
+                pdf.multi_cell(w, 6, f"Secondary structure not computable: reliability coverage below {LAW_105_THRESHOLD}% "
                                f"(observed: {coverage}%). Insufficient high-confidence coordinates for "
                                "phi/psi-based assignment.")
                 pdf.set_text_color(0, 0, 0)
@@ -332,8 +340,8 @@ def generate_v21_dossier(payload):
         pdf.cell(w, 6, f"S6 (Deterministic Compliance): {s6_val}", ln=True)
         if s6_val == 0.0 or s6_val == 0:
             pdf.set_font("Helvetica", "I", 7)
-            pdf.set_text_color(140, 40, 40)
-            pdf.multi_cell(w, 4, "Note: S6 = 0.0 because coverage gate (LAW-105) failed. When reliability coverage < 70%, the prioritization index is zeroed regardless of individual law compliance. This is by design: epistemic insufficiency prevents meaningful prioritization scoring.")
+            pdf.set_text_color(*PDF_COLORS["VETO"])
+            pdf.multi_cell(w, 4, f"Note: S6 = 0.0 because coverage gate (LAW-105) failed. When reliability coverage < {LAW_105_THRESHOLD}%, the prioritization index is zeroed regardless of individual law compliance. This is by design: epistemic insufficiency prevents meaningful prioritization scoring.")
             pdf.set_text_color(0, 0, 0)
             pdf.set_font("Helvetica", "", 8)
         pdf.cell(w, 6, f"W_arch (Architecture Weight): {math_data.get('w_arch', 'N/A')}", ln=True)
