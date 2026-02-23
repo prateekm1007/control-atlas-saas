@@ -8,3 +8,5 @@ google-generativeai>=0.3.0
 fpdf2>=2.7.4
 numpy>=1.24.0,<2.0
 scipy>=1.10.0,<2.0
+matplotlib>=3.7.0
+pillow>=10.0.0

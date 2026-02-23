@@ -1,4 +1,5 @@
 from fpdf import FPDF
+from .confidence_viz import generate_confidence_bar
 from datetime import datetime
 from .pdf_theme import PDF_COLORS, PDF_LAYOUT
 from ..governance.constants import LAW_105_THRESHOLD
@@ -149,6 +150,22 @@ def generate_v21_dossier(payload):
 
         pdf.ln(3)
 
+        # CONFIDENCE BAR — Visual coverage indicator
+        try:
+            bar_png = generate_confidence_bar(coverage, v.get('det_passed', 0), v.get('det_total', 12))
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                tmp.write(bar_png)
+                tmp_path = tmp.name
+            pdf.image(tmp_path, x=10, w=190, h=15)
+            import os
+            os.unlink(tmp_path)
+            pdf.ln(3)
+        except Exception as e:
+            pdf.set_font("Helvetica", "I", 8)
+            pdf.cell(190, 6, f"[Confidence visualization unavailable]", ln=True, align="C")
+            pdf.ln(2)
+
         # Obligation statement
         pdf.set_font("Helvetica", "B", 9)
         pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
@@ -283,15 +300,7 @@ def generate_v21_dossier(payload):
         pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
         pdf.ln(2)
         pdf.ln(2)
-        pdf.set_font("Helvetica", "B", 7)
-        pdf.cell(w, 4, "Classification Definitions:", ln=True)
-        pdf.set_font("Helvetica", "", 7)
-        pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
-        pdf.cell(w, 4, "DETERMINISTIC = Physically invariant coordinate measurement. Failure triggers VETO for predicted structures.", ln=True)
-        pdf.cell(w, 4, "ADVISORY = Deterministic law reclassified to non-scoring for experimental data due to coordinate uncertainty (PIL-CAL-03).", ln=True)
-        pdf.cell(w, 4, "HEURISTIC = Statistical proxy for structural plausibility. Does not trigger VETO. Contextual signal only.", ln=True)
-        pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
-        pdf.ln(2)
+
         pdf.ln(4)
 
         adv_laws = [l for l in laws if l.get('method') != 'deterministic']
@@ -303,8 +312,9 @@ def generate_v21_dossier(payload):
         pdf.set_font("Helvetica", "", 7)
         for l in adv_laws:
             cls = "Advisory" if "advisory" in l.get('method', '') else "Heuristic"
+            display_status = l['status'] if l['status'] != 'VETO' else 'FAIL'
             for i, field in enumerate([l['law_id'], l['title'], cls,
-                                       str(l['observed']), f"{l['operator']} {l['threshold']}", l['status']]):
+                                       str(l['observed']), f"{l['operator']} {l['threshold']}", display_status]):
                 pdf.cell(widths[i], 7, pdf.safe(field), 1, 0, "C" if i != 1 else "L")
             pdf.ln(7)
 
@@ -382,6 +392,7 @@ def generate_v21_dossier(payload):
             pdf.multi_cell(w, 4, f"Note: S6 = 0.0 because coverage gate (LAW-105) failed. When reliability coverage < {LAW_105_THRESHOLD}%, the prioritization index is zeroed regardless of individual law compliance. This is by design: epistemic insufficiency prevents meaningful prioritization scoring.")
             pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
             pdf.set_font("Helvetica", "", 8)
+        pdf.set_font("Helvetica", "", 8)
         pdf.cell(w, 6, f"W_arch (Architecture Weight): {math_data.get('w_arch', 'N/A')}", ln=True)
         pdf.cell(w, 6, f"M_S8 (NKG Penalty): {math_data.get('m_s8', 'N/A')}", ln=True)
         pdf.cell(w, 6, f"Formula: {BAYESIAN_FORMULA}", ln=True)
