@@ -12,22 +12,47 @@ from ..governance.modality_matrix import compute_matrix_hash
 class ToscaniniDossier(FPDF):
     def header(self):
         self.set_font("Helvetica", "B", 8)
-        self.set_text_color(80, 80, 80)
+        self.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
         self.cell(w=0, h=10, txt=f"TOSCANINI STRUCTURAL GOVERNANCE DOSSIER v{STATION_METADATA['version']}", border=0, align="L")
         self.ln(10)
 
     def footer(self):
         self.set_y(-15)
         self.set_font("Helvetica", "I", 7)
-        self.set_text_color(128, 128, 128)
+        self.set_text_color(*PDF_COLORS["TEXT_MUTED"])
         self.cell(0, 10, f"Engine: v{STATION_METADATA['version']} // Canon: {LAW_CANON_HASH[:12]}... // Matrix: {compute_matrix_hash()[:12]}... // Page {self.page_no()}", align="R")
 
     def section_title(self, text):
         self.set_font("Helvetica", "B", 11)
-        self.set_text_color(0, 0, 0)
+        self.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
         self.cell(0, 8, text.upper(), ln=True)
         self.set_draw_color(0, 0, 0)
         self.line(10, self.get_y(), 200, self.get_y())
+        self.ln(4)
+
+    def verdict_badge(self, verdict: str, score: int, coverage: float):
+        """Large centered verdict badge for executive cognition."""
+        color_map = {
+            "PASS": PDF_COLORS["PASS"],
+            "VETO": PDF_COLORS["VETO"],
+            "INDETERMINATE": PDF_COLORS["INDETERMINATE"],
+        }
+        badge_color = color_map.get(verdict, PDF_COLORS["INDETERMINATE"])
+        badge_width = 190
+
+        # Badge background
+        self.set_fill_color(*badge_color)
+        self.set_text_color(*PDF_COLORS["TEXT_WHITE"])
+        self.set_font("Helvetica", "B", 28)
+        self.cell(badge_width, 22, verdict, border=0, ln=True, align="C", fill=True)
+
+        # Score line below badge
+        self.set_fill_color(*PDF_COLORS["BG_LIGHT"])
+        self.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+        self.set_font("Helvetica", "B", 11)
+        self.cell(badge_width, 10,
+                  f"Deterministic Score: {score}/100   |   Coverage: {coverage}%",
+                  border=0, ln=True, align="C", fill=True)
         self.ln(4)
 
     def safe(self, text):
@@ -35,29 +60,29 @@ class ToscaniniDossier(FPDF):
 
     def red_banner(self, text):
         """Regulator Finding #1: High-contrast epistemic warning."""
-        self.set_fill_color(180, 30, 30)
-        self.set_text_color(255, 255, 255)
+        self.set_fill_color(*PDF_COLORS["BANNER_VETO"])
+        self.set_text_color(*PDF_COLORS["TEXT_WHITE"])
         self.set_font("Helvetica", "B", 10)
         self.cell(190, 10, self.safe(f"  {text}"), border=1, ln=True, fill=True, align="L")
-        self.set_text_color(0, 0, 0)
+        self.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
         self.ln(3)
 
     def amber_banner(self, text):
         """Amber warning for advisory notices."""
-        self.set_fill_color(200, 150, 30)
-        self.set_text_color(255, 255, 255)
+        self.set_fill_color(*PDF_COLORS["BANNER_ALERT"])
+        self.set_text_color(*PDF_COLORS["TEXT_WHITE"])
         self.set_font("Helvetica", "B", 9)
         self.cell(190, 9, self.safe(f"  {text}"), border=1, ln=True, fill=True, align="L")
-        self.set_text_color(0, 0, 0)
+        self.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
         self.ln(3)
 
     def section_divider(self, text, r, g, b):
         """Regulator Finding #4: Visually distinct section headers."""
         self.set_fill_color(r, g, b)
-        self.set_text_color(255, 255, 255)
+        self.set_text_color(*PDF_COLORS["TEXT_WHITE"])
         self.set_font("Helvetica", "B", 10)
         self.cell(190, 9, self.safe(f"  {text}"), border=0, ln=True, fill=True, align="L")
-        self.set_text_color(0, 0, 0)
+        self.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
         self.ln(3)
 
 
@@ -92,33 +117,46 @@ def generate_v21_dossier(payload):
 
         # Source Attribution Header
         source_label = f"EXPERIMENTAL ({ss.get('source_type', 'N/A').upper()})" if is_experimental else "ML-PREDICTED (ALPHAFOLD)"
-        pdf.set_font("Helvetica", "B", 10)
-        pdf.set_fill_color(240, 240, 240)
-        pdf.cell(w, 10, f"DATA REGIME: {source_label}", border=1, ln=True, fill=True, align="C")
-        pdf.ln(5)
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_fill_color(*PDF_COLORS["TEXT_SECONDARY"])
+        pdf.set_text_color(*PDF_COLORS["TEXT_WHITE"])
+        pdf.cell(w, 7, f"DATA REGIME: {source_label}", border=0, ln=True, fill=True, align="C")
+        pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+        pdf.ln(4)
 
-        decision_data = [
-            ["Final Verdict", verdict_binary],
-            ["Deterministic Compliance", f"{v.get('det_passed', 0)} / {v.get('det_total', 12)}"],
-            ["Reliability Coverage", f"{coverage} %"],
-            ["Prioritization Index", f"{payload.get('tier3', {}).get('probability', 0)} %"]
-        ]
+        # VERDICT BADGE — Large centered institutional panel
+        det_score = v.get("deterministic_score", 0)
+        pdf.verdict_badge(verdict_binary, det_score, coverage)
 
-        for row in decision_data:
-            pdf.set_font("Helvetica", "B", 9)
-            pdf.set_fill_color(*PDF_COLORS["LIGHT_GREY"])
-            pdf.cell(80, 8, row[0], border=0, fill=True)
-            pdf.set_font("Helvetica", "", 9)
-            if row[1] == "VETO":
-                pdf.set_text_color(*PDF_COLORS["VETO"])
-            elif row[1] == "PASS":
-                pdf.set_text_color(*PDF_COLORS["PASS"])
-            elif row[1] == "INDETERMINATE":
-                pdf.set_text_color(*PDF_COLORS["ALERT"])
-            pdf.cell(110, 8, row[1], border=0, ln=True)
-            pdf.set_text_color(0, 0, 0)
+        # METRIC CARDS — Three columns, no borders
+        card_w = 63
+
+        # Labels row
+        pdf.set_fill_color(*PDF_COLORS["BG_LIGHT"])
+        pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
+        pdf.set_font("Helvetica", "", 8)
+        pdf.cell(card_w, 6, "DETERMINISTIC COMPLIANCE", border=0, align="C", fill=True)
+        pdf.cell(card_w, 6, "RELIABILITY COVERAGE", border=0, align="C", fill=True)
+        pdf.cell(card_w, 6, "PRIORITIZATION INDEX", border=0, ln=True, align="C", fill=True)
+
+        # Values row
+        pdf.set_fill_color(255, 255, 255)
+        pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+        pdf.set_font("Helvetica", "B", 14)
+        pdf.cell(card_w, 10, f"{v.get('det_passed', 0)}/{v.get('det_total', 12)}", border=1, align="C", fill=True)
+        pdf.cell(card_w, 10, f"{coverage}%", border=1, align="C", fill=True)
+        pdf.cell(card_w, 10, f"{payload.get('tier3', {}).get('probability', 0)}%", border=1, ln=True, align="C", fill=True)
 
         pdf.ln(3)
+
+        # Obligation statement
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
+        pdf.cell(w, 6,
+                 "Independent experimental confirmation required prior to reliance on this certification.",
+                 border=0, ln=True, align="C")
+        pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+        pdf.ln(4)
 
         # ═══ REGULATOR FIX #1: Coverage failure high-contrast warning ═══
         if coverage < LAW_105_THRESHOLD:
@@ -171,7 +209,7 @@ def generate_v21_dossier(payload):
         pdf.set_text_color(*PDF_COLORS["ALERT"])
         # CANONICAL ADJUDICATION HIERARCHY — DO NOT DUPLICATE ANYWHERE
         pdf.multi_cell(w, 4, f"Adjudication Hierarchy: Coverage gate (LAW-105 >= {LAW_105_THRESHOLD}%) precedes deterministic incompatibility checks. If coverage is insufficient, verdict is INDETERMINATE regardless of individual law compliance. This reflects epistemic insufficiency, not structural failure.")
-        pdf.set_text_color(0, 0, 0)
+        pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
         pdf.ln(2)
         pdf.set_font("Helvetica", "B", 8)
         pdf.set_text_color(*PDF_COLORS["ALERT"])
@@ -187,9 +225,9 @@ def generate_v21_dossier(payload):
             pdf.set_font("Helvetica", "B", 9)
             pdf.set_text_color(*PDF_COLORS["VETO"])
             pdf.cell(w, 8, f"DETECTION: {len(violations)} DETERMINISTIC VIOLATION(S)", ln=True)
-            pdf.set_text_color(0, 0, 0)
+            pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
             pdf.set_font("Helvetica", "B", 8)
-            pdf.set_fill_color(245, 230, 230)  # Veto table background
+            pdf.set_fill_color(*PDF_COLORS["BG_VETO_TABLE"])
             for i, h in enumerate(headers):
                 pdf.cell(widths[i], 8, h, 1, 0, "C", True)
             pdf.ln(8)
@@ -204,7 +242,7 @@ def generate_v21_dossier(payload):
         pdf.set_font("Helvetica", "B", 9)
         pdf.cell(w, 8, "DETERMINISTIC COMPLIANCE LEDGER", ln=True)
         pdf.set_font("Helvetica", "B", 8)
-        pdf.set_fill_color(230, 245, 230)  # Pass table background
+        pdf.set_fill_color(*PDF_COLORS["BG_PASS_TABLE"])
         for i, h in enumerate(headers):
             pdf.cell(widths[i], 8, h, 1, 0, "C", True)
         pdf.ln(8)
@@ -218,11 +256,11 @@ def generate_v21_dossier(payload):
         # ═══ REGULATOR FIX #3: LAW-100 inline footnote ═══
         pdf.ln(3)
         pdf.set_font("Helvetica", "I", 7)
-        pdf.set_text_color(100, 100, 100)
+        pdf.set_text_color(*PDF_COLORS["TEXT_SUBTLE"])
         pdf.multi_cell(w, 4, "Note: LAW-100 (Bond Integrity RMSZ) is classified Deterministic for predicted structures "
                        "and Advisory for experimental coordinate regimes, reflecting resolution-dependent uncertainty. "
                        "See PIL-CAL-03 modality matrix for full classification rules.")
-        pdf.set_text_color(0, 0, 0)
+        pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
 
         # ══════ PAGE 3: SECTION II — ADVISORY METRICS ══════
         pdf.add_page()
@@ -238,27 +276,27 @@ def generate_v21_dossier(payload):
         pdf.set_font("Helvetica", "B", 7)
         pdf.cell(w, 4, "Classification Definitions:", ln=True)
         pdf.set_font("Helvetica", "", 7)
-        pdf.set_text_color(80, 80, 80)
+        pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
         pdf.cell(w, 4, "DETERMINISTIC = Physically invariant coordinate measurement. Failure triggers VETO for predicted structures.", ln=True)
         pdf.cell(w, 4, "ADVISORY = Deterministic law reclassified to non-scoring for experimental data due to coordinate uncertainty (PIL-CAL-03).", ln=True)
         pdf.cell(w, 4, "HEURISTIC = Statistical proxy for structural plausibility. Does not trigger VETO. Contextual signal only.", ln=True)
-        pdf.set_text_color(0, 0, 0)
+        pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
         pdf.ln(2)
         pdf.ln(2)
         pdf.set_font("Helvetica", "B", 7)
         pdf.cell(w, 4, "Classification Definitions:", ln=True)
         pdf.set_font("Helvetica", "", 7)
-        pdf.set_text_color(80, 80, 80)
+        pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
         pdf.cell(w, 4, "DETERMINISTIC = Physically invariant coordinate measurement. Failure triggers VETO for predicted structures.", ln=True)
         pdf.cell(w, 4, "ADVISORY = Deterministic law reclassified to non-scoring for experimental data due to coordinate uncertainty (PIL-CAL-03).", ln=True)
         pdf.cell(w, 4, "HEURISTIC = Statistical proxy for structural plausibility. Does not trigger VETO. Contextual signal only.", ln=True)
-        pdf.set_text_color(0, 0, 0)
+        pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
         pdf.ln(2)
         pdf.ln(4)
 
         adv_laws = [l for l in laws if l.get('method') != 'deterministic']
         pdf.set_font("Helvetica", "B", 8)
-        pdf.set_fill_color(255, 245, 220)  # Advisory table background
+        pdf.set_fill_color(*PDF_COLORS["BG_ADV_TABLE"])
         for i, h in enumerate(headers):
             pdf.cell(widths[i], 8, h, 1, 0, "C", True)
         pdf.ln(8)
@@ -295,7 +333,7 @@ def generate_v21_dossier(payload):
                 pdf.multi_cell(w, 6, f"Secondary structure not computable: reliability coverage below {LAW_105_THRESHOLD}% "
                                f"(observed: {coverage}%). Insufficient high-confidence coordinates for "
                                "phi/psi-based assignment.")
-                pdf.set_text_color(0, 0, 0)
+                pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
             else:
                 pdf.set_font("Helvetica", "I", 9)
                 pdf.multi_cell(w, 6, "Secondary structure computation returned no data. "
@@ -342,7 +380,7 @@ def generate_v21_dossier(payload):
             pdf.set_font("Helvetica", "I", 7)
             pdf.set_text_color(*PDF_COLORS["VETO"])
             pdf.multi_cell(w, 4, f"Note: S6 = 0.0 because coverage gate (LAW-105) failed. When reliability coverage < {LAW_105_THRESHOLD}%, the prioritization index is zeroed regardless of individual law compliance. This is by design: epistemic insufficiency prevents meaningful prioritization scoring.")
-            pdf.set_text_color(0, 0, 0)
+            pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
             pdf.set_font("Helvetica", "", 8)
         pdf.cell(w, 6, f"W_arch (Architecture Weight): {math_data.get('w_arch', 'N/A')}", ln=True)
         pdf.cell(w, 6, f"M_S8 (NKG Penalty): {math_data.get('m_s8', 'N/A')}", ln=True)
