@@ -3,7 +3,9 @@ services:
     build: ./backend
     container_name: brain
     ports: ["8000:8000"]
-    volumes: ["nkg_data:/app/nkg"]
+    volumes:
+      - nkg_data:/app/nkg
+      - ./backend/tos/saas/keys.db:/app/tos/saas/keys.db
     env_file:
       - .env
     restart: unless-stopped

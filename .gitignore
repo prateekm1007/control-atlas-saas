@@ -32,3 +32,4 @@ dist/
 # --- TOSCANINI EVIDENCE EXCEPTIONS ---
 !ledger/assets/**/*.cif
 !ledger/assets/**/*.pdb
+backend/tos/saas/keys.db

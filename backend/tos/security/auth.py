@@ -5,6 +5,7 @@ Supports single key (TOSCANINI_API_KEY) or multiple keys (TOSCANINI_API_KEYS).
 import os
 import logging
 from fastapi import Header, HTTPException, UploadFile
+from tos.saas.key_store import hash_key, get_key, check_quota, increment_usage
 
 logger = logging.getLogger("toscanini.security")
 
@@ -31,12 +32,44 @@ BATCH_ALLOWED_EXTENSIONS = {".zip"}
 
 
 def verify_api_key(x_api_key: str = Header(None, alias="X-API-Key")):
-    """FastAPI dependency for API key verification."""
+    """FastAPI dependency for API key verification with quota enforcement."""
+    # Legacy OPEN_MODE (dev only)
     if OPEN_MODE:
         return True
-    if not x_api_key or x_api_key not in ALLOWED_KEYS:
-        logger.warning("Unauthorized access attempt")
-        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+    
+    # Check against static keys first (backward compat)
+    if x_api_key and x_api_key in ALLOWED_KEYS:
+        return True
+    
+    # DB-backed multi-tenant key validation
+    if not x_api_key:
+        logger.warning("Missing API key")
+        raise HTTPException(status_code=401, detail="Missing API key")
+    
+    key_hash_val = hash_key(x_api_key)
+    key = get_key(key_hash_val)
+    
+    if not key:
+        logger.warning(f"Invalid API key: {key_hash_val[:16]}...")
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    if not key.active:
+        logger.warning(f"Revoked API key: {key_hash_val[:16]}...")
+        raise HTTPException(status_code=401, detail="API key has been revoked")
+    
+    # Quota check
+    allowed, used, limit = check_quota(key_hash_val)
+    if not allowed:
+        logger.warning(f"Quota exceeded for key: {used}/{limit}")
+        raise HTTPException(
+            status_code=429,
+            detail=f"Daily quota exceeded: {used}/{limit} requests used"
+        )
+    
+    # Increment usage atomically
+    increment_usage(key_hash_val)
+    
+    logger.info(f"Authorized request: tier={key.tier}, usage={used+1}/{limit}")
     return True
 
 
