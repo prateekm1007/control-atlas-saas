@@ -319,6 +319,73 @@ def render_characterization(char: dict) -> None:
     c4.metric("Resolution", f"{res:.2f} Å" if res else "N/A (NMR/Predicted)")
 
 
+
+def _extract_plddt_from_pdb(pdb_b64_str):
+    """Extract per-residue B-factors (pLDDT) from base64 PDB CA atoms."""
+    import base64 as _b64
+    confidences = []
+    try:
+        pdb_text = _b64.b64decode(pdb_b64_str).decode("utf-8", errors="ignore")
+        for line in pdb_text.splitlines():
+            if line.startswith("ATOM") and len(line) >= 66:
+                if line[12:16].strip() == "CA":
+                    try:
+                        confidences.append(float(line[60:66]))
+                    except (ValueError, IndexError):
+                        confidences.append(50.0)
+    except Exception:
+        pass
+    return confidences
+
+
+def _render_sidebar_confidence_strip(confidences):
+    """Render a per-residue colored strip as pure HTML in the sidebar."""
+    n = len(confidences)
+    if n < 3:
+        return
+    colors = []
+    for c in confidences:
+        if c >= 90: colors.append("#0066CC")
+        elif c >= 70: colors.append("#4DA6FF")
+        elif c >= 50: colors.append("#FFB84D")
+        else: colors.append("#CC0000")
+    stops = ",".join(["%s %.1f%% %.1f%%" % (colors[i], i/n*100, (i+1)/n*100) for i in range(n)])
+    n_vh = sum(1 for c in confidences if c >= 90)
+    n_h = sum(1 for c in confidences if 70 <= c < 90)
+    n_m = sum(1 for c in confidences if 50 <= c < 70)
+    n_l = sum(1 for c in confidences if c < 50)
+    # Find contiguous low regions
+    low_spans = []
+    in_r, start = False, 0
+    for i, c in enumerate(confidences):
+        if c < 50:
+            if not in_r: start, in_r = i, True
+        elif in_r:
+            if i - start >= 3: low_spans.append((start+1, i))
+            in_r = False
+    if in_r and n - start >= 3: low_spans.append((start+1, n))
+    low_html = ""
+    if low_spans:
+        spans_str = ", ".join(["%d-%d" % (s, e) for s, e in low_spans])
+        low_html = '<div style="font-size:10px;color:#CC0000;margin-top:4px;">Disordered: residues %s</div>' % spans_str
+    html = (
+        '<div style="margin:8px 0;">'
+        '<div style="font-size:11px;font-weight:600;color:#333;margin-bottom:4px;">'
+        'Per-Residue Confidence (%d residues)</div>'
+        '<div style="width:100%%;height:14px;border-radius:3px;'
+        'background:linear-gradient(to right,%s);border:1px solid #ddd;"></div>'
+        '<div style="display:flex;justify-content:space-between;font-size:9px;color:#999;margin-top:2px;">'
+        '<span>1</span><span>%d</span></div>'
+        '<div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">'
+        '<span style="font-size:9px;"><span style="color:#0066CC;">&#9632;</span> VH:%d</span>'
+        '<span style="font-size:9px;"><span style="color:#4DA6FF;">&#9632;</span> H:%d</span>'
+        '<span style="font-size:9px;"><span style="color:#FFB84D;">&#9632;</span> M:%d</span>'
+        '<span style="font-size:9px;"><span style="color:#CC0000;">&#9632;</span> L:%d</span>'
+        '</div>%s</div>'
+    ) % (n, stops, n, n_vh, n_h, n_m, n_l, low_html)
+    st.markdown(html, unsafe_allow_html=True)
+
+
 def render_3d_viewer(pdb_b64: str, binary: str, height: int = 500, width: int = 700) -> None:
     try:
         pdb_str = base64.decodebytes(pdb_b64.encode()).decode("utf-8", errors="ignore")
@@ -565,6 +632,15 @@ with st.sidebar:
                     f"{_fl.get('observed', 'N/A')} "
                     f"(threshold: {_fl.get('operator', '')} {_fl.get('threshold', 'N/A')})"
                 )
+
+        st.divider()
+
+        # ── PER-RESIDUE CONFIDENCE MAP ──
+        _pdb_b64 = _ar.get("pdb_b64", "")
+        if _pdb_b64:
+            _residue_conf = _extract_plddt_from_pdb(_pdb_b64)
+            if len(_residue_conf) >= 3:
+                _render_sidebar_confidence_strip(_residue_conf)
 
         st.divider()
 

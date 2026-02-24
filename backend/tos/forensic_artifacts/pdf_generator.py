@@ -1,6 +1,7 @@
 from fpdf import FPDF
 from .confidence_viz import generate_confidence_bar
 from .structure_viz import generate_structure_render
+from .residue_heatmap import generate_residue_heatmap_png
 from datetime import datetime
 from .pdf_theme import PDF_COLORS, PDF_LAYOUT
 from ..governance.constants import LAW_105_THRESHOLD
@@ -113,6 +114,20 @@ def _extract_ca_atoms(pdb_b64):
         pass
     return coords, confidences
 
+
+
+def _find_low_regions(confidences, threshold=50.0, min_length=3):
+    """Find contiguous stretches of residues below threshold. Returns 1-indexed tuples."""
+    regions, in_r, start = [], False, 0
+    for i, s in enumerate(confidences):
+        if s < threshold:
+            if not in_r: start, in_r = i, True
+        elif in_r:
+            if (i - start) >= min_length: regions.append((start + 1, i))
+            in_r = False
+    if in_r and (len(confidences) - start) >= min_length:
+        regions.append((start + 1, len(confidences)))
+    return regions
 
 def generate_v21_dossier(payload):
     try:
@@ -465,6 +480,56 @@ def generate_v21_dossier(payload):
         else:
             pdf.set_font("Helvetica", "I", 9)
             pdf.cell(w, 8, "[Insufficient CA atoms for 3D visualization]", ln=True, align="C")
+
+        # ── RESIDUE-LEVEL CONFIDENCE HEATMAP (below 3D render) ──
+        if ca_confidences and len(ca_confidences) >= 3:
+            try:
+                import tempfile as _tf_hm
+                import os as _os_hm
+                _hm_title = "Per-Residue Confidence - %d residues" % len(ca_confidences)
+                heatmap_png = generate_residue_heatmap_png(
+                    ca_confidences, title=_hm_title,
+                    figwidth=7.0, figheight=1.8, dpi=200,
+                )
+                with _tf_hm.NamedTemporaryFile(suffix=".png", delete=False) as _tmp_hm:
+                    _tmp_hm.write(heatmap_png)
+                    _hm_path = _tmp_hm.name
+                if pdf.get_y() > 200:
+                    pdf.add_page()
+                    pdf.section_divider("RESIDUE-LEVEL CONFIDENCE DISTRIBUTION", 20, 60, 120)
+                    pdf.ln(2)
+                else:
+                    pdf.ln(6)
+                    pdf.set_font("Helvetica", "B", 9)
+                    pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+                    pdf.cell(w, 6, "RESIDUE-LEVEL CONFIDENCE DISTRIBUTION", ln=True)
+                    pdf.ln(2)
+                pdf.image(_hm_path, x=15, w=180)
+                pdf.set_y(pdf.get_y() + 2)
+                _os_hm.unlink(_hm_path)
+                pdf.set_font("Helvetica", "", 7)
+                pdf.set_text_color(*PDF_COLORS["TEXT_MUTED"])
+                n_total = len(ca_confidences)
+                n_low = sum(1 for s in ca_confidences if s < 50)
+                n_med = sum(1 for s in ca_confidences if 50 <= s < 70)
+                n_high = sum(1 for s in ca_confidences if 70 <= s < 90)
+                n_vhigh = sum(1 for s in ca_confidences if s >= 90)
+                pdf.cell(w, 4, "Very High %d (%.0f%%) | High %d (%.0f%%) | Medium %d (%.0f%%) | Low %d (%.0f%%)" % (
+                    n_vhigh, n_vhigh/n_total*100, n_high, n_high/n_total*100,
+                    n_med, n_med/n_total*100, n_low, n_low/n_total*100), ln=True, align="C")
+                if n_low > 0:
+                    low_regions = _find_low_regions(ca_confidences)
+                    if low_regions:
+                        pdf.set_text_color(*PDF_COLORS["VETO"])
+                        pdf.set_font("Helvetica", "B", 7)
+                        pdf.cell(w, 4, "Low-confidence regions: residues %s" % ", ".join(
+                            ["%d-%d" % (s, e) for s, e in low_regions]), ln=True, align="C")
+                pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+                pdf.ln(2)
+            except Exception:
+                pdf.set_font("Helvetica", "I", 8)
+                pdf.cell(w, 5, "[Residue heatmap could not be generated]", ln=True, align="C")
+                pdf.ln(2)
 
 
         pdf.add_page()
