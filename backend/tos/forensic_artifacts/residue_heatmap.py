@@ -72,7 +72,7 @@ def generate_residue_heatmap_png(plddt_scores, title="Per-Residue Confidence (pL
     legend = [Patch(facecolor=BAND_COLORS[k], label=k) for k in BAND_COLORS]
     ax_t.legend(handles=legend, loc="upper right", fontsize=5.5,
                 frameon=True, framealpha=0.9, edgecolor="#E0E0E0", ncol=4)
-    plt.tight_layout()
+    fig.subplots_adjust(left=0.06, right=0.95, top=0.88, bottom=0.22, hspace=0.05)
 
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=dpi, bbox_inches="tight", facecolor="white")
