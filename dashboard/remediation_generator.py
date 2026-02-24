@@ -483,7 +483,7 @@ def generate_remediation_report(audit_result):
     report = {
         "toscanini_remediation_report": {
             "version":          "2.0",
-            "generated_utc":    datetime.now(timezone.utc).isoformat(),
+            "generated_utc":    meta["timestamp"],
             "audit_id":         meta["audit_id"],
             "verdict":          meta["verdict"],
             "coverage_pct":     meta["coverage"],
