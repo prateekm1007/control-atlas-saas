@@ -67,6 +67,7 @@ DEPENDENCIES (requirements.txt unchanged):
 import streamlit as st
 import requests
 from remediation_generator import generate_remediation_zip, should_show_remediation
+from comparison_engine import compare_audits
 import base64
 import os
 import hashlib
@@ -129,6 +130,8 @@ apply_arena_theme()
 
 if "audit_result" not in st.session_state:
     st.session_state.audit_result = None
+if "baseline_audit" not in st.session_state:
+    st.session_state.baseline_audit = None
 if "candidates" not in st.session_state:
     st.session_state.candidates = []
 if "benchmark_results" not in st.session_state:
@@ -806,6 +809,94 @@ with tab_audit:
 
         st.divider()
         render_full_audit_result(res)
+
+        # ── BEFORE/AFTER COMPARISON ──────────────────────────────────────
+        st.divider()
+        col_baseline, col_compare = st.columns(2)
+        
+        with col_baseline:
+            if st.button("📌 Set as Baseline for Comparison", use_container_width=True,
+                         help="Store this audit as the 'before' state for refinement comparison"):
+                st.session_state.baseline_audit = res
+                st.success(f"Baseline stored: {res.get('governance', {}).get('audit_id', 'N/A')}")
+        
+        with col_compare:
+            if st.session_state.baseline_audit:
+                baseline_id = st.session_state.baseline_audit.get("governance", {}).get("audit_id", "N/A")
+                st.info(f"Baseline: {baseline_id}")
+            else:
+                st.caption("No baseline set")
+        
+        # If baseline exists and current != baseline, show comparison
+        if st.session_state.baseline_audit:
+            baseline_id = st.session_state.baseline_audit.get("governance", {}).get("audit_id", "")
+            current_id = res.get("governance", {}).get("audit_id", "")
+            
+            if baseline_id != current_id:
+                st.divider()
+                st.subheader("🔬 Before/After Comparison")
+                
+                try:
+                    comparison = compare_audits(st.session_state.baseline_audit, res)
+                    
+                    # Summary metrics
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        delta_cov = comparison["coverage_delta"]
+                        st.metric("Coverage Change", f"{delta_cov:+.1f}%",
+                                  delta=f"{delta_cov:.1f}%",
+                                  delta_color="normal" if delta_cov >= 0 else "inverse")
+                    with col2:
+                        delta_viol = comparison["violation_count_delta"]
+                        st.metric("Violations", f"{comparison['violation_count_after']}",
+                                  delta=f"{delta_viol:+d}",
+                                  delta_color="inverse" if delta_viol < 0 else "normal")
+                    with col3:
+                        st.metric("Verdict Change", comparison["verdict_change"],
+                                  delta="Improved" if comparison["verdict_improved"] else "No improvement",
+                                  delta_color="normal" if comparison["verdict_improved"] else "off")
+                    
+                    st.divider()
+                    
+                    # Regressions warning
+                    if comparison["regressions"]:
+                        st.error(f"⚠️ **REGRESSIONS DETECTED:** {len(comparison['regressions'])} deterministic laws worsened")
+                        st.caption(", ".join(comparison["regressions"]))
+                    
+                    # Improvements
+                    if comparison["improvements"]:
+                        st.success(f"✅ **IMPROVEMENTS:** {len(comparison['improvements'])} violations resolved")
+                        st.caption(", ".join(comparison["improvements"]))
+                    
+                    # Law-by-law table
+                    if comparison["law_changes"]:
+                        st.markdown("**Detailed Law Changes**")
+                        change_df = []
+                        for lc in comparison["law_changes"]:
+                            status_emoji = {
+                                "RESOLVED": "✅",
+                                "REGRESSED": "❌",
+                                "CHANGED": "🔄",
+                                "UNCHANGED": "➖",
+                                "STRUCTURAL_CHANGE": "⚠️",
+                            }.get(lc["change_type"], "")
+                            
+                            change_df.append({
+                                "Law": lc["law_id"],
+                                "Title": lc["title"],
+                                "Before": lc["before_status"],
+                                "After": lc["after_status"],
+                                "Status": f"{status_emoji} {lc['change_type']}",
+                            })
+                        st.dataframe(change_df, use_container_width=True, hide_index=True)
+                    
+                    st.caption(
+                        f"Baseline: {comparison['baseline_audit_id']} | "
+                        f"Refined: {comparison['refined_audit_id']}"
+                    )
+                
+                except Exception as e:
+                    st.error(f"Comparison failed: {e}")
 
     else:
         st.subheader("Upload Structure for Audit")
