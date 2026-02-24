@@ -125,11 +125,11 @@ def generate_v21_dossier(payload):
         pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
         pdf.ln(4)
 
-        # VERDICT BADGE — Large centered institutional panel
+        # VERDICT BADGE - Large centered institutional panel
         det_score = v.get("deterministic_score", 0)
         pdf.verdict_badge(verdict_binary, det_score, coverage)
 
-        # METRIC CARDS — Three columns, no borders
+        # METRIC CARDS - Three columns, no borders
         card_w = 63
 
         # Labels row
@@ -150,7 +150,7 @@ def generate_v21_dossier(payload):
 
         pdf.ln(3)
 
-        # CONFIDENCE BAR — Visual coverage indicator
+        # CONFIDENCE BAR - Visual coverage indicator
         try:
             bar_png = generate_confidence_bar(coverage, v.get('det_passed', 0), v.get('det_total', 12))
             import tempfile
@@ -212,7 +212,7 @@ def generate_v21_dossier(payload):
                        "NMR: LAW-100, LAW-125, LAW-170 advisory. "
                        "Predicted (AlphaFold): all deterministic laws enforced at full jurisdiction.")
 
-        # ══════ PAGE 2: SECTION I — DETERMINISTIC GOVERNANCE ══════
+        # ══════ PAGE 2: SECTION I - DETERMINISTIC GOVERNANCE ══════
         pdf.add_page()
 
         # ═══ REGULATOR FIX #4: Distinct section header ═══
@@ -224,7 +224,7 @@ def generate_v21_dossier(payload):
         pdf.ln(2)
         pdf.set_font("Helvetica", "B", 8)
         pdf.set_text_color(*PDF_COLORS["ALERT"])
-        # CANONICAL ADJUDICATION HIERARCHY — DO NOT DUPLICATE ANYWHERE
+        # CANONICAL ADJUDICATION HIERARCHY - DO NOT DUPLICATE ANYWHERE
         pdf.multi_cell(w, 4, f"Adjudication Hierarchy: Coverage gate (LAW-105 >= {LAW_105_THRESHOLD}%) precedes deterministic incompatibility checks. If coverage is insufficient, verdict is INDETERMINATE regardless of individual law compliance. This reflects epistemic insufficiency, not structural failure.")
         pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
         pdf.ln(2)
@@ -258,17 +258,14 @@ def generate_v21_dossier(payload):
 
         pdf.set_font("Helvetica", "B", 9)
         pdf.cell(w, 8, "DETERMINISTIC COMPLIANCE LEDGER", ln=True)
-        pdf.set_font("Helvetica", "B", 8)
+        pdf.set_font("Helvetica", "", 8)
         pdf.set_fill_color(*PDF_COLORS["BG_PASS_TABLE"])
-        for i, h in enumerate(headers):
-            pdf.cell(widths[i], 8, h, 1, 0, "C", True)
-        pdf.ln(8)
-        pdf.set_font("Helvetica", "", 7)
-        for l in passes:
-            for i, field in enumerate([l['law_id'], l['title'], "Deterministic",
-                                       str(l['observed']), f"{l['operator']} {l['threshold']}", l['status']]):
-                pdf.cell(widths[i], 7, pdf.safe(field), 1, 0, "C" if i != 1 else "L")
-            pdf.ln(7)
+        pdf.cell(w, 8, f"[PASS] {len(passes)} Deterministic Laws Compliant (no violations detected)", 
+                 border=1, ln=True, align="C", fill=True)
+        pdf.set_font("Helvetica", "I", 7)
+        pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
+        pdf.cell(w, 5, "All deterministic coordinate measurements within thresholds.", ln=True)
+        pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
 
         # ═══ REGULATOR FIX #3: LAW-100 inline footnote ═══
         pdf.ln(3)
@@ -279,7 +276,7 @@ def generate_v21_dossier(payload):
                        "See PIL-CAL-03 modality matrix for full classification rules.")
         pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
 
-        # ══════ PAGE 3: SECTION II — ADVISORY METRICS ══════
+        # ══════ PAGE 3: SECTION II - ADVISORY METRICS ══════
         pdf.add_page()
 
         # ═══ REGULATOR FIX #4: Distinct section header (different color) ═══
