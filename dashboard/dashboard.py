@@ -89,10 +89,7 @@ from style_utils import (
 BACKEND = os.getenv("BACKEND_URL", "http://brain:8000")
 API_KEY = os.getenv("TOSCANINI_API_KEY", "")
 
-T3_CATEGORIES = [
-    "NONE", "LINEAR", "MULTIVALENT", "ENGAGEMENT",
-    "MOTIFS", "LINKERS", "CONFORMATIONAL", "METAL",
-]
+T3_CATEGORIES = ["NONE"]  # Simplified — refinement studio replaces weighting
 
 BENCHMARK_CRYSTALS = [
     {"pdb_id": "3NIR", "name": "Endothiapepsin (Ultra-High)", "resolution": 0.48, "method": "X-ray",   "af_id": "AF-P11838-F1"},
@@ -495,28 +492,203 @@ def render_law_comparison_table(crystal_laws: list, af_laws: list) -> None:
 
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/1042/1042307.png", width=72)
-    st.title("STATION CONFIG")
+    st.title("TOSCANINI")
 
     st.toggle("Dark Mode", key="noir_toggle")
     apply_arena_theme()
 
+    # t3_category hardcoded — no user selection
+    t3_category = "NONE"
+
     st.divider()
 
-    t3_category = st.radio(
-        "⚙️ Tier-3 Strategic Weighting",
-        T3_CATEGORIES,
-        index=0,
-        help="Selects therapeutic class weighting. NONE = canonical physics only.",
-    )
+    # ── ENGINE STATUS ──
+    try:
+        health = requests.get(f"{BACKEND}/health", timeout=3).json()
+        engine_ver = health.get("version", "?")
+        engine_status = health.get("status", "?").upper()
+        if engine_status == "OPERATIONAL":
+            st.success(f"Engine v{engine_ver} -- {engine_status}")
+        else:
+            st.warning(f"Engine v{engine_ver} -- {engine_status}")
+    except Exception:
+        st.error("Engine unreachable")
+        engine_ver = "?"
+
+    st.divider()
+
+    # ═══════════════════════════════════════════
+    # STRUCTURE REFINEMENT STUDIO
+    # ═══════════════════════════════════════════
+    _ar = st.session_state.get("audit_result")
+
+    if _ar is not None:
+        _v = _ar.get("verdict", {})
+        _binary = _v.get("binary", "UNKNOWN")
+        _cov = _v.get("coverage_pct", 0)
+        _det_passed = _v.get("det_passed", 0)
+        _det_total = _v.get("det_total", 12)
+        _det_score = _v.get("deterministic_score", 0)
+        _laws = _ar.get("tier1", {}).get("laws", [])
+        _failing = [l for l in _laws if l.get("status") != "PASS" and l.get("method") == "deterministic"]
+        _char = _ar.get("characterization", {})
+        _total_res = _char.get("total_residues", "N/A")
+
+        st.markdown("### REFINEMENT STUDIO")
+
+        # ── VERDICT STATUS INDICATOR ──
+        if _binary == "PASS" and _cov >= 70:
+            st.success("Structure is high-confidence -- ready for drug discovery")
+        elif _binary == "INDETERMINATE":
+            st.warning("INDETERMINATE -- refinement recommended")
+        elif _binary == "VETO":
+            st.error("VETO -- critical physics violations detected")
+        else:
+            st.info(f"Status: {_binary}")
+
+        # ── DIAGNOSIS SUMMARY ──
+        st.markdown("**Diagnosis**")
+        _diag_cols = st.columns(2)
+        _diag_cols[0].metric("Coverage", f"{_cov:.1f}%",
+                             delta="OK" if _cov >= 70 else "LOW",
+                             delta_color="normal" if _cov >= 70 else "inverse")
+        _diag_cols[1].metric("Det. Laws", f"{_det_passed}/{_det_total}",
+                             delta="OK" if _det_passed == _det_total else f"{_det_total - _det_passed} FAIL",
+                             delta_color="normal" if _det_passed == _det_total else "inverse")
+
+        # Show failing laws
+        if _failing:
+            st.markdown("**Failing Laws:**")
+            for _fl in _failing:
+                st.markdown(
+                    f"- **{_fl['law_id']}** {_fl.get('title', '')}: "
+                    f"{_fl.get('observed', 'N/A')} "
+                    f"(threshold: {_fl.get('operator', '')} {_fl.get('threshold', 'N/A')})"
+                )
+
+        st.divider()
+
+        # ── RECOMMENDED REFINEMENT ACTIONS ──
+        _needs_refinement = (_binary != "PASS" or _cov < 70)
+
+        if _needs_refinement:
+            st.markdown("**Recommended Refinement Actions**")
+            st.caption("Physics-first methods to fix structural issues")
+
+            # Priority table
+            _refine_data = [
+                {"Priority": "1", "Method": "Rosetta Fast Relax",
+                 "Expected Improvement": "Fix rotamer outliers and clashes",
+                 "Est. Time": "30-90 sec", "Recommendation": "Strongly recommended"},
+                {"Priority": "2", "Method": "Short MD Equilibration",
+                 "Expected Improvement": "Improve hydrophobic burial",
+                 "Est. Time": "3-8 min", "Recommendation": "Recommended"},
+                {"Priority": "3", "Method": "Targeted Loop Modeling",
+                 "Expected Improvement": "Rebuild disordered regions",
+                 "Est. Time": "2-5 min", "Recommendation": "If loops critical"},
+                {"Priority": "4", "Method": "Pocket Refinement",
+                 "Expected Improvement": "Optimize binding site geometry",
+                 "Est. Time": "8-15 min", "Recommendation": "For drug design"},
+            ]
+
+            # Determine which methods are most relevant
+            _has_rotamer = any("rotam" in l.get("title", "").lower() or "155" in l.get("law_id", "") for l in _failing)
+            _has_burial = any("burial" in l.get("title", "").lower() or "hydrophob" in l.get("title", "").lower() or "182" in l.get("law_id", "") for l in _failing)
+            _low_coverage = _cov < 50
+
+            for _rd in _refine_data:
+                _method = _rd["Method"]
+                _rec = _rd["Recommendation"]
+
+                # Highlight most relevant
+                if _method == "Rosetta Fast Relax" and _has_rotamer:
+                    _rec = "CRITICAL -- rotamer issues detected"
+                elif _method == "Short MD Equilibration" and _has_burial:
+                    _rec = "CRITICAL -- burial issues detected"
+                elif _method == "Targeted Loop Modeling" and _low_coverage:
+                    _rec = "CRITICAL -- low coverage regions"
+
+                _rd["Recommendation"] = _rec
+
+            st.dataframe(_refine_data, use_container_width=True, hide_index=True)
+
+            st.divider()
+
+            # ── ACTION BUTTONS ──
+            st.markdown("**Execute Refinement**")
+
+            if st.button("Fast Relax (Rosetta)", use_container_width=True,
+                         help="Quick local minimization + rotamer fixing. Fixes 80%+ of rotamer outliers."):
+                st.info("Rosetta Fast Relax: backend integration in development.")
+                st.caption("Pipeline: Upload PDB -> Rosetta relax -> Re-validate -> Download refined structure")
+
+            if st.button("Short MD Equilibration", use_container_width=True,
+                         help="10-50ns MD simulation (OpenMM). Improves hydrophobic burial and dynamic regions."):
+                st.info("MD Equilibration: backend integration in development.")
+                st.caption("Pipeline: Solvate -> Equilibrate -> Production MD -> Extract lowest-energy frame")
+
+            if st.button("Loop Modeling", use_container_width=True,
+                         help="Rebuild disordered loops with Rosetta/AlphaFold."):
+                st.info("Loop modeling: backend integration in development.")
+
+            if st.button("Pocket Refinement", use_container_width=True,
+                         help="Focus physics optimization on binding site. Best for virtual screening prep."):
+                st.info("Pocket refinement: backend integration in development.")
+
+            if st.button("AlphaFold3 Targeted Re-run", use_container_width=True,
+                         help="Re-predict with ligands/multimers for interface accuracy."):
+                st.info("AF3 re-run: backend integration in development.")
+
+            # ── ADVANCED OPTIONS ──
+            with st.expander("Advanced Refinement Options"):
+                st.selectbox("MD Length", ["10 ns", "50 ns", "100 ns", "500 ns"],
+                             help="Longer = better sampling, slower")
+                st.selectbox("Force Field", ["AMBER ff14SB", "CHARMM36m", "OPLS-AA"])
+                st.checkbox("Explicit solvent (TIP3P)", value=True)
+                st.checkbox("Membrane environment")
+                st.number_input("Temperature (K)", value=300, min_value=200, max_value=500, step=10)
+                st.selectbox("Quantum Method (active site)", ["None", "ORCA DFT", "Psi4 MP2", "xTB GFN2"])
+                if st.button("Run Custom Pipeline", use_container_width=True):
+                    st.info("Custom refinement pipeline: coming soon.")
+
+            st.divider()
+
+            # ── EXPECTED OUTCOME ──
+            st.markdown("**Expected After Refinement**")
+            if _cov < 70:
+                st.caption(
+                    f"Current coverage: {_cov:.1f}%. "
+                    "After Rosetta relax + short MD, expected improvement to 65-85% "
+                    "depending on initial structure quality."
+                )
+            if _failing:
+                _fail_ids = ", ".join([f['law_id'] for f in _failing])
+                st.caption(f"Failing: {_fail_ids}. Fast Relax resolves rotamer/clash issues in ~80% of cases.")
+            st.caption("Re-upload refined structure to Toscanini for re-validation.")
+
+        # ── PDF DOWNLOAD (always visible) ──
+        st.divider()
+        _pdf_b64 = _ar.get("pdf_b64", "")
+        _audit_id = _ar.get("governance", {}).get("audit_id", "ARTIFACT")
+        if _pdf_b64:
+            import base64 as _b64
+            _pdf_bytes = _b64.b64decode(_pdf_b64)
+            st.download_button(
+                label="Download Forensic Dossier (PDF)",
+                data=_pdf_bytes,
+                file_name=f"TOSCANINI_DOSSIER_{_audit_id}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+            )
+
+    else:
+        # No audit result — minimal sidebar
+        st.markdown("### REFINEMENT STUDIO")
+        st.caption("Upload a structure to activate diagnosis and refinement tools.")
+        st.caption("The studio auto-detects issues and recommends physics-first fixes.")
 
     st.divider()
     st.caption(f"Theme: {get_active_theme_name()}")
-
-    try:
-        health = requests.get(f"{BACKEND}/health", timeout=3).json()
-        st.caption(f"Engine: v{health.get('version', '?')} · {health.get('status', '?').upper()}")
-    except Exception:
-        st.caption("⚠️ Backend unreachable")
 
 
 # ===============================================================

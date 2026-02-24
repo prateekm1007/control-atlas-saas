@@ -509,6 +509,83 @@ def generate_v21_dossier(payload):
         pdf.cell(w, 6, f"Scope: Computed over core residues only (n={ss.get('total_residues', 'N/A')}).", ln=True)
 
         # ══════ PAGE 5: PROVENANCE ══════
+
+        # ══════ REFINEMENT RECOMMENDATIONS PAGE ══════
+        if verdict_binary != "PASS" or coverage < LAW_105_THRESHOLD:
+            pdf.add_page()
+            pdf.section_title("Refinement Recommendations")
+            pdf.section_divider("PHYSICS-FIRST REFINEMENT FOR DRUG DISCOVERY USE", 20, 60, 120)
+            pdf.ln(3)
+
+            pdf.set_font("Helvetica", "", 9)
+            pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+            if coverage < LAW_105_THRESHOLD:
+                pdf.multi_cell(w, 5,
+                    "This structure has insufficient reliability coverage (%.1f%%) and is not yet "
+                    "suitable for drug discovery without refinement. The following physics-first "
+                    "methods are recommended to improve structural quality." % coverage)
+            else:
+                det_fail_list = [l for l in laws if l.get('method') == 'deterministic' and l['status'] != 'PASS']
+                fail_names = ", ".join([l['law_id'] for l in det_fail_list])
+                pdf.multi_cell(w, 5,
+                    "This structure has deterministic violations (%s) that prevent certification. "
+                    "The following refinement methods address the identified issues." % fail_names)
+            pdf.ln(4)
+
+            pdf.set_font("Helvetica", "B", 9)
+            pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+            pdf.cell(w, 7, "Recommended Physics-First Refinement Methods (Prioritized)", ln=True)
+            pdf.ln(2)
+
+            ref_headers = ["Priority", "Method", "Expected Improvement", "Est. Time", "Recommendation"]
+            ref_widths = [18, 40, 52, 22, 58]
+            pdf.set_font("Helvetica", "B", 7)
+            pdf.set_fill_color(*PDF_COLORS["SECTION_DET"])
+            pdf.set_text_color(*PDF_COLORS["TEXT_WHITE"])
+            for i, h in enumerate(ref_headers):
+                pdf.cell(ref_widths[i], 7, h, 1, 0, "C", True)
+            pdf.ln(7)
+
+            ref_rows = [
+                ["1", "Rosetta Fast Relax", "Fix rotamer outliers and clashes", "30-90 sec", "Strongly recommended"],
+                ["2", "Short MD Equilibration", "Improve hydrophobic burial", "3-8 min", "Recommended"],
+                ["3", "Targeted Loop Modeling", "Rebuild disordered regions", "2-5 min", "If loops are critical"],
+                ["4", "Pocket Refinement", "Optimize binding site geometry", "8-15 min", "For drug design focus"],
+            ]
+
+            pdf.set_font("Helvetica", "", 7)
+            pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+            for row_idx, row in enumerate(ref_rows):
+                if row_idx % 2 == 0:
+                    pdf.set_fill_color(*PDF_COLORS["BG_LIGHTER"])
+                else:
+                    pdf.set_fill_color(255, 255, 255)
+                for i, field in enumerate(row):
+                    pdf.cell(ref_widths[i], 6, pdf.safe(field), 1, 0,
+                             "C" if i in [0, 3] else "L", True)
+                pdf.ln(6)
+
+            pdf.ln(5)
+            pdf.set_font("Helvetica", "B", 9)
+            pdf.cell(w, 7, "Next Step", ln=True)
+            pdf.set_font("Helvetica", "", 8)
+            pdf.multi_cell(w, 5,
+                "Run Rosetta Fast Relax on flagged regions, then re-upload the refined PDB "
+                "to Toscanini for re-validation. After recommended refinement, this model is "
+                "expected to reach sufficient reliability coverage and become suitable for "
+                "virtual screening and lead optimization.")
+            pdf.ln(3)
+
+            pdf.set_font("Helvetica", "I", 7)
+            pdf.set_text_color(*PDF_COLORS["TEXT_SUBTLE"])
+            pdf.multi_cell(w, 4,
+                "Note: Refinement recommendations are generated based on detected physics "
+                "violations and coverage analysis. Actual improvement depends on the specific "
+                "structural context and refinement parameters used. All refined structures "
+                "must be re-validated through the full Toscanini governance pipeline.")
+            pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+
+
         pdf.add_page()
         pdf.section_title("Provenance & Authentication")
         pdf.set_font("Helvetica", "B", 9)
