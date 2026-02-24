@@ -66,6 +66,7 @@ DEPENDENCIES (requirements.txt unchanged):
 
 import streamlit as st
 import requests
+from remediation_generator import generate_remediation_zip, should_show_remediation
 import base64
 import os
 import hashlib
@@ -690,42 +691,30 @@ with st.sidebar:
 
             st.divider()
 
-            # ── ACTION BUTTONS ──
-            st.markdown("**Execute Refinement**")
-
-            if st.button("Fast Relax (Rosetta)", use_container_width=True,
-                         help="Quick local minimization + rotamer fixing. Fixes 80%+ of rotamer outliers."):
-                st.info("Rosetta Fast Relax: backend integration in development.")
-                st.caption("Pipeline: Upload PDB -> Rosetta relax -> Re-validate -> Download refined structure")
-
-            if st.button("Short MD Equilibration", use_container_width=True,
-                         help="10-50ns MD simulation (OpenMM). Improves hydrophobic burial and dynamic regions."):
-                st.info("MD Equilibration: backend integration in development.")
-                st.caption("Pipeline: Solvate -> Equilibrate -> Production MD -> Extract lowest-energy frame")
-
-            if st.button("Loop Modeling", use_container_width=True,
-                         help="Rebuild disordered loops with Rosetta/AlphaFold."):
-                st.info("Loop modeling: backend integration in development.")
-
-            if st.button("Pocket Refinement", use_container_width=True,
-                         help="Focus physics optimization on binding site. Best for virtual screening prep."):
-                st.info("Pocket refinement: backend integration in development.")
-
-            if st.button("AlphaFold3 Targeted Re-run", use_container_width=True,
-                         help="Re-predict with ligands/multimers for interface accuracy."):
-                st.info("AF3 re-run: backend integration in development.")
-
-            # ── ADVANCED OPTIONS ──
-            with st.expander("Advanced Refinement Options"):
-                st.selectbox("MD Length", ["10 ns", "50 ns", "100 ns", "500 ns"],
-                             help="Longer = better sampling, slower")
-                st.selectbox("Force Field", ["AMBER ff14SB", "CHARMM36m", "OPLS-AA"])
-                st.checkbox("Explicit solvent (TIP3P)", value=True)
-                st.checkbox("Membrane environment")
-                st.number_input("Temperature (K)", value=300, min_value=200, max_value=500, step=10)
-                st.selectbox("Quantum Method (active site)", ["None", "ORCA DFT", "Psi4 MP2", "xTB GFN2"])
-                if st.button("Run Custom Pipeline", use_container_width=True):
-                    st.info("Custom refinement pipeline: coming soon.")
+            # ── REMEDIATION PACKAGE DOWNLOAD ──
+            st.markdown("**Remediation Package**")
+            st.caption(
+                "Download a parameterized remediation kit: Rosetta FastRelax protocol, "
+                "OpenMM equilibration script, and per-law prescription report. "
+                "Execute in your validated environment, then re-upload for re-certification."
+            )
+            try:
+                _zip_bytes = generate_remediation_zip(_ar)
+                _zip_name = f"TOSCANINI_REMEDIATION_{_audit_id}.zip"
+                st.download_button(
+                    label="Download Remediation Package (ZIP)",
+                    data=_zip_bytes,
+                    file_name=_zip_name,
+                    mime="application/zip",
+                    use_container_width=True,
+                    help="Contains: Rosetta XML, flags, OpenMM script, per-law report, README",
+                )
+                st.caption(
+                    "Package includes: rosetta_relax.xml, rosetta.flags, "
+                    "openmm_equilibrate.py, loop_modeling.xml, remediation_report.json, README.txt"
+                )
+            except Exception as _rem_err:
+                st.error(f"Remediation package generation failed: {_rem_err}")
 
             st.divider()
 
