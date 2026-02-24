@@ -601,6 +601,7 @@ with st.sidebar:
         _failing = [l for l in _laws if l.get("status") != "PASS" and l.get("method") == "deterministic"]
         _char = _ar.get("characterization", {})
         _total_res = _char.get("total_residues", "N/A")
+        _audit_id = _ar.get("governance", {}).get("audit_id", "ARTIFACT")
 
         st.markdown("### REFINEMENT STUDIO")
 
@@ -734,7 +735,6 @@ with st.sidebar:
         # ── PDF DOWNLOAD (always visible) ──
         st.divider()
         _pdf_b64 = _ar.get("pdf_b64", "")
-        _audit_id = _ar.get("governance", {}).get("audit_id", "ARTIFACT")
         if _pdf_b64:
             import base64 as _b64
             _pdf_bytes = _b64.b64decode(_pdf_b64)
