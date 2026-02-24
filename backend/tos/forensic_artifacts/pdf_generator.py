@@ -1,5 +1,6 @@
 from fpdf import FPDF
 from .confidence_viz import generate_confidence_bar
+from .structure_viz import generate_structure_render
 from datetime import datetime
 from .pdf_theme import PDF_COLORS, PDF_LAYOUT
 from ..governance.constants import LAW_105_THRESHOLD
@@ -44,8 +45,8 @@ class ToscaniniDossier(FPDF):
         # Badge background
         self.set_fill_color(*badge_color)
         self.set_text_color(*PDF_COLORS["TEXT_WHITE"])
-        self.set_font("Helvetica", "B", 28)
-        self.cell(badge_width, 22, verdict, border=0, ln=True, align="C", fill=True)
+        self.set_font("Helvetica", "B", 32)
+        self.cell(badge_width, 26, verdict, border=0, ln=True, align="C", fill=True)
 
         # Score line below badge
         self.set_fill_color(*PDF_COLORS["BG_LIGHT"])
@@ -54,7 +55,7 @@ class ToscaniniDossier(FPDF):
         self.cell(badge_width, 10,
                   f"Deterministic Score: {score}/100   |   Coverage: {coverage}%",
                   border=0, ln=True, align="C", fill=True)
-        self.ln(4)
+        self.ln(6)
 
     def safe(self, text):
         return str(text).encode('latin-1', 'replace').decode('latin-1')
@@ -85,6 +86,32 @@ class ToscaniniDossier(FPDF):
         self.cell(190, 9, self.safe(f"  {text}"), border=0, ln=True, fill=True, align="L")
         self.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
         self.ln(3)
+
+
+def _extract_ca_atoms(pdb_b64):
+    """Extract CA atom coordinates and B-factors from base64-encoded PDB.
+    Used for 3D structure visualization in the forensic dossier.
+    Returns: (list of (x,y,z) tuples, list of confidence floats)"""
+    import base64 as _b64
+    coords, confidences = [], []
+    try:
+        pdb_text = _b64.b64decode(pdb_b64).decode("utf-8", errors="ignore")
+        for line in pdb_text.splitlines():
+            if line.startswith("ATOM") and len(line) >= 54:
+                atom_name = line[12:16].strip()
+                if atom_name == "CA":
+                    x = float(line[30:38])
+                    y = float(line[38:46])
+                    z = float(line[46:54])
+                    coords.append((x, y, z))
+                    try:
+                        bfactor = float(line[60:66])
+                        confidences.append(bfactor)
+                    except (ValueError, IndexError):
+                        confidences.append(50.0)
+    except Exception:
+        pass
+    return coords, confidences
 
 
 def generate_v21_dossier(payload):
@@ -129,41 +156,104 @@ def generate_v21_dossier(payload):
         det_score = v.get("deterministic_score", 0)
         pdf.verdict_badge(verdict_binary, det_score, coverage)
 
-        # METRIC CARDS - Three columns, no borders
-        card_w = 63
+        # METRIC CARDS - Institutional cards with left accent strip
+        card_w = 56
+        card_gap = 7
+        card_total_h = 27
+        start_x = PDF_LAYOUT["MARGIN_LEFT"]
 
-        # Labels row
-        pdf.set_fill_color(*PDF_COLORS["BG_LIGHT"])
-        pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
-        pdf.set_font("Helvetica", "", 8)
-        pdf.cell(card_w, 6, "DETERMINISTIC COMPLIANCE", border=0, align="C", fill=True)
-        pdf.cell(card_w, 6, "RELIABILITY COVERAGE", border=0, align="C", fill=True)
-        pdf.cell(card_w, 6, "PRIORITIZATION INDEX", border=0, ln=True, align="C", fill=True)
+        det_pass = v.get('det_passed', 0)
+        det_total_v = v.get('det_total', 12)
+        cov_val = coverage
+        pri_val = payload.get('tier3', {}).get('probability', 0)
 
-        # Values row
-        pdf.set_fill_color(255, 255, 255)
+        if cov_val >= 70:
+            cov_sub, cov_col = "SUFFICIENT", PDF_COLORS["PASS"]
+        elif cov_val >= 50:
+            cov_sub, cov_col = "MARGINAL", PDF_COLORS["ALERT"]
+        else:
+            cov_sub, cov_col = "INSUFFICIENT", PDF_COLORS["INDETERMINATE"]
+
+        if det_pass == det_total_v:
+            comp_sub, comp_col = "ALL LAWS MET", PDF_COLORS["PASS"]
+        elif det_pass >= det_total_v * 0.8:
+            comp_sub, comp_col = "MINOR FLAGS", PDF_COLORS["ALERT"]
+        else:
+            comp_sub, comp_col = "VIOLATIONS", PDF_COLORS["VETO"]
+
+        if pri_val >= 70:
+            pri_sub, pri_col = "HIGH PRIORITY", PDF_COLORS["PASS"]
+        elif pri_val >= 40:
+            pri_sub, pri_col = "MODERATE", PDF_COLORS["ALERT"]
+        else:
+            pri_sub, pri_col = "LOW / GATED", PDF_COLORS["INDETERMINATE"]
+
+        cards = [
+            ("DETERMINISTIC COMPLIANCE", "%d / %d" % (det_pass, det_total_v), comp_sub, comp_col),
+            ("RELIABILITY COVERAGE",     "%.1f%%" % cov_val,                  cov_sub,  cov_col),
+            ("PRIORITIZATION INDEX",     "%s%%" % str(pri_val),               pri_sub,  pri_col),
+        ]
+
+        card_y = pdf.get_y()
+
+        for idx, (label, value, subtext, val_color) in enumerate(cards):
+            cx = start_x + idx * (card_w + card_gap)
+            accent_w = 2.5
+
+            # Left accent strip (colored indicator)
+            pdf.set_fill_color(*val_color)
+            pdf.rect(cx, card_y, accent_w, card_total_h, style='F')
+
+            # Card body (single rect, no internal borders)
+            body_x = cx + accent_w
+            body_w = card_w - accent_w
+            pdf.set_draw_color(215, 215, 215)
+            pdf.set_line_width(0.25)
+            pdf.set_fill_color(*PDF_COLORS["BG_LIGHTER"])
+            pdf.rect(body_x, card_y, body_w, card_total_h, style='DF')
+
+            # Label (top zone - grey text, 7pt)
+            pdf.set_xy(body_x, card_y + 2)
+            pdf.set_font("Helvetica", "B", 7)
+            pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
+            pdf.cell(body_w, 5, label, border=0, align="C")
+
+            # Value (center zone - black, 18pt bold)
+            pdf.set_xy(body_x, card_y + 8)
+            pdf.set_font("Helvetica", "B", 18)
+            pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+            pdf.cell(body_w, 12, value, border=0, align="C")
+
+            # Subtext (bottom zone - colored status)
+            pdf.set_xy(body_x, card_y + 20)
+            pdf.set_font("Helvetica", "B", 8)
+            pdf.set_text_color(*val_color)
+            pdf.cell(body_w, 5, subtext, border=0, align="C")
+
+        # Reset drawing state below cards
+        pdf.set_draw_color(0, 0, 0)
+        pdf.set_line_width(0.2)
         pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
-        pdf.set_font("Helvetica", "B", 14)
-        pdf.cell(card_w, 10, f"{v.get('det_passed', 0)}/{v.get('det_total', 12)}", border=1, align="C", fill=True)
-        pdf.cell(card_w, 10, f"{coverage}%", border=1, align="C", fill=True)
-        pdf.cell(card_w, 10, f"{payload.get('tier3', {}).get('probability', 0)}%", border=1, ln=True, align="C", fill=True)
+        pdf.set_y(card_y + card_total_h + 7)
+        pdf.set_x(PDF_LAYOUT["MARGIN_LEFT"])
 
-        pdf.ln(3)
-
-        # CONFIDENCE BAR - Visual coverage indicator
+        # FULL-WIDTH pLDDT CONFIDENCE BAR
         try:
-            bar_png = generate_confidence_bar(coverage, v.get('det_passed', 0), v.get('det_total', 12))
-            import tempfile
-            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
-                tmp.write(bar_png)
-                tmp_path = tmp.name
-            pdf.image(tmp_path, x=10, w=190, h=15)
-            import os
-            os.unlink(tmp_path)
-            pdf.ln(3)
-        except Exception as e:
+            bar_png = generate_confidence_bar(
+                coverage, v.get('det_passed', 0), v.get('det_total', 12)
+            )
+            import tempfile as _tf_bar
+            import os as _os_bar
+            with _tf_bar.NamedTemporaryFile(suffix='.png', delete=False) as _tmp_bar:
+                _tmp_bar.write(bar_png)
+                _bar_path = _tmp_bar.name
+            pdf.image(_bar_path, x=PDF_LAYOUT["MARGIN_LEFT"], w=190, h=30)
+            _os_bar.unlink(_bar_path)
+            pdf.ln(5)
+        except Exception:
             pdf.set_font("Helvetica", "I", 8)
-            pdf.cell(190, 6, f"[Confidence visualization unavailable]", ln=True, align="C")
+            pdf.cell(190, 6, "[Confidence distribution unavailable]",
+                     ln=True, align="C")
             pdf.ln(2)
 
         # Obligation statement
@@ -257,16 +347,33 @@ def generate_v21_dossier(payload):
             pdf.ln(5)
 
         pdf.set_font("Helvetica", "B", 9)
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
         pdf.cell(w, 8, "DETERMINISTIC COMPLIANCE LEDGER", ln=True)
-        pdf.set_font("Helvetica", "", 8)
+        pdf.set_font("Helvetica", "B", 7)
         pdf.set_fill_color(*PDF_COLORS["BG_PASS_TABLE"])
-        pdf.cell(w, 8, f"[PASS] {len(passes)} Deterministic Laws Compliant (no violations detected)", 
-                 border=1, ln=True, align="C", fill=True)
+        for i, h in enumerate(headers):
+            pdf.cell(widths[i], 7, h, 1, 0, "C", True)
+        pdf.ln(7)
+        pdf.set_font("Helvetica", "", 7)
+        for law in passes:
+            row_fields = [
+                law['law_id'],
+                law['title'],
+                "Deterministic",
+                str(law.get('observed', 'N/A')),
+                "%s %s" % (law.get('operator', ''), law.get('threshold', 'N/A')),
+                "[PASS]"
+            ]
+            pdf.set_fill_color(*PDF_COLORS["BG_PASS_TABLE"])
+            for i, field in enumerate(row_fields):
+                pdf.cell(widths[i], 6, pdf.safe(field), 1, 0, "C" if i != 1 else "L", True)
+            pdf.ln(6)
+        pdf.ln(3)
         pdf.set_font("Helvetica", "I", 7)
-        pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
+        pdf.set_text_color(*PDF_COLORS["TEXT_SUBTLE"])
         pdf.cell(w, 5, "All deterministic coordinate measurements within thresholds.", ln=True)
         pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
-
         # ═══ REGULATOR FIX #3: LAW-100 inline footnote ═══
         pdf.ln(3)
         pdf.set_font("Helvetica", "I", 7)
@@ -316,6 +423,50 @@ def generate_v21_dossier(payload):
             pdf.ln(7)
 
         # ══════ PAGE 4: CHARACTERIZATION ══════
+
+        # ══════ STRUCTURAL VISUALIZATION PAGE ══════
+        pdf.add_page()
+        pdf.section_title("Structural Visualization")
+        pdf.section_divider("3D CA-TRACE RENDER (CONFIDENCE-COLORED)", 20, 60, 120)
+        pdf.ln(3)
+
+        pdb_b64_data = payload.get("pdb_b64", "")
+        ca_coords, ca_confidences = _extract_ca_atoms(pdb_b64_data)
+
+        if len(ca_coords) > 500:
+            step = max(1, len(ca_coords) // 500)
+            ca_coords_plot = ca_coords[::step]
+            ca_conf_plot = ca_confidences[::step]
+        else:
+            ca_coords_plot = ca_coords
+            ca_conf_plot = ca_confidences
+
+        if ca_coords_plot and len(ca_coords_plot) >= 3:
+            try:
+                _rtitle = "CA Trace - %s (%d residues)" % (prov.get("source", "Unknown"), len(ca_coords))
+                render_png = generate_structure_render(ca_coords_plot, ca_conf_plot, _rtitle)
+                import tempfile as _tf
+                with _tf.NamedTemporaryFile(suffix=".png", delete=False) as _tmp:
+                    _tmp.write(render_png)
+                    _render_path = _tmp.name
+                pdf.image(_render_path, x=15, w=180)
+                import os as _os
+                _os.unlink(_render_path)
+                pdf.ln(5)
+                pdf.set_font("Helvetica", "", 8)
+                pdf.set_text_color(*PDF_COLORS["TEXT_MUTED"])
+                _atom_msg = "Atoms plotted: %d CA | Colored by pLDDT/B-factor" % len(ca_coords)
+                pdf.cell(w, 5, _atom_msg, ln=True, align="C")
+                pdf.cell(w, 5, "Blue (>=90) | Light Blue (70-90) | Orange (50-70) | Red (<50)", ln=True, align="C")
+                pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+            except Exception:
+                pdf.set_font("Helvetica", "I", 9)
+                pdf.cell(w, 8, "[Structure visualization could not be generated]", ln=True, align="C")
+        else:
+            pdf.set_font("Helvetica", "I", 9)
+            pdf.cell(w, 8, "[Insufficient CA atoms for 3D visualization]", ln=True, align="C")
+
+
         pdf.add_page()
         pdf.section_title("Structural Characterization")
         pdf.set_font("Helvetica", "B", 9)
@@ -389,9 +540,14 @@ def generate_v21_dossier(payload):
             pdf.multi_cell(w, 4, f"Note: S6 = 0.0 because coverage gate (LAW-105) failed. When reliability coverage < {LAW_105_THRESHOLD}%, the prioritization index is zeroed regardless of individual law compliance. This is by design: epistemic insufficiency prevents meaningful prioritization scoring.")
             pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
             pdf.set_font("Helvetica", "", 8)
+        pdf.ln(3)
+        pdf.set_x(15)
         pdf.set_font("Helvetica", "", 8)
+        pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
         pdf.cell(w, 6, f"W_arch (Architecture Weight): {math_data.get('w_arch', 'N/A')}", ln=True)
+        pdf.set_x(15)
         pdf.cell(w, 6, f"M_S8 (NKG Penalty): {math_data.get('m_s8', 'N/A')}", ln=True)
+        pdf.set_x(15)
         pdf.cell(w, 6, f"Formula: {BAYESIAN_FORMULA}", ln=True)
 
         return force_bytes(pdf.output(dest='S'))
