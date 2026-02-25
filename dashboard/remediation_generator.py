@@ -250,6 +250,21 @@ def generate_rosetta_xml(audit_result):
             rotamer_str += f" (+ {len(rotamer_residues) - 20} more)"
         rotamer_comment = f"    Rotamer outliers at residues: {rotamer_str}\n"
 
+    # Extract residue-level diagnostics from LAW-130 (clash pairs)
+    clash_pairs = []
+    for law in all_laws:
+        if law.get("law_id") == "LAW-130" and law.get("granularity") == "residue_pair":
+            clash_pairs = law.get("failing_residue_pairs", [])
+            break
+
+    clash_comment = ""
+    if clash_pairs:
+        display_pairs = clash_pairs[:10]  # max 10 pairs for XML clarity
+        clash_str = ", ".join([f"{p[0]}-{p[1]}" for p in display_pairs])
+        if len(clash_pairs) > 10:
+            clash_str += f" (+ {len(clash_pairs) - 10} more pairs)"
+        clash_comment = f"    Steric clashes between residue pairs: {clash_str}\n"
+
     xml = f"""<ROSETTASCRIPTS>
   <!--
     Toscanini FastRelax Protocol (Deterministic)
@@ -258,7 +273,7 @@ def generate_rosetta_xml(audit_result):
     Verdict   : {meta['verdict']}
     Coverage  : {meta['coverage']}%
     Violations: {failing_str}
-    {rama_comment}{rotamer_comment}    Residues  : {meta['n_residues']}
+    {rama_comment}{rotamer_comment}{clash_comment}    Residues  : {meta['n_residues']}
     Source    : {meta['source']}
 {DISCLAIMER}
   -->
