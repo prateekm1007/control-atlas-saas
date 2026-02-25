@@ -632,17 +632,32 @@ def generate_v21_dossier(payload):
 
             pdf.ln(5)
 
-            # ── RESIDUE-LEVEL DIAGNOSTICS (LAW-125) ──────────────────────
+            # ── RESIDUE-LEVEL DIAGNOSTICS (UNIFIED HEADER) ────────────────
+            # Check if ANY law has residue-level violations
+            has_residue_diagnostics = any(
+                l.get("granularity") in ("residue", "residue_pair") and 
+                (l.get("failing_residues") or l.get("failing_residue_pairs"))
+                for l in laws
+            )
+
+            if has_residue_diagnostics:
+                pdf.set_font("Helvetica", "B", 10)
+                pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+                pdf.cell(w, 8, "Residue-Level Diagnostics", ln=True)
+                pdf.set_font("Helvetica", "I", 7)
+                pdf.set_text_color(*PDF_COLORS["TEXT_SUBTLE"])
+                pdf.multi_cell(w, 4,
+                    "The following violations were detected at specific residue positions. "
+                    "Use these lists to target refinement protocols with surgical precision.")
+                pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+                pdf.ln(3)
+
+            # ── LAW-125 RAMACHANDRAN ──────────────────────────────────────
             # Extract LAW-125 residue data if available
             law_125 = next((l for l in laws if l.get("law_id") == "LAW-125"), None)
             if law_125 and law_125.get("granularity") == "residue":
                 rama_residues = law_125.get("failing_residues", [])
                 if rama_residues:
-                    pdf.set_font("Helvetica", "B", 9)
-                    pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
-                    pdf.cell(w, 7, "Residue-Level Diagnostics", ln=True)
-                    pdf.ln(1)
-                    
                     pdf.set_font("Helvetica", "B", 8)
                     pdf.cell(w, 5, "LAW-125 Ramachandran Outliers:", ln=True)
                     pdf.set_font("Helvetica", "", 8)
