@@ -631,6 +631,47 @@ def generate_v21_dossier(payload):
                 pdf.ln(6)
 
             pdf.ln(5)
+
+            # ── RESIDUE-LEVEL DIAGNOSTICS (LAW-125) ──────────────────────
+            # Extract LAW-125 residue data if available
+            law_125 = next((l for l in laws if l.get("law_id") == "LAW-125"), None)
+            if law_125 and law_125.get("granularity") == "residue":
+                rama_residues = law_125.get("failing_residues", [])
+                if rama_residues:
+                    pdf.set_font("Helvetica", "B", 9)
+                    pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+                    pdf.cell(w, 7, "Residue-Level Diagnostics", ln=True)
+                    pdf.ln(1)
+                    
+                    pdf.set_font("Helvetica", "B", 8)
+                    pdf.cell(w, 5, "LAW-125 Ramachandran Outliers:", ln=True)
+                    pdf.set_font("Helvetica", "", 8)
+                    
+                    # Format: max 20 residues per line, institutional formatting
+                    display_residues = rama_residues[:20]
+                    residue_str = ", ".join(map(str, display_residues))
+                    if len(rama_residues) > 20:
+                        residue_str += " (+ %d more)" % (len(rama_residues) - 20)
+                    
+                    pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
+                    pdf.multi_cell(w, 4,
+                        "Detected %d Ramachandran outliers (%.2f%% of %d core residues): %s" % (
+                            len(rama_residues),
+                            law_125.get("observed", 0.0),
+                            law_125.get("sample", 0),
+                            residue_str
+                        ))
+                    pdf.ln(2)
+                    
+                    pdf.set_font("Helvetica", "I", 7)
+                    pdf.set_text_color(*PDF_COLORS["TEXT_SUBTLE"])
+                    pdf.multi_cell(w, 4,
+                        "Recommendation: Restrict Rosetta FastRelax to these specific residues "
+                        "using coordinate constraints. Full-structure relaxation may introduce "
+                        "new violations in currently compliant regions.")
+                    pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+                    pdf.ln(4)
+
             pdf.set_font("Helvetica", "B", 9)
             pdf.cell(w, 7, "Next Step", ln=True)
             pdf.set_font("Helvetica", "", 8)
