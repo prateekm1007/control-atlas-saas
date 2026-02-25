@@ -232,6 +232,7 @@ class Tier1Measurements:
         # (pairwise distance already handled by KDTree radius query).
         # ═══════════════════════════════════════════════════════════
         clash = 0
+        clash_pairs = []  # Phase A.5: inline residue-pair capture
         all_coords = np.array([a.pos for a in structure.atoms])
         if len(all_coords) > 1:
             try:
@@ -245,13 +246,22 @@ class Tier1Measurements:
                     if ai.chain_id == aj.chain_id and abs(ai.res_seq - aj.res_seq) <= 1:
                         continue
                     clash += 1
+                    # Capture as residue pair, deterministic order (lower chain:seq first)
+                    r1 = f"{ai.chain_id}:{ai.res_seq}"
+                    r2 = f"{aj.chain_id}:{aj.res_seq}"
+                    pair = tuple(sorted([r1, r2], key=lambda x: (x.split(":")[0], int(x.split(":")[1]))))
+                    clash_pairs.append(pair)
             except Exception:
                 pass
+        # Deduplicate and sort pairs
+        unique_pairs = sorted(set(clash_pairs), key=lambda p: (p[0].split(":")[0], int(p[0].split(":")[1]), p[1].split(":")[0], int(p[1].split(":")[1])))
         clash_score = (clash / len(all_coords)) * 1000 if len(all_coords) > 0 else 0.0
         results["LAW-130"] = {
             "observed": round(clash_score, 2),
             "status": "PASS" if clash_score < LAW_CANON["LAW-130"]["threshold"] else "VETO",
-            "sample": len(all_coords)
+            "sample": len(all_coords),
+            "granularity": GRANULARITY_RESIDUE_PAIR,
+            "failing_residue_pairs": unique_pairs
         }
 
         # ═══════════════════════════════════════════════════════════
@@ -280,6 +290,7 @@ class Tier1Measurements:
         # ═══════════════════════════════════════════════════════════
         chiral_violations = 0
         chiral_checked = 0
+        chiral_outlier_residues = []  # Phase A.5: inline residue capture
         for r in core:
             if r["_name"] == "GLY":
                 continue
@@ -299,11 +310,14 @@ class Tier1Measurements:
             # CB only 0.009Å from the N-CA-C plane.
             if 0.0 < improper < 90.0:
                 chiral_violations += 1
+                chiral_outlier_residues.append(f"{r['_chain']}:{r['_seq']}")
 
         results["LAW-145"] = {
             "observed": chiral_violations,
             "status": "PASS" if chiral_violations == 0 else "VETO",
-            "sample": chiral_checked
+            "sample": chiral_checked,
+            "granularity": GRANULARITY_RESIDUE,
+            "failing_residues": sorted(chiral_outlier_residues, key=lambda x: (x.split(":")[0], int(x.split(":")[1])))
         }
         # ═══════════════════════════════════════════════════════════
         # LAW-135: Omega Planarity (Module 1.2.2 — uses coord_math.dihedral_deg)
@@ -315,6 +329,7 @@ class Tier1Measurements:
         # Reference: Ramachandran & Sasisekharan (1968)
         # ═══════════════════════════════════════════════════════════
         omega_outliers, omega_total = 0, 0
+        omega_outlier_residues = []  # Phase A.5: inline residue capture
         for i in range(len(core) - 1):
             r1, r2 = core[i], core[i + 1]
             if not Tier1Measurements._is_sequential(r1, r2):
@@ -336,12 +351,16 @@ class Tier1Measurements:
             min_dev = min(dev_from_trans, dev_from_cis)
             if min_dev > 30.0:
                 omega_outliers += 1
+                # Capture the peptide bond as r1-r2 pair (report r2 as the affected residue)
+                omega_outlier_residues.append(f"{r2['_chain']}:{r2['_seq']}")
 
         omega_pct = (omega_outliers / omega_total * 100) if omega_total > 0 else 0.0
         results["LAW-135"] = {
             "observed": round(omega_pct, 2),
             "status": "PASS" if omega_pct <= LAW_CANON["LAW-135"]["threshold"] else "VETO",
-            "sample": omega_total
+            "sample": omega_total,
+            "granularity": GRANULARITY_RESIDUE,
+            "failing_residues": sorted(omega_outlier_residues, key=lambda x: (x.split(":")[0], int(x.split(":")[1])))
         }
         # ═══════════════════════════════════════════════════════════
         # LAW-150: Rotamer Audit (Module 1.2.5 — uses coord_math.dihedral_deg)

@@ -706,6 +706,100 @@ def generate_v21_dossier(payload):
                     pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
                     pdf.ln(4)
 
+            # ── RESIDUE-LEVEL DIAGNOSTICS (LAW-130) ──────────────────────
+            law_130 = next((l for l in laws if l.get("law_id") == "LAW-130"), None)
+            if law_130 and law_130.get("granularity") == "residue_pair":
+                clash_pairs = law_130.get("failing_residue_pairs", [])
+                if clash_pairs:
+                    pdf.set_font("Helvetica", "B", 8)
+                    pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+                    pdf.cell(w, 5, "LAW-130 Steric Clashes:", ln=True)
+                    pdf.set_font("Helvetica", "", 8)
+
+                    # Format pairs: max 10 pairs displayed
+                    display_pairs = clash_pairs[:10]
+                    pairs_str = ", ".join([f"{p[0]}-{p[1]}" for p in display_pairs])
+                    if len(clash_pairs) > 10:
+                        pairs_str += " (+ %d more)" % (len(clash_pairs) - 10)
+
+                    pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
+                    pdf.multi_cell(w, 4,
+                        "Detected %d clashing residue pairs (score: %.2f): %s" % (
+                            len(clash_pairs),
+                            law_130.get("observed", 0.0),
+                            pairs_str
+                        ))
+                    pdf.ln(2)
+
+                    pdf.set_font("Helvetica", "I", 7)
+                    pdf.set_text_color(*PDF_COLORS["TEXT_SUBTLE"])
+                    pdf.multi_cell(w, 4,
+                        "Recommendation: Apply Rosetta FastRelax with fa_rep upweighted to resolve steric overlaps.")
+                    pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+                    pdf.ln(4)
+
+            # ── RESIDUE-LEVEL DIAGNOSTICS (LAW-135) ──────────────────────
+            law_135 = next((l for l in laws if l.get("law_id") == "LAW-135"), None)
+            if law_135 and law_135.get("granularity") == "residue":
+                omega_residues = law_135.get("failing_residues", [])
+                if omega_residues:
+                    pdf.set_font("Helvetica", "B", 8)
+                    pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+                    pdf.cell(w, 5, "LAW-135 Omega Planarity Outliers:", ln=True)
+                    pdf.set_font("Helvetica", "", 8)
+
+                    display_residues = omega_residues[:20]
+                    residue_str = ", ".join(map(str, display_residues))
+                    if len(omega_residues) > 20:
+                        residue_str += " (+ %d more)" % (len(omega_residues) - 20)
+
+                    pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
+                    pdf.multi_cell(w, 4,
+                        "Detected %d omega outliers (%.2f%% of %d peptide bonds): %s" % (
+                            len(omega_residues),
+                            law_135.get("observed", 0.0),
+                            law_135.get("sample_size", law_135.get("sample", 0)),
+                            residue_str
+                        ))
+                    pdf.ln(2)
+
+                    pdf.set_font("Helvetica", "I", 7)
+                    pdf.set_text_color(*PDF_COLORS["TEXT_SUBTLE"])
+                    pdf.multi_cell(w, 4,
+                        "Recommendation: Inspect cis-peptide bonds. Non-proline cis bonds are typically errors.")
+                    pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+                    pdf.ln(4)
+
+            # ── RESIDUE-LEVEL DIAGNOSTICS (LAW-145) ──────────────────────
+            law_145 = next((l for l in laws if l.get("law_id") == "LAW-145"), None)
+            if law_145 and law_145.get("granularity") == "residue":
+                chiral_residues = law_145.get("failing_residues", [])
+                if chiral_residues:
+                    pdf.set_font("Helvetica", "B", 8)
+                    pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+                    pdf.cell(w, 5, "LAW-145 Chirality Violations:", ln=True)
+                    pdf.set_font("Helvetica", "", 8)
+
+                    display_residues = chiral_residues[:20]
+                    residue_str = ", ".join(map(str, display_residues))
+                    if len(chiral_residues) > 20:
+                        residue_str += " (+ %d more)" % (len(chiral_residues) - 20)
+
+                    pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
+                    pdf.multi_cell(w, 4,
+                        "Detected %d D-amino acid chirality errors: %s" % (
+                            len(chiral_residues),
+                            residue_str
+                        ))
+                    pdf.ln(2)
+
+                    pdf.set_font("Helvetica", "I", 7)
+                    pdf.set_text_color(*PDF_COLORS["TEXT_SUBTLE"])
+                    pdf.multi_cell(w, 4,
+                        "CRITICAL: Chirality errors require manual correction. These cannot be fixed by automated refinement.")
+                    pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+                    pdf.ln(4)
+
             pdf.set_font("Helvetica", "B", 9)
             pdf.cell(w, 7, "Next Step", ln=True)
             pdf.set_font("Helvetica", "", 8)

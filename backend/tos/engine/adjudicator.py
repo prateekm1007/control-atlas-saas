@@ -160,6 +160,8 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
             row["granularity"] = m["granularity"]
         if "failing_residues" in m:
             row["failing_residues"] = m["failing_residues"]
+        if "failing_residue_pairs" in m:
+            row["failing_residue_pairs"] = m["failing_residue_pairs"]
         res_t1.append(row)
         if m.get("status", "FAIL") in ("FAIL", "VETO") and row["method"] == "deterministic":
             failing_det.append(f"{lid}: {LAW_CANON[lid]['title']}")
