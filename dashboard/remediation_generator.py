@@ -219,6 +219,22 @@ def generate_rosetta_xml(audit_result):
     relax_cycles  = "5"
     failing_str   = ", ".join(fail_ids) if fail_ids else "NONE"
 
+    # Extract residue-level diagnostics from LAW-125 (even if PASS)
+    rama_residues = []
+    all_laws = audit_result.get("tier1", {}).get("laws", [])
+    for law in all_laws:
+        if law.get("law_id") == "LAW-125" and law.get("granularity") == "residue":
+            rama_residues = law.get("failing_residues", [])
+            break
+    
+    rama_comment = ""
+    if rama_residues:
+        display_residues = rama_residues[:20]  # max 20 for XML clarity
+        rama_str = ", ".join(map(str, display_residues))
+        if len(rama_residues) > 20:
+            rama_str += f" (+ {len(rama_residues) - 20} more)"
+        rama_comment = f"    Ramachandran outliers at residues: {rama_str}\n"
+
     xml = f"""<ROSETTASCRIPTS>
   <!--
     Toscanini FastRelax Protocol (Deterministic)
@@ -227,7 +243,7 @@ def generate_rosetta_xml(audit_result):
     Verdict   : {meta['verdict']}
     Coverage  : {meta['coverage']}%
     Violations: {failing_str}
-    Residues  : {meta['n_residues']}
+    {rama_comment}    Residues  : {meta['n_residues']}
     Source    : {meta['source']}
 {DISCLAIMER}
   -->
