@@ -265,6 +265,38 @@ def generate_rosetta_xml(audit_result):
             clash_str += f" (+ {len(clash_pairs) - 10} more pairs)"
         clash_comment = f"    Steric clashes between residue pairs: {clash_str}\n"
 
+    # Extract residue-level diagnostics from LAW-135 (Omega planarity)
+    omega_residues = []
+    for law in all_laws:
+        if law.get("law_id") == "LAW-135" and law.get("granularity") == "residue":
+            omega_residues = law.get("failing_residues", [])
+            break
+
+    omega_comment = ""
+    if omega_residues:
+        display_residues = omega_residues[:15]  # max 15 for XML clarity
+        omega_str = ", ".join(map(str, display_residues))
+        if len(omega_residues) > 15:
+            omega_str += f" (+ {len(omega_residues) - 15} more)"
+        omega_comment = f"    Omega planarity outliers at residues: {omega_str}\n"
+        omega_comment += f"    Recommendation: Constrain omega dihedrals during minimization\n"
+
+    # Extract residue-level diagnostics from LAW-145 (Chirality)
+    chiral_residues = []
+    for law in all_laws:
+        if law.get("law_id") == "LAW-145" and law.get("granularity") == "residue":
+            chiral_residues = law.get("failing_residues", [])
+            break
+
+    chiral_comment = ""
+    if chiral_residues:
+        display_residues = chiral_residues[:10]  # max 10 for XML clarity
+        chiral_str = ", ".join(map(str, display_residues))
+        if len(chiral_residues) > 10:
+            chiral_str += f" (+ {len(chiral_residues) - 10} more)"
+        chiral_comment = f"    Chirality violations at residues: {chiral_str}\n"
+        chiral_comment += f"    CRITICAL: Manual inspection required - automated refinement cannot fix chirality errors\n"
+
     xml = f"""<ROSETTASCRIPTS>
   <!--
     Toscanini FastRelax Protocol (Deterministic)
@@ -273,7 +305,7 @@ def generate_rosetta_xml(audit_result):
     Verdict   : {meta['verdict']}
     Coverage  : {meta['coverage']}%
     Violations: {failing_str}
-    {rama_comment}{rotamer_comment}{clash_comment}    Residues  : {meta['n_residues']}
+    {rama_comment}{rotamer_comment}{clash_comment}{omega_comment}{chiral_comment}    Residues  : {meta['n_residues']}
     Source    : {meta['source']}
 {DISCLAIMER}
   -->
