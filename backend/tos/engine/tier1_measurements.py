@@ -25,6 +25,11 @@ from ..governance.station_sop import (
     STANDARD_RESIDUES, HYDROPHOBIC_RESIDUES
 )
 
+# Phase A.5: Residue-level granularity constants
+GRANULARITY_RESIDUE      = "residue"
+GRANULARITY_RESIDUE_PAIR = "residue_pair"
+GRANULARITY_GLOBAL       = "global"
+
 logger = logging.getLogger("toscanini.tier1")
 
 
@@ -182,6 +187,7 @@ class Tier1Measurements:
         # Computes phi/psi dihedrals and flags outliers.
         # ═══════════════════════════════════════════════════════════
         rama_out, rama_tot = 0, 0
+        rama_outliers = []  # Phase A.5: inline residue capture
         for i in range(1, len(core) - 1):
             p, c, n = core[i - 1], core[i], core[i + 1]
             if not (Tier1Measurements._is_sequential(p, c) and
@@ -209,12 +215,15 @@ class Tier1Measurements:
             rama_tot += 1
             if Tier1Measurements._is_rama_outlier(c["_name"], phi, psi):
                 rama_out += 1
+                rama_outliers.append(int(c["_seq"]))  # inline capture, int only
 
         rama_pct = (rama_out / rama_tot * 100) if rama_tot > 0 else 0.0
         results["LAW-125"] = {
             "observed": round(rama_pct, 2),
             "status": "PASS" if rama_pct <= LAW_CANON["LAW-125"]["threshold"] else "VETO",
-            "sample": rama_tot
+            "sample": rama_tot,
+            "granularity": GRANULARITY_RESIDUE,
+            "failing_residues": sorted(rama_outliers)
         }
 
         # ═══════════════════════════════════════════════════════════
