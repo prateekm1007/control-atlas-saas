@@ -235,6 +235,21 @@ def generate_rosetta_xml(audit_result):
             rama_str += f" (+ {len(rama_residues) - 20} more)"
         rama_comment = f"    Ramachandran outliers at residues: {rama_str}\n"
 
+    # Extract residue-level diagnostics from LAW-150
+    rotamer_residues = []
+    for law in all_laws:
+        if law.get("law_id") == "LAW-150" and law.get("granularity") == "residue":
+            rotamer_residues = law.get("failing_residues", [])
+            break
+
+    rotamer_comment = ""
+    if rotamer_residues:
+        rot_display = rotamer_residues[:20]
+        rotamer_str = ", ".join(map(str, rot_display))
+        if len(rotamer_residues) > 20:
+            rotamer_str += f" (+ {len(rotamer_residues) - 20} more)"
+        rotamer_comment = f"    Rotamer outliers at residues: {rotamer_str}\n"
+
     xml = f"""<ROSETTASCRIPTS>
   <!--
     Toscanini FastRelax Protocol (Deterministic)
@@ -243,7 +258,7 @@ def generate_rosetta_xml(audit_result):
     Verdict   : {meta['verdict']}
     Coverage  : {meta['coverage']}%
     Violations: {failing_str}
-    {rama_comment}    Residues  : {meta['n_residues']}
+    {rama_comment}{rotamer_comment}    Residues  : {meta['n_residues']}
     Source    : {meta['source']}
 {DISCLAIMER}
   -->

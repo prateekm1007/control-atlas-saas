@@ -658,7 +658,7 @@ def generate_v21_dossier(payload):
                         "Detected %d Ramachandran outliers (%.2f%% of %d core residues): %s" % (
                             len(rama_residues),
                             law_125.get("observed", 0.0),
-                            law_125.get("sample", 0),
+                            law_125.get("sample_size", law_125.get("sample", 0)),
                             residue_str
                         ))
                     pdf.ln(2)
@@ -669,6 +669,40 @@ def generate_v21_dossier(payload):
                         "Recommendation: Restrict Rosetta FastRelax to these specific residues "
                         "using coordinate constraints. Full-structure relaxation may introduce "
                         "new violations in currently compliant regions.")
+                    pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+                    pdf.ln(4)
+
+            # ── RESIDUE-LEVEL DIAGNOSTICS (LAW-150) ──────────────────────
+            law_150 = next((l for l in laws if l.get("law_id") == "LAW-150"), None)
+            if law_150 and law_150.get("granularity") == "residue":
+                rotamer_residues = law_150.get("failing_residues", [])
+                if rotamer_residues:
+                    pdf.set_font("Helvetica", "B", 8)
+                    pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+                    pdf.cell(w, 5, "LAW-150 Rotamer Outliers:", ln=True)
+                    pdf.set_font("Helvetica", "", 8)
+
+                    # Format: max 20 residues per line
+                    display_residues = rotamer_residues[:20]
+                    residue_str = ", ".join(map(str, display_residues))
+                    if len(rotamer_residues) > 20:
+                        residue_str += " (+ %d more)" % (len(rotamer_residues) - 20)
+
+                    pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
+                    pdf.multi_cell(w, 4,
+                        "Detected %d rotamer outliers (%.2f%% of %d side chains): %s" % (
+                            len(rotamer_residues),
+                            law_150.get("observed", 0.0),
+                            law_150.get("sample_size", law_150.get("sample", 0)),
+                            residue_str
+                        ))
+                    pdf.ln(2)
+
+                    pdf.set_font("Helvetica", "I", 7)
+                    pdf.set_text_color(*PDF_COLORS["TEXT_SUBTLE"])
+                    pdf.multi_cell(w, 4,
+                        "Recommendation: Apply Rosetta rotamer optimization with fa_dun scoreterm "
+                        "upweighted to 2.0. These residues are outside Dunbrack rotamer library wells.")
                     pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
                     pdf.ln(4)
 

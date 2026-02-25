@@ -155,6 +155,11 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
             "deviation": m.get("deviation", "0.0"), "sample_size": m.get("sample", 0),
             "scope": LAW_CANON[lid]["scope"], "principle": LAW_CANON[lid].get("principle", "N/A")
         }
+        # Phase A.5: Propagate residue-level diagnostics if present
+        if "granularity" in m:
+            row["granularity"] = m["granularity"]
+        if "failing_residues" in m:
+            row["failing_residues"] = m["failing_residues"]
         res_t1.append(row)
         if m.get("status", "FAIL") in ("FAIL", "VETO") and row["method"] == "deterministic":
             failing_det.append(f"{lid}: {LAW_CANON[lid]['title']}")

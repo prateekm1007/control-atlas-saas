@@ -215,7 +215,7 @@ class Tier1Measurements:
             rama_tot += 1
             if Tier1Measurements._is_rama_outlier(c["_name"], phi, psi):
                 rama_out += 1
-                rama_outliers.append(int(c["_seq"]))  # inline capture, int only
+                rama_outliers.append(f"{c['_chain']}:{c['_seq']}")  # chain:seq format
 
         rama_pct = (rama_out / rama_tot * 100) if rama_tot > 0 else 0.0
         results["LAW-125"] = {
@@ -223,7 +223,7 @@ class Tier1Measurements:
             "status": "PASS" if rama_pct <= LAW_CANON["LAW-125"]["threshold"] else "VETO",
             "sample": rama_tot,
             "granularity": GRANULARITY_RESIDUE,
-            "failing_residues": sorted(rama_outliers)
+            "failing_residues": sorted(rama_outliers, key=lambda x: (x.split(":")[0], int(x.split(":")[1])))
         }
 
         # ═══════════════════════════════════════════════════════════
@@ -355,6 +355,7 @@ class Tier1Measurements:
         # Threshold: 20.0% from station_sop.py
         # ═══════════════════════════════════════════════════════════
         rot_outliers, rot_total = 0, 0
+        rotamer_outliers = []  # Phase A.5: inline residue capture
         for r in core:
             res_name = r["_name"]
             if res_name in NO_CHI1_RESIDUES:
@@ -379,12 +380,15 @@ class Tier1Measurements:
             in_trans = (abs_chi1 >= 150.0)  # covers both 150-180 and -180 to -150
             if not (in_gauche_plus or in_gauche_minus or in_trans):
                 rot_outliers += 1
+                rotamer_outliers.append(f"{r['_chain']}:{r['_seq']}")  # inline capture
 
         rot_pct = (rot_outliers / rot_total * 100) if rot_total > 0 else 0.0
         results["LAW-150"] = {
             "observed": round(rot_pct, 2),
             "status": "PASS" if rot_pct <= LAW_CANON["LAW-150"]["threshold"] else "VETO",
-            "sample": rot_total
+            "sample": rot_total,
+            "granularity": GRANULARITY_RESIDUE,
+            "failing_residues": sorted(rotamer_outliers, key=lambda x: (x.split(":")[0], int(x.split(":")[1])))
         }
 
         # ═══════════════════════════════════════════════════════════
