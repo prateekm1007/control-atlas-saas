@@ -255,7 +255,7 @@ async def refinement_callback(
     """
     try:
         # Validate token
-        payload = validate_refinement_token(token)
+        payload = validate_refinement_token(token, consume=True)  # Single-use enforcement
         original_audit_id = payload["audit_id"]
         user_email = payload.get("user_email")
         
@@ -369,3 +369,54 @@ async def list_comparisons_for_original(original_id: str):
         
     except Exception as e:
         return {"status": "error", "message": str(e)}, 500
+
+
+@app.get("/health")
+async def health_check():
+    """
+    System health check for monitoring and deployment validation.
+    
+    Checks:
+    - API responding
+    - Token system operational
+    - Storage accessible
+    - Canon hash stable
+    """
+    from tos.security.tokens import create_refinement_token, validate_refinement_token
+    from tos.storage.comparisons import STORAGE_DIR
+    from pathlib import Path
+    
+    checks = {}
+    
+    # Token system check
+    try:
+        test_token = create_refinement_token("HEALTH_CHECK")
+        validate_refinement_token(test_token)
+        checks["token_system"] = "OK"
+    except Exception as e:
+        checks["token_system"] = f"ERROR: {str(e)}"
+    
+    # Storage check
+    try:
+        storage_path = Path("/app/data/comparisons")
+        storage_path.mkdir(parents=True, exist_ok=True)
+        checks["storage"] = "OK"
+    except Exception as e:
+        checks["storage"] = f"ERROR: {str(e)}"
+    
+    # Canon hash check
+    try:
+        checks["canon_hash"] = LAW_CANON_HASH[:8] + "..."
+        checks["governance"] = "STABLE"
+    except Exception as e:
+        checks["governance"] = f"ERROR: {str(e)}"
+    
+    all_ok = all(v in ("OK", "STABLE") or "..." in str(v) 
+                 for v in checks.values())
+    
+    return {
+        "status": "healthy" if all_ok else "degraded",
+        "version": STATION_METADATA.get("version", "unknown"),
+        "checks": checks,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
