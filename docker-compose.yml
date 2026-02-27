@@ -6,8 +6,14 @@ services:
     volumes:
       - nkg_data:/app/nkg
       - ./backend/tos/saas/keys.db:/app/tos/saas/keys.db
+      - toscanini_data:/app/data
     env_file:
       - .env
+    environment:
+      - TOSCANINI_DATA_DIR=/app/data
+      - REDIS_URL=redis://redis:6379/0
+      - BRAIN_URL=http://brain:8000
+    depends_on: ["redis"]
     restart: unless-stopped
 
   face:
@@ -21,5 +27,44 @@ services:
     depends_on: ["brain"]
     restart: unless-stopped
 
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis
+    ports: ["6379:6379"]
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  gpu_worker:
+    build: ./gpu_worker
+    container_name: gpu_worker
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - BRAIN_URL=http://brain:8000
+      - TOSCANINI_DATA_DIR=/app/data
+    volumes:
+      - toscanini_data:/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
 volumes:
   nkg_data:
+  redis_data:
+  toscanini_data:

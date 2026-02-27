@@ -30,6 +30,48 @@ from tos.security.auth import verify_api_key, validate_upload, validate_batch_up
 from tos.telemetry.usage_logger import log_usage as log_usage_telemetry
 from tos.security.tokens import validate_refinement_token
 from tos.storage.comparisons import store_comparison, get_comparison
+from tos.storage.audit_store import store_audit_result, get_audit_result
+
+
+# ── Week 12: Hard caps ────────────────────────────────────────────────────────
+MAX_PDB_BYTES     = 50 * 1024 * 1024   # 50 MB
+MAX_RESIDUE_COUNT = 1500               # GPU budget cap
+
+
+def _count_residues(pdb_bytes: bytes) -> int:
+    """Count unique (chain_id, resseq) pairs from ATOM/HETATM lines.
+    Pure-Python — no Biopython required in the brain container."""
+    seen: set = set()
+    for line in pdb_bytes.decode("utf-8", errors="replace").splitlines():
+        if line.startswith(("ATOM  ", "HETATM")):
+            chain  = line[21] if len(line) > 21 else "?"
+            resseq = line[22:26].strip() if len(line) > 26 else "0"
+            seen.add((chain, resseq))
+    return len(seen)
+
+
+def _validate_pdb_upload(raw: bytes) -> None:
+    """Raise HTTPException before credits or GPU are touched.
+    Called once at the top of /refinement/submit."""
+    if len(raw) > MAX_PDB_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                f"PDB file exceeds the 50 MB hard cap "
+                f"({len(raw) / 1_048_576:.1f} MB received). "
+                "Split your structure or use the B1 external path."
+            ),
+        )
+    n_res = _count_residues(raw)
+    if n_res > MAX_RESIDUE_COUNT:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Structure contains {n_res} residues, exceeding the "
+                f"{MAX_RESIDUE_COUNT}-residue cap for managed GPU runs. "
+                "Trim your structure or use the B1 external path."
+            ),
+        )
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("toscanini.brain")
@@ -291,6 +333,9 @@ async def refinement_callback(
         }
         
         store_comparison(original_audit_id, refined_audit_id, comparison_data)
+
+        # Store refined audit for future retrieval
+        store_audit_result(refined_audit_id, refined_audit)
         
         # Build comparison URL
         comparison_url = f"/compare?baseline={original_audit_id}&refined={refined_audit_id}"
@@ -447,10 +492,11 @@ async def refinement_submit(
     import uuid
 
     try:
-        # Read file
+        # ── Week 12: read once, validate immediately (before credits) ──────
         content_bytes = await file.read()
         if len(content_bytes) == 0:
             return {"status": "error", "message": "Empty file"}, 400
+        _validate_pdb_upload(content_bytes)   # raises 413 / 422 on violation
 
         # Validate protocol
         if protocol not in ("openmm", "rosetta"):
@@ -470,9 +516,11 @@ async def refinement_submit(
             REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
             celery_app = Celery("toscanini_client", broker=REDIS_URL, backend=REDIS_URL)
 
-            # Get failing laws from audit (for protocol selection)
-            all_laws = audit_result.get("tier1", {}).get("laws", []) if "audit_result" in dir() else []
-            failing_laws = [l["law_id"] for l in all_laws if l.get("status") not in ("PASS",)]
+            # Week 12: failing_laws derived from stored audit if available
+            # audit_result is never in scope here; retrieve from store instead
+            _stored = get_audit_result(audit_id) or {}
+            _all_laws = _stored.get("tier1", {}).get("laws", [])
+            failing_laws = [l["law_id"] for l in _all_laws if l.get("status") not in ("PASS",)]
 
             # Dispatch via execution engine
             import sys
@@ -612,3 +660,34 @@ async def internal_callback(payload: dict):
     except Exception as e:
         logger.error(f"Internal callback error: {str(e)}")
         return {"status": "error", "message": str(e)}, 500
+
+
+@app.get("/audit/{audit_id}")
+async def get_stored_audit(audit_id: str):
+    """Retrieve a previously stored audit result by ID."""
+    result = get_audit_result(audit_id)
+    if result:
+        return {"status": "success", "audit": result}
+    return {"status": "not_found", "message": f"Audit {audit_id} not found or expired"}
+
+@app.post("/compare")
+async def compare_audits_endpoint(baseline_id: str = Form(...), refined_id: str = Form(...)):
+    """Compare two stored audits and return delta analysis."""
+    baseline = get_audit_result(baseline_id)
+    refined  = get_audit_result(refined_id)
+
+    if not baseline:
+        return {"status": "error", "message": f"Baseline audit {baseline_id} not found"}
+    if not refined:
+        return {"status": "error", "message": f"Refined audit {refined_id} not found"}
+
+    # Import comparison engine
+    import sys
+    sys.path.insert(0, "/app")
+    from comparison_engine import compare_audits
+
+    comparison = compare_audits(baseline, refined)
+    return {
+        "status": "success",
+        "comparison": comparison
+    }
