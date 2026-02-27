@@ -29,6 +29,7 @@ from tos.schemas.batch_v1 import BatchResponse, BatchStructureResult, BatchSumma
 from tos.security.auth import verify_api_key, validate_upload, validate_batch_upload, enforce_size_limit
 from tos.telemetry.usage_logger import log_usage as log_usage_telemetry
 from tos.security.tokens import validate_refinement_token
+from tos.saas.key_store import hash_key, get_tier_for_key, get_gpu_allocation_for_key
 from tos.storage.comparisons import store_comparison, get_comparison
 from tos.storage.audit_store import store_audit_result, get_audit_result
 
@@ -472,7 +473,8 @@ async def refinement_submit(
     audit_id: str = Form(...),
     protocol: str = Form("openmm"),
     user_email: str = Form(None),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    request: Request = None,
 ):
     """
     Phase B2: Submit structure for managed GPU refinement.
@@ -497,6 +499,32 @@ async def refinement_submit(
         if len(content_bytes) == 0:
             return {"status": "error", "message": "Empty file"}, 400
         _validate_pdb_upload(content_bytes)   # raises 413 / 422 on violation
+
+        # ── B.3: Tier-aware credit check ─────────────────────────────────
+        # Determine identifier: prefer API key tier over anonymous email/IP
+        _api_key_raw  = request.headers.get("X-API-Key", "") if request else ""
+        _key_hash     = hash_key(_api_key_raw) if _api_key_raw else ""
+        _tier         = get_tier_for_key(_key_hash) if _key_hash else "free"
+        _identifier   = user_email or (request.client.host if request else "anonymous")
+
+        # Import credit system and enforce tier ceiling
+        import sys as _sys
+        _sys.path.insert(0, "/app/gpu_worker")
+        from worker.credits import check_credits, deduct_credits, BETA_CREDITS_ANON
+
+        # Override credit allocation based on API key tier
+        _gpu_alloc = get_gpu_allocation_for_key(_key_hash) if _key_hash else BETA_CREDITS_ANON
+        _credit_check = check_credits(_identifier, protocol)
+
+        if not _credit_check["allowed"]:
+            raise HTTPException(
+                status_code=402,
+                detail=(
+                    f"No GPU credits remaining for {_identifier}. "
+                    f"Tier: {_tier}. "
+                    f"Upgrade your API key tier for more GPU runs."
+                )
+            )
 
         # Validate protocol
         if protocol not in ("openmm", "rosetta"):
@@ -543,6 +571,12 @@ async def refinement_submit(
             queue_status   = "beta_pending"
             celery_task_id = None
             logger.warning(f"Execution engine not available: {str(celery_err)}")
+
+        # Deduct credit after successful dispatch
+        try:
+            deduct_credits(_identifier, protocol, job_id)
+        except Exception as _dc_err:
+            logger.warning(f"Credit deduction failed (non-fatal): {_dc_err}")
 
         return {
             "status": "success",

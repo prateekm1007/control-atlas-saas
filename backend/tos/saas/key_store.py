@@ -5,7 +5,7 @@ Designed for easy migration to PostgreSQL later.
 import sqlite3
 import hashlib
 import secrets
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Optional
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,9 +21,16 @@ class APIKey:
     last_used: Optional[str]
 
 TIER_LIMITS = {
-    "free": {"daily": 10, "batch_max": 25},
-    "pro": {"daily": 500, "batch_max": 500},
-    "enterprise": {"daily": 999999, "batch_max": 999999},
+    "free":       {"daily": 10,     "batch_max": 25,  "gpu_runs": 3},
+    "pro":        {"daily": 500,    "batch_max": 500,  "gpu_runs": 50},
+    "enterprise": {"daily": 999999, "batch_max": 999999, "gpu_runs": 999999},
+}
+
+# ── Week B.3: GPU credit allocation by tier ───────────────────────────────────
+GPU_TIER_CREDITS = {
+    "free":       3,
+    "pro":        50,
+    "enterprise": 999999,
 }
 
 def _get_conn():
@@ -70,7 +77,7 @@ def create_key(tier: str = "free") -> str:
     conn = _get_conn()
     conn.execute(
         "INSERT INTO api_keys (key_hash, tier, created_at) VALUES (?, ?, ?)",
-        (key_hash_val, tier, datetime.utcnow().isoformat())
+        (key_hash_val, tier, datetime.now(timezone.utc).isoformat())
     )
     conn.commit()
     conn.close()
@@ -138,7 +145,7 @@ def increment_usage(key_hash_val: str) -> None:
     )
     conn.execute(
         "UPDATE api_keys SET last_used = ? WHERE key_hash = ?",
-        (datetime.utcnow().isoformat(), key_hash_val)
+        (datetime.now(timezone.utc).isoformat(), key_hash_val)
     )
     conn.commit()
     conn.close()
@@ -153,6 +160,31 @@ def revoke_key(key_hash_val: str) -> bool:
     conn.commit()
     conn.close()
     return cursor.rowcount > 0
+
+
+def get_gpu_allocation_for_key(key_hash_val: str) -> int:
+    """
+    Return the GPU run allocation for a given API key.
+
+    Used by /refinement/submit to set the credit ceiling
+    based on the key tier rather than anonymous email/IP.
+
+    Returns:
+        int: number of GPU runs allowed (999999 = unlimited)
+        Returns 3 (anon default) if key not found or inactive.
+    """
+    key = get_key(key_hash_val)
+    if not key or not key.active:
+        return GPU_TIER_CREDITS["free"]
+    return GPU_TIER_CREDITS.get(key.tier, GPU_TIER_CREDITS["free"])
+
+
+def get_tier_for_key(key_hash_val: str) -> str:
+    """Return tier string for a given key hash. Returns 'free' if not found."""
+    key = get_key(key_hash_val)
+    if not key or not key.active:
+        return "free"
+    return key.tier
 
 # Initialize DB on import
 init_db()
