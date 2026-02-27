@@ -28,6 +28,8 @@ from tos.engine.batch_processor import process_batch
 from tos.schemas.batch_v1 import BatchResponse, BatchStructureResult, BatchSummary, FailingLawCount
 from tos.security.auth import verify_api_key, validate_upload, validate_batch_upload, enforce_size_limit
 from tos.telemetry.usage_logger import log_usage as log_usage_telemetry
+from tos.security.tokens import validate_refinement_token
+from tos.storage.comparisons import store_comparison, get_comparison
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("toscanini.brain")
@@ -231,3 +233,82 @@ async def search(query: str = Form(...)):
     from tos.discovery.resolver import DiscoveryResolver
     results = DiscoveryResolver.resolve(query)
     return {"results": results, "count": len(results)}
+
+
+@app.post("/refinement/callback")
+async def refinement_callback(
+    token: str = Form(...),
+    file: UploadFile = File(...)
+):
+    """
+    Phase B1: Accept refined structure upload via callback token.
+    
+    Flow:
+    1. Validate token (7-day expiry, single-use)
+    2. Extract original audit_id from token
+    3. Run new audit on refined structure
+    4. Store comparison metadata
+    5. Return comparison URL + new audit result
+    
+    Returns:
+        JSON with original_audit_id, refined_audit_id, comparison_url
+    """
+    try:
+        # Validate token
+        payload = validate_refinement_token(token)
+        original_audit_id = payload["audit_id"]
+        user_email = payload.get("user_email")
+        
+        # Read uploaded file
+        content_bytes = await file.read()
+        
+        if len(content_bytes) == 0:
+            return {"status": "error", "message": "Empty file uploaded"}, 400
+        
+        # Detect mode from file extension (or use original audit metadata)
+        mode = "experimental" if file.filename.endswith('.pdb') else "predicted"
+        
+        # Run audit on refined structure
+        refined_audit = _run_physics_sync(
+            content_bytes, 
+            file.filename, 
+            mode, 
+            "NONE"
+        )
+        
+        refined_audit_id = refined_audit["governance"]["audit_id"]
+        
+        # Store comparison metadata
+        comparison_data = {
+            "original_audit_id": original_audit_id,
+            "refined_audit_id": refined_audit_id,
+            "uploaded_at": datetime.now(timezone.utc).isoformat(),
+            "user_email": user_email,
+            "filename": file.filename,
+            "file_size_bytes": len(content_bytes),
+            "refinement_method": "external",  # Phase B1: user-executed
+            "status": "complete"
+        }
+        
+        store_comparison(original_audit_id, refined_audit_id, comparison_data)
+        
+        # Build comparison URL
+        comparison_url = f"/compare?baseline={original_audit_id}&refined={refined_audit_id}"
+        
+        return {
+            "status": "success",
+            "message": "Refined structure audited successfully",
+            "original_audit_id": original_audit_id,
+            "refined_audit_id": refined_audit_id,
+            "comparison_url": comparison_url,
+            "verdict": refined_audit["verdict"]["binary"],
+            "coverage_pct": refined_audit["verdict"]["coverage_pct"],
+            "deterministic_score": refined_audit["verdict"]["deterministic_score"],
+            "next_step": "View comparison in dashboard to verify improvement"
+        }
+        
+    except ValueError as e:
+        return {"status": "error", "message": str(e), "error_type": "token_validation"}, 401
+    except Exception as e:
+        logger.error(f"Callback error: {str(e)}")
+        return {"status": "error", "message": f"Server error: {str(e)}", "error_type": "server"}, 500
