@@ -650,48 +650,23 @@ def generate_readme(audit_result, include_loop_modeling, callback_token=None):
         "",
         DISCLAIMER,
     ]
-    
-        callback_section = ""
-        if callback_token:
-            callback_section = f"""
 
-MANAGED REFINEMENT CALLBACK (BETA)
-{"=" * 60}
-  After executing refinement locally, re-upload your refined PDB
-  using the callback token below. Toscanini will automatically:
-  
-  1. Re-audit the refined structure
-  2. Generate before/after comparison
-  3. Show coverage delta and law improvements
-  
-  Callback Token (valid for 7 days):
-  
-    {callback_token}
-  
-  Upload Methods:
-  
-  A. Via Dashboard:
-     - Go to "Upload Refined Structure" section
-     - Paste token above
-     - Upload refined PDB file
-     - View automatic comparison
-  
-  B. Via API (curl):
-     curl -X POST https://your-toscanini.com/refinement/callback \\
-       -F "token={callback_token}" \\
-       -F "file=@{pdb_name}_refined.pdb"
-  
-  IMPORTANT:
-  - Token expires in 7 days from generation
-  - Single-use only (consumed after first upload)
-  - Tied to audit ID {meta['audit_id']}
+    if callback_token:
+        sep = "=" * 60
+        callback_section = (
+            "\nMANAGED REFINEMENT CALLBACK (BETA)\n"
+            + sep + "\n"
+            + "  After executing refinement locally, re-upload your refined PDB\n"
+            + "  using the callback token below.\n\n"
+            + "  Callback Token (valid for 7 days):\n\n"
+            + "    " + str(callback_token) + "\n\n"
+            + "  Upload via Dashboard or curl.\n"
+            + "  IMPORTANT: Token expires in 7 days. Single-use only.\n"
+            + sep + "\n"
+        )
+        lines.insert(-5, callback_section)
 
-{"=" * 60}
-"""
-
-        if callback_token:
-            lines.insert(-5, callback_section)
-        return "\n".join(lines)
+    return "\n".join(lines)
 
 
 def generate_remediation_zip(audit_result, callback_token=None):
