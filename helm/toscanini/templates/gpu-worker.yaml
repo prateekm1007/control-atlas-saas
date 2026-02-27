@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-gpu-worker
+  labels:
+    app.kubernetes.io/name: toscanini-gpu-worker
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.gpuWorker.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-gpu-worker
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-gpu-worker
+    spec:
+      # GPU nodes must be tainted nvidia.com/gpu=true:NoSchedule
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: gpu-worker
+          image: "{{ .Values.gpuWorker.image.repository }}:{{ .Values.gpuWorker.image.tag }}"
+          imagePullPolicy: {{ .Values.gpuWorker.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-config
+          env:
+            - name: ROSETTA_BIN
+              value: {{ .Values.gpuWorker.env.ROSETTA_BIN | quote }}
+          resources:
+            {{- toYaml .Values.gpuWorker.resources | nindent 12 }}
+          volumeMounts:
+            - name: toscanini-data
+              mountPath: {{ .Values.global.dataDir }}
+      volumes:
+        - name: toscanini-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-toscanini-data

@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-brain
+  labels:
+    app.kubernetes.io/name: toscanini-brain
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.brain.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-brain
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-brain
+    spec:
+      containers:
+        - name: brain
+          image: "{{ .Values.brain.image.repository }}:{{ .Values.brain.image.tag }}"
+          imagePullPolicy: {{ .Values.brain.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.brain.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Release.Name }}-config
+            - secretRef:
+                name: {{ .Release.Name }}-secrets
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.brain.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.brain.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.brain.resources | nindent 12 }}
+          volumeMounts:
+            - name: toscanini-data
+              mountPath: {{ .Values.global.dataDir }}
+            - name: nkg-data
+              mountPath: /app/nkg
+      volumes:
+        - name: toscanini-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-toscanini-data
+        - name: nkg-data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-nkg-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-brain
+  labels:
+    app.kubernetes.io/name: toscanini-brain
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  selector:
+    app: {{ .Release.Name }}-brain
+  ports:
+    - port: {{ .Values.brain.port }}
+      targetPort: {{ .Values.brain.port }}

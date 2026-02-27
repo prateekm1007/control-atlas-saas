@@ -1,0 +1,107 @@
+# ── Toscanini Helm Values ─────────────────────────────────────────────────────
+# Override any value with: helm install toscanini . -f my-values.yaml
+
+global:
+  imageRegistry: ""          # e.g. "gcr.io/my-project" — empty = local build
+  dataDir: "/app/data"
+  redisUrl: "redis://redis:6379/0"
+
+# ── Brain (FastAPI backend) ───────────────────────────────────────────────────
+brain:
+  replicaCount: 1
+  image:
+    repository: toscanini-brain
+    tag: latest
+    pullPolicy: IfNotPresent
+  port: 8000
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2000m"
+      memory: "4Gi"
+  env:
+    TOSCANINI_DATA_DIR: "/app/data"
+    BRAIN_URL: "http://brain:8000"
+  secrets:
+    TOSCANINI_API_KEY: ""     # set via --set brain.secrets.TOSCANINI_API_KEY=...
+    GEMINI_API_KEY: ""
+
+# ── Face (Streamlit dashboard) ────────────────────────────────────────────────
+face:
+  replicaCount: 1
+  image:
+    repository: toscanini-face
+    tag: latest
+    pullPolicy: IfNotPresent
+  port: 8501
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+  env:
+    BACKEND_URL: "http://brain:8000"
+
+# ── Redis ─────────────────────────────────────────────────────────────────────
+redis:
+  image:
+    repository: redis
+    tag: "7.2-alpine"
+    pullPolicy: IfNotPresent
+  port: 6379
+  maxmemory: "512mb"
+  maxmemoryPolicy: "allkeys-lru"
+  persistence:
+    enabled: true
+    size: "2Gi"
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "768Mi"
+
+# ── GPU Worker ────────────────────────────────────────────────────────────────
+gpuWorker:
+  replicaCount: 1
+  image:
+    repository: toscanini-gpu-worker
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: "1000m"
+      memory: "4Gi"
+      nvidia.com/gpu: "1"
+    limits:
+      cpu: "4000m"
+      memory: "16Gi"
+      nvidia.com/gpu: "1"
+  env:
+    TOSCANINI_DATA_DIR: "/app/data"
+    ROSETTA_BIN: "/opt/rosetta/main/source/bin/rosetta_scripts.default.linuxgccrelease"
+
+# ── Shared persistent volume ──────────────────────────────────────────────────
+persistence:
+  toscaniniData:
+    enabled: true
+    size: "10Gi"
+    storageClass: ""          # "" = cluster default
+    accessMode: ReadWriteMany # brain + gpu-worker share this volume
+  nkgData:
+    enabled: true
+    size: "5Gi"
+    storageClass: ""
+    accessMode: ReadWriteOnce
+
+# ── Ingress ───────────────────────────────────────────────────────────────────
+ingress:
+  enabled: false
+  className: "nginx"
+  host: "toscanini.example.com"
+  tls: false

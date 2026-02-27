@@ -1,0 +1,26 @@
+Toscanini has been deployed successfully.
+
+  Release:    {{ .Release.Name }}
+  Namespace:  {{ .Release.Namespace }}
+  Version:    {{ .Chart.AppVersion }}
+
+Access the dashboard:
+  kubectl port-forward svc/{{ .Release.Name }}-face 8501:8501
+
+Access the API:
+  kubectl port-forward svc/{{ .Release.Name }}-brain 8000:8000
+
+Check system health:
+  curl http://localhost:8000/health
+
+Run a full audit:
+  curl -X POST http://localhost:8000/ingest \
+    -H "X-API-Key: YOUR_KEY" \
+    -F "mode=Audit" \
+    -F "candidate_id=test" \
+    -F "file=@your_structure.pdb"
+
+GPU worker status:
+  kubectl logs deployment/{{ .Release.Name }}-gpu-worker
+
+Governance fingerprint is immutable. Do not modify station_sop.py.

@@ -1,0 +1,14 @@
+apiVersion: v2
+name: toscanini
+description: Forensic Structural Governance Engine — Phase B.3
+type: application
+version: 0.3.0
+appVersion: "B.3.0"
+keywords:
+  - protein
+  - structural-biology
+  - governance
+  - gpu
+maintainers:
+  - name: Toscanini Architects
+home: https://github.com/prateekm1007/control-atlas-saas

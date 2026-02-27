@@ -1,0 +1,37 @@
+{{- if .Values.persistence.toscaniniData.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-toscanini-data
+  labels:
+    app.kubernetes.io/name: toscanini
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.toscaniniData.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.toscaniniData.size }}
+  {{- if .Values.persistence.toscaniniData.storageClass }}
+  storageClassName: {{ .Values.persistence.toscaniniData.storageClass }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.persistence.nkgData.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-nkg-data
+  labels:
+    app.kubernetes.io/name: toscanini
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.nkgData.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.nkgData.size }}
+  {{- if .Values.persistence.nkgData.storageClass }}
+  storageClassName: {{ .Values.persistence.nkgData.storageClass }}
+  {{- end }}
+{{- end }}
