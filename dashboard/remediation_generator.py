@@ -582,7 +582,7 @@ def generate_remediation_report(audit_result):
     return report
 
 
-def generate_readme(audit_result, include_loop_modeling):
+def generate_readme(audit_result, include_loop_modeling, callback_token=None):
     """Generate plain-text README. Returns string."""
     meta      = _get_audit_meta(audit_result)
     failing   = _get_failing_laws(audit_result)
@@ -650,10 +650,51 @@ def generate_readme(audit_result, include_loop_modeling):
         "",
         DISCLAIMER,
     ]
-    return "\n".join(lines)
+    
+        callback_section = ""
+        if callback_token:
+            callback_section = f"""
+
+MANAGED REFINEMENT CALLBACK (BETA)
+{"=" * 60}
+  After executing refinement locally, re-upload your refined PDB
+  using the callback token below. Toscanini will automatically:
+  
+  1. Re-audit the refined structure
+  2. Generate before/after comparison
+  3. Show coverage delta and law improvements
+  
+  Callback Token (valid for 7 days):
+  
+    {callback_token}
+  
+  Upload Methods:
+  
+  A. Via Dashboard:
+     - Go to "Upload Refined Structure" section
+     - Paste token above
+     - Upload refined PDB file
+     - View automatic comparison
+  
+  B. Via API (curl):
+     curl -X POST https://your-toscanini.com/refinement/callback \\
+       -F "token={callback_token}" \\
+       -F "file=@{pdb_name}_refined.pdb"
+  
+  IMPORTANT:
+  - Token expires in 7 days from generation
+  - Single-use only (consumed after first upload)
+  - Tied to audit ID {meta['audit_id']}
+
+{"=" * 60}
+"""
+
+        if callback_token:
+            lines.insert(-5, callback_section)
+        return "\n".join(lines)
 
 
-def generate_remediation_zip(audit_result):
+def generate_remediation_zip(audit_result, callback_token=None):
     """
     Generate complete remediation package as deterministic ZIP.
     Same audit → byte-identical output.
@@ -687,7 +728,7 @@ def generate_remediation_zip(audit_result):
     artifacts.append(("openmm_equilibrate.py", generate_openmm_script(audit_result)))
 
     # 6. README (must be generated last to know if loop modeling was included)
-    artifacts.append(("README.txt", generate_readme(audit_result, needs_loop_modeling)))
+    artifacts.append(("README.txt", generate_readme(audit_result, needs_loop_modeling, callback_token)))
 
     # Sort alphabetically (deterministic across Python versions and dict insertion order)
     artifacts.sort(key=lambda x: x[0])

@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  worker:
+    build:
+      context: ./gpu_worker
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - BRAIN_URL=http://brain:8000
+      - ROSETTA_BIN=/opt/rosetta/main/source/bin/rosetta_scripts.default.linuxgccrelease
+    volumes:
+      - ./gpu_worker:/app/worker
+      - worker_tmp:/tmp/refinement_jobs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - toscanini_net
+
+  brain:
+    extends:
+      file: docker-compose.yml
+      service: brain
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    networks:
+      - toscanini_net
+
+  face:
+    extends:
+      file: docker-compose.yml
+      service: face
+    networks:
+      - toscanini_net
+
+volumes:
+  redis_data:
+  worker_tmp:
+
+networks:
+  toscanini_net:
+    driver: bridge
