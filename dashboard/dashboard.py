@@ -1363,6 +1363,80 @@ with tab_refine:
             except Exception as _pe:
                 st.error(f"Status check failed: {_pe}")
 
+    # ── AUTO-COMPARISON DISPLAY ────────────────────────────────────
+    st.divider()
+    st.markdown("**📊 Before/After Comparison**")
+
+    if "comparison_baseline" in st.session_state and "comparison_refined" in st.session_state:
+        _base_id = st.session_state.get("comparison_baseline")
+        _refn_id = st.session_state.get("comparison_refined")
+
+        if _base_id and _refn_id:
+            st.info(f"Comparing: `{_base_id}` → `{_refn_id}`")
+
+            try:
+                _cmp_resp = api(
+                    "POST", "/compare",
+                    data={"baseline_id": _base_id, "refined_id": _refn_id}
+                )
+
+                if _cmp_resp and _cmp_resp.get("status") == "success":
+                    _cmp = _cmp_resp["comparison"]
+
+                    # High-level metrics
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric(
+                        "Verdict",
+                        _cmp.get("verdict_change", "?"),
+                        delta="Improved" if _cmp.get("verdict_improved") else "No change"
+                    )
+                    c2.metric(
+                        "Coverage",
+                        f"+{_cmp.get('coverage_delta', 0):.1f}%" if _cmp.get("coverage_delta", 0) > 0 else f"{_cmp.get('coverage_delta', 0):.1f}%"
+                    )
+                    c3.metric(
+                        "Violations",
+                        f"{_cmp.get('violation_count_after', '?')}",
+                        delta=str(_cmp.get("violation_count_delta", 0))
+                    )
+
+                    # Improvements
+                    if _cmp.get("improvements"):
+                        st.success("✅ Laws resolved: " + ", ".join(_cmp["improvements"]))
+                    if _cmp.get("regressions"):
+                        st.error("⚠️ Regressions: " + ", ".join(_cmp["regressions"]))
+
+                    # Law-by-law breakdown
+                    _changes = _cmp.get("law_changes", [])
+                    if _changes:
+                        with st.expander("🔬 Law-Level Changes", expanded=False):
+                            for _ch in _changes:
+                                _icon = "✅" if _ch.get("change_type") == "RESOLVED" else "⚠️"
+                                st.markdown(
+                                    f"{_icon} **{_ch['law_id']}** ({_ch.get('title','')}): "
+                                    f"{_ch['before_status']} → {_ch['after_status']} "
+                                    f"(observed: {_ch.get('before_observed','?')} → {_ch.get('after_observed','?')})"
+                                )
+
+                                # Residue improvements
+                                _ri = _ch.get("residue_improvements")
+                                if _ri and _ri.get("fixed_count", 0) > 0:
+                                    st.caption(
+                                        f"  Fixed residues: {', '.join(_ri['fixed_residues'][:10])}"
+                                        + (f" (+ {_ri['fixed_count'] - 10} more)" if _ri['fixed_count'] > 10 else "")
+                                    )
+                                if _ri and _ri.get("still_count", 0) > 0:
+                                    st.caption(
+                                        f"  Still failing: {', '.join(_ri['still_failing'][:10])}"
+                                    )
+                else:
+                    st.caption("Comparison not available yet. Both audits must be stored.")
+
+            except Exception as _ce:
+                st.caption(f"Comparison engine: {_ce}")
+    else:
+        st.caption("Submit a refined structure above to see before/after comparison.")
+
 with tab_bench:
     st.subheader("Benchmark — Experimental vs. Predicted")
     st.markdown(
