@@ -9,24 +9,36 @@ import sys
 import json
 import pytest
 
+# ── CRITICAL: set env BEFORE any storage module is imported ──────────────────
+# audit_store.py and comparisons.py call .mkdir() at module level using this var.
+# If it is not set before import, they fall back to /app/data and fail on host.
 os.environ["TOSCANINI_DATA_DIR"] = "/tmp/tos_b3_history_test"
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+# Pre-create the base dir so module-level mkdir succeeds on first import
+import pathlib
+pathlib.Path("/tmp/tos_b3_history_test").mkdir(parents=True, exist_ok=True)
 
 
 @pytest.fixture(autouse=True)
 def clean_storage(tmp_path, monkeypatch):
-    """Each test gets a fresh storage directory."""
+    """Each test gets isolated fresh storage directories.
+
+    Must patch module-level Path constants AFTER import — monkeypatch.setattr
+    replaces the attribute on the already-imported module object, which is
+    what the functions close over at call time (not import time).
+    """
     import tos.storage.comparisons as comp_mod
     import tos.storage.audit_store as audit_mod
-    from pathlib import Path
 
     comp_dir  = tmp_path / "comparisons"
     audit_dir = tmp_path / "audits"
-    comp_dir.mkdir()
-    audit_dir.mkdir()
+    comp_dir.mkdir(parents=True, exist_ok=True)
+    audit_dir.mkdir(parents=True, exist_ok=True)
 
-    monkeypatch.setattr(comp_mod,  "STORAGE_DIR", comp_dir)
-    monkeypatch.setattr(audit_mod, "AUDIT_DIR",   audit_dir)
+    # Patch the lazy getter functions so all calls in this test use tmp dirs
+    monkeypatch.setattr(comp_mod,  "_get_storage_dir", lambda: comp_dir)
+    monkeypatch.setattr(audit_mod, "_get_audit_dir",   lambda: audit_dir)
     yield
 
 

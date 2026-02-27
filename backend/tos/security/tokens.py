@@ -26,8 +26,12 @@ ALGORITHM = "HS256"
 TOKEN_EXPIRY_DAYS = 7
 
 # Blacklist storage (Phase 1: file-based. Phase 2: Redis)
-BLACKLIST_DIR = Path("/app/data/token_blacklist")
-BLACKLIST_DIR.mkdir(parents=True, exist_ok=True)
+import os as _os
+def _get_blacklist_dir() -> Path:
+    """Lazy evaluation — read TOSCANINI_DATA_DIR at call time, not import time."""
+    d = Path(_os.environ.get("TOSCANINI_DATA_DIR", "/app/data")) / "token_blacklist"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
 
 # Rate limit: max callbacks per original audit_id
 MAX_CALLBACKS_PER_AUDIT = 3
@@ -41,14 +45,14 @@ def _token_fingerprint(token: str) -> str:
 def _is_blacklisted(token: str) -> bool:
     """Check if token has already been used."""
     fp = _token_fingerprint(token)
-    blacklist_file = BLACKLIST_DIR / f"{fp}.json"
+    blacklist_file = _get_blacklist_dir() / f"{fp}.json"
     return blacklist_file.exists()
 
 
 def _blacklist_token(token: str, audit_id: str, reason: str = "used") -> None:
     """Mark token as used — prevents reuse."""
     fp = _token_fingerprint(token)
-    blacklist_file = BLACKLIST_DIR / f"{fp}.json"
+    blacklist_file = _get_blacklist_dir() / f"{fp}.json"
     
     data = {
         "fingerprint": fp,
@@ -64,7 +68,7 @@ def _blacklist_token(token: str, audit_id: str, reason: str = "used") -> None:
 def _get_callback_count(audit_id: str) -> int:
     """Count how many callbacks have been made for a given audit_id."""
     count = 0
-    for f in BLACKLIST_DIR.glob("*.json"):
+    for f in _get_blacklist_dir().glob("*.json"):
         with open(f, 'r') as fh:
             try:
                 data = json.load(fh)

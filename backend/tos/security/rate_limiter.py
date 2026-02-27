@@ -9,8 +9,12 @@ from pathlib import Path
 from typing import Dict, Tuple
 from collections import defaultdict
 
-RATE_LIMIT_DIR = Path("/app/data/rate_limits")
-RATE_LIMIT_DIR.mkdir(parents=True, exist_ok=True)
+import os as _os
+def _get_rate_limit_dir() -> Path:
+    """Lazy evaluation — read TOSCANINI_DATA_DIR at call time, not import time."""
+    d = Path(_os.environ.get("TOSCANINI_DATA_DIR", "/app/data")) / "rate_limits"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
 
 # Rate limit rules per endpoint
 RATE_LIMITS = {
@@ -24,7 +28,7 @@ def _get_rate_file(ip: str, endpoint: str) -> Path:
     """Get rate limit tracking file for an IP + endpoint combo."""
     safe_ip = ip.replace(".", "_").replace(":", "_")
     safe_ep = endpoint.replace("/", "_")
-    return RATE_LIMIT_DIR / f"{safe_ip}{safe_ep}.json"
+    return _get_rate_limit_dir() / f"{safe_ip}{safe_ep}.json"
 
 
 def check_rate_limit(ip: str, endpoint: str) -> Tuple[bool, Dict]:

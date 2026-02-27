@@ -429,7 +429,7 @@ async def health_check():
     - Canon hash stable
     """
     from tos.security.tokens import create_refinement_token, validate_refinement_token
-    from tos.storage.comparisons import STORAGE_DIR
+    from tos.storage.comparisons import _get_storage_dir
     from pathlib import Path
     
     checks = {}
@@ -444,7 +444,7 @@ async def health_check():
     
     # Storage check
     try:
-        storage_path = Path(os.environ.get("TOSCANINI_DATA_DIR", "/app/data")) / "comparisons"
+        storage_path = _get_storage_dir()
         storage_path.mkdir(parents=True, exist_ok=True)
         checks["storage"] = "OK"
     except Exception as e:
