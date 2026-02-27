@@ -420,3 +420,200 @@ async def health_check():
         "checks": checks,
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
+
+
+@app.post("/refinement/submit")
+async def refinement_submit(
+    audit_id: str = Form(...),
+    protocol: str = Form("openmm"),
+    user_email: str = Form(None),
+    file: UploadFile = File(...)
+):
+    """
+    Phase B2: Submit structure for managed GPU refinement.
+
+    Flow:
+    1. Validate audit_id exists
+    2. Read PDB file
+    3. Queue Celery task (execute_openmm or execute_rosetta)
+    4. Return job_id for status polling
+
+    Args:
+        audit_id: Original audit ID (must be INDETERMINATE/VETO)
+        protocol: openmm | rosetta
+        user_email: Optional email for notification
+        file: PDB/CIF file to refine
+    """
+    import uuid
+
+    try:
+        # Read file
+        content_bytes = await file.read()
+        if len(content_bytes) == 0:
+            return {"status": "error", "message": "Empty file"}, 400
+
+        # Validate protocol
+        if protocol not in ("openmm", "rosetta"):
+            return {"status": "error", "message": "Invalid protocol. Use openmm or rosetta."}, 400
+
+        # Generate job ID
+        job_id = str(uuid.uuid4())[:8].upper()
+
+        # Convert to hex for Celery serialization
+        pdb_hex = content_bytes.hex()
+
+        # Queue task
+        try:
+            from celery import Celery
+            import os
+
+            REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
+            celery_app = Celery("toscanini_client", broker=REDIS_URL, backend=REDIS_URL)
+
+            if protocol == "openmm":
+                protocol_config = {
+                    "temperature_k": 300,
+                    "sim_steps": 1000000,
+                    "timestep_fs": 2
+                }
+                task = celery_app.send_task(
+                    "worker.tasks.execute_openmm",
+                    args=[job_id, pdb_hex, protocol_config],
+                    queue="refinement"
+                )
+            else:
+                # Get Rosetta XML from remediation generator
+                mock_audit = {"tier1": {"laws": []}, "verdict": {}, "governance": {"audit_id": audit_id}}
+                from remediation_generator import generate_rosetta_xml
+                xml_protocol = generate_rosetta_xml(mock_audit)
+                task = celery_app.send_task(
+                    "worker.tasks.execute_rosetta",
+                    args=[job_id, pdb_hex, xml_protocol],
+                    queue="refinement"
+                )
+
+            queue_status = "queued"
+            celery_task_id = task.id
+
+        except Exception as celery_err:
+            # Celery not available yet (B2 not deployed)
+            queue_status = "beta_pending"
+            celery_task_id = None
+            logger.warning(f"Celery not available: {str(celery_err)}")
+
+        return {
+            "status": "success",
+            "job_id": job_id,
+            "celery_task_id": celery_task_id,
+            "queue_status": queue_status,
+            "protocol": protocol,
+            "original_audit_id": audit_id,
+            "message": (
+                "Job queued for GPU execution. Poll /refinement/status/{job_id} for updates."
+                if queue_status == "queued"
+                else "B2 GPU worker not yet deployed. Use B1 callback flow for now."
+            ),
+            "estimated_time_minutes": 5 if protocol == "openmm" else 3
+        }
+
+    except Exception as e:
+        logger.error(f"Submit error: {str(e)}")
+        return {"status": "error", "message": str(e)}, 500
+
+
+@app.get("/refinement/status/{job_id}")
+async def refinement_status(job_id: str):
+    """Poll job state from Redis state manager."""
+    try:
+        import redis as redis_lib, json, os
+        r = redis_lib.from_url(
+            os.environ.get("REDIS_URL", "redis://redis:6379/0"),
+            decode_responses=True
+        )
+        raw = r.get(f"job:{job_id}")
+        if raw:
+            job = json.loads(raw)
+            return {
+                "job_id":           job_id,
+                "state":            job.get("state", "unknown"),
+                "protocol":         job.get("protocol"),
+                "original_audit_id":job.get("original_audit_id"),
+                "refined_audit_id": job.get("refined_audit_id"),
+                "comparison_url":   job.get("comparison_url"),
+                "created_at":       job.get("created_at"),
+                "started_at":       job.get("started_at"),
+                "completed_at":     job.get("completed_at"),
+                "logs":             job.get("logs"),
+                "error":            job.get("error")
+            }
+        return {"job_id": job_id, "state": "not_found",
+                "message": "Job not found or expired"}
+    except Exception as e:
+        return {"job_id": job_id, "state": "unknown", "error": str(e),
+                "message": "Redis not available (B2 GPU worker not deployed)"}
+
+@app.get("/refinement/jobs/{original_audit_id}")
+async def list_jobs_for_audit(original_audit_id: str):
+    """List all refinement jobs for a given original audit."""
+    try:
+        import redis as redis_lib, json, os
+        r = redis_lib.from_url(
+            os.environ.get("REDIS_URL", "redis://redis:6379/0"),
+            decode_responses=True
+        )
+        job_ids = r.lrange(f"audit_jobs:{original_audit_id}", 0, -1)
+        jobs = []
+        for jid in job_ids:
+            raw = r.get(f"job:{jid}")
+            if raw:
+                jobs.append(json.loads(raw))
+        return {
+            "original_audit_id": original_audit_id,
+            "job_count":         len(jobs),
+            "jobs": sorted(jobs, key=lambda x: x.get("created_at",""), reverse=True)
+        }
+    except Exception as e:
+        return {"original_audit_id": original_audit_id, "error": str(e)}
+
+
+@app.post("/refinement/internal-callback")
+async def internal_callback(payload: dict):
+    """
+    Internal endpoint: called by GPU worker after execution completes.
+    Triggers re-audit and stores comparison.
+    """
+    try:
+        original_audit_id = payload["original_audit_id"]
+        refined_pdb_hex = payload["refined_pdb_hex"]
+        job_id = payload.get("job_id", "UNKNOWN")
+        user_email = payload.get("user_email")
+        protocol = payload.get("protocol", "unknown")
+
+        # Re-audit refined structure
+        refined_bytes = bytes.fromhex(refined_pdb_hex)
+        refined_audit = _run_physics_sync(refined_bytes, f"refined_{job_id}.pdb", "experimental", "NONE")
+        refined_audit_id = refined_audit["governance"]["audit_id"]
+
+        # Store comparison
+        comparison_data = {
+            "original_audit_id": original_audit_id,
+            "refined_audit_id": refined_audit_id,
+            "job_id": job_id,
+            "protocol": protocol,
+            "refinement_method": "managed_gpu",
+            "user_email": user_email,
+            "status": "complete"
+        }
+
+        store_comparison(original_audit_id, refined_audit_id, comparison_data)
+
+        return {
+            "status": "success",
+            "original_audit_id": original_audit_id,
+            "refined_audit_id": refined_audit_id,
+            "comparison_url": f"/compare?baseline={original_audit_id}&refined={refined_audit_id}"
+        }
+
+    except Exception as e:
+        logger.error(f"Internal callback error: {str(e)}")
+        return {"status": "error", "message": str(e)}, 500
