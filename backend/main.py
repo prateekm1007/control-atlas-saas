@@ -470,36 +470,31 @@ async def refinement_submit(
             REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
             celery_app = Celery("toscanini_client", broker=REDIS_URL, backend=REDIS_URL)
 
-            if protocol == "openmm":
-                protocol_config = {
-                    "temperature_k": 300,
-                    "sim_steps": 1000000,
-                    "timestep_fs": 2
-                }
-                task = celery_app.send_task(
-                    "worker.tasks.execute_openmm",
-                    args=[job_id, pdb_hex, protocol_config],
-                    queue="refinement"
-                )
-            else:
-                # Get Rosetta XML from remediation generator
-                mock_audit = {"tier1": {"laws": []}, "verdict": {}, "governance": {"audit_id": audit_id}}
-                from remediation_generator import generate_rosetta_xml
-                xml_protocol = generate_rosetta_xml(mock_audit)
-                task = celery_app.send_task(
-                    "worker.tasks.execute_rosetta",
-                    args=[job_id, pdb_hex, xml_protocol],
-                    queue="refinement"
-                )
+            # Get failing laws from audit (for protocol selection)
+            all_laws = audit_result.get("tier1", {}).get("laws", []) if "audit_result" in dir() else []
+            failing_laws = [l["law_id"] for l in all_laws if l.get("status") not in ("PASS",)]
 
-            queue_status = "queued"
-            celery_task_id = task.id
+            # Dispatch via execution engine
+            import sys
+            sys.path.insert(0, "/app/gpu_worker")
+            from worker.execution_engine import dispatch_job
+
+            dispatch_result = dispatch_job(
+                pdb_bytes=content_bytes,
+                original_audit_id=audit_id,
+                failing_laws=failing_laws,
+                user_email=user_email,
+                protocol_override=protocol if protocol != "auto" else None
+            )
+
+            job_id         = dispatch_result["job_id"]
+            queue_status   = dispatch_result["state"]
+            celery_task_id = dispatch_result.get("celery_task_id")
 
         except Exception as celery_err:
-            # Celery not available yet (B2 not deployed)
-            queue_status = "beta_pending"
+            queue_status   = "beta_pending"
             celery_task_id = None
-            logger.warning(f"Celery not available: {str(celery_err)}")
+            logger.warning(f"Execution engine not available: {str(celery_err)}")
 
         return {
             "status": "success",
