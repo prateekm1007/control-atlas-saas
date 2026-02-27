@@ -444,7 +444,7 @@ async def health_check():
     
     # Storage check
     try:
-        storage_path = Path("/app/data/comparisons")
+        storage_path = Path(os.environ.get("TOSCANINI_DATA_DIR", "/app/data")) / "comparisons"
         storage_path.mkdir(parents=True, exist_ok=True)
         checks["storage"] = "OK"
     except Exception as e:
@@ -703,6 +703,84 @@ async def get_stored_audit(audit_id: str):
     if result:
         return {"status": "success", "audit": result}
     return {"status": "not_found", "message": f"Audit {audit_id} not found or expired"}
+
+
+@app.get("/history/{user_email:path}")
+async def get_user_history(user_email: str):
+    """
+    Retrieve full refinement history for a registered user (by email).
+
+    Returns all comparisons submitted by this email, sorted newest first.
+    Each entry includes original_audit_id, refined_audit_id, protocol,
+    verdict change, and timestamps.
+
+    Args:
+        user_email: URL-encoded email address
+    """
+    try:
+        from tos.storage.comparisons import list_user_comparisons
+        from urllib.parse import unquote
+        email = unquote(user_email)
+        comparisons = list_user_comparisons(email)
+
+        # Enrich each comparison with verdict summary if audit is stored
+        enriched = []
+        for comp in comparisons:
+            entry = dict(comp)
+            # Attach refined verdict if available
+            refined_id = comp.get("refined_audit_id")
+            if refined_id:
+                refined = get_audit_result(refined_id)
+                if refined:
+                    entry["refined_verdict"]  = refined.get("verdict", {}).get("binary")
+                    entry["refined_score"]    = refined.get("verdict", {}).get("deterministic_score")
+                    entry["refined_coverage"] = refined.get("verdict", {}).get("coverage_pct")
+            # Attach original verdict if available
+            original_id = comp.get("original_audit_id")
+            if original_id:
+                original = get_audit_result(original_id)
+                if original:
+                    entry["original_verdict"]  = original.get("verdict", {}).get("binary")
+                    entry["original_score"]    = original.get("verdict", {}).get("deterministic_score")
+                    entry["original_coverage"] = original.get("verdict", {}).get("coverage_pct")
+            enriched.append(entry)
+
+        return {
+            "status":             "success",
+            "user_email":         email,
+            "refinement_count":   len(enriched),
+            "comparisons":        enriched,
+        }
+
+    except Exception as e:
+        logger.error(f"History error for {user_email}: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/history/ip/{client_ip}")
+async def get_ip_history(client_ip: str):
+    """
+    Retrieve refinement history for an anonymous user (by IP).
+
+    Same structure as /history/{user_email} but keyed on IP address.
+    Used by the dashboard when no email was provided at submission.
+    """
+    try:
+        from tos.storage.comparisons import list_user_comparisons
+        # list_user_comparisons filters by user_email field —
+        # anonymous submissions store the IP in that field
+        comparisons = list_user_comparisons(client_ip)
+
+        return {
+            "status":           "success",
+            "client_ip":        client_ip,
+            "refinement_count": len(comparisons),
+            "comparisons":      comparisons,
+        }
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 
 @app.post("/compare")
 async def compare_audits_endpoint(baseline_id: str = Form(...), refined_id: str = Form(...)):
