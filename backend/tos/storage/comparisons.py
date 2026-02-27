@@ -8,8 +8,7 @@ from pathlib import Path
 from typing import Optional, Dict, List
 from datetime import datetime, timezone
 
-import os
-STORAGE_DIR = Path(os.environ.get("TOSCANINI_DATA_DIR", "/app/data")) / "comparisons"
+STORAGE_DIR = Path("/app/data/comparisons")
 STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 def store_comparison(original_id: str, refined_id: str, metadata: Dict) -> None:

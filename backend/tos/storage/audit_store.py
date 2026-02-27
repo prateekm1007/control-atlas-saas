@@ -7,8 +7,7 @@ import json
 from pathlib import Path
 from typing import Optional, Dict
 
-import os
-AUDIT_DIR = Path(os.environ.get("TOSCANINI_DATA_DIR", "/app/data")) / "audits"
+AUDIT_DIR = Path("/app/data/audits")
 AUDIT_DIR.mkdir(parents=True, exist_ok=True)
 AUDIT_TTL_DAYS = 30  # Keep audits for 30 days
 
