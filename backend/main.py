@@ -312,3 +312,60 @@ async def refinement_callback(
     except Exception as e:
         logger.error(f"Callback error: {str(e)}")
         return {"status": "error", "message": f"Server error: {str(e)}", "error_type": "server"}, 500
+
+
+@app.get("/comparison/{original_id}/{refined_id}")
+async def get_comparison(original_id: str, refined_id: str):
+    """
+    Retrieve stored comparison metadata and regenerate comparison analysis.
+    
+    Args:
+        original_id: Original (baseline) audit ID
+        refined_id: Refined audit ID
+    
+    Returns:
+        Full comparison object with law deltas and improvements
+    """
+    try:
+        from tos.storage.comparisons import get_comparison
+        
+        # Retrieve comparison metadata
+        comp_meta = get_comparison(original_id, refined_id)
+        
+        if not comp_meta:
+            return {"status": "error", "message": "Comparison not found"}, 404
+        
+        # TODO: Retrieve full audit results for both IDs
+        # For now, return metadata only
+        # In Week 4, add full audit retrieval and delta calculation
+        
+        return {
+            "status": "success",
+            "comparison": comp_meta,
+            "message": "Full delta calculation coming in Week 4"
+        }
+        
+    except Exception as e:
+        return {"status": "error", "message": str(e)}, 500
+
+@app.get("/comparisons/by-original/{original_id}")
+async def list_comparisons_for_original(original_id: str):
+    """
+    List all refined audits derived from a given original audit.
+    
+    Useful for showing refinement history on audit detail page.
+    """
+    try:
+        from tos.storage.comparisons import list_comparisons_by_original
+        
+        comparisons = list_comparisons_by_original(original_id)
+        
+        return {
+            "status": "success",
+            "original_audit_id": original_id,
+            "refinement_count": len(comparisons),
+            "comparisons": comparisons
+        }
+        
+    except Exception as e:
+        return {"status": "error", "message": str(e)}, 500

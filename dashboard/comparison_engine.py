@@ -7,6 +7,74 @@ a structured comparison dict.
 """
 
 
+
+def calculate_law_delta(baseline_law: dict, refined_law: dict) -> dict:
+    """
+    Calculate improvement delta for a single law.
+    
+    Returns:
+        dict with status_change, observed_delta, improvement_pct
+    """
+    baseline_status = baseline_law.get("status", "UNKNOWN")
+    refined_status = refined_law.get("status", "UNKNOWN")
+    
+    baseline_obs = baseline_law.get("observed", 0)
+    refined_obs = refined_law.get("observed", 0)
+    
+    # Determine if improvement occurred
+    status_improved = (baseline_status in ("VETO", "FAIL", "INDETERMINATE") and 
+                      refined_status == "PASS")
+    
+    # Calculate delta (direction depends on operator)
+    operator = baseline_law.get("operator", "<=")
+    if operator in ("<=", "<"):
+        # Lower is better
+        delta = baseline_obs - refined_obs
+        improvement_pct = (delta / baseline_obs * 100) if baseline_obs != 0 else 0
+    else:
+        # Higher is better (>=, >)
+        delta = refined_obs - baseline_obs
+        improvement_pct = (delta / baseline_obs * 100) if baseline_obs != 0 else 0
+    
+    return {
+        "baseline_status": baseline_status,
+        "refined_status": refined_status,
+        "status_changed": baseline_status != refined_status,
+        "status_improved": status_improved,
+        "baseline_observed": baseline_obs,
+        "refined_observed": refined_obs,
+        "delta": round(delta, 3),
+        "improvement_pct": round(improvement_pct, 2),
+        "operator": operator
+    }
+
+def calculate_residue_improvements(baseline_law: dict, refined_law: dict) -> dict:
+    """
+    Calculate which residues were fixed (for residue-level laws).
+    
+    Returns:
+        dict with fixed_residues, new_violations, still_failing
+    """
+    if baseline_law.get("granularity") != "residue":
+        return None
+    
+    baseline_residues = set(baseline_law.get("failing_residues", []))
+    refined_residues = set(refined_law.get("failing_residues", []))
+    
+    fixed = baseline_residues - refined_residues
+    new_violations = refined_residues - baseline_residues
+    still_failing = baseline_residues & refined_residues
+    
+    return {
+        "fixed_residues": sorted(list(fixed), key=lambda x: (x.split(":")[0], int(x.split(":")[1]))),
+        "new_violations": sorted(list(new_violations), key=lambda x: (x.split(":")[0], int(x.split(":")[1]))),
+        "still_failing": sorted(list(still_failing), key=lambda x: (x.split(":")[0], int(x.split(":")[1]))),
+        "fixed_count": len(fixed),
+        "new_count": len(new_violations),
+        "still_count": len(still_failing)
+    }
+
+
 def compare_audits(baseline, refined):
     """
     Compare two audit results (before refinement vs after).
@@ -57,6 +125,9 @@ def compare_audits(baseline, refined):
             else:
                 change_type = "CHANGED"
             
+            # Residue-level improvement tracking
+            residue_improvements = calculate_residue_improvements(b_law, r_law)
+
             law_changes.append({
                 "law_id": lid,
                 "title": r_law.get("title") or b_law.get("title", ""),
@@ -67,6 +138,8 @@ def compare_audits(baseline, refined):
                 "after_observed": r_law.get("observed", "N/A"),
                 "threshold": r_law.get("threshold") or b_law.get("threshold", "N/A"),
                 "change_type": change_type,
+                "delta": calculate_law_delta(b_law, r_law),
+                "residue_improvements": residue_improvements,
             })
     
     # Coverage delta
