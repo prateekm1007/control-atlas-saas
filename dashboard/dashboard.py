@@ -735,6 +735,143 @@ with st.sidebar:
                 st.caption(f"Failing: {_fail_ids}. Fast Relax resolves rotamer/clash issues in ~80% of cases.")
             st.caption("Re-upload refined structure to Toscanini for re-validation.")
 
+            st.divider()
+
+            # ── B1: CALLBACK TOKEN ──────────────────────────────────────
+            st.markdown("**🎫 Managed Refinement (B1 — Callback)**")
+            st.caption("Refine locally, upload result, get automatic before/after comparison.")
+
+            _email_input = st.text_input(
+                "Email (optional)",
+                key="b1_email",
+                placeholder="you@institution.edu"
+            )
+
+            if st.button("Generate Callback Token", key="b1_token_btn"):
+                try:
+                    import sys
+                    sys.path.insert(0, '/app')
+                    from tos.security.tokens import create_refinement_token
+                    _token = create_refinement_token(
+                        _audit_id,
+                        _email_input if _email_input else None
+                    )
+                    _zip_managed = generate_remediation_zip(_ar, callback_token=_token)
+                    st.success("✅ Token generated and embedded in ZIP")
+                    st.download_button(
+                        label="📦 Download Managed Remediation Package",
+                        data=_zip_managed,
+                        file_name=f"TOSCANINI_REMEDIATION_{_audit_id}_MANAGED.zip",
+                        mime="application/zip",
+                        use_container_width=True,
+                        key="b1_managed_zip"
+                    )
+                    with st.expander("View Token", expanded=False):
+                        st.code(_token, language="text")
+                        st.caption("Token valid 7 days. Single-use. See README.txt in ZIP.")
+                except Exception as _te:
+                    st.error(f"Token generation failed: {_te}")
+
+            st.divider()
+
+            # ── B2: RUN WITH TOSCANINI ───────────────────────────────────
+            st.markdown("**⚡ Run with Toscanini (B2 — Managed GPU)**")
+            st.caption("We execute refinement on our GPU. Auto re-audit on completion.")
+
+            _protocol_choice = st.selectbox(
+                "Protocol",
+                options=["auto", "openmm", "rosetta"],
+                key="b2_protocol",
+                help="Auto = Toscanini selects based on violations"
+            )
+
+            _b2_email = st.text_input(
+                "Email for notification",
+                key="b2_email",
+                placeholder="you@institution.edu"
+            )
+
+            if st.button("⚡ Run with Toscanini (Beta)", key="b2_run_btn", type="primary"):
+                try:
+                    import requests as _req
+
+                    # Re-upload the original PDB for GPU execution
+                    if "uploaded_file_bytes" in st.session_state and st.session_state.uploaded_file_bytes:
+                        _pdb_bytes = st.session_state.uploaded_file_bytes
+                        _pdb_name  = st.session_state.get("uploaded_file_name", "structure.pdb")
+
+                        _resp = _req.post(
+                            "http://brain:8000/refinement/submit",
+                            data={
+                                "audit_id":   _audit_id,
+                                "protocol":   _protocol_choice,
+                                "user_email": _b2_email if _b2_email else ""
+                            },
+                            files={"file": (_pdb_name, _pdb_bytes, "application/octet-stream")},
+                            timeout=30
+                        )
+
+                        if _resp.status_code == 200:
+                            _job = _resp.json()
+                            st.success(f"✅ Job submitted: `{_job['job_id']}`")
+                            st.info(
+                                "Protocol: **" + str(_job.get("protocol","?")) + "**  \n"
+                                + "Est. time: **" + str(_job.get("estimated_minutes","?")) + " min**  \n"
+                                + "Poll: /refinement/status/" + str(_job.get("job_id","?"))
+                            )
+                            st.session_state["b2_job_id"] = _job["job_id"]
+                        else:
+                            st.warning(_resp.json().get("message", "GPU worker not yet deployed."))
+                    else:
+                        st.warning("Original file not in session. Re-upload to use managed execution.")
+
+                except Exception as _b2e:
+                    st.warning(f"B2 GPU worker not deployed yet: {_b2e}")
+
+            # ── B2: JOB STATUS POLLING ───────────────────────────────────
+            if "b2_job_id" in st.session_state and st.session_state.b2_job_id:
+                _job_id = st.session_state.b2_job_id
+                st.markdown(f"**Job Status: `{_job_id}`**")
+
+                if st.button("🔄 Refresh Status", key="b2_refresh"):
+                    try:
+                        import requests as _req2
+                        _status_resp = _req2.get(
+                            f"http://brain:8000/refinement/status/{_job_id}",
+                            timeout=10
+                        )
+                        _status = _status_resp.json()
+                        _state  = _status.get("state", "unknown")
+
+                        _state_colors = {
+                            "queued":    "🟡",
+                            "running":   "🔵",
+                            "success":   "🟢",
+                            "failed":    "🔴",
+                            "timeout":   "🟠",
+                            "not_found": "⚪"
+                        }
+                        _icon = _state_colors.get(_state, "⚪")
+
+                        st.markdown(f"{_icon} **State:** {_state.upper()}")
+
+                        if _status.get("logs"):
+                            st.caption(f"Logs: {_status['logs']}")
+
+                        if _state == "success" and _status.get("comparison_url"):
+                            st.success("✅ Refinement complete!")
+                            st.markdown(
+                                f"[View Before/After Comparison]({_status['comparison_url']})"
+                            )
+                            st.session_state["b2_job_id"] = None
+
+                        if _state == "failed":
+                            st.error(f"❌ Job failed: {_status.get('error', 'Unknown error')}")
+                            st.session_state["b2_job_id"] = None
+
+                    except Exception as _se:
+                        st.warning(f"Status check failed: {_se}")
+
         # ── PDF DOWNLOAD (always visible) ──
         st.divider()
         _pdf_b64 = _ar.get("pdf_b64", "")
@@ -789,8 +926,8 @@ render_lifecycle_header(_lifecycle_state)
 # §4  TAB LAYOUT
 # ===============================================================
 
-tab_audit, tab_batch, tab_bench, tab_ref = st.tabs(
-    ["⚡ Audit", "📦 Batch", "🔬 Benchmark", "📜 Reference"]
+tab_audit, tab_batch, tab_refine, tab_bench, tab_ref = st.tabs(
+    ["⚡ Audit", "📦 Batch", "⚡ Refinement", "🔬 Benchmark", "📜 Reference"]
 )
 
 
@@ -926,6 +1063,9 @@ with tab_audit:
                     )
                 if res:
                     st.session_state.audit_result = res
+                    # Store file bytes for B2 managed execution
+                    st.session_state.uploaded_file_bytes = uploaded_file.getvalue()
+                    st.session_state.uploaded_file_name  = uploaded_file.name
                     st.rerun()
 
         st.divider()
@@ -1105,6 +1245,123 @@ def _run_benchmark_audit(candidate_id: str) -> dict | None:
         data={"mode": "Benchmark", "candidate_id": candidate_id, "t3_category": "NONE"},
     )
 
+
+
+# ===============================================================
+# TAB 3 — REFINEMENT (Upload Refined Structure)
+# ===============================================================
+
+with tab_refine:
+    st.subheader("Upload Refined Structure")
+    st.caption(
+        "If you have refined your structure locally (Rosetta/OpenMM), "
+        "upload it here with your callback token for automatic re-audit and before/after comparison."
+    )
+
+    st.markdown("---")
+
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        _ref_token = st.text_input(
+            "Callback Token",
+            key="refine_token",
+            placeholder="Paste token from README.txt in your remediation package",
+            help="Token is valid for 7 days, single-use"
+        )
+    with col2:
+        st.write("")
+        st.write("")
+        _ref_file = st.file_uploader(
+            "Refined PDB",
+            type=["pdb", "cif"],
+            key="refine_file"
+        )
+
+    if st.button("🚀 Submit Refined Structure", type="primary", key="refine_submit"):
+        if not _ref_token:
+            st.error("⚠️ Please provide a callback token")
+        elif not _ref_file:
+            st.error("⚠️ Please upload a refined PDB file")
+        else:
+            with st.spinner("Uploading and re-auditing refined structure..."):
+                try:
+                    _ref_resp = api(
+                        "POST", "/refinement/callback",
+                        data={"token": _ref_token},
+                        files={"file": (_ref_file.name, _ref_file.getvalue(), "application/octet-stream")}
+                    )
+                    if _ref_resp:
+                        _ref_verdict  = _ref_resp.get("verdict", "UNKNOWN")
+                        _ref_coverage = _ref_resp.get("coverage_pct", 0)
+                        _ref_score    = _ref_resp.get("deterministic_score", 0)
+                        _orig_id      = _ref_resp.get("original_audit_id", "?")
+                        _new_id       = _ref_resp.get("refined_audit_id", "?")
+
+                        st.success("✅ Refined structure audited successfully!")
+
+                        c1, c2, c3 = st.columns(3)
+                        c1.metric("Verdict",   _ref_verdict)
+                        c2.metric("Coverage",  f"{_ref_coverage:.1f}%")
+                        c3.metric("Det. Score",f"{_ref_score}/100")
+
+                        st.info(
+                            "**Comparison ready:**  \n"
+                            + f"Original: `{_orig_id}`  \n"
+                            + f"Refined:  `{_new_id}`"
+                        )
+
+                        st.session_state["comparison_baseline"] = _orig_id
+                        st.session_state["comparison_refined"]   = _new_id
+                        st.balloons()
+                    else:
+                        st.error("Upload failed. Check token validity and file format.")
+                except Exception as _re:
+                    st.error(f"Upload error: {_re}")
+
+    st.divider()
+
+    # Job status polling for B2 managed jobs
+    st.markdown("**⚡ B2 Job Status**")
+    st.caption("If you submitted a managed GPU job, check its status here.")
+
+    _poll_job_id = st.text_input(
+        "Job ID",
+        key="poll_job_id",
+        placeholder="e.g. A1B2C3D4",
+        value=st.session_state.get("b2_job_id", "")
+    )
+
+    if st.button("🔄 Check Job Status", key="poll_status_btn"):
+        if not _poll_job_id:
+            st.warning("Enter a Job ID")
+        else:
+            try:
+                _st_resp = api("GET", f"/refinement/status/{_poll_job_id}")
+                if _st_resp:
+                    _state = _st_resp.get("state", "unknown")
+                    _icons = {
+                        "queued":    "🟡 QUEUED",
+                        "running":   "🔵 RUNNING",
+                        "success":   "🟢 SUCCESS",
+                        "failed":    "🔴 FAILED",
+                        "timeout":   "🟠 TIMEOUT",
+                        "not_found": "⚪ NOT FOUND"
+                    }
+                    st.markdown(f"**Status:** {_icons.get(_state, _state.upper())}")
+
+                    if _st_resp.get("logs"):
+                        st.caption(f"Logs: {_st_resp['logs']}")
+                    if _st_resp.get("error"):
+                        st.error(f"Error: {_st_resp['error']}")
+                    if _state == "success" and _st_resp.get("comparison_url"):
+                        st.success("Refinement complete!")
+                        st.markdown(f"Comparison URL: `{_st_resp['comparison_url']}`")
+                    if _st_resp.get("started_at"):
+                        st.caption(f"Started: {_st_resp['started_at']}")
+                    if _st_resp.get("completed_at"):
+                        st.caption(f"Completed: {_st_resp['completed_at']}")
+            except Exception as _pe:
+                st.error(f"Status check failed: {_pe}")
 
 with tab_bench:
     st.subheader("Benchmark — Experimental vs. Predicted")
