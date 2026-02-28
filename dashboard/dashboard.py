@@ -1320,6 +1320,137 @@ with tab_refine:
 
     st.divider()
 
+    # ── BYOC NOTEBOOK GENERATOR ──────────────────────────────────────
+    # BYOC_PLATFORM_SELECTOR
+    st.markdown("**🚀 Run on Free GPU — Kaggle / Colab / Paperspace**")
+    st.caption(
+        "No GPU? No problem. Generate a pre-filled notebook and run it on "
+        "Kaggle (30 hrs/week free), Google Colab, or Paperspace. "
+        "Your refined structure posts back automatically."
+    )
+
+    if st.session_state.get("audit_result"):
+        _byoc_audit = st.session_state["audit_result"]
+
+        _byoc_col1, _byoc_col2 = st.columns(2)
+
+        with _byoc_col1:
+            _byoc_platform = st.selectbox(
+                "Platform",
+                options=["kaggle", "colab", "paperspace"],
+                format_func=lambda x: {
+                    "kaggle":     "🟦 Kaggle (30 hrs/week free)",
+                    "colab":      "🟠 Google Colab (free T4 GPU)",
+                    "paperspace": "🟣 Paperspace Gradient (free tier)",
+                }[x],
+                key="byoc_platform"
+            )
+
+        with _byoc_col2:
+            try:
+                from notebook_generator import select_protocol_for_audit
+                _auto_proto = select_protocol_for_audit(_byoc_audit)
+            except Exception:
+                _auto_proto = "openmm"
+
+            _byoc_protocol = st.selectbox(
+                "Protocol",
+                options=["openmm", "rosetta"],
+                index=0 if _auto_proto == "openmm" else 1,
+                format_func=lambda x: {
+                    "openmm":  "⚗️ OpenMM (no license needed)",
+                    "rosetta": "🔬 Rosetta FastRelax (academic license)",
+                }[x],
+                key="byoc_protocol",
+                help="Auto-selected based on your failing laws. Override if needed."
+            )
+
+        # Platform info card
+        try:
+            from notebook_generator import get_platform_info
+            _pinfo = get_platform_info(_byoc_platform)
+            st.info(
+                f"**{_pinfo.get('name')}** · "
+                f"{_pinfo.get('gpu_type')} · "
+                f"{_pinfo.get('free_hours')} · "
+                f"{_pinfo.get('notes')}"
+            )
+        except Exception:
+            pass
+
+        # Generate + download notebook
+        _byoc_token = st.session_state.get("last_callback_token", "")
+        if not _byoc_token:
+            st.caption(
+                "💡 Generate a callback token first via the remediation package "
+                "(Download Remediation ZIP above) to enable automatic re-upload."
+            )
+
+        if st.button("📓 Generate Notebook", key="byoc_generate_btn", type="primary"):
+            with st.spinner("Generating notebook..."):
+                try:
+                    from notebook_generator import generate_notebook_bytes, get_platform_redirect_url
+                    _nb_bytes = generate_notebook_bytes(
+                        _byoc_audit,
+                        _byoc_token or "PASTE_YOUR_CALLBACK_TOKEN_HERE",
+                        _byoc_platform,
+                        _byoc_protocol
+                    )
+                    _nb_filename = f"toscanini_{_byoc_audit.get('governance',{}).get('audit_id','AUDIT')}_{_byoc_protocol}.ipynb"
+
+                    st.download_button(
+                        label=f"⬇️ Download {_nb_filename}",
+                        data=_nb_bytes,
+                        file_name=_nb_filename,
+                        mime="application/json",
+                        key="byoc_download_btn"
+                    )
+
+                    # Platform-specific instructions
+                    if _byoc_platform == "kaggle":
+                        st.success(
+                            "**Kaggle steps:**  \n"
+                            "1. Download the notebook above  \n"
+                            "2. Go to [kaggle.com/kernels](https://www.kaggle.com/kernels)  \n"
+                            "3. Click **New Notebook** → **File** → **Import Notebook**  \n"
+                            "4. Upload the .ipynb file  \n"
+                            "5. Enable GPU: **Settings** → **Accelerator** → T4 GPU  \n"
+                            "6. Click **Run All** — results post back automatically"
+                        )
+                    elif _byoc_platform == "colab":
+                        st.success(
+                            "**Colab steps:**  \n"
+                            "1. Download the notebook above  \n"
+                            "2. Go to [colab.research.google.com](https://colab.research.google.com)  \n"
+                            "3. **File** → **Upload notebook**  \n"
+                            "4. **Runtime** → **Change runtime type** → T4 GPU  \n"
+                            "5. **Runtime** → **Run all** — results post back automatically"
+                        )
+                    elif _byoc_platform == "paperspace":
+                        st.success(
+                            "**Paperspace steps:**  \n"
+                            "1. Download the notebook above  \n"
+                            "2. Go to [console.paperspace.com](https://console.paperspace.com)  \n"
+                            "3. Create a new Notebook project  \n"
+                            "4. Upload the .ipynb file  \n"
+                            "5. Select free GPU runtime and run all cells"
+                        )
+
+                    if _byoc_token:
+                        st.caption(f"Token embedded: `{_byoc_token[:20]}...` (single-use, 7 days)")
+                    else:
+                        st.warning(
+                            "No callback token embedded. After running the notebook, "
+                            "manually download the refined PDB and upload it above."
+                        )
+
+                except Exception as _be:
+                    st.error(f"Notebook generation failed: {_be}")
+    else:
+        st.info("Run an audit first to enable notebook generation.")
+
+    st.divider()
+
     # Job status polling for B2 managed jobs
     st.markdown("**⚡ B2 Job Status**")
     st.caption("If you submitted a managed GPU job, check its status here.")
