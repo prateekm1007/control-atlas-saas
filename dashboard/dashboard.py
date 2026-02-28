@@ -1453,9 +1453,19 @@ with tab_refine:
                             "6. Click **Run All** — results post back automatically"
                         )
                     elif _byoc_platform == "colab":
+                        # colab_direct_url — one-click open via GitHub raw URL
+                        _colab_template = f"toscanini_{_byoc_protocol}_colab_template.ipynb"
+                        _colab_url = (
+                            "https://colab.research.google.com/github/"
+                            "prateekm1007/control-atlas-saas/blob/main/"
+                            f"dashboard/notebooks/{_colab_template}"
+                        )
                         st.success(
-                            "**Colab steps:**  \n"
-                            "1. Download the notebook above  \n"
+                            "**Colab — two options:**  \n\n"
+                            f"**Option A (one-click):** [Open template in Colab]({_colab_url})  \n"
+                            "Then replace `PASTE_YOUR_CALLBACK_TOKEN_HERE` with your token.  \n\n"
+                            "**Option B (pre-filled):**  \n"
+                            "1. Download the notebook above (token already embedded)  \n"
                             "2. Go to [colab.research.google.com](https://colab.research.google.com)  \n"
                             "3. **File** → **Upload notebook**  \n"
                             "4. **Runtime** → **Change runtime type** → T4 GPU  \n"
