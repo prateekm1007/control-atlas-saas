@@ -10,3 +10,8 @@ numpy>=1.24.0,<2.0
 scipy>=1.10.0,<2.0
 matplotlib>=3.7.0
 pillow>=10.0.0
+
+# Phase B1/B2 dependencies (added B.3 sync)
+PyJWT>=2.8.0,<3.0
+redis>=5.0.0,<6.0
+celery>=5.3.0,<6.0
