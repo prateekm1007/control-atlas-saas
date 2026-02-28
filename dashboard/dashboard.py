@@ -1391,6 +1391,30 @@ with tab_refine:
         if st.button("📓 Generate Notebook", key="byoc_generate_btn", type="primary"):
             with st.spinner("Generating notebook..."):
                 try:
+                    # ── B5: Credit check before generation ───────────────
+                    # byoc_credit_check
+                    import sys as _nbsys
+                    _nbsys.path.insert(0, "/app/gpu_worker")
+                    try:
+                        from worker.credits import check_credits, deduct_credits
+                        _nb_identifier = (
+                            st.session_state.get("b1_email") or
+                            st.session_state.get("b2_email") or
+                            "anonymous"
+                        )
+                        _nb_credit_check = check_credits(_nb_identifier, "notebook")
+                        if not _nb_credit_check["allowed"]:
+                            st.error(
+                                f"No GPU credits remaining for `{_nb_identifier}`. "
+                                f"Each notebook export costs 1 credit. "
+                                f"Credits remaining: {_nb_credit_check['credits_remaining']}"
+                            )
+                            st.stop()
+                    except ImportError:
+                        # Credits module not available in this environment — allow
+                        _nb_identifier  = "anonymous"
+                        _nb_credit_check = {"allowed": True}
+
                     from notebook_generator import generate_notebook_bytes, get_platform_redirect_url
                     _nb_bytes = generate_notebook_bytes(
                         _byoc_audit,
@@ -1407,6 +1431,15 @@ with tab_refine:
                         mime="application/json",
                         key="byoc_download_btn"
                     )
+
+                    # ── B5: Deduct credit after successful generation ──────
+                    try:
+                        _nb_audit_id = _byoc_audit.get("governance", {}).get("audit_id", "UNKNOWN")
+                        deduct_credits(_nb_identifier, "notebook", f"NB_{_nb_audit_id}")
+                        _remaining = _nb_credit_check["credits_remaining"] - 1
+                        st.caption(f"✓ 1 credit deducted · {_remaining} remaining")
+                    except Exception:
+                        pass  # Non-fatal — notebook already generated
 
                     # Platform-specific instructions
                     if _byoc_platform == "kaggle":

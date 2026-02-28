@@ -26,10 +26,11 @@ BETA_CREDITS_ANON  = 3
 
 # Cost per protocol (GPU minutes)
 PROTOCOL_COST = {
-    "openmm":  5,   # ~5 GPU minutes
-    "rosetta": 3,   # ~3 GPU minutes
-    "both":    10,  # ~10 GPU minutes
-    "loop":    15,  # ~15 GPU minutes
+    "openmm":   5,   # ~5 GPU minutes
+    "rosetta":  3,   # ~3 GPU minutes
+    "both":     10,  # ~10 GPU minutes
+    "loop":     15,  # ~15 GPU minutes
+    "notebook": 1,   # notebook export = 1 credit (no GPU, just generation)
 }
 
 
