@@ -928,8 +928,8 @@ render_lifecycle_header(_lifecycle_state)
 # §4  TAB LAYOUT
 # ===============================================================
 
-tab_audit, tab_batch, tab_refine, tab_bench, tab_ref = st.tabs(
-    ["⚡ Audit", "📦 Batch", "⚡ Refinement", "🔬 Benchmark", "📜 Reference"]
+tab_audit, tab_batch, tab_refine, tab_bench, tab_ref, tab_history = st.tabs(
+    ["⚡ Audit", "📦 Batch", "⚡ Refinement", "🔬 Benchmark", "📜 Reference", "📊 History"]
 )
 
 
@@ -1740,3 +1740,185 @@ with tab_ref:
                     st.caption(f"Key: `{key}`")
         else:
             st.info("Definitions unavailable.")
+
+
+# ===============================================================
+# TAB 6 — INSTITUTIONAL HISTORY
+# ===============================================================
+
+with tab_history:
+    st.subheader("📊 Refinement History")
+    st.caption(
+        "Track your refinement journey. Every structure you have submitted "
+        "for refinement appears here with before/after metrics."
+    )
+
+    st.markdown("---")
+
+    # ── Identifier input ──────────────────────────────────────────────────────
+    _hist_col1, _hist_col2 = st.columns([3, 1])
+    with _hist_col1:
+        _hist_identifier = st.text_input(
+            "Email or IP",
+            key="hist_identifier",
+            placeholder="you@institution.edu  or  your IP address",
+            help="Use the same email you provided when submitting refinement jobs"
+        )
+    with _hist_col2:
+        st.write("")
+        st.write("")
+        _hist_use_ip = st.checkbox("Use my IP", key="hist_use_ip",
+                                   help="Look up history by IP address instead of email")
+
+    if st.button("🔍 Load History", key="hist_load_btn", type="primary"):
+        if not _hist_identifier and not _hist_use_ip:
+            st.warning("Enter an email address or check 'Use my IP'")
+        else:
+            with st.spinner("Loading refinement history..."):
+                try:
+                    if _hist_use_ip:
+                        # Get client IP via a simple echo endpoint or use placeholder
+                        _hist_resp = api("GET", "/history/ip/client")
+                    else:
+                        import urllib.parse
+                        _encoded = urllib.parse.quote(_hist_identifier, safe="")
+                        _hist_resp = api("GET", f"/history/{_encoded}")
+
+                    if _hist_resp and _hist_resp.get("status") == "success":
+                        st.session_state["history_data"] = _hist_resp
+                    else:
+                        st.error("Could not load history. Check identifier.")
+                except Exception as _he:
+                    st.error(f"History load failed: {_he}")
+
+    # ── Display history ───────────────────────────────────────────────────────
+    if st.session_state.get("history_data"):
+        _hdata = st.session_state["history_data"]
+        _hcount = _hdata.get("refinement_count", 0)
+        _hcomps = _hdata.get("comparisons", [])
+
+        # Summary metrics
+        st.markdown("---")
+        _hm1, _hm2, _hm3, _hm4 = st.columns(4)
+        _hm1.metric("Total Refinements", _hcount)
+
+        # Calculate aggregate stats
+        _improved = sum(
+            1 for c in _hcomps
+            if c.get("refined_verdict") == "PASS" and c.get("original_verdict") != "PASS"
+        )
+        _still_veto = sum(
+            1 for c in _hcomps
+            if c.get("refined_verdict") == "VETO"
+        )
+        _protocols = {}
+        for c in _hcomps:
+            proto = c.get("protocol", "unknown")
+            _protocols[proto] = _protocols.get(proto, 0) + 1
+
+        _hm2.metric("Resolved to PASS", _improved,
+                    delta=f"{_improved/_hcount*100:.0f}%" if _hcount > 0 else "0%")
+        _hm3.metric("Still VETO", _still_veto)
+        _hm4.metric("Most Used Protocol",
+                    max(_protocols, key=_protocols.get) if _protocols else "—")
+
+        st.markdown("---")
+
+        if _hcount == 0:
+            st.info(
+                "No refinement history found for this identifier. "
+                "Submit a structure for refinement to start tracking your journey."
+            )
+        else:
+            st.markdown(f"**{_hcount} refinement(s) found — newest first**")
+
+            for _i, _comp in enumerate(_hcomps):
+                _orig_id   = _comp.get("original_audit_id", "?")
+                _ref_id    = _comp.get("refined_audit_id", "?")
+                _proto     = _comp.get("protocol", "unknown")
+                _method    = _comp.get("refinement_method", "unknown")
+                _created   = _comp.get("created_at", "")[:19].replace("T", " ")
+                _orig_v    = _comp.get("original_verdict", "?")
+                _ref_v     = _comp.get("refined_verdict", "?")
+                _orig_s    = _comp.get("original_score", "?")
+                _ref_s     = _comp.get("refined_score", "?")
+                _orig_cov  = _comp.get("original_coverage", "?")
+                _ref_cov   = _comp.get("refined_coverage", "?")
+
+                # Verdict change indicator
+                _verdict_icon = "✅" if _ref_v == "PASS" and _orig_v != "PASS" else (
+                    "🔴" if _ref_v == "VETO" else "🟡"
+                )
+
+                with st.expander(
+                    f"{_verdict_icon} [{_created}] {_orig_id} → {_ref_id} "
+                    f"({_orig_v} → {_ref_v}) · {_proto}",
+                    expanded=(_i == 0)  # expand most recent
+                ):
+                    _dc1, _dc2, _dc3 = st.columns(3)
+
+                    # Verdict delta
+                    _dc1.metric(
+                        "Verdict",
+                        _ref_v,
+                        delta=f"{_orig_v} → {_ref_v}",
+                        delta_color="normal"
+                    )
+
+                    # Score delta
+                    if isinstance(_orig_s, (int, float)) and isinstance(_ref_s, (int, float)):
+                        _dc2.metric(
+                            "Det. Score",
+                            f"{_ref_s}/100",
+                            delta=f"{_ref_s - _orig_s:+d} pts"
+                        )
+                    else:
+                        _dc2.metric("Det. Score", str(_ref_s))
+
+                    # Coverage delta
+                    if isinstance(_orig_cov, (int, float)) and isinstance(_ref_cov, (int, float)):
+                        _dc3.metric(
+                            "Coverage",
+                            f"{_ref_cov:.1f}%",
+                            delta=f"{_ref_cov - _orig_cov:+.1f}%"
+                        )
+                    else:
+                        _dc3.metric("Coverage", str(_ref_cov))
+
+                    # Metadata row
+                    st.caption(
+                        f"Protocol: `{_proto}` · "
+                        f"Method: `{_method}` · "
+                        f"Original: `{_orig_id}` · "
+                        f"Refined: `{_ref_id}`"
+                    )
+
+                    # Load comparison button
+                    if st.button(
+                        "📊 Load Comparison",
+                        key=f"hist_cmp_{_i}_{_orig_id}",
+                        help="Load this comparison into the Refinement tab"
+                    ):
+                        st.session_state["comparison_baseline"] = _orig_id
+                        st.session_state["comparison_refined"]  = _ref_id
+                        st.success(
+                            "Comparison loaded. Switch to the **Refinement** tab "
+                            "to see the full before/after analysis."
+                        )
+    else:
+        st.info("Enter your email or IP above and click **Load History** to see your refinement journey.")
+
+    # ── Retention metrics (admin view) ────────────────────────────────────────
+    with st.expander("📈 Platform Metrics (Admin)", expanded=False):
+        st.caption("Aggregate usage across all users. Metadata only — no coordinates stored.")
+        try:
+            _cost_resp = api("GET", "/costs/summary")
+            if _cost_resp:
+                _cm1, _cm2, _cm3 = st.columns(3)
+                _cm1.metric("Total Jobs",       _cost_resp.get("total_jobs", "—"))
+                _cm2.metric("Total GPU Minutes", f"{_cost_resp.get('total_gpu_minutes', 0):.1f}")
+                _cm3.metric("Total Cost (USD)",  f"${_cost_resp.get('total_usd', 0):.4f}")
+            else:
+                st.caption("Cost summary endpoint not available.")
+        except Exception as _me:
+            st.caption("Metrics unavailable.")
