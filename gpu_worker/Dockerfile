@@ -22,7 +22,7 @@ RUN pip3 install --no-cache-dir \
     requests==2.31.0 \
     "numpy>=1.26.0,<3" 
 
-WORKDIR /app/worker
+WORKDIR /app
 
 COPY worker/ /app/worker/
 COPY protocols/ /app/protocols/
