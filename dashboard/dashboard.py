@@ -756,6 +756,8 @@ with st.sidebar:
                         _audit_id,
                         _email_input if _email_input else None
                     )
+                    # Store token in session state for BYOC notebook generator
+                    st.session_state["last_callback_token"] = _token
                     _zip_managed = generate_remediation_zip(_ar, callback_token=_token)
                     st.success("✅ Token generated and embedded in ZIP")
                     st.download_button(
