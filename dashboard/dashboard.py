@@ -83,6 +83,7 @@ from style_utils import (
     render_lifecycle_header,
     THEMES,
 )
+from usage_widget import render_usage_sidebar
 
 # ===============================================================
 # CONFIGURATION
@@ -895,6 +896,7 @@ with st.sidebar:
         st.caption("The studio auto-detects issues and recommends physics-first fixes.")
 
     st.divider()
+    render_usage_sidebar(API_KEY)
     st.caption(f"Theme: {get_active_theme_name()}")
 
 
@@ -1581,6 +1583,29 @@ with tab_refine:
                         st.success("✅ Laws resolved: " + ", ".join(_cmp["improvements"]))
                     if _cmp.get("regressions"):
                         st.error("⚠️ Regressions: " + ", ".join(_cmp["regressions"]))
+
+                    # ── B.6: Refinement Resolution Certificate ────────────────
+                    try:
+                        from pdf_certificate import build_certificate
+                        import time as _ptime
+                        _pdf_meta = {
+                            "structure_name":  st.session_state.get("uploaded_file_name", "structure.pdb"),
+                            "api_key_masked":  (API_KEY[:4] + "****" + API_KEY[-4:]) if len(API_KEY) >= 8 else "tos_****",
+                            "tier":            "pro",
+                            "engine":          st.session_state.get("byoc_protocol", "openmm"),
+                            "issued_at":       int(_ptime.time()),
+                        }
+                        _cert_bytes = build_certificate(_cmp, _pdf_meta)
+                        _cert_name  = f"toscanini_certificate_{_base_id}.pdf"
+                        st.download_button(
+                            label="📄 Download Refinement Resolution Certificate",
+                            data=_cert_bytes,
+                            file_name=_cert_name,
+                            mime="application/pdf",
+                            help="Tamper-evident PDF summarising your structural improvements.",
+                        )
+                    except Exception as _cert_err:
+                        st.caption(f"Certificate unavailable: {_cert_err}")
 
                     # Law-by-law breakdown
                     _changes = _cmp.get("law_changes", [])

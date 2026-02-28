@@ -803,3 +803,66 @@ async def compare_audits_endpoint(baseline_id: str = Form(...), refined_id: str 
         "status": "success",
         "comparison": comparison
     }
+
+
+# ── B.6: Usage instrumentation endpoint ───────────────────────────────────────
+
+@app.get("/usage")
+async def get_usage(request: Request):
+    """
+    Return credit and quota status for the calling API key.
+    Called by the dashboard sidebar widget (cached 30s client-side).
+
+    Response:
+    {
+        "tier": "pro",
+        "credits_used": 42,
+        "credits_total": 1000,
+        "quotas": {
+            "notebooks_per_day": 20,
+            "audits_per_day": 500,
+            "max_residues": 1500,
+            "max_file_mb": 50
+        }
+    }
+    """
+    _api_key_raw = request.headers.get("X-API-Key", "")
+    if not _api_key_raw:
+        raise HTTPException(status_code=401, detail="X-API-Key header required.")
+
+    _key_hash = hash_key(_api_key_raw)
+    _tier     = get_tier_for_key(_key_hash)
+
+    # Pull quota config from TIER_LIMITS (already imported via key_store)
+    from tos.saas.key_store import TIER_LIMITS, get_key, GPU_TIER_CREDITS
+    _key_record = get_key(_key_hash)
+    if _key_record is None:
+        raise HTTPException(status_code=401, detail="Invalid or inactive API key.")
+
+    _limits = TIER_LIMITS.get(_tier, TIER_LIMITS["free"])
+    _gpu_total = GPU_TIER_CREDITS.get(_tier, GPU_TIER_CREDITS["free"])
+
+    # Credits used: read from gpu_worker credits store if available
+    _credits_used = 0
+    try:
+        import sys as _usys
+        _usys.path.insert(0, "/app/gpu_worker")
+        from worker.credits import get_credits
+        _identifier = _key_record.last_used or _api_key_raw[:8]
+        _credit_rec = get_credits(_api_key_raw)
+        _credits_used = _credit_rec.get("jobs_submitted", 0)
+    except Exception:
+        pass  # credits system unavailable — return zeros gracefully
+
+    return {
+        "tier":          _tier,
+        "credits_used":  _credits_used,
+        "credits_total": _gpu_total,
+        "quotas": {
+            "audits_per_day":    _limits.get("daily",      "—"),
+            "batch_max":         _limits.get("batch_max",  "—"),
+            "gpu_runs":          _limits.get("gpu_runs",   "—"),
+            "max_residues":      MAX_RESIDUE_COUNT,
+            "max_file_mb":       MAX_PDB_BYTES // (1024 * 1024),
+        },
+    }
