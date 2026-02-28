@@ -77,6 +77,25 @@ def _validate_pdb_upload(raw: bytes) -> None:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("toscanini.brain")
 
+# ── B.6 Silent Telemetry ─────────────────────────────────────────────────────
+import json as _json
+
+def _emit_telemetry(event: str, data: dict) -> None:
+    """Append one JSON event to telemetry/events.jsonl. Fire-and-forget."""
+    try:
+        from pathlib import Path as _Path
+        import os as _os
+        tel_dir = _Path(_os.environ.get("TOSCANINI_DATA_DIR", "/app/data")) / "telemetry"
+        tel_dir.mkdir(parents=True, exist_ok=True)
+        record = {"event": event, "ts": datetime.now(timezone.utc).isoformat(),
+                  "version": "v23.2.0-B6", **data}
+        with open(tel_dir / "events.jsonl", "a") as _f:
+            _f.write(_json.dumps(record) + "\n")
+    except Exception:
+        pass
+
+
+
 app = FastAPI(title="Toscanini OS", version=STATION_METADATA["version"])
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
@@ -182,6 +201,13 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
         payload["pdf_error"] = "PDF_GENERATION_FAILED"
     try: get_nkg().record_audit(payload)
     except: pass
+    _emit_telemetry("audit_created", {
+        "audit_id":  payload.get("governance", {}).get("audit_id"),
+        "verdict":   payload.get("verdict", {}).get("binary"),
+        "det_score": payload.get("verdict", {}).get("deterministic_score"),
+        "coverage":  payload.get("verdict", {}).get("coverage_pct"),
+        "residues":  payload.get("characterization", {}).get("total_residues"),
+    })
     try: log_usage_telemetry(get_nkg(), payload, "/ingest")
     except: pass
     return payload
@@ -299,6 +325,11 @@ async def refinement_callback(
     try:
         # Validate token
         payload = validate_refinement_token(token, consume=True)  # Single-use enforcement
+        _emit_telemetry("token_generated", {
+            "audit_id":   original_audit_id,
+            "user_email": user_email,
+        })
+
         original_audit_id = payload["audit_id"]
         user_email = payload.get("user_email")
         
@@ -334,6 +365,21 @@ async def refinement_callback(
         }
         
         store_comparison(original_audit_id, refined_audit_id, comparison_data)
+        _emit_telemetry("callback_completed", {
+            "original_audit_id": original_audit_id,
+            "refined_audit_id":  refined_audit_id,
+            "refined_verdict":   refined_audit.get("verdict", {}).get("binary"),
+            "refined_score":     refined_audit.get("verdict", {}).get("deterministic_score"),
+            "refined_coverage":  refined_audit.get("verdict", {}).get("coverage_pct"),
+            "delta_coverage":    (
+                refined_audit.get("verdict", {}).get("coverage_pct", 0) -
+                (get_audit_result(original_audit_id) or {})
+                .get("verdict", {}).get("coverage_pct", 0)
+            ),
+            "user_email": user_email,
+            "filename":   file.filename,
+        })
+
 
         # Store refined audit for future retrieval
         store_audit_result(refined_audit_id, refined_audit)
@@ -575,6 +621,13 @@ async def refinement_submit(
         # Deduct credit after successful dispatch
         try:
             deduct_credits(_identifier, protocol, job_id)
+            _emit_telemetry("credit_consumed", {
+                "identifier": _identifier,
+                "tier":       _tier,
+                "protocol":   protocol,
+                "job_id":     job_id,
+            })
+
         except Exception as _dc_err:
             logger.warning(f"Credit deduction failed (non-fatal): {_dc_err}")
 
