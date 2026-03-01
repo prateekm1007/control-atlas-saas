@@ -325,13 +325,13 @@ async def refinement_callback(
     try:
         # Validate token
         payload = validate_refinement_token(token, consume=True)  # Single-use enforcement
+
+        original_audit_id = payload["audit_id"]
+        user_email = payload.get("user_email")
         _emit_telemetry("token_generated", {
             "audit_id":   original_audit_id,
             "user_email": user_email,
         })
-
-        original_audit_id = payload["audit_id"]
-        user_email = payload.get("user_email")
         
         # Read uploaded file
         content_bytes = await file.read()
