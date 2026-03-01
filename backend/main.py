@@ -556,7 +556,7 @@ async def refinement_submit(
         # Import credit system and enforce tier ceiling
         import sys as _sys
         _sys.path.insert(0, "/app")
-        from worker.credits import check_credits, deduct_credits, BETA_CREDITS_ANON
+        from tos_credits.credits import check_credits, deduct_credits, BETA_CREDITS_ANON
 
         # Override credit allocation based on API key tier
         _gpu_alloc = get_gpu_allocation_for_key(_key_hash) if _key_hash else BETA_CREDITS_ANON
@@ -902,7 +902,7 @@ async def get_usage(request: Request):
     try:
         import sys as _usys
         _usys.path.insert(0, "/app")
-        from worker.credits import get_credits
+        from tos_credits.credits import get_credits
         _identifier = _key_record.last_used or _api_key_raw[:8]
         _credit_rec = get_credits(_api_key_raw)
         _credits_used = _credit_rec.get("jobs_submitted", 0)
