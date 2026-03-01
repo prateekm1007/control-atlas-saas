@@ -555,7 +555,7 @@ async def refinement_submit(
 
         # Import credit system and enforce tier ceiling
         import sys as _sys
-        _sys.path.insert(0, "/app/gpu_worker")
+        _sys.path.insert(0, "/app")
         from worker.credits import check_credits, deduct_credits, BETA_CREDITS_ANON
 
         # Override credit allocation based on API key tier
@@ -598,7 +598,7 @@ async def refinement_submit(
 
             # Dispatch via execution engine
             import sys
-            sys.path.insert(0, "/app/gpu_worker")
+            sys.path.insert(0, "/app")
             from worker.execution_engine import dispatch_job
 
             dispatch_result = dispatch_job(
@@ -646,6 +646,8 @@ async def refinement_submit(
             "estimated_time_minutes": 5 if protocol == "openmm" else 3
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Submit error: {str(e)}")
         return {"status": "error", "message": str(e)}, 500
@@ -899,7 +901,7 @@ async def get_usage(request: Request):
     _credits_used = 0
     try:
         import sys as _usys
-        _usys.path.insert(0, "/app/gpu_worker")
+        _usys.path.insert(0, "/app")
         from worker.credits import get_credits
         _identifier = _key_record.last_used or _api_key_raw[:8]
         _credit_rec = get_credits(_api_key_raw)
