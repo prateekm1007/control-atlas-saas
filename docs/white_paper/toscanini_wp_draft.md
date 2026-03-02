@@ -463,3 +463,83 @@ B267F5CB  Hemoglobin AF-P69905-F1
 Figure 1: docs/white_paper/figures/fig1_boxplots.png
 Figure 2: docs/white_paper/figures/fig2_rotamer.png
 Figure 3: docs/white_paper/figures/fig3_deltas.png
+
+---
+
+## 6. Future Work
+
+### 6.1 Cross-Source Score Normalization
+
+The current deterministic score is not directly comparable across source
+types due to advisory_experimental method assignment (Section 2.2). Two
+score variants should be computed in parallel:
+
+    det_score_raw:               current implementation (10/12 ceiling for xray)
+    det_score_normalized:        computed on the 10-law subset common to both
+                                 source types, enabling direct numerical comparison
+
+This does not require canon modification. It requires a second scoring
+pass over the same law results using a source-invariant subset.
+
+### 6.2 Resolution-Conditional Evaluation
+
+LAW-150 (Rotamer Audit, threshold 20%) produced two VETOs at margins of
+0.35% and 1.60% at resolutions of 2.1 A and 2.0 A respectively. At these
+resolutions, rotameric strain is physically expected and electron-density
+supported. A resolution-conditional tolerance band — not a threshold
+mutation, but a separate reporting tier — would distinguish:
+
+    geometric_veto:    violation independent of resolution
+    resolution_veto:   violation within expected tolerance for stated resolution
+
+The canon threshold remains fixed. The interpretation layer gains precision.
+
+### 6.3 INDETERMINATE Subcategorization
+
+The current INDETERMINATE verdict conflates three distinct conditions
+observed in this dataset:
+
+    low_confidence:         pLDDT below threshold across most residues (Insulin)
+    intrinsically_disordered: known disordered regions suppressing coverage (p53)
+    sequence_mismatch:      full precursor sequence submitted vs mature form
+
+Subcategorization does not change the verdict. It changes the actionability
+of the result for the researcher receiving it.
+
+### 6.4 Large-Protein Packing Normalization
+
+LAW-200 (Packing Quality) showed high AF variance (SD 105.277) driven by
+EGFR_AF at 1210 residues. The current bounding-box computation does not
+account for domain architecture or chain length. Normalization by domain
+or reporting median alongside mean would stabilize the metric for large
+multi-domain proteins.
+
+### 6.5 Statistical Layer
+
+This paper reports descriptive statistics. For hypothesis testing in a
+larger dataset, the following are indicated:
+
+    Mann-Whitney U:    non-parametric comparison of law distributions
+    Cohen's d:         effect size for laws showing directional separation
+    95% CI:            confidence intervals on mean differences
+
+The n=9 per class in this study is insufficient for inferential statistics.
+A dataset of n>=30 pairs per protein family is the appropriate target.
+
+### 6.6 Functional Law Expansion
+
+Geometric admissibility does not imply functional correctness. KRAS G12D
+(audit FECA32C3) passes all geometric laws despite carrying a pathogenic
+substitution at position 12. The audit correctly identifies the structure
+as geometrically admissible — it does not and cannot identify functional
+consequences from geometry alone.
+
+A Tier 2 functional law set is the natural extension:
+
+    LAW-F01:  Active site geometry — catalytic residue spatial constraints
+    LAW-F02:  Binding pocket conservation — ligand contact residue identity
+    LAW-F03:  Allosteric pathway integrity — known signaling residue networks
+
+These laws require sequence-to-structure mapping beyond the current
+coordinate-only audit scope. They are the differentiating frontier.
+
