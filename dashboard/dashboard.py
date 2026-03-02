@@ -752,11 +752,19 @@ with st.sidebar:
                 try:
                     import sys
                     sys.path.insert(0, '/app')
-                    from tos.security.tokens import create_refinement_token
-                    _token = create_refinement_token(
-                        _audit_id,
-                        _email_input if _email_input else None
+                    import requests as _treq
+                    _token_resp = _treq.post(
+                        "http://brain:8000/refinement/token",
+                        data={
+                            "audit_id": _audit_id,
+                            "user_email": _email_input if _email_input else ""
+                        },
+                        headers={"X-API-Key": API_KEY},
+                        timeout=10
                     )
+                    if _token_resp.status_code != 200:
+                        raise Exception(f"Token API error: {_token_resp.text}")
+                    _token = _token_resp.json()["token"]
                     # Store token in session state for BYOC notebook generator
                     st.session_state["last_callback_token"] = _token
                     _zip_managed = generate_remediation_zip(_ar, callback_token=_token)
@@ -799,6 +807,15 @@ with st.sidebar:
                     import requests as _req
 
                     # Re-upload the original PDB for GPU execution
+                    # Fetch PDB from brain if not in session state
+                    if "uploaded_file_bytes" not in st.session_state or not st.session_state.uploaded_file_bytes:
+                        _fetch = __import__("requests").get(
+                            f"http://brain:8000/refinement/pdb/{_audit_id}",
+                            headers={"X-API-Key": API_KEY}, timeout=10
+                        )
+                        if _fetch.status_code == 200:
+                            st.session_state.uploaded_file_bytes = _fetch.content
+                            st.session_state.uploaded_file_name = f"{_audit_id}.pdb"
                     if "uploaded_file_bytes" in st.session_state and st.session_state.uploaded_file_bytes:
                         _pdb_bytes = st.session_state.uploaded_file_bytes
                         _pdb_name  = st.session_state.get("uploaded_file_name", "structure.pdb")

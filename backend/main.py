@@ -360,6 +360,36 @@ async def search(query: str = Form(...)):
     return {"results": results, "count": len(results)}
 
 
+
+
+@app.get("/refinement/pdb/{audit_id}")
+async def get_original_pdb(audit_id: str, _auth=Depends(verify_api_key)):
+    """Serve the original PDB file stored at ingest time."""
+    from tos.storage.audit_store import _get_audit_dir
+    pdb_path = _get_audit_dir() / f"{audit_id}.pdb"
+    if not pdb_path.exists():
+        raise HTTPException(status_code=404, detail=f"PDB not found for audit {audit_id}")
+    from fastapi.responses import Response
+    return Response(
+        content=pdb_path.read_bytes(),
+        media_type="chemical/x-pdb",
+        headers={"Content-Disposition": f"attachment; filename={audit_id}.pdb"}
+    )
+
+@app.post("/refinement/token")
+async def generate_refinement_token(
+    audit_id: str = Form(...),
+    user_email: str = Form(""),
+    _auth=Depends(verify_api_key)
+):
+    """Generate a single-use refinement callback token for a given audit_id."""
+    from tos.security.tokens import create_refinement_token
+    try:
+        token = create_refinement_token(audit_id, user_email)
+        return {"token": token, "audit_id": audit_id}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @app.post("/refinement/callback")
 async def refinement_callback(
     token: str = Form(...),
