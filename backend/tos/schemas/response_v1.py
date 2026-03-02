@@ -29,6 +29,8 @@ class AdjudicationVerdict(BaseModel):
     physical_score: int = Field(..., ge=0, le=100)
     confidence_score: float
     det_passed: int = Field(..., ge=0)
+    det_score_normalized: Optional[int] = Field(None, ge=0, le=100)
+    det_passed_normalized: Optional[int] = Field(None, ge=0)
     det_total: int = Field(..., ge=0)
     heur_passed: int = Field(..., ge=0)
     heur_total: int = Field(..., ge=0)

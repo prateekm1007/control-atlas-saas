@@ -77,6 +77,8 @@ class AdjudicationResult:
     advisory_score: int = 0
     det_passed: int = 0
     heur_passed: int = 0
+    det_score_normalized: int = 0
+    det_passed_normalized: int = 0
     strategic_math: StrategicMath = field(
         default_factory=lambda: StrategicMath(0.0, 1.0, 0.0, 0, None)
     )
@@ -169,6 +171,10 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
     # ── Stage 4: Scoring ─────────────────────────────────────────────────
     det_passed = sum(1 for r in res_t1 if r["status"] == "PASS" and r["method"] == "deterministic")
     det_score = int((det_passed / max(DETERMINISTIC_COUNT, 1)) * 100)
+    # WP-01: normalized score includes advisory_experimental laws for cross-source comparability
+    det_passed_normalized = sum(1 for r in res_t1 if r["status"] == "PASS"
+                                and r["method"] in ("deterministic", "advisory_experimental"))
+    det_score_normalized = int((det_passed_normalized / max(DETERMINISTIC_COUNT, 1)) * 100)
     heur_passed = sum(1 for r in res_t1 if r["status"] == "PASS" and r["method"] == "heuristic")
     adv_score = int((heur_passed / max(HEURISTIC_COUNT, 1)) * 100)
 
@@ -198,6 +204,8 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
         advisory_score=adv_score,
         det_passed=det_passed,
         heur_passed=heur_passed,
+        det_score_normalized=det_score_normalized,
+        det_passed_normalized=det_passed_normalized,
         strategic_math=StrategicMath(
             s6=s6_final, w_arch=w_arch, m_s8=m_s8,
             p_score=p_score, suppression=suppression,
