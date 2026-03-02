@@ -31,7 +31,7 @@ from tos.telemetry.usage_logger import log_usage as log_usage_telemetry
 from tos.security.tokens import validate_refinement_token
 from tos.saas.key_store import hash_key, get_tier_for_key, get_gpu_allocation_for_key
 from tos.storage.comparisons import store_comparison, get_comparison
-from tos.storage.audit_store import store_audit_result, get_audit_result
+from tos.storage.audit_store import store_audit_result, get_audit_result, _get_audit_dir
 
 
 # ── Week 12: Hard caps ────────────────────────────────────────────────────────
@@ -214,6 +214,15 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
     })
     try: log_usage_telemetry(get_nkg(), payload, "/ingest")
     except: pass
+
+    # WP-03: Persist original PDB and audit result at ingest time (BYOC loop requirement)
+    try:
+        _ingest_audit_id = payload["governance"]["audit_id"]
+        store_audit_result(_ingest_audit_id, payload)
+        _pdb_path = _get_audit_dir() / f"{_ingest_audit_id}.pdb"
+        _pdb_path.write_bytes(content_bytes)
+    except Exception as _e:
+        logger.error(f"Audit persistence failed: {_e}")
 
     # WP-02: VETO cause clarity
     VETO_GUIDANCE = {
