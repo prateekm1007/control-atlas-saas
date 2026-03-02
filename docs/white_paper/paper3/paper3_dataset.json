@@ -1,0 +1,331 @@
+{
+  "query_date": "2026-03-02T09:08:30.125491",
+  "sample_date": "2026-03-02T09:19:37.767058+00:00",
+  "random_seed": 42,
+  "target_per_bin": 15,
+  "bins": [
+    [
+      0.8,
+      1.2
+    ],
+    [
+      1.2,
+      1.6
+    ],
+    [
+      1.6,
+      2.0
+    ],
+    [
+      2.0,
+      2.4
+    ],
+    [
+      2.4,
+      3.0
+    ]
+  ],
+  "total_selected": 75,
+  "structures": [
+    {
+      "pdb_id": "1K4O",
+      "resolution": 1.1
+    },
+    {
+      "pdb_id": "1A6K",
+      "resolution": 1.1
+    },
+    {
+      "pdb_id": "1O8S",
+      "resolution": 1.15
+    },
+    {
+      "pdb_id": "1CEX",
+      "resolution": 1.0
+    },
+    {
+      "pdb_id": "1CXQ",
+      "resolution": 1.02
+    },
+    {
+      "pdb_id": "1G2B",
+      "resolution": 1.12
+    },
+    {
+      "pdb_id": "1K7C",
+      "resolution": 1.12
+    },
+    {
+      "pdb_id": "1OXE",
+      "resolution": 1.15
+    },
+    {
+      "pdb_id": "1JF8",
+      "resolution": 1.12
+    },
+    {
+      "pdb_id": "1MFM",
+      "resolution": 1.02
+    },
+    {
+      "pdb_id": "1D2U",
+      "resolution": 1.15
+    },
+    {
+      "pdb_id": "1NQJ",
+      "resolution": 1.0
+    },
+    {
+      "pdb_id": "1M1R",
+      "resolution": 1.02
+    },
+    {
+      "pdb_id": "1C7K",
+      "resolution": 1.0
+    },
+    {
+      "pdb_id": "1KF5",
+      "resolution": 1.15
+    },
+    {
+      "pdb_id": "1QB7",
+      "resolution": 1.5
+    },
+    {
+      "pdb_id": "1OS8",
+      "resolution": 1.55
+    },
+    {
+      "pdb_id": "1NA3",
+      "resolution": 1.55
+    },
+    {
+      "pdb_id": "1QAU",
+      "resolution": 1.25
+    },
+    {
+      "pdb_id": "1OMR",
+      "resolution": 1.5
+    },
+    {
+      "pdb_id": "1I1N",
+      "resolution": 1.5
+    },
+    {
+      "pdb_id": "1PEE",
+      "resolution": 1.5
+    },
+    {
+      "pdb_id": "1DCS",
+      "resolution": 1.3
+    },
+    {
+      "pdb_id": "1Q4A",
+      "resolution": 1.45
+    },
+    {
+      "pdb_id": "1JZF",
+      "resolution": 1.5
+    },
+    {
+      "pdb_id": "1DLW",
+      "resolution": 1.54
+    },
+    {
+      "pdb_id": "1C5V",
+      "resolution": 1.48
+    },
+    {
+      "pdb_id": "1BGF",
+      "resolution": 1.45
+    },
+    {
+      "pdb_id": "1D3S",
+      "resolution": 1.4
+    },
+    {
+      "pdb_id": "1GI2",
+      "resolution": 1.38
+    },
+    {
+      "pdb_id": "1FLA",
+      "resolution": 1.9
+    },
+    {
+      "pdb_id": "1QCP",
+      "resolution": 1.8
+    },
+    {
+      "pdb_id": "1AVS",
+      "resolution": 1.75
+    },
+    {
+      "pdb_id": "1AKU",
+      "resolution": 1.9
+    },
+    {
+      "pdb_id": "1DVT",
+      "resolution": 1.9
+    },
+    {
+      "pdb_id": "1DAD",
+      "resolution": 1.6
+    },
+    {
+      "pdb_id": "1FIT",
+      "resolution": 1.85
+    },
+    {
+      "pdb_id": "1NMX",
+      "resolution": 1.7
+    },
+    {
+      "pdb_id": "1NN6",
+      "resolution": 1.75
+    },
+    {
+      "pdb_id": "1FA7",
+      "resolution": 1.9
+    },
+    {
+      "pdb_id": "1Q5Z",
+      "resolution": 1.8
+    },
+    {
+      "pdb_id": "1GQN",
+      "resolution": 1.78
+    },
+    {
+      "pdb_id": "1JER",
+      "resolution": 1.6
+    },
+    {
+      "pdb_id": "1OTN",
+      "resolution": 1.97
+    },
+    {
+      "pdb_id": "1CV8",
+      "resolution": 1.75
+    },
+    {
+      "pdb_id": "1E20",
+      "resolution": 2.02
+    },
+    {
+      "pdb_id": "1EIQ",
+      "resolution": 2.0
+    },
+    {
+      "pdb_id": "1PA9",
+      "resolution": 2.0
+    },
+    {
+      "pdb_id": "1B1J",
+      "resolution": 2.0
+    },
+    {
+      "pdb_id": "1BYO",
+      "resolution": 2.0
+    },
+    {
+      "pdb_id": "1MSC",
+      "resolution": 2.0
+    },
+    {
+      "pdb_id": "1DMN",
+      "resolution": 2.05
+    },
+    {
+      "pdb_id": "1OUN",
+      "resolution": 2.3
+    },
+    {
+      "pdb_id": "1C6F",
+      "resolution": 2.0
+    },
+    {
+      "pdb_id": "1C7E",
+      "resolution": 2.25
+    },
+    {
+      "pdb_id": "1H4K",
+      "resolution": 2.05
+    },
+    {
+      "pdb_id": "1AV5",
+      "resolution": 2.0
+    },
+    {
+      "pdb_id": "10DC",
+      "resolution": 2.08
+    },
+    {
+      "pdb_id": "1MJL",
+      "resolution": 2.1
+    },
+    {
+      "pdb_id": "1BWO",
+      "resolution": 2.1
+    },
+    {
+      "pdb_id": "1CK1",
+      "resolution": 2.6
+    },
+    {
+      "pdb_id": "1HLB",
+      "resolution": 2.5
+    },
+    {
+      "pdb_id": "1IOC",
+      "resolution": 2.4
+    },
+    {
+      "pdb_id": "1DXM",
+      "resolution": 2.6
+    },
+    {
+      "pdb_id": "1BPE",
+      "resolution": 2.9
+    },
+    {
+      "pdb_id": "1FHX",
+      "resolution": 2.5
+    },
+    {
+      "pdb_id": "1B98",
+      "resolution": 2.75
+    },
+    {
+      "pdb_id": "1PL9",
+      "resolution": 2.9
+    },
+    {
+      "pdb_id": "1F7R",
+      "resolution": 2.5
+    },
+    {
+      "pdb_id": "1EAE",
+      "resolution": 2.6
+    },
+    {
+      "pdb_id": "1NWM",
+      "resolution": 2.4
+    },
+    {
+      "pdb_id": "1HGU",
+      "resolution": 2.5
+    },
+    {
+      "pdb_id": "1PTG",
+      "resolution": 2.6
+    },
+    {
+      "pdb_id": "1C6Y",
+      "resolution": 2.5
+    },
+    {
+      "pdb_id": "1JH7",
+      "resolution": 2.4
+    }
+  ]
+}
