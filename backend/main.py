@@ -629,7 +629,7 @@ async def refinement_submit(
         # ── Week 12: read once, validate immediately (before credits) ──────
         content_bytes = await file.read()
         if len(content_bytes) == 0:
-            return {"status": "error", "message": "Empty file"}, 400
+            raise HTTPException(status_code=400, detail="Empty file")
         _validate_pdb_upload(content_bytes)   # raises 413 / 422 on violation
 
         # ── B.3: Tier-aware credit check ─────────────────────────────────
@@ -660,7 +660,7 @@ async def refinement_submit(
 
         # Validate protocol
         if protocol not in ("openmm", "rosetta"):
-            return {"status": "error", "message": "Invalid protocol. Use openmm or rosetta."}, 400
+            raise HTTPException(status_code=400, detail="Invalid protocol. Use openmm or rosetta.")
 
         # Generate job ID
         job_id = str(uuid.uuid4())[:8].upper()
