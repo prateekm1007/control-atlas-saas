@@ -16,15 +16,24 @@ and returns a binary verdict, a reproducible score, and a cryptographically
 fingerprinted governance record. We apply Toscanini to ten protein pairs —
 each pair consisting of an AlphaFold v6 prediction and a high-resolution
 X-ray crystallographic structure — and report the audit results in full.
-We find a consistent scoring asymmetry between predicted and experimental
-structures that is partially attributable to method assignment within the
-audit framework, and partially to genuine structural differences. Two
-experimental structures receive VETO verdicts due to rotamer violations.
-Two AlphaFold structures receive INDETERMINATE verdicts due to insufficient
-reliability coverage. We report all results without suppression and identify
-the methodological boundary that must be resolved before cross-source score
-comparisons can be made without qualification. All audit IDs and the canon
-hash are provided as reproducibility anchors.
+
+After source-normalized scoring, AlphaFold and experimental structures are
+equally admissible under the geometric law set. However, they occupy distinct
+structural regimes: AlphaFold structures exhibit geometric idealization
+(zero bond violations, low rotamer strain, looser atomic packing) while
+experimental structures carry physical strain signatures consistent with
+crystallographic conditions (higher rotamer violation rates, tighter packing,
+stronger hydrophobic burial). Two experimental structures receive VETO verdicts
+due to marginal rotamer violations at 2.0-2.1 A resolution. Two AlphaFold
+structures receive INDETERMINATE verdicts due to low reliability coverage in
+disordered or precursor regions.
+
+The primary finding is not that one source type is superior. It is that
+deterministic geometric auditing reveals reproducible, quantifiable regime
+differences between predicted and experimental structures — differences that
+are consistent across ten protein families spanning oncology targets, enzymes,
+signaling proteins, and engineered proteins. All audit IDs and the canon hash
+are provided as reproducibility anchors.
 
 ---
 
@@ -47,7 +56,11 @@ score, and the same verdict.
 
 This paper introduces the framework and reports its application to ten
 protein pairs spanning oncology targets, structural benchmarks, enzymes,
-signaling proteins, and engineered proteins.
+signaling proteins, and engineered proteins. The central question is not
+whether AlphaFold predictions are correct. It is whether predicted and
+experimental structures occupy the same geometric regime under a fixed,
+deterministic law set — and if not, how the regimes differ and where they
+diverge.
 
 ---
 
@@ -203,13 +216,26 @@ Insulin (AF-P01308-F1, audit F9BDFEAF):
 
 ### 3.5 Score Distribution
 
-Experimental PASS structures (n=8): score = 83 (uniform)
-AlphaFold PASS structures (n=7):    score = 100 (uniform)
+Raw deterministic scores:
+  Experimental PASS (n=8): det_score = 83  (uniform, ceiling from method assignment)
+  AlphaFold PASS (n=7):    det_score = 100 (uniform)
 
-The uniformity on both sides is a direct consequence of method
-assignment (Section 2.2), not protein-specific variation. Within
-each source class, all passing structures hit the same ceiling.
-Per-law observed values carry the protein-specific signal.
+Source-normalized scores (det_score_normalized, WP-01):
+  Experimental PASS (n=8): det_score_normalized = 100 (uniform)
+  AlphaFold PASS (n=7):    det_score_normalized = 100 (uniform)
+
+After normalization, both source classes achieve identical scores across
+all passing structures. The raw score difference (83 vs 100) is entirely
+attributable to method assignment for LAW-100 and LAW-160 (Section 2.2),
+not to structural quality differences.
+
+The governance-internal raw score (det_score) is preserved unchanged for
+audit and compliance purposes. The normalized score (det_score_normalized)
+is the appropriate metric for cross-source comparison.
+
+The structural regime differences between source types are carried entirely
+in per-law observed values, not in the summary score. That is where the
+scientific signal lives.
 
 ### 3.6 Per-Law Descriptive Statistics
 
@@ -339,21 +365,30 @@ outside the scope of this audit. The threshold is fixed at canon hash
 
 ## 4. Discussion
 
-### 4.1 What the Score Difference Means
+### 4.1 What the Scores Mean
 
-The 17-point score gap between experimental (83) and AlphaFold (100)
-structures does not mean AlphaFold structures are better. It means:
+Raw deterministic scores (det_score) are governance-internal. They reflect
+method assignment per source type and are not directly comparable across
+sources. An experimental structure scoring 83 and an AlphaFold structure
+scoring 100 are both fully admitted under the law set.
 
-1. LAW-100 and LAW-160 are assigned advisory_experimental for X-ray
-   structures, structurally capping their score at 83.
-2. AlphaFold structures receive these laws as deterministic, allowing
-   scores of 100.
-3. Both source classes pass the admissibility threshold of 83.
+Source-normalized scores (det_score_normalized) are the correct metric for
+cross-source comparison. Under normalization, all passing structures from
+both source classes score 100. This confirms that AlphaFold and experimental
+structures are equally admissible under geometric laws.
 
-The correct interpretation is that both are admitted under the law set.
-The score difference is a methodological artifact that must be resolved
-in a future governance review before quantitative cross-source comparison
-is valid.
+The finding is therefore not about score difference. It is about regime
+difference — visible only in per-law observed values:
+
+  Bond Integrity (LAW-100):    AF = 0.000%  Xray = 1.368%  (geometric idealization)
+  Ramachandran (LAW-125):      AF = 0.273%  Xray = 1.210%  (backbone strain)
+  Rotamer Audit (LAW-150):     AF = 3.845%  Xray = 12.328% (side-chain strain)
+  Hydrophobic Burial (LAW-182):AF = 0.405   Xray = 0.587   (core packing)
+  Packing Quality (LAW-200):   AF = 137.6   Xray = 71.0    (atomic density)
+
+AlphaFold structures are geometrically idealized. Experimental structures
+carry physical strain. Both are admissible. The regime difference is
+quantifiable, reproducible, and consistent across ten protein families.
 
 ### 4.2 What the Verdicts Mean
 
@@ -424,9 +459,10 @@ structural admissibility audit. Applied to ten protein pairs, it reveals:
 - Stable governance across all 21 audits (canon hash 6a9cd4b4349b81de
   verified on every record).
 
-The framework is ready for broader application. The scoring asymmetry
-between source types requires governance resolution before cross-source
-numerical comparisons are published as findings.
+The framework is ready for broader application. Cross-source score
+comparison is now valid using det_score_normalized. The per-law regime
+differences reported here are reproducible under canon hash 6a9cd4b4349b81de
+and constitute the primary scientific finding of this paper.
 
 ---
 
