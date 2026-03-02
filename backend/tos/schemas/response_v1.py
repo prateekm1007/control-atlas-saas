@@ -36,6 +36,9 @@ class AdjudicationVerdict(BaseModel):
     heur_total: int = Field(..., ge=0)
     coverage_pct: float = Field(..., ge=0, le=100)
     suppression_reason: Optional[str] = None
+    primary_cause: Optional[str] = None
+    recommended_action: Optional[str] = None
+    veto_law: Optional[str] = None
 
 
 class PhysicsMeasurement(BaseModel):

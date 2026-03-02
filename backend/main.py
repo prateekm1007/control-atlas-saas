@@ -204,14 +204,59 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
     try: get_nkg().record_audit(payload)
     except: pass
     _emit_telemetry("audit_created", {
-        "audit_id":  payload.get("governance", {}).get("audit_id"),
-        "verdict":   payload.get("verdict", {}).get("binary"),
-        "det_score": payload.get("verdict", {}).get("deterministic_score"),
-        "coverage":  payload.get("verdict", {}).get("coverage_pct"),
-        "residues":  payload.get("characterization", {}).get("total_residues"),
+        "audit_id":    payload.get("governance", {}).get("audit_id"),
+        "verdict":     payload.get("verdict", {}).get("binary"),
+        "det_score":   payload.get("verdict", {}).get("deterministic_score"),
+        "coverage":    payload.get("verdict", {}).get("coverage_pct"),
+        "residues":    payload.get("characterization", {}).get("total_residues"),
+        "resolution":  payload.get("characterization", {}).get("resolution"),
+        "source_type": payload.get("characterization", {}).get("source_type"),
     })
     try: log_usage_telemetry(get_nkg(), payload, "/ingest")
     except: pass
+
+    # WP-02: VETO cause clarity
+    VETO_GUIDANCE = {
+        "LAW-110": ("Backbone discontinuity detected",
+                    "Check for missing residues or broken chain segments."),
+        "LAW-120": ("Bond angle deviation exceeds threshold",
+                    "Structure may require geometric energy minimization."),
+        "LAW-125": ("Ramachandran outliers exceed threshold",
+                    "Review backbone torsion angles. High outlier count suggests poor refinement."),
+        "LAW-130": ("Steric clashes detected",
+                    "Serious atomic overlaps present. Run clash correction before deposition."),
+        "LAW-135": ("Non-planar peptide bonds detected",
+                    "Omega angle deviations indicate refinement artifacts."),
+        "LAW-145": ("Chirality inversion detected",
+                    "D-amino acid or inverted center found. Verify atom handedness."),
+        "LAW-150": ("Rotamer outliers exceed threshold",
+                    "Side chain conformations are non-rotameric. Run rotamer correction."),
+        "LAW-160": ("Chain integrity failure",
+                    "Ca-Ca distances exceed threshold. Check for coordinate errors."),
+        "LAW-170": ("Unrecognized residues detected",
+                    "Non-standard residues present. Verify residue naming."),
+        "LAW-195": ("Disulfide geometry violation",
+                    "Cysteine pair geometry deviates from ideal. Check SG-SG distance."),
+    }
+    if verdict == "VETO" and failing_det:
+        raw = failing_det[0] if isinstance(failing_det[0], str) else failing_det[0].get("law_id", "")
+        law_id = raw.split(":")[0].strip() if isinstance(raw, str) else raw
+        cause, action = VETO_GUIDANCE.get(law_id, (
+            f"Deterministic failure in {law_id}",
+            "Review the flagged law in the tier1 laws array for observed vs threshold values."
+        ))
+        payload["verdict"]["primary_cause"] = cause
+        payload["verdict"]["recommended_action"] = action
+        payload["verdict"]["veto_law"] = law_id
+    elif verdict == "INDETERMINATE":
+        payload["verdict"]["primary_cause"] = "Coverage below 70% threshold"
+        payload["verdict"]["recommended_action"] = (
+            "Insufficient high-confidence residues. "
+            "For experimental: check B-factor distribution. "
+            "For predicted: filter by pLDDT > 70."
+        )
+        payload["verdict"]["veto_law"] = "LAW-105"
+
     return payload
 
 @app.post("/ingest", response_model=ToscaniniResponse)
