@@ -7,6 +7,21 @@ on:
     branches: [main]
 
 jobs:
+  secret-scan:
+    name: Secret Scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install gitleaks (pinned v8.30.1)
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz -o /tmp/gitleaks.tgz
+          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
+          /tmp/gitleaks version
+
+      - name: Scan HEAD tree — fails on any finding
+        run: /tmp/gitleaks detect --no-git --redact --exit-code 1 -v
+
   unit-tests:
     name: Unit Tests + Hash Lock
     runs-on: ubuntu-latest

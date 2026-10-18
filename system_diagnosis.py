@@ -4,8 +4,11 @@ import google.generativeai as genai
 def diagnose():
     print("--- 🛡️ TOSCANINI FORENSIC DIAGNOSIS ---")
     
-    # 1. API Key Check
-    key = "AIzaSyD1d8ydNS345g_qblFNaSAntBwifk_L-Bg"
+    # 1. API Key Check — key is read from the environment only, never hardcoded.
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        print("❌ Gemini API: GEMINI_API_KEY is not set. Export it (without printing it) and retry.")
+        sys.exit(1)
     try:
         genai.configure(api_key=key)
         models = [m.name for m in genai.list_models()]
