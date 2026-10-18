@@ -1,1 +1,1 @@
-EXPLANATION = {"title": "pI Balance", "principle": "Near-neutral pI causes aggregation.", "rationale": "At pH=pI, proteins lack repulsion and turn into industrial sludge."}
+EXPLANATION = {"title": "Residue Identity", "principle": "All residues use standard amino-acid names (zero unrecognized residues).", "rationale": "The pinned code counts residues whose names are outside the standard 20 amino-acid set. WP-8: rewritten from the incorrect isoelectric-point description — pI balance is not measured by any pinned law."}
