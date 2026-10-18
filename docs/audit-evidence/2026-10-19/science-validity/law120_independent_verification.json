@@ -1,6 +1,6 @@
 {
   "artifact": "law120-independent-verification",
-  "generated_utc": "2026-10-18T20:49:13.910554+00:00",
+  "generated_utc": "2026-10-18T20:50:27.022903+00:00",
   "construction": "two-residue backbone built with plain numpy in backend/tests/test_law_120_correction.py, independent of coord_math: all measured triples exactly at Engh-Huber ideals (N-CA-C 111.0, O-C-N 123.0 with N from residue i+1, CA-C-N 116.6)",
   "expected_engine_result": {
     "rmsd": "0.0 (tolerance 0.05)",

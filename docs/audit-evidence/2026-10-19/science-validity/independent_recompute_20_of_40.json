@@ -1,6 +1,6 @@
 {
   "artifact": "independent-recompute-20-of-40",
-  "generated_utc": "2026-10-18T20:49:13.910554+00:00",
+  "generated_utc": "2026-10-18T20:50:27.022903+00:00",
   "claim_under_test": "auditor statement: 'at most 20 of 40 experimental structures could pass'",
   "method": "apply the CURRENT modality matrix (PIL-CAL-03) to the recorded v23 per-law rows in backend/calibration/calibration_results.json; a structure could pass iff no deterministic law row (after reclassification) has status FAIL or VETO",
   "reproduce": "python3 -c \"import json; d=json.load(open('backend/calibration/calibration_results.json')); ...\" -- see protocol \u00a71",

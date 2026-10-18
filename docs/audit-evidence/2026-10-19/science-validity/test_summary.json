@@ -1,0 +1,32 @@
+{
+  "artifact": "test-summary-wp-sci-1",
+  "generated_utc": "2026-10-18T20:50:17.554423+00:00",
+  "tested_commit": "863e6dd56156375c8bf48c9e6a802a0daf4cec14",
+  "command": "cd backend && TOSCANINI_DATA_DIR=<fresh tmp> python -m pytest tests -q",
+  "runtime": "python 3.12.15 (toscanini-final-venv; Ubuntu container)",
+  "counts": {
+    "passed": 434,
+    "skipped": 5,
+    "failed": 1,
+    "errors": 0
+  },
+  "failures": [
+    {
+      "test": "tests/test_ids.py::TestJobIds::test_job_id_is_full_uuid_hex",
+      "classification": "pre-existing local test-isolation fragility, NOT introduced by this WP",
+      "evidence": "reproduces identically with this WP stashed (git stash push -- backend/ -> 382 passed + same failure = same 383 total as the recorded baseline); passes under the CI module ordering (tests/test_api_key_guard.py + tests/test_ids.py + tests/test_source_unavailable.py = 51/51) and was green in CI on PR #15 head 0eae6d5; failure mode is an auth env/import-order coupling (401 Invalid API key with hash_key(test-key-xyz)) that appears only in the full local suite order",
+      "owner": "integration chain owner (separate test-hygiene fix)"
+    }
+  ],
+  "delta_vs_baseline": {
+    "baseline": "383 passed / 5 skipped / 0 failed @ 0eae6d5",
+    "new_or_updated_tests": 51
+  },
+  "hash_gate": {
+    "command": "cd backend && python -c \"...verify canon/matrix/semantic...\"",
+    "canon_hash": "6a9cd4b4349b81de",
+    "matrix_hash": "ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4",
+    "law_semantic_hash_pinned": "3f49a7b5605e17dcf26bcd114713ad651cdc2279d684f1c681943eefa0f4379a",
+    "result": "verified locally (see PR CI run for the gate on the merge candidate)"
+  }
+}
