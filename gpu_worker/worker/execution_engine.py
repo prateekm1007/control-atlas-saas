@@ -23,8 +23,8 @@ REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
 
 
 def generate_job_id() -> str:
-    """Generate unique 8-char uppercase job ID."""
-    return str(uuid.uuid4())[:8].upper()
+    """Generate a full uuid4 hex job ID (WP-5: 128-bit, collision-safe)."""
+    return uuid.uuid4().hex
 
 
 def dispatch_job(pdb_bytes: bytes,

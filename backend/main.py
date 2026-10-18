@@ -175,7 +175,10 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
             "coverage_pct": round(coverage, 2), "suppression_reason": suppression
         },
         "governance": {
-            "audit_id": str(hashlib.md5(coord_hash.encode()).hexdigest()[:8]).upper(),
+            # WP-5: full SHA-256 of the canonical coordinate hash (64 hex chars).
+            # Deterministic — structurally identical submissions share an ID
+            # (owner decision: dedup kept). Replaces collision-prone md5[:8].
+            "audit_id": hashlib.sha256(coord_hash.encode()).hexdigest(),
             "station_version": STATION_METADATA["version"],
             "timestamp_utc": datetime.now(timezone.utc).isoformat(),
             "governance_fingerprint": {
@@ -690,8 +693,9 @@ async def refinement_submit(
         if protocol not in ("openmm", "rosetta"):
             raise HTTPException(status_code=400, detail="Invalid protocol. Use openmm or rosetta.")
 
-        # Generate job ID
-        job_id = str(uuid.uuid4())[:8].upper()
+        # Generate job ID — WP-5: full uuid4().hex (128 bits), not an 8-char
+        # prefix that collides and silently overwrites stored results.
+        job_id = uuid.uuid4().hex
 
         # Convert to hex for Celery serialization
         pdb_hex = content_bytes.hex()
