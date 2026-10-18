@@ -2,12 +2,32 @@
   "artifact": "preflight_record",
   "directive": "Coder Directive - WP-13 onward: P0 containment, constitution-first execution, and safe integration",
   "generated": "2026-10-19",
-  "task_ids": ["P0-credential-containment", "WP-13-jwt-secret-fail-closed", "WP-14-gated-deployment", "evidence-publication", "integration-candidate", "branch-protection"],
+  "task_ids": [
+    "P0 credential containment",
+    "WP-13 jwt secret fail closed",
+    "WP-14 gated deployment",
+    "evidence publication",
+    "integration candidate",
+    "branch protection"
+  ],
   "repository": "prateekm1007/control-atlas-saas",
   "base_state": {
     "remote_main_head": "2195a048e87dcec4aa63e8dc7981b3bb6d237ca0 (verified via API 2026-10-19, unchanged since baseline)",
     "working_tree": "clean at hardening/WP-12-ci-trigger-globs @ fd59206",
-    "open_prs": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "open_prs": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
     "wp12_head": "fd59206 (CI trigger globs fix; behavior-verified green run 39155133102)"
   },
   "policy_documents": {
@@ -17,7 +37,10 @@
       "sha256": "cfdd5ba3babda31513b55894a49597fbfb18c2e870535a068c8b0ea423c53ce8",
       "bytes": 622,
       "read_in_full": true,
-      "key_rules": ["OBS-153: contact-density ratio >= 2.5x @ 4.5 A", "CRIT-154: warhead RMSD < 1.0 A vs 5NIU; clash < 1.2 A veto"]
+      "key_rules": [
+        "OBS-153: contact-density ratio >= 2.5x @ 4.5 A",
+        "CRIT-154: warhead RMSD < 1.0 A vs 5NIU; clash < 1.2 A veto"
+      ]
     },
     "engineering_constitution": {
       "path": "ENGINEERING_CONSTITUTION.md",
@@ -25,7 +48,16 @@
       "sha256": "e0f256f78f2c1256228c4286311cba15800dcd5a6c8005583508ee66d27983f5",
       "bytes": 20572,
       "read_in_full": true,
-      "governing_sections": ["2 pre-coding", "3 security", "5 config", "6 testing", "7 CI/CD+supply chain", "12 DoD", "13 prohibited shortcuts", "14 artifacts"]
+      "governing_sections": [
+        "2 pre-coding",
+        "3 security",
+        "5 config",
+        "6 testing",
+        "7 CI/CD+supply chain",
+        "12 DoD",
+        "13 prohibited shortcuts",
+        "14 artifacts"
+      ]
     }
   },
   "files_inspected": [
@@ -39,10 +71,19 @@
     "backend/requirements-lock.txt / requirements-dev.txt (PyJWT 2.15.1 present post-WP-7)"
   ],
   "caller_map": {
-    "jwt_secret_readers": ["backend/tos/security/tokens.py only (encode + decode)"],
-    "token_api_callers": ["backend/main.py:429 (/refinement/token, auth-gated)", "backend/main.py:609 (/health self-check)"],
+    "jwt_secret_readers": [
+      "backend/tos/security/tokens.py only (encode + decode)"
+    ],
+    "token_api_callers": [
+      "backend/main.py:429 (/refinement/token, auth-gated)",
+      "backend/main.py:609 (/health self-check)"
+    ],
     "gpu_worker": "NO JWT/SECRET_KEY references - worker callback auth is HMAC INTERNAL_CALLBACK_SECRET (PR #3); configuration contract: TOSCANINI_JWT_SECRET is a brain-only variable",
-    "tests_touching_tokens": ["backend/tests/test_b1_tokens.py", "backend/tests/test_b6_regression.py", "new backend/tests/test_wp13_jwt_secret_gate.py"]
+    "tests_touching_tokens": [
+      "backend/tests/test_b1_tokens.py",
+      "backend/tests/test_b6_regression.py",
+      "new backend/tests/test_wp13_jwt_secret_gate.py"
+    ]
   },
   "expected_behavior": {
     "P0": "Full-history gitleaks scan (git log scope, not --no-git) + tracked tree; redacted machine-readable result; issuer-side rotation recorded BLOCKED (no credential-management authorization in this environment); history NOT rewritten.",
@@ -52,15 +93,38 @@
     "integration": "Single main-targeted candidate branch containing the full chain WP-1..WP-14 (fast-forward merge of linear stack) + evidence commit; corrected gate must run on the actual main-targeted merge candidate (pull_request uses merge-ref workflow) and be green; component PRs stay open and are marked superseded with mapping; PR #11 stays independent."
   },
   "risks_and_mitigations": [
-    {"risk": "Removing JWT fallback breaks existing tests relying on it", "mitigation": "conftest setdefault explicit test-only secret BEFORE module imports; full suite rerun required"},
-    {"risk": "Fail-closed secret check breaks /health or startup in Docker where env var is not yet set", "mitigation": "lazy check at use time; /health already degrades gracefully; DEPLOY docs updated to name TOSCANINI_JWT_SECRET as required brain env var"},
-    {"risk": "deploy.yml rewrite cannot be end-to-end verified without EC2 secrets", "mitigation": "workflow-policy pytest asserts structure/negative paths; actual deployment stays UNVERIFIED-by-design and is recorded as such"},
-    {"risk": "Integration PR hides review mapping of 12 open PRs", "mitigation": "supersede mapping table in PR body; component PRs NOT closed"}
+    {
+      "risk": "Removing JWT fallback breaks existing tests relying on it",
+      "mitigation": "conftest setdefault explicit test-only secret BEFORE module imports; full suite rerun required"
+    },
+    {
+      "risk": "Fail-closed secret check breaks /health or startup in Docker where env var is not yet set",
+      "mitigation": "lazy check at use time; /health already degrades gracefully; DEPLOY docs updated to name TOSCANINI_JWT_SECRET as required brain env var"
+    },
+    {
+      "risk": "deploy.yml rewrite cannot be end-to-end verified without EC2 secrets",
+      "mitigation": "workflow-policy pytest asserts structure/negative paths; actual deployment stays UNVERIFIED-by-design and is recorded as such"
+    },
+    {
+      "risk": "Integration PR hides review mapping of 12 open PRs",
+      "mitigation": "supersede mapping table in PR body; component PRs NOT closed"
+    }
   ],
   "files_expected_to_change": {
-    "WP-13": ["backend/tos/security/tokens.py", "backend/tests/conftest.py", "backend/main.py (/refinement/token error mapping)", "backend/tests/test_wp13_jwt_secret_gate.py (new)", "README.md (env table row)"],
-    "WP-14": [".github/workflows/deploy.yml", "backend/tests/test_deploy_gate_policy.py (new)"],
-    "evidence": ["docs/audit-evidence/2026-10-19/* (new, sanitized)"]
+    "WP-13": [
+      "backend/tos/security/tokens.py",
+      "backend/tests/conftest.py",
+      "backend/main.py (/refinement/token error mapping)",
+      "backend/tests/test_wp13_jwt_secret_gate.py (new)",
+      "README.md (env table row)"
+    ],
+    "WP-14": [
+      ".github/workflows/deploy.yml",
+      "backend/tests/test_deploy_gate_policy.py (new)"
+    ],
+    "evidence": [
+      "docs/audit-evidence/2026-10-19/* (new, sanitized)"
+    ]
   },
   "acceptance_tests": [
     "backend/tests/test_wp13_jwt_secret_gate.py: missing secret fails; empty fails; <32 chars fails; valid secret round-trips; foreign-secret token rejected; no production secret in tests",
