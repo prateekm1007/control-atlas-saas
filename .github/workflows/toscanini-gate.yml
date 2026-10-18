@@ -31,14 +31,20 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.12"
 
-      - name: Install dependencies
+      # WP-7: install from the locked/dev files instead of a hand-written list.
+      # requirements-lock.txt is fully resolvable (gradio pins that conflicted
+      # with websockets==15.0.1 were removed; PyJWT was added — it is required
+      # by tos.security.tokens and was missing from the lock).
+      - name: Install dependencies (lock + dev)
         run: |
-          pip install fpdf2 numpy fastapi uvicorn python-multipart scipy requests google-generativeai
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements-lock.txt
+          pip install -r backend/requirements-dev.txt
 
       - name: Run unit tests
-        run: cd backend && python -m pytest tests/ -v --tb=short
+        run: cd backend && python -m pytest tests -q --tb=short
 
       - name: Verify hash integrity
         run: |

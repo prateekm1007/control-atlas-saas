@@ -1602,27 +1602,15 @@ with tab_refine:
                         st.error("⚠️ Regressions: " + ", ".join(_cmp["regressions"]))
 
                     # ── B.6: Refinement Resolution Certificate ────────────────
-                    try:
-                        from pdf_certificate import build_certificate
-                        import time as _ptime
-                        _pdf_meta = {
-                            "structure_name":  st.session_state.get("uploaded_file_name", "structure.pdb"),
-                            "api_key_masked":  (API_KEY[:4] + "****" + API_KEY[-4:]) if len(API_KEY) >= 8 else "tos_****",
-                            "tier":            "pro",
-                            "engine":          st.session_state.get("byoc_protocol", "openmm"),
-                            "issued_at":       int(_ptime.time()),
-                        }
-                        _cert_bytes = build_certificate(_cmp, _pdf_meta)
-                        _cert_name  = f"toscanini_certificate_{_base_id}.pdf"
-                        st.download_button(
-                            label="📄 Download Refinement Resolution Certificate",
-                            data=_cert_bytes,
-                            file_name=_cert_name,
-                            mime="application/pdf",
-                            help="Tamper-evident PDF summarising your structural improvements.",
-                        )
-                    except Exception as _cert_err:
-                        st.caption(f"Certificate unavailable: {_cert_err}")
+                    # WP-7: dashboard/pdf_certificate.py was removed — the
+                    # product PDF path is tos.forensic_artifacts.pdf_generator
+                    # (generate_v21_dossier), embedded as pdf_b64 in every
+                    # audit response. The old certificate module depended on
+                    # reportlab (never declared) and was untested here.
+                    st.caption(
+                        "📄 The full PDF dossier for each audit (baseline and "
+                        "refined) is embedded in the audit response as pdf_b64."
+                    )
 
                     # Law-by-law breakdown
                     _changes = _cmp.get("law_changes", [])

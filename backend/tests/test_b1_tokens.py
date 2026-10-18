@@ -1,135 +1,100 @@
 """
-Toscanini Phase B1 — Token System Test Suite
-Automated validation of all token security paths.
+Toscanini Phase B1 — Token System Test Suite.
+
+WP-7: rewritten from a script-with-sys.exit into proper pytest tests. The
+original module-level harness (helper `test()` collected as a test +
+module-level sys.exit(1)) broke collection.
 """
-import sys
-sys.path.insert(0, '/app')
+import secrets
+
+import pytest
 
 from tos.security.tokens import (
     create_refinement_token,
     validate_refinement_token,
     revoke_token,
-    get_token_stats
+    get_token_stats,
 )
 
-passed = 0
-failed = 0
 
-def test(name, fn):
-    global passed, failed
-    try:
-        fn()
-        print(f"  ✓ {name}")
-        passed += 1
-    except Exception as e:
-        print(f"  ✗ {name}: {e}")
-        failed += 1
-
-print("\n=== TOKEN SYSTEM TEST SUITE ===\n")
-
-# TEST 1: Token generation
-def t1():
+def test_token_generation():
     token = create_refinement_token("AUDIT001", "test@test.com")
     assert token is not None and len(token) > 50
-test("Token generation", t1)
 
-# TEST 2: Token validation
-def t2():
+
+def test_token_validation():
     token = create_refinement_token("AUDIT002", "test@test.com")
     payload = validate_refinement_token(token)
     assert payload["audit_id"] == "AUDIT002"
     assert payload["user_email"] == "test@test.com"
     assert payload["purpose"] == "refinement_callback"
-test("Token validation", t2)
 
-# TEST 3: Token without email
-def t3():
+
+def test_token_without_email():
     token = create_refinement_token("AUDIT003")
     payload = validate_refinement_token(token)
     assert payload["audit_id"] == "AUDIT003"
     assert payload["user_email"] is None
-test("Token without email", t3)
 
-# TEST 4: Invalid token rejected
-def t4():
-    try:
+
+def test_invalid_token_rejected():
+    with pytest.raises(ValueError):
         validate_refinement_token("invalid.token.string")
-        assert False, "Should have rejected invalid token"
-    except ValueError:
-        pass
-test("Invalid token rejected", t4)
 
-# TEST 5: Tampered token rejected
-def t5():
+
+def test_tampered_token_rejected():
     token = create_refinement_token("AUDIT005")
     tampered = token[:-5] + "XXXXX"
-    try:
+    with pytest.raises(ValueError):
         validate_refinement_token(tampered)
-        assert False, "Should have rejected tampered token"
-    except ValueError:
-        pass
-test("Tampered token rejected", t5)
 
-# TEST 6: Single-use enforcement
-def t6():
-    token = create_refinement_token("AUDIT006_UNIQUE_" + __import__("secrets").token_hex(4))
+
+def test_single_use_enforcement():
+    token = create_refinement_token("AUDIT006_UNIQUE_" + secrets.token_hex(4))
     payload = validate_refinement_token(token, consume=True)
     assert payload is not None
-    try:
+    with pytest.raises(ValueError, match="already been used"):
         validate_refinement_token(token)
-        assert False, "Should have rejected used token"
-    except ValueError as e:
-        assert "already been used" in str(e)
-test("Single-use enforcement", t6)
 
-# TEST 7: Token stats
-def t7():
-    audit_id = "AUDIT007_STATS_" + __import__("secrets").token_hex(4)
-    token = create_refinement_token(audit_id)
+
+def test_token_stats():
+    audit_id = "AUDIT007_STATS_" + secrets.token_hex(4)
+    create_refinement_token(audit_id)
     stats = get_token_stats(audit_id)
     assert stats["audit_id"] == audit_id
     assert stats["callbacks_used"] == 0
     assert stats["callbacks_remaining"] == 3
-test("Token stats", t7)
 
-# TEST 8: Rate limit after max callbacks
-def t8():
-    import secrets as s
-    audit_id = "AUDIT008_RATE_" + s.token_hex(4)
-    # Use 3 tokens (max)
-    for i in range(3):
+
+def test_rate_limiting_after_max_callbacks():
+    audit_id = "AUDIT008_RATE_" + secrets.token_hex(4)
+    for _ in range(3):  # max callbacks per audit
         token = create_refinement_token(audit_id)
         validate_refinement_token(token, consume=True)
-    # 4th should be rate limited
     token4 = create_refinement_token(audit_id)
-    try:
+    with pytest.raises(ValueError, match="Maximum callbacks"):
         validate_refinement_token(token4)
-        assert False, "Should have rate limited"
-    except ValueError as e:
-        assert "Maximum callbacks" in str(e)
-test("Rate limiting after max callbacks", t8)
 
-# TEST 9: Nonce uniqueness (two tokens for same audit are different)
-def t9():
-    audit_id = "AUDIT009"
-    t1 = create_refinement_token(audit_id)
-    t2 = create_refinement_token(audit_id)
+
+def test_token_uniqueness_nonce():
+    t1 = create_refinement_token("AUDIT009")
+    t2 = create_refinement_token("AUDIT009")
     assert t1 != t2, "Tokens should be unique even for same audit_id"
-test("Token uniqueness (nonce)", t9)
 
-# TEST 10: Revocation
-def t10():
-    import secrets as s
-    audit_id = "AUDIT010_REVOKE_" + s.token_hex(4)
+
+def test_token_revocation():
+    audit_id = "AUDIT010_REVOKE_" + secrets.token_hex(4)
     token = create_refinement_token(audit_id)
     revoke_token(token, audit_id)
-    try:
+    with pytest.raises(ValueError, match="already been used"):
         validate_refinement_token(token)
-        assert False, "Should have rejected revoked token"
-    except ValueError as e:
-        assert "already been used" in str(e)
-test("Token revocation", t10)
 
-print(f"\n=== RESULTS: {passed}/{passed+failed} passed ===\n")
-if failed > 0:
-    sys.exit(1)
+
+def test_extra_claims_carried_and_protected():
+    """WP-2: extra_claims reach the payload; base claims cannot be overwritten."""
+    token = create_refinement_token(
+        "AUDIT011_CLAIMS", extra_claims={"created_by_key_hash": "abc", "purpose": "hijack"}
+    )
+    payload = validate_refinement_token(token)
+    assert payload["created_by_key_hash"] == "abc"
+    assert payload["purpose"] == "refinement_callback"  # base claim preserved

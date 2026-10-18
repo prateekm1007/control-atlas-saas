@@ -1,0 +1,7 @@
+# TOSCANINI Backend — development / CI-only dependencies (WP-7)
+# Installed ON TOP of requirements-lock.txt by CI and local test runs.
+# Everything the test suite needs that the runtime lock does not provide.
+
+streamlit==1.66.0   # dashboard/usage_widget.py is imported by TestUsageWidget
+pytest==9.1.1       # (also pinned in requirements-lock.txt; listed so the dev set is self-contained)
+httpx==0.28.1       # FastAPI TestClient transport
