@@ -150,7 +150,10 @@ class TestLaw150:
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
         res = results["LAW-150"]
         assert res["sample"] == 0
-        assert res["status"] == "PASS"
+        # WP-SCI-1: no chi1 side chain available -> NOT_MEASURED, not a
+        # vacuous zero-outlier PASS.
+        assert res["status"] == "NOT_MEASURED"
+        assert res["observed"] is None
 
     def test_missing_chi1_atoms_skipped(self):
         """LEU without CG → cannot compute chi1 → skipped."""
@@ -164,7 +167,9 @@ class TestLaw150:
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
         res = results["LAW-150"]
         assert res["sample"] == 0
-        assert res["status"] == "PASS"
+        # WP-SCI-1: chi1 atoms missing -> NOT_MEASURED, not a vacuous PASS.
+        assert res["status"] == "NOT_MEASURED"
+        assert res["observed"] is None
 
     def test_mixed_good_and_bad(self):
         """3 residues: 2 in wells + 1 outlier → 33.3% → VETO (> 20%)."""

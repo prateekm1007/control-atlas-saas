@@ -111,7 +111,9 @@ class TestLaw145:
         assert res["sample"] == 1
 
     def test_glycine_excluded(self):
-        """GLY has no CB → should be skipped, sample = 0."""
+        """GLY has no CB → nothing measurable.
+        WP-SCI-1: an empty sample is NOT_MEASURED, not a vacuous PASS
+        claiming zero chirality violations were found."""
         atoms = [
             _make_atom("N",  "N", [0.0, 0.0, 0.0],  res_name="GLY", res_seq=1),
             _make_atom("CA", "C", [1.47, 0.0, 0.0],  res_name="GLY", res_seq=1),
@@ -120,8 +122,8 @@ class TestLaw145:
         ]
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
         res = results["LAW-145"]
-        assert res["status"] == "PASS"
-        assert res["observed"] == 0
+        assert res["status"] == "NOT_MEASURED"
+        assert res["observed"] is None
         assert res["sample"] == 0
 
     def test_mixed_l_and_d(self):
@@ -134,7 +136,9 @@ class TestLaw145:
         assert res["sample"] == 3
 
     def test_missing_cb_skipped(self):
-        """Residue without CB atom → skipped (not counted as violation)."""
+        """Residue without CB atom → nothing measurable.
+        WP-SCI-1: empty sample -> NOT_MEASURED (honest non-success),
+        never a fabricated zero-violation PASS."""
         atoms = [
             _make_atom("N",  "N", [-0.5, 0.8, 0.0], res_seq=1),
             _make_atom("CA", "C", [0.0, 0.0, 0.0],  res_seq=1),
@@ -144,8 +148,8 @@ class TestLaw145:
         ]
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
         res = results["LAW-145"]
-        assert res["status"] == "PASS"
-        assert res["observed"] == 0
+        assert res["status"] == "NOT_MEASURED"
+        assert res["observed"] is None
         assert res["sample"] == 0
 
     def test_uses_station_sop_threshold(self):

@@ -42,6 +42,26 @@ object names the primary failing law with observed vs threshold values.
 law failures (LAW-155/182/200) are advisory and never by themselves
 produce a `VETO`.
 
+Every law row also distinguishes `NOT_MEASURED` (empty sample — nothing
+was measurable; never a zero and never a pass), `NOT_APPLICABLE` (the
+law's scope does not apply — e.g. LAW-195 on a structure with no
+disulfide pair), and `MEASUREMENT_FAILED` (acquisition or tooling
+failure). Missing mandatory measurements on deterministic laws prevent
+an authoritative `PASS`: the verdict is `INDETERMINATE` until the
+evidence is complete.
+
+**LAW-120 containment (WP-SCI-1):** the peptide O–C–N angle was
+measured against the wrong atom (the same residue's nitrogen instead of
+residue i+1's). The measurement is corrected, but the pinned 18.0°
+threshold was derived from the uncorrected metric and is **not
+validated** for the corrected one. Until the v24 diagnostic calibration
+and the independent validation protocol
+(`backend/calibration/protocol/evaluation_protocol_v1.md`) meet their
+predetermined acceptance criteria, a measured LAW-120 violation cannot
+independently issue an authoritative `VETO` — the verdict is
+`INDETERMINATE` with explicit containment provenance. LAW-120 rows are
+marked `contained` in the response.
+
 ## Endpoints and authentication
 
 All requests (except the three public reads below) require an API key
@@ -131,9 +151,21 @@ cd backend && python -m pytest tests -q
 The suite is green with zero failures and zero errors; every skipped
 test carries a reason string. CI (`.github/workflows/toscanini-gate.yml`)
 runs the suite plus a pinned gitleaks secret scan and verifies the canon
-(`6a9cd4b4349b81de`) and matrix
+(`6a9cd4b4349b81de`), matrix
 (`ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4`)
-hashes on every run.
+and **law-semantic** hashes (`governance/law_semantic.sha256`, which
+binds thresholds, units, operators, scopes, containment and modality
+rules — meaning drift fails the gate until explicitly re-pinned) on
+every run.
+
+## Calibration evidence status
+
+The v23 calibration report and results under `backend/calibration/` are
+**historical**: they were recorded with the uncorrected LAW-120 metric
+and are retained unmodified for audit. The current diagnostic run is
+`backend/calibration/runs/v24/` (see its `MANIFEST.sha256`). No LAW-120
+threshold is claimed as validated; the independent evaluation protocol
+and its acceptance criteria live under `backend/calibration/protocol/`.
 
 ## Deploy
 

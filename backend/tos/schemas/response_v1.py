@@ -10,6 +10,10 @@ from pydantic import BaseModel, Field
 
 class GovernanceFingerprint(BaseModel):
     canon_hash: str
+    # WP-SCI-1: binds thresholds/units/operators/scopes/containment and
+    # modality rules — lets any consumer verify the exact law semantics
+    # in force against governance/law_semantic.sha256.
+    law_semantic_hash: Optional[str] = None
     matrix_hash: str
     matrix_schema_version: str
     policy_ref: str
@@ -46,7 +50,9 @@ class PhysicsMeasurement(BaseModel):
     title: str
     status: str
     method: str
-    observed: float
+    # WP-SCI-1: None for NOT_MEASURED / NOT_APPLICABLE /
+    # MEASUREMENT_FAILED rows — an empty sample is never a zero.
+    observed: Optional[float]
     threshold: float
     operator: str
     units: str
@@ -54,6 +60,11 @@ class PhysicsMeasurement(BaseModel):
     sample_size: int = Field(..., ge=0)
     scope: str
     principle: str = "N/A"
+    # WP-SCI-1 additions (additive, optional): containment provenance and
+    # the explicit non-success reason for unmeasured rows.
+    contained: Optional[bool] = None
+    containment_reason: Optional[str] = None
+    reason: Optional[str] = None
 
 
 class Tier1(BaseModel):

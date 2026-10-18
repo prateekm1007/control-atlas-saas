@@ -23,6 +23,18 @@ The pinned engine enforces **15 unique forensic laws** (see
 *   **HEURISTIC:** LAW-155 Voxel Occupancy, LAW-200 Packing Quality (heuristic failures do not by themselves trigger VETO).
 *   LAW-160 Chain Integrity (deterministic).
 
+> **WP-SCI-1 science containment (2026-10-19).** LAW-120's peptide O–C–N
+> angle was measured against the wrong atom (same-residue N instead of
+> residue i+1's N); the measurement is corrected, but the 18.0° threshold
+> was derived from the uncorrected metric and is NOT validated. LAW-120 is
+> **contained**: a measured LAW-120 violation alone yields `INDETERMINATE`,
+> never an authoritative VETO, until the v24 calibration and the
+> independent validation protocol meet their acceptance criteria. Law rows
+> now distinguish `NOT_MEASURED` / `NOT_APPLICABLE` / `MEASUREMENT_FAILED`
+> from measured PASS/VETO/FAIL; an empty sample is never a zero and never
+> a pass. See `governance/law_registry.yaml` (v1.1.0) and
+> `backend/calibration/protocol/evaluation_protocol_v1.md`.
+
 > **WP-8 label corrections.** This document previously cited laws that do
 > not exist in the pinned set and are hereby corrected — LAW-138
 > "Deformation", LAW-151 "Rho", LAW-152 "Ghost Decoupling", LAW-155.1

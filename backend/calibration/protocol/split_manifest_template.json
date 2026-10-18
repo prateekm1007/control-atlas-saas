@@ -1,0 +1,33 @@
+{
+  "$comment": "WP-SCI-1 split manifest template (protocol v1, section 3). Fill one file per split; commit before any engine run on held-out cases. The builder script must verify structure-level and near-identity (>=90% seq identity) non-overlap and record the check results below.",
+  "schema_version": "split-manifest/1.0.0",
+  "protocol": "backend/calibration/protocol/evaluation_protocol_v1.md",
+  "created_utc": null,
+  "policy_binding": {
+    "code_sha": null,
+    "law_semantic_hash": null
+  },
+  "splits": {
+    "calibration": [],
+    "validation": [],
+    "held_out": []
+  },
+  "entry_shape": {
+    "$comment": "each entry in splits.*",
+    "structure_id": "PDB or AF accession",
+    "label_source": "wwpdb-validation | perturbed-by-construction | known-defective-deposit",
+    "label": "acceptable | defective",
+    "cohort": "A | B1 | B2",
+    "strata": {"modality": "x_ray | cryo_em | nmr | predicted", "resolution_band": "ultra_high | medium | low | na"},
+    "coordinate_sha256": null,
+    "defect_manifest_ref": null
+  },
+  "overlap_checks": {
+    "identity_overlap_found": null,
+    "near_identity_pairs": [],
+    "near_identity_threshold": 0.9,
+    "checked_by": "scripts/build_split_manifest.py (to be run at split creation)",
+    "all_checks_passed": null
+  },
+  "freeze_rule": "held_out entries are inspected exactly once, after acceptance criteria are met on the validation split"
+}

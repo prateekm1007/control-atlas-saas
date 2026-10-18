@@ -22,12 +22,26 @@
 # and mirrored in governance/law_registry.sha256.
 # =============================================================================
 
-registry_version: "1.0.0"
+registry_version: "1.1.0"
 authority:
   runtime_source: "backend/tos/governance/station_sop.py::LAW_CANON"
   canon_hash: "6a9cd4b4349b81de"
   matrix_hash: "ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4"
   method_classification_source: "backend/tos/governance/station_sop.py::LAW_METHOD_CLASSIFICATIONS"
+
+# WP-SCI-1 (directive §2, Constitution §4): every law row carries exactly one
+# of these statuses. An empty sample is never a zero-valued measurement and
+# never a favorable PASS; missing mandatory measurements on deterministic
+# laws prevent an authoritative PASS (adjudicator yields INDETERMINATE);
+# NOT_APPLICABLE laws neither pass nor veto; MEASUREMENT_FAILED is an
+# explicit non-success state for acquisition/tooling errors.
+status_semantics:
+  measured_success: PASS
+  measured_violation: VETO
+  measured_failure: FAIL
+  empty_sample: NOT_MEASURED
+  not_applicable: NOT_APPLICABLE
+  acquisition_failure: MEASUREMENT_FAILED
 
 laws:
   # ── enforced (all 15 pinned laws, values copied exactly) ──────────────────
@@ -86,18 +100,39 @@ laws:
     title: Bond Angle
     tier: deterministic
     status: enforced
+    containment:
+      state: contained
+      reason: measurement-definition-repair
+      since: "2026-10-19"
+      detail: >
+        The pinned 18.0 deg threshold was selected from the v23 cohort using
+        the UNCORRECTED metric (O(i)-C(i)-N(i)) and is not validated for the
+        corrected metric. Until the v24 diagnostic run and the independent
+        validation protocol (backend/calibration/protocol/
+        evaluation_protocol_v1.md) meet their acceptance criteria, a
+        measured LAW-120 VETO cannot independently issue an authoritative
+        VETO (adjudicator yields INDETERMINATE with containment provenance).
     threshold: 18.0
     units: "°"
     operator: "<="
     scope: core residues
     type: RMSD
+    measurement_definition_version: 2
     measures: >
-      RMS deviation of backbone bond angles (N-CA-C, CA-C-N, O-C-N) from
-      Engh-Huber ideals, in degrees. NOT a peptide-bond-length check —
-      bond lengths are LAW-100's measurement.
+      RMS deviation of backbone bond angles from Engh-Huber ideals, in
+      degrees. Measured triples (WP-SCI-1 definition v2): intra-residue
+      N(i)-CA(i)-C(i); peptide carbonyl O(i)-C(i)-N(i+1) using the NEXT
+      residue's nitrogen; and CA(i)-C(i)-N(i+1) — the latter two only for
+      valid sequential same-chain pairs (shared adjacency predicate;
+      insertion codes honored; chains never joined; missing spans skipped).
+      Ideals (IDEAL_TABLE): N-CA-C 111.0°, O-C-N 123.0°, CA-C-N 116.6°.
+      Definition v1 incorrectly measured O(i)-C(i)-N(i) — a non-bonded
+      pseudo-angle — against the peptide ideal. NOT a peptide-bond-length
+      check — bond lengths are LAW-100's measurement. Empty sample yields
+      NOT_MEASURED, never a favorable zero.
     implementation: "backend/tos/engine/tier1_measurements.py::Tier1Measurements.run_full_audit (LAW-120 block)"
     test: {file: backend/tests/test_law_120.py, dedicated: true}
-    cited_in: [TRUST_MATRIX_v22.5.3.md]
+    cited_in: [TRUST_MATRIX_v22.5.3.md, "Engh & Huber (1991), Acta Cryst. A47, 392-400"]
 
   - id: LAW-125
     title: Ramachandran
@@ -208,10 +243,17 @@ laws:
     operator: "<="
     scope: sequential C-alphas
     type: Scalar
+    measurement_definition_version: 2
     measures: >
-      Maximum C-alpha to C-alpha distance between sequential same-chain
-      residues (ideal ~3.8 Angstrom). Values above 4.5 Angstrom indicate a
-      chain break. Observed value is the max gap in Angstrom.
+      Maximum C-alpha to C-alpha distance between IMMEDIATELY SEQUENTIAL
+      same-chain residue pairs (WP-SCI-1 definition v2, shared adjacency
+      predicate: residue numbers differing by exactly one with insertion
+      codes honored; chains never joined). A missing residue span
+      (numbering gap, e.g. 45 -> 67) is absent density, not a physical
+      chain break, and is skipped; genuine coordinate discontinuities
+      between adjacent-numbered residues still veto. Ideal ~3.8 Angstrom.
+      Values above 4.5 Angstrom indicate a chain break. Observed value is
+      the max gap in Angstrom; empty sample yields NOT_MEASURED.
     implementation: "backend/tos/engine/tier1_measurements.py::Tier1Measurements.run_full_audit (LAW-160 block)"
     test: {file: backend/tests/test_law_160.py, dedicated: true}
     cited_in: [TRUST_MATRIX_v22.5.3.md, "station_sop.py calibration notes (Ramachandran & Sasisekharan 1968)"]
@@ -258,12 +300,16 @@ laws:
     operator: "<="
     scope: cys pairs
     type: Scalar
+    measurement_definition_version: 2
     measures: >
       Maximum deviation of cysteine SG-SG distances from the ideal 2.033
-      Angstrom disulfide bond length.
+      Angstrom disulfide bond length, over putative disulfide pairs
+      (SG-SG < 3.0 Angstrom). WP-SCI-1: a structure with NO applicable
+      disulfide pair is recorded as NOT_APPLICABLE (sample 0) — it has
+      neither passed nor violated this law.
     implementation: "backend/tos/engine/tier1_measurements.py::Tier1Measurements.run_full_audit (LAW-195 block)"
     test: {file: backend/tests/test_law_195.py, dedicated: true}
-    cited_in: []
+    cited_in: ["Engh & Huber (1991), Acta Cryst. A47, 392-400"]
 
   - id: LAW-200
     title: Packing Quality

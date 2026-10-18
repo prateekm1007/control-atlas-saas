@@ -145,6 +145,49 @@ def get_chains(atoms) -> Set[str]:
     return {atom.chain_id for atom in atoms}
 
 
+def residues_are_adjacent(chain_a: str, seq_a: int, icode_a: str,
+                          chain_b: str, seq_b: int, icode_b: str) -> bool:
+    """
+    Sequence-adjacency predicate for backbone continuity (WP-SCI-1).
+
+    True only when residue B is the immediate sequential successor of
+    residue A within the SAME chain, honoring PDB insertion codes.
+    A gap in residue numbering (missing residue span, e.g. 45 -> 67) is
+    NOT adjacent: absent density is not a physical chain break, and the
+    caller must skip such pairs instead of measuring across them.
+
+    This is the single shared definition used by every inter-residue
+    measurement (LAW-110, LAW-120, LAW-125, LAW-135, LAW-160).
+
+    Decision table (exact semantics preserved from the historical
+    Tier1Measurements._is_sequential, now centralized):
+      - chain mismatch                        -> False (never join chains)
+      - seq_b == seq_a + 1, no icode on B     -> True  (plain successor,
+        with or without an insertion code on A)
+      - seq_a == seq_b and icode_b > icode_a  -> True  (insertion-code
+        successors of the same residue number, e.g. 99 -> 99A)
+      - anything else (including seq gaps, icode on B with seq_b == seq_a + 1)
+                                              -> False
+
+    Args:
+        chain_a, seq_a, icode_a: chain ID, residue sequence number and
+            insertion code of the first residue (icode "" when absent).
+        chain_b, seq_b, icode_b: same for the second residue.
+
+    Returns:
+        True when the pair is immediately sequential within one chain.
+    """
+    if chain_a != chain_b:
+        return False
+    if seq_b - seq_a == 1 and not icode_a and not icode_b:
+        return True
+    if seq_a == seq_b and icode_b > icode_a:
+        return True
+    if seq_b - seq_a == 1 and icode_a and not icode_b:
+        return True
+    return False
+
+
 def get_sequential_residues(atoms, chain_id: str) -> List[Tuple[int, str, str]]:
     """
     Return an ordered list of residues in a chain.

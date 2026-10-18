@@ -1,0 +1,307 @@
+{
+  "artifact": "preflight-science-validity-wp-sci-1",
+  "generated_utc": "2026-10-18T20:03:59.269836+00:00",
+  "repository": "prateekm1007/control-atlas-saas",
+  "baseline": {
+    "head_sha": "0eae6d575cd91376588fe6b36d1b9212352df7fc",
+    "branch": "integration/p0-hardening-2026-10-19",
+    "main_sha": "2195a048e87dcec4aa63e8dc7981b3bb6d237ca0",
+    "main_untouched": true,
+    "working_tree_dirty_entries": 0,
+    "baseline_test_command": "cd backend && TOSCANINI_DATA_DIR=$(mktemp -d) TOSCANINI_API_KEYS=test-key python -m pytest tests -q",
+    "baseline_test_result": "383 passed, 5 skipped, 0 failed (python 3.12.15, toscanini-final-venv)"
+  },
+  "policy": {
+    "constitution_md_sha256": "cfdd5ba3babda31513b55894a49597fbfb18c2e870535a068c8b0ea423c53ce8",
+    "constitution_md_source": "working tree == origin/main 2195a04 (git diff clean)",
+    "engineering_constitution_sha256": "e0f256f78f2c1256228c4286311cba15800dcd5a6c8005583508ee66d27983f5",
+    "engineering_constitution_source": "PR #11 head 4993cb3b6954ffb8ecad281817b2c59f1f8fc041 (Proposed, not adopted)",
+    "canon_hash_current": "6a9cd4b4349b81de",
+    "matrix_hash_current": "ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4",
+    "protected_hash_policy": "LAW_CANON IDs/method classifications and modality_matrix.json bytes must remain byte-identical through this WP; any registry content change requires updating governance/law_registry.sha256 + test_law_registry.py REGISTRY_SHA256 in the same reviewed PR."
+  },
+  "inspected_files": [
+    {
+      "path": "constitution.md",
+      "role": "domain constitution (v6.1-Hardened)"
+    },
+    {
+      "path": "ENGINEERING_CONSTITUTION.md@4993cb3",
+      "role": "engineering constitution (Proposed, PR #11)"
+    },
+    {
+      "path": "backend/tos/engine/tier1_measurements.py",
+      "role": "law measurement engine (LAW-100..200)"
+    },
+    {
+      "path": "backend/tos/engine/coord_math.py",
+      "role": "pure geometry primitives"
+    },
+    {
+      "path": "backend/tos/engine/adjudicator.py",
+      "role": "verdict/scoring engine"
+    },
+    {
+      "path": "backend/tos/governance/station_sop.py",
+      "role": "LAW_CANON/IDEAL_TABLE/canon hash"
+    },
+    {
+      "path": "backend/tos/governance/modality_matrix.py",
+      "role": "PIL-CAL-03 loader + resolve_method"
+    },
+    {
+      "path": "backend/tos/governance/modality_matrix.json",
+      "role": "modality reclassification rules"
+    },
+    {
+      "path": "backend/tos/glossary/tier1/law_120.py",
+      "role": "LAW-120 glossary text"
+    },
+    {
+      "path": "backend/tos/glossary/tier1/law_120_bond.py",
+      "role": "LAW-120 glossary text (registry variant)"
+    },
+    {
+      "path": "backend/tos/glossary/tier1/law_160.py",
+      "role": "LAW-160 glossary text"
+    },
+    {
+      "path": "backend/tos/glossary/tier1/law_160_backbone.py",
+      "role": "LAW-160 glossary text (registry variant)"
+    },
+    {
+      "path": "governance/law_registry.yaml",
+      "role": "single law registry (WP-8)"
+    },
+    {
+      "path": "governance/law_registry.sha256",
+      "role": "registry content hash pin"
+    },
+    {
+      "path": "backend/main.py",
+      "role": "production verdict path _run_physics_sync -> adjudicate_laws"
+    },
+    {
+      "path": "backend/calibration/calibration_report_v23.md",
+      "role": "v23 calibration report (stale vs code)"
+    },
+    {
+      "path": "backend/calibration/calibration_results.json",
+      "role": "v23 recorded measurements (50 targets)"
+    },
+    {
+      "path": "backend/calibration/dataset_v23.py",
+      "role": "v23 dataset definition"
+    },
+    {
+      "path": "calibration_results.json",
+      "role": "LEGACY v22.4.3 screen (18 structures) — duplicate entry point"
+    },
+    {
+      "path": "backend/invariants/v23.0.phase1.snapshot.json",
+      "role": "phase-1 snapshot"
+    },
+    {
+      "path": "backend/tests/test_law_120.py",
+      "role": "LAW-120 tests"
+    },
+    {
+      "path": "backend/tests/test_law_160.py",
+      "role": "LAW-160 tests"
+    },
+    {
+      "path": "backend/tests/test_law_195.py",
+      "role": "LAW-195 tests"
+    },
+    {
+      "path": "backend/tests/test_adjudicator.py",
+      "role": "adjudicator tests"
+    },
+    {
+      "path": "backend/tests/test_modality_matrix.py",
+      "role": "matrix tests"
+    },
+    {
+      "path": "backend/tests/test_law_registry.py",
+      "role": "registry<->canon pin tests"
+    },
+    {
+      "path": "backend/tests/conftest.py",
+      "role": "backbone fixtures"
+    },
+    {
+      "path": ".github/workflows/toscanini-gate.yml",
+      "role": "CI gate incl. canon/matrix hash lock"
+    },
+    {
+      "path": "README.md",
+      "role": "public claims (verdict semantics)"
+    },
+    {
+      "path": "SAAS_HANDOFF.md",
+      "role": "handoff claims (15 laws)"
+    }
+  ],
+  "call_sites": [
+    {
+      "symbol": "Tier1Measurements.run_full_audit",
+      "callers": [
+        "backend/main.py::_run_physics_sync (line ~136)",
+        "backend/tos/engine/batch_processor.py (via _run_physics_sync callback)",
+        "backend/main.py refinement paths (lines ~484, ~976)"
+      ]
+    },
+    {
+      "symbol": "adjudicate_laws",
+      "callers": [
+        "backend/main.py::_run_physics_sync (line ~145)"
+      ]
+    },
+    {
+      "symbol": "resolve_method",
+      "callers": [
+        "backend/tos/engine/adjudicator.py (line ~140)"
+      ]
+    },
+    {
+      "symbol": "compute_canon_hash / LAW_CANON_HASH",
+      "callers": [
+        "backend/main.py governance fingerprint",
+        ".github/workflows/toscanini-gate.yml hash lock",
+        "backend/tos/export/sealer.py (verify)",
+        "backend/tests/test_law_registry.py"
+      ]
+    },
+    {
+      "symbol": "compute_matrix_hash",
+      "callers": [
+        "backend/main.py governance fingerprint",
+        ".github/workflows/toscanini-gate.yml hash lock"
+      ]
+    },
+    {
+      "symbol": "get_sequential_residues",
+      "callers": [
+        "tier1_measurements LAW-160 loop",
+        "tier1_measurements LAW-182 loop"
+      ]
+    },
+    {
+      "symbol": "_is_sequential",
+      "callers": [
+        "tier1_measurements LAW-110 loop",
+        "LAW-120 CA-C-N loop",
+        "LAW-125 phi/psi loop",
+        "LAW-135 omega loop"
+      ]
+    }
+  ],
+  "confirmed_defects": [
+    {
+      "id": "SCI-1",
+      "law": "LAW-120",
+      "severity": "P0-scientific",
+      "finding": "O-C-N angle measured intra-residue O(i)-C(i)-N(i) against the peptide ideal O-C-N 123.0 deg (Engh-Huber). C(i) is bonded to O(i), CA(i) and N(i+1), NOT N(i); the measured triple is a non-bonded pseudo-angle.",
+      "evidence": "tier1_measurements.py lines 162-166; IDEAL_TABLE['O-C-N']=123.0; v23 report chose 18.0 deg from the same flawed metric"
+    },
+    {
+      "id": "SCI-2",
+      "law": "LAW-120",
+      "severity": "P0-scientific",
+      "finding": "Empty angle sample set -> observed 0.0 -> PASS (vacuous favorable outcome).",
+      "evidence": "tier1_measurements.py line 178; v23 recorded LAW-120 sample=0/observed=0.0/status=PASS for 1I0T and AF-P62988-F1"
+    },
+    {
+      "id": "SCI-3",
+      "law": "LAW-160",
+      "severity": "P0-scientific",
+      "finding": "CA-CA adjacency taken from sorted residue list position (i, i+1) without requiring consecutive residue numbers; missing residue spans (e.g. 45->67) become physical chain-break vetoes.",
+      "evidence": "coord_math.get_sequential_residues sorts only; LAW-160 loop in tier1_measurements.py lines 418-431; v23 report lists 7 multi-chain/missing-loop breaches and deferred the code fix"
+    },
+    {
+      "id": "SCI-4",
+      "law": "LAW-195",
+      "severity": "P1-scientific",
+      "finding": "No CYS-SG pair within 3.0 A -> observed 0.0 -> PASS with sample=0; not-applicable recorded as a passed measurement.",
+      "evidence": "tier1_measurements.py lines 456-473; v23: 36/50 structures zero-sample LAW-195 PASS"
+    },
+    {
+      "id": "SCI-5",
+      "law": "ALL",
+      "severity": "P1-scientific",
+      "finding": "Equivalent empty-sample -> 0.0 -> favorable fallbacks exist in LAW-100 (rmsz/pct), LAW-110 (gaps==0 PASS sample may be 0), LAW-125/135/150 (pct 0.0 when total 0), LAW-145 (0 violations when checked=0), LAW-160 (max_gap 0.0 when no CA pairs), LAW-182 (ratio forced 1.0 'vacuously true'), LAW-200 (vol/atom 0.0 -> PASS); LAW-155 converts missing coords to 0.0 -> VETO (missing-as-violation).",
+      "evidence": "tier1_measurements.py lines 111-117, 139-143, 220-227, 258-265, 315-321, 357-364, 404-411, 418-437, 510-518, 529-546, 554-569"
+    },
+    {
+      "id": "SCI-6",
+      "law": "GOVERNANCE",
+      "severity": "P1-integrity",
+      "finding": "Canon hash binds only sorted law IDs + method classifications; threshold/definition/unit drift is invisible to CI.",
+      "evidence": "station_sop.py compute_canon_hash(); directive section 6"
+    },
+    {
+      "id": "SCI-7",
+      "law": "EVIDENCE",
+      "severity": "P1-integrity",
+      "finding": "v23 recorded run is stale (thresholds 10.0 vs live 18.0), contains impossible zero-sample PASS rows, and the 18.0 decision was selected from the same cohort it claims to validate (circular). Two ambiguous duplicate entry points exist (18 vs 50 structures).",
+      "evidence": "calibration_results.json (root) vs backend/calibration/calibration_results.json; zero-sample rows"
+    },
+    {
+      "id": "SCI-8",
+      "law": "ADJUDICATOR",
+      "severity": "P2-design",
+      "finding": "No explicit NOT_MEASURED / NOT_APPLICABLE / MEASUREMENT_FAILED statuses; a law row missing from raw_measurements defaults to FAIL (deterministic -> VETO), conflating 'not measured' with 'measured and failed'.",
+      "evidence": "adjudicator.py lines 132-135, 148-169; _compute_verdict lines 91-108"
+    }
+  ],
+  "expected_behavior": {
+    "LAW-120": "N(i)-CA(i)-C(i) intra-residue; O(i)-C(i)-N(i+1) and CA(i)-C(i)-N(i+1) only for valid sequential same-chain pairs (adjacency predicate shared with LAW-110/125/135); ideals N-CA-C 111.0, O-C-N 123.0, CA-C-N 116.6 (IDEAL_TABLE, unchanged); units degrees; empty sample -> NOT_MEASURED, never PASS",
+    "LAW-160": "CA(i)-CA(i+1) measured only for adjacent residue records under the shared adjacency predicate (res_seq+1 / insertion-code successors, same chain); missing spans skipped and not treated as breaks; empty sample -> NOT_MEASURED",
+    "LAW-195": "zero applicable disulfide pairs -> NOT_APPLICABLE (sample=0, no favorable PASS, no VETO)",
+    "all laws": "status in {PASS, VETO, FAIL, NOT_MEASURED, NOT_APPLICABLE, MEASUREMENT_FAILED}; missing mandatory measurements prevent authoritative PASS (verdict INDETERMINATE when nothing else vetoes); missing data never becomes a favorable zero nor a fabricated physical violation",
+    "LAW-120 containment": "until the corrected metric has an independently validated threshold, LAW-120 cannot independently issue an authoritative VETO: contained-law failure alone yields INDETERMINATE with explicit containment provenance; LAW_CANON values byte-unchanged (canon hash 6a9cd4b4349b81de preserved)",
+    "v24 calibration": "new versioned run under backend/calibration/runs/v24 with manifest, pinned coordinate digests, per-law rows, non-zero exit on incomplete acquisition; v23 files untouched"
+  },
+  "change_scope": {
+    "code": [
+      "backend/tos/engine/tier1_measurements.py (LAW-120 O-C-N fix, LAW-160 adjacency, status semantics via shared helper)",
+      "backend/tos/engine/coord_math.py (add adjacency predicate is_adjacent_residues; get_sequential_residues unchanged for existing callers)",
+      "backend/tos/engine/adjudicator.py (new status handling + containment logic in _compute_verdict)",
+      "backend/tos/governance/station_sop.py (LAW_CONTAINMENT registry + compute_law_semantic_hash; LAW_CANON/IDs/methods untouched)",
+      "governance/law_registry.yaml (measurement_definition/version/citations for LAW-120/160/195 + status semantics) + governance/law_registry.sha256 + test_law_registry.py pin",
+      "backend/tos/glossary/tier1/law_120*.py, law_160*.py, law_195*.py (glossary alignment)",
+      "backend/calibration/ (new runner + runs/v24 + protocol docs; historical files untouched)",
+      ".github/workflows/toscanini-gate.yml (semantic-hash lock step)",
+      "README.md (verdict semantics + containment note)"
+    ],
+    "tests": [
+      "backend/tests/test_law_120.py (regression: correct atom indices, geometry vs independent calculation, empty sample never PASS)",
+      "backend/tests/test_law_160.py (adjacency, insertion codes, missing spans, chain boundaries, missing CA)",
+      "backend/tests/test_law_195.py (NOT_APPLICABLE)",
+      "backend/tests/test_adjudicator.py (status semantics, containment, missing-law default)",
+      "backend/tests/test_e2e_adjudication.py (new: production path via TestClient)",
+      "backend/tests/test_law_semantic_hash.py (new: drift detection)",
+      "backend/tests/test_calibration_runner.py (new: manifest/digest/fail-closed)"
+    ]
+  },
+  "conflicts_and_risks": [
+    "v23 report's 18.0 decision is bound to the uncorrected metric; threshold retained in LAW_CANON for byte-stability but marked contained/unvalidated — lift requires v24 + independent validation acceptance criteria",
+    "Predicted-mode cohort distributions change under the corrected O-C-N definition; all historical per-law numbers are void for LAW-120/160 comparisons (historical files preserved, not reinterpreted)",
+    "Registry content hash changes (definitions updated); pin files must change in the same PR or CI fails — this is the intended drift-detection behavior",
+    "Root calibration_results.json is a legacy v22.4.3 artifact; will be documented as historical, not deleted",
+    "AlphaFold DB returned 403 from sandbox during preflight; predicted-coordinate acquisition may be blocked — runner must record acquisition failure honestly rather than substituting synthetic coordinates",
+    "P0 security blockers (credential rotation unverified, JWT/deployment gates) remain open in PR stack #1-#14/#15 — no conflation with this diff"
+  ],
+  "tests_planned": "see change_scope.tests; all new tests must fail-before/pass-after per Constitution §6",
+  "rollback_plan": "single-PR revert; LAW_CANON/modality_matrix byte-unchanged so protected hashes never move; containment is additive (LAW_CONTAINMENT dict) and removable independently; v23 artifacts untouched so evidence rollback = delete runs/v24 + restore registry pin files",
+  "acceptance_criteria": [
+    "regression tests prove LAW-120 uses N(i+1) for O-C-N with adjacency and expected ideals",
+    "empty LAW-120 sample cannot return PASS; LAW-195 no-pair -> NOT_APPLICABLE",
+    "LAW-160 missing spans are not chain-break vetoes; insertion codes and chain boundaries handled",
+    "missing mandatory measurements -> no authoritative PASS (INDETERMINATE)",
+    "v24 run manifest binds code SHA, coordinate digests, semantic hash, matrix hash; exit non-zero when incomplete",
+    "semantic hash drift detected by CI (pin mismatch fails the gate)",
+    "canon hash 6a9cd4b4349b81de and matrix hash ed1731ac... unchanged",
+    "evidence committed under docs/audit-evidence/2026-10-19/ and MANIFEST verified from clean checkout"
+  ]
+}

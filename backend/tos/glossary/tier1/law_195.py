@@ -1,1 +1,1 @@
-EXPLANATION = {"title": "Disulfide Geometry", "principle": "S–S distance ≈ 2.05A.", "rationale": "Incorrect geometry prevents proper folding and traps the design in non-functional states."}
+EXPLANATION = {"title": "Disulfide Geometry", "principle": "S–S distance ≈ 2.05A.", "rationale": "Incorrect geometry prevents proper folding and traps the design in non-functional states. WP-SCI-1: a structure with no applicable disulfide pair (fewer than two CYS-SG or none within 3.0 A) is recorded as NOT_APPLICABLE — it has neither passed nor violated this law."}

@@ -1,0 +1,157 @@
+{
+  "artifact": "changed-file-manifest",
+  "generated_utc": "2026-10-18T20:49:13.910554+00:00",
+  "base_commit": "0eae6d575cd91376588fe6b36d1b9212352df7fc",
+  "branch": "science/law-validity-wp15",
+  "note": "status letters are git porcelain codes; untracked dirs are expanded at patch time",
+  "entries": [
+    {
+      "status": "M",
+      "path": "README.md"
+    },
+    {
+      "status": "M",
+      "path": "SAAS_HANDOFF.md"
+    },
+    {
+      "status": "M",
+      "path": "backend/main.py"
+    },
+    {
+      "status": "M",
+      "path": "backend/tests/test_adjudicator.py"
+    },
+    {
+      "status": "M",
+      "path": "backend/tests/test_law_145.py"
+    },
+    {
+      "status": "M",
+      "path": "backend/tests/test_law_150.py"
+    },
+    {
+      "status": "M",
+      "path": "backend/tests/test_law_182.py"
+    },
+    {
+      "status": "M",
+      "path": "backend/tests/test_law_195.py"
+    },
+    {
+      "status": "M",
+      "path": "backend/tests/test_law_registry.py"
+    },
+    {
+      "status": "M",
+      "path": "backend/tos/engine/adjudicator.py"
+    },
+    {
+      "status": "M",
+      "path": "backend/tos/engine/coord_math.py"
+    },
+    {
+      "status": "M",
+      "path": "backend/tos/engine/tier1_measurements.py"
+    },
+    {
+      "status": "M",
+      "path": "backend/tos/forensic_artifacts/pdf_generator.py"
+    },
+    {
+      "status": "M",
+      "path": "backend/tos/glossary/tier1/law_120.py"
+    },
+    {
+      "status": "M",
+      "path": "backend/tos/glossary/tier1/law_120_bond.py"
+    },
+    {
+      "status": "M",
+      "path": "backend/tos/glossary/tier1/law_160.py"
+    },
+    {
+      "status": "M",
+      "path": "backend/tos/glossary/tier1/law_160_backbone.py"
+    },
+    {
+      "status": "M",
+      "path": "backend/tos/glossary/tier1/law_195.py"
+    },
+    {
+      "status": "M",
+      "path": "backend/tos/glossary/tier1/law_195_disulfide.py"
+    },
+    {
+      "status": "M",
+      "path": "backend/tos/governance/station_sop.py"
+    },
+    {
+      "status": "M",
+      "path": "backend/tos/schemas/response_v1.py"
+    },
+    {
+      "status": "M",
+      "path": "governance/law_registry.sha256"
+    },
+    {
+      "status": "M",
+      "path": "governance/law_registry.yaml"
+    },
+    {
+      "status": "??",
+      "path": "backend/calibration/README.md"
+    },
+    {
+      "status": "??",
+      "path": "backend/calibration/evaluate.py"
+    },
+    {
+      "status": "??",
+      "path": "backend/calibration/protocol/"
+    },
+    {
+      "status": "??",
+      "path": "backend/calibration/runner.py"
+    },
+    {
+      "status": "??",
+      "path": "backend/calibration/runs/"
+    },
+    {
+      "status": "??",
+      "path": "backend/tests/test_calibration_runner.py"
+    },
+    {
+      "status": "??",
+      "path": "backend/tests/test_e2e_adjudication.py"
+    },
+    {
+      "status": "??",
+      "path": "backend/tests/test_law_120_correction.py"
+    },
+    {
+      "status": "??",
+      "path": "backend/tests/test_law_160_correction.py"
+    },
+    {
+      "status": "??",
+      "path": "backend/tests/test_law_semantic_hash.py"
+    },
+    {
+      "status": "??",
+      "path": "backend/tests/test_status_semantics.py"
+    },
+    {
+      "status": "??",
+      "path": "docs/audit-evidence/2026-10-19/science-validity/"
+    },
+    {
+      "status": "??",
+      "path": "governance/law_semantic.sha256"
+    },
+    {
+      "status": "M",
+      "path": "github/workflows/toscanini-gate.yml"
+    }
+  ]
+}

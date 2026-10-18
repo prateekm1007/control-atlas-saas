@@ -356,7 +356,8 @@ def generate_v21_dossier(payload):
             pdf.set_font("Helvetica", "", 7)
             for l in violations:
                 for i, field in enumerate([l['law_id'], l['title'], "Deterministic",
-                                           str(l['observed']), f"{l['operator']} {l['threshold']}", l['status']]):
+                                           ('N/A (not measured)' if l.get('observed') is None else str(l['observed'])),
+                                           f"{l['operator']} {l['threshold']}", l['status']]):
                     pdf.cell(widths[i], 7, pdf.safe(field), 1, 0, "C" if i != 1 else "L")
                 pdf.ln(7)
             pdf.ln(5)
@@ -376,7 +377,7 @@ def generate_v21_dossier(payload):
                 law['law_id'],
                 law['title'],
                 "Deterministic",
-                str(law.get('observed', 'N/A')),
+                ('N/A (not measured)' if law.get('observed') is None else str(law.get('observed', 'N/A'))),
                 "%s %s" % (law.get('operator', ''), law.get('threshold', 'N/A')),
                 "[PASS]"
             ]
@@ -433,7 +434,8 @@ def generate_v21_dossier(payload):
             cls = "Advisory" if "advisory" in l.get('method', '') else "Heuristic"
             display_status = l['status'] if l['status'] != 'VETO' else 'FAIL'
             for i, field in enumerate([l['law_id'], l['title'], cls,
-                                       str(l['observed']), f"{l['operator']} {l['threshold']}", display_status]):
+                                       ('N/A (not measured)' if l.get('observed') is None else str(l['observed'])),
+                                       f"{l['operator']} {l['threshold']}", display_status]):
                 pdf.cell(widths[i], 7, pdf.safe(field), 1, 0, "C" if i != 1 else "L")
             pdf.ln(7)
 
@@ -672,7 +674,7 @@ def generate_v21_dossier(payload):
                     pdf.multi_cell(w, 4,
                         "Detected %d Ramachandran outliers (%.2f%% of %d core residues): %s" % (
                             len(rama_residues),
-                            law_125.get("observed", 0.0),
+                            law_125.get("observed") or 0.0,
                             law_125.get("sample_size", law_125.get("sample", 0)),
                             residue_str
                         ))
@@ -707,7 +709,7 @@ def generate_v21_dossier(payload):
                     pdf.multi_cell(w, 4,
                         "Detected %d rotamer outliers (%.2f%% of %d side chains): %s" % (
                             len(rotamer_residues),
-                            law_150.get("observed", 0.0),
+                            law_150.get("observed") or 0.0,
                             law_150.get("sample_size", law_150.get("sample", 0)),
                             residue_str
                         ))
@@ -741,7 +743,7 @@ def generate_v21_dossier(payload):
                     pdf.multi_cell(w, 4,
                         "Detected %d clashing residue pairs (score: %.2f): %s" % (
                             len(clash_pairs),
-                            law_130.get("observed", 0.0),
+                            law_130.get("observed") or 0.0,
                             pairs_str
                         ))
                     pdf.ln(2)
@@ -772,7 +774,7 @@ def generate_v21_dossier(payload):
                     pdf.multi_cell(w, 4,
                         "Detected %d omega outliers (%.2f%% of %d peptide bonds): %s" % (
                             len(omega_residues),
-                            law_135.get("observed", 0.0),
+                            law_135.get("observed") or 0.0,
                             law_135.get("sample_size", law_135.get("sample", 0)),
                             residue_str
                         ))

@@ -24,7 +24,7 @@ SHA256_FILE = REPO / "governance" / "law_registry.sha256"
 MEASUREMENTS = REPO / "backend" / "tos" / "engine" / "tier1_measurements.py"
 
 # Recorded content hash of governance/law_registry.yaml (WP-8 requirement).
-REGISTRY_SHA256 = "d53a2a506f4ddff8e7210489afc55bea60e137e2f516c3192b1e3fa5ade1d7ae"
+REGISTRY_SHA256 = "24e0761169990f16bddf73a84edf0f6092b496f60e80e7973e9685351d00ba15"
 
 yaml = pytest.importorskip("yaml", reason="PyYAML comes from requirements-dev.txt")
 

@@ -68,7 +68,9 @@ class TestLaw195:
         assert res["sample"] == 1
 
     def test_no_cys_residues(self):
-        """Structure with no CYS → sample=0, observed=0, PASS."""
+        """Structure with no CYS → no applicable disulfide.
+        WP-SCI-1 (directive §2): recorded as NOT_APPLICABLE, not as a
+        measurement that passed."""
         atoms = [
             _make_atom("N",  "N", [0.0, 0.0, 0.0],  res_name="ALA", res_seq=1),
             _make_atom("CA", "C", [1.47, 0.0, 0.0],  res_name="ALA", res_seq=1),
@@ -76,8 +78,8 @@ class TestLaw195:
         ]
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
         res = results["LAW-195"]
-        assert res["status"] == "PASS"
-        assert res["observed"] == 0.0
+        assert res["status"] == "NOT_APPLICABLE"
+        assert res["observed"] is None
         assert res["sample"] == 0
 
     def test_distant_cys_not_disulfide(self):
@@ -94,8 +96,10 @@ class TestLaw195:
         ]
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
         res = results["LAW-195"]
-        assert res["status"] == "PASS"
-        assert res["observed"] == 0.0
+        # WP-SCI-1: CYS present but SG-SG > 3.0 Å means no applicable
+        # disulfide pair — NOT_APPLICABLE, not a vacuous PASS.
+        assert res["status"] == "NOT_APPLICABLE"
+        assert res["observed"] is None
         assert res["sample"] == 0
 
     def test_multiple_disulfides(self):
@@ -159,5 +163,7 @@ class TestLaw195:
         ]
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
         res = results["LAW-195"]
-        assert res["status"] == "PASS"
+        # WP-SCI-1: a lone measurable SG forms no disulfide pair —
+        # NOT_APPLICABLE, not a vacuous PASS.
+        assert res["status"] == "NOT_APPLICABLE"
         assert res["sample"] == 0

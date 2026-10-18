@@ -1,0 +1,22 @@
+{
+  "artifact": "law120-independent-verification",
+  "generated_utc": "2026-10-18T20:49:13.910554+00:00",
+  "construction": "two-residue backbone built with plain numpy in backend/tests/test_law_120_correction.py, independent of coord_math: all measured triples exactly at Engh-Huber ideals (N-CA-C 111.0, O-C-N 123.0 with N from residue i+1, CA-C-N 116.6)",
+  "expected_engine_result": {
+    "rmsd": "0.0 (tolerance 0.05)",
+    "sample": 4,
+    "status": "PASS"
+  },
+  "actual_engine_result": {
+    "rmsd": "~0.0",
+    "sample": 4,
+    "status": "PASS"
+  },
+  "historical_definition_result": "same coordinates under the uncorrected O(i)-C(i)-N(i) definition produce a large RMSD (non-bonded pseudo-angle vs 123.0 ideal)",
+  "tests": [
+    "test_law_120_correction.py::TestLaw120CorrectAtomIndices",
+    "tests/test_law_120.py",
+    "tests/test_status_semantics.py"
+  ],
+  "v24_diagnostic_corroboration": "40 measured experimental structures: corrected metric observed 0.51-7.04 deg (median 2.03), 0 measured vetoes; see backend/calibration/runs/v24/"
+}

@@ -25,6 +25,11 @@ from tos.governance.station_sop import (
     HEURISTIC_COUNT,
     LAW_METHOD_CLASSIFICATIONS,
     ARCHITECTURE_WEIGHTS,
+    BLOCKING_STATUSES,
+    INDETERMINATE_CAUSE_STATUSES,
+    STATUS_NOT_MEASURED,
+    CONTAINED_LAWS,
+    LAW_CONTAINMENT,
 )
 from tos.governance.modality_matrix import resolve_method
 
@@ -69,6 +74,16 @@ class AdjudicationResult:
 
     Every field here was previously computed inline in _run_physics_sync.
     The field names and value semantics are preserved exactly.
+
+    WP-SCI-1 additions:
+        contained_law_failures: law IDs whose measured failure could not
+            independently veto because the law is contained (see
+            station_sop.LAW_CONTAINMENT); the verdict is INDETERMINATE
+            with explicit provenance when this is the only blocking
+            evidence.
+        indeterminate_causes: law IDs whose status was NOT_MEASURED or
+            MEASUREMENT_FAILED on a deterministic law — missing mandatory
+            measurements prevent an authoritative PASS.
     """
     law_rows: list = field(default_factory=list)
     failing_deterministic: list = field(default_factory=list)
@@ -79,6 +94,8 @@ class AdjudicationResult:
     heur_passed: int = 0
     det_score_normalized: int = 0
     det_passed_normalized: int = 0
+    contained_law_failures: list = field(default_factory=list)
+    indeterminate_causes: list = field(default_factory=list)
     strategic_math: StrategicMath = field(
         default_factory=lambda: StrategicMath(0.0, 1.0, 0.0, 0, None)
     )
@@ -88,24 +105,53 @@ class AdjudicationResult:
 # VERDICT LOGIC (moved verbatim from main.py _compute_verdict)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _compute_verdict(res_t1: list[dict], coverage: float) -> str:
+def _compute_verdict(res_t1: list[dict], coverage: float) -> tuple[str, list[str], list[str]]:
     """
-    Determine binary verdict from classified law rows and coverage.
+    Determine the verdict from classified law rows and coverage.
 
-    Logic preserved exactly from main.py:
+    WP-SCI-1 semantics (directive §1–§2, Constitution §4):
     - Coverage below LAW-105 threshold → INDETERMINATE
-    - Any deterministic law with FAIL or VETO → VETO
+    - Any deterministic law measured FAIL or VETO → VETO, EXCEPT a
+      contained law cannot independently issue the veto: if contained
+      failures exist but no uncontained deterministic law failed, the
+      verdict is INDETERMINATE (honest non-success, no physical claim).
+    - Any deterministic law NOT_MEASURED or MEASUREMENT_FAILED blocks an
+      authoritative PASS → INDETERMINATE (missing evidence is neither
+      favorable evidence nor a fabricated violation).
+    - NOT_APPLICABLE laws neither pass nor veto.
     - Otherwise → PASS
+
+    Returns:
+        (verdict, contained_law_failures, indeterminate_causes)
     """
     cov_threshold = float(LAW_CANON["LAW-105"]["threshold"])
     if coverage < cov_threshold:
-        return "INDETERMINATE"
+        return "INDETERMINATE", [], []
+
+    contained_failures: list[str] = []
+    indeterminate_causes: list[str] = []
+    uncontained_veto = False
 
     for r in res_t1:
-        if r["method"] == "deterministic" and r["status"] in ("FAIL", "VETO"):
-            return "VETO"
+        if r["method"] != "deterministic":
+            continue
+        status = r["status"]
+        if status in ("FAIL", "VETO"):
+            if r.get("law_id", "") in CONTAINED_LAWS:
+                contained_failures.append(r["law_id"])
+            else:
+                uncontained_veto = True
+        elif status in INDETERMINATE_CAUSE_STATUSES:
+            indeterminate_causes.append(r["law_id"])
 
-    return "PASS"
+    if uncontained_veto:
+        return "VETO", contained_failures, indeterminate_causes
+    if contained_failures or indeterminate_causes:
+        # Missing mandatory measurements and contained-law failures are
+        # explicit non-success states: no authoritative PASS.
+        return "INDETERMINATE", contained_failures, indeterminate_causes
+
+    return "PASS", [], []
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -130,8 +176,15 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
 
     # ── Stage 3: Law Classification Loop ─────────────────────────────────
     for lid in sorted(LAW_CANON.keys()):
+        # WP-SCI-1: a law entirely absent from the measurements is NOT
+        # MEASURED, not "measured and failed". (run_full_audit currently
+        # emits every law, so this default is a fail-closed guard for
+        # future callers rather than a live path.)
         m = inp.raw_measurements.get(
-            lid, {"observed": 0, "deviation": "0.0", "sample": 0, "status": "FAIL"}
+            lid,
+            {"observed": None, "deviation": "N/A", "sample": 0,
+             "status": STATUS_NOT_MEASURED,
+             "reason": "no measurement row emitted by the engine"},
         )
         method = LAW_METHOD_CLASSIFICATIONS.get(lid, "unknown")
 
@@ -164,6 +217,12 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
             row["failing_residues"] = m["failing_residues"]
         if "failing_residue_pairs" in m:
             row["failing_residue_pairs"] = m["failing_residue_pairs"]
+        # WP-SCI-1: containment provenance and explicit non-success reason
+        if lid in CONTAINED_LAWS:
+            row["contained"] = True
+            row["containment_reason"] = LAW_CONTAINMENT[lid].get("reason", "contained")
+        if "reason" in m:
+            row["reason"] = m["reason"]
         res_t1.append(row)
         if m.get("status", "FAIL") in ("FAIL", "VETO") and row["method"] == "deterministic":
             failing_det.append(f"{lid}: {LAW_CANON[lid]['title']}")
@@ -178,7 +237,8 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
     heur_passed = sum(1 for r in res_t1 if r["status"] == "PASS" and r["method"] == "heuristic")
     adv_score = int((heur_passed / max(HEURISTIC_COUNT, 1)) * 100)
 
-    verdict = _compute_verdict(res_t1, inp.coverage)
+    # WP-SCI-1: verdict carries containment and missing-measurement provenance.
+    verdict, contained_failures, indeterminate_causes = _compute_verdict(res_t1, inp.coverage)
 
     # PIL-MTH-12: Strategic Success Math
     raw_s6 = round(det_score / 100.0, 4)
@@ -206,6 +266,8 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
         heur_passed=heur_passed,
         det_score_normalized=det_score_normalized,
         det_passed_normalized=det_passed_normalized,
+        contained_law_failures=contained_failures,
+        indeterminate_causes=indeterminate_causes,
         strategic_math=StrategicMath(
             s6=s6_final, w_arch=w_arch, m_s8=m_s8,
             p_score=p_score, suppression=suppression,

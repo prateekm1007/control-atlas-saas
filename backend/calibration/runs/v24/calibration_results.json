@@ -1,0 +1,6811 @@
+{
+  "meta": {
+    "runner_version": "v24-runner/1.0.0",
+    "run_type": "diagnostic",
+    "purpose": "Document corrected-metric distributions (WP-SCI-1). NOT a threshold validation: thresholds may only be re-validated via backend/calibration/protocol/evaluation_protocol_v1.md.",
+    "run_timestamp_utc": "2026-10-18T20:34:35.876655+00:00",
+    "code_sha": "0eae6d575cd91376588fe6b36d1b9212352df7fc",
+    "code_sha_source": "git rev-parse HEAD of the repository containing this runner",
+    "backend_version": "22.5.3",
+    "policy_binding": {
+      "canon_hash": "6a9cd4b4349b81de",
+      "law_semantic_hash": "3f49a7b5605e17dcf26bcd114713ad651cdc2279d684f1c681943eefa0f4379a",
+      "modality_matrix_sha256": "ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4",
+      "law_registry_sha256": "24e0761169990f16bddf73a84edf0f6092b496f60e80e7973e9685351d00ba15"
+    },
+    "environment": {
+      "python": "3.12.15",
+      "platform": "Linux-5.10.134-013.15.kangaroo.al8.x86_64-x86_64-with-glibc2.41"
+    },
+    "dataset_definition_sha256": "1acb32d260f97edbea824c719a8f500d3408ac83f30cd9b20f02793cea4337ec",
+    "config": {
+      "ingest_modes": {
+        "rcsb": "experimental",
+        "alphafold": "predicted"
+      },
+      "network_sources": {
+        "rcsb": "https://files.rcsb.org/download/{pdb_id}.pdb",
+        "alphafold": "https://alphafold.ebi.ac.uk/files/{pdb_id}-model_v4.pdb"
+      },
+      "http_timeout_s": 60
+    },
+    "expected_target_count": 50,
+    "completed_at_utc": "2026-10-18T20:36:02.193008+00:00"
+  },
+  "summary": {
+    "expected_targets": 50,
+    "acquired": 40,
+    "measured": 40,
+    "acquisition_failures": 10,
+    "run_status": "incomplete",
+    "verdicts": {
+      "INDETERMINATE": 1,
+      "PASS": 33,
+      "VETO": 6,
+      "not:NOT_MEASURED": 10
+    },
+    "failures": [
+      "AF-P04637-F1: acquisition failed (HTTPError: HTTP Error 404: Not Found)",
+      "AF-P68871-F1: acquisition failed (HTTPError: HTTP Error 404: Not Found)",
+      "AF-P0DTC2-F1: acquisition failed (HTTPError: HTTP Error 404: Not Found)",
+      "AF-Q9Y6K9-F1: acquisition failed (HTTPError: HTTP Error 404: Not Found)",
+      "AF-P21802-F1: acquisition failed (HTTPError: HTTP Error 404: Not Found)",
+      "AF-O15111-F1: acquisition failed (HTTPError: HTTP Error 404: Not Found)",
+      "AF-P62988-F1: acquisition failed (HTTPError: HTTP Error 404: Not Found)",
+      "AF-P02768-F1: acquisition failed (HTTPError: HTTP Error 404: Not Found)",
+      "AF-P10636-F1: acquisition failed (HTTPError: HTTP Error 404: Not Found)",
+      "AF-P00533-F1: acquisition failed (HTTPError: HTTP Error 404: Not Found)"
+    ]
+  },
+  "targets": {
+    "2VB1": {
+      "category": "xray_ultrahigh",
+      "resolution": 0.65,
+      "desc": "Crambin ultra-high res",
+      "acquisition": {
+        "pdb_id": "2VB1",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/2VB1.pdb",
+        "sha256": "cb971a808effff36ae4c2e7030a6608e7a78f55a1c4eb9ccd669872dbd66aa37",
+        "bytes": 447444,
+        "fetched_at_utc": "2026-10-18T20:34:36.518659+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 1323,
+      "det_passed": 10,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.42,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 504
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 129
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 128
+        },
+        "LAW-120": {
+          "observed": 2.8,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 385,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.0,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 127
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1323
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 128
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 117
+        },
+        "LAW-150": {
+          "observed": 4.76,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 105
+        },
+        "LAW-155": {
+          "observed": 6.57,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 1323
+        },
+        "LAW-160": {
+          "observed": 3.88,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 128
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 129
+        },
+        "LAW-182": {
+          "observed": 0.844,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 45
+        },
+        "LAW-195": {
+          "observed": 0.007,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 4
+        },
+        "LAW-200": {
+          "observed": 38.73,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 1323
+        }
+      }
+    },
+    "1EJG": {
+      "category": "xray_ultrahigh",
+      "resolution": 0.54,
+      "desc": "Cholesterol oxidase",
+      "acquisition": {
+        "pdb_id": "1EJG",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1EJG.pdb",
+        "sha256": "115e25b3c80a72b51cda981575f9917309140c5c4249f81bcc0ad245f17c6f18",
+        "bytes": 124416,
+        "fetched_at_utc": "2026-10-18T20:34:36.831515+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 424,
+      "det_passed": 10,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.42,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 180
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 46
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 45
+        },
+        "LAW-120": {
+          "observed": 2.27,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 136,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.0,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 44
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 424
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 45
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 42
+        },
+        "LAW-150": {
+          "observed": 10.81,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 37
+        },
+        "LAW-155": {
+          "observed": 5.78,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 424
+        },
+        "LAW-160": {
+          "observed": 3.85,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 45
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 46
+        },
+        "LAW-182": {
+          "observed": 1.0,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 19
+        },
+        "LAW-195": {
+          "observed": 0.014,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 3
+        },
+        "LAW-200": {
+          "observed": 37.44,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 424
+        }
+      }
+    },
+    "2OV0": {
+      "category": "xray_ultrahigh",
+      "resolution": 0.75,
+      "desc": "Lysozyme ultra-high",
+      "acquisition": {
+        "pdb_id": "2OV0",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/2OV0.pdb",
+        "sha256": "3eafc180aa32668ea7e4cb1e61f22d802e47a7384223cb93e1f473221df2eef4",
+        "bytes": 196668,
+        "fetched_at_utc": "2026-10-18T20:34:37.160232+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 830,
+      "det_passed": 9,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.15,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 413
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 105
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 104
+        },
+        "LAW-120": {
+          "observed": 1.99,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 313,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.97,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 103
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 830
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 104
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 98
+        },
+        "LAW-150": {
+          "observed": 8.24,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 85
+        },
+        "LAW-155": {
+          "observed": 5.9,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 830
+        },
+        "LAW-160": {
+          "observed": 3.86,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 104
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 105
+        },
+        "LAW-182": {
+          "observed": 0.84,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 50
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 45.0,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 830
+        }
+      }
+    },
+    "1I0T": {
+      "category": "xray_ultrahigh",
+      "resolution": 0.6,
+      "desc": "Ferredoxin",
+      "acquisition": {
+        "pdb_id": "1I0T",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1I0T.pdb",
+        "sha256": "d1349a882000fc684600ebc2695d25333dfe5325504bc597aaa022213662ff6b",
+        "bytes": 49572,
+        "fetched_at_utc": "2026-10-18T20:34:37.859922+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "VETO",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 240,
+      "det_passed": 2,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [
+        "LAW-110",
+        "LAW-120",
+        "LAW-125",
+        "LAW-135",
+        "LAW-145",
+        "LAW-150"
+      ],
+      "laws": {
+        "LAW-100": {
+          "observed": null,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "NOT_MEASURED",
+          "method": "advisory_experimental",
+          "sample_size": 0,
+          "reason": "no covalent bond pairs available in core residues"
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 12
+        },
+        "LAW-110": {
+          "observed": null,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_MEASURED",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no sequentially adjacent C-N pairs available"
+        },
+        "LAW-120": {
+          "observed": null,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "NOT_MEASURED",
+          "method": "deterministic",
+          "sample_size": 0,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair",
+          "reason": "no backbone angle samples (no residues with N/CA/C and no valid sequential pairs)"
+        },
+        "LAW-125": {
+          "observed": null,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "NOT_MEASURED",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no consecutive residue triples with complete phi/psi atoms"
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 240
+        },
+        "LAW-135": {
+          "observed": null,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "NOT_MEASURED",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no sequentially adjacent CA-C-N-CA omega pairs available"
+        },
+        "LAW-145": {
+          "observed": null,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "NOT_MEASURED",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no residue with N/CA/C/CB available to check chirality"
+        },
+        "LAW-150": {
+          "observed": null,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "NOT_MEASURED",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no side chain with a measurable chi1 dihedral available"
+        },
+        "LAW-155": {
+          "observed": 14.5,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 240
+        },
+        "LAW-160": {
+          "observed": null,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_MEASURED",
+          "method": "advisory_experimental",
+          "sample_size": 0,
+          "reason": "no sequentially adjacent CA pairs available"
+        },
+        "LAW-170": {
+          "observed": 12,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "VETO",
+          "method": "deterministic",
+          "sample_size": 12
+        },
+        "LAW-182": {
+          "observed": null,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "NOT_APPLICABLE",
+          "method": "heuristic",
+          "sample_size": 0,
+          "reason": "no hydrophobic residues \u2014 no hydrophobic core to measure"
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 28.97,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 240
+        }
+      }
+    },
+    "3NIR": {
+      "category": "xray_ultrahigh",
+      "resolution": 0.48,
+      "desc": "Concanavalin A",
+      "acquisition": {
+        "pdb_id": "3NIR",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/3NIR.pdb",
+        "sha256": "b1ecd8b00fe1b0e2a3cb8f71609d2fe5177a8f3be699d30c58e4109d5e4e5ab5",
+        "bytes": 163701,
+        "fetched_at_utc": "2026-10-18T20:34:37.891195+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 452,
+      "det_passed": 10,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.01,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 180
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 46
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 45
+        },
+        "LAW-120": {
+          "observed": 3.59,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 136,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.0,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 44
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 452
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 45
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 42
+        },
+        "LAW-150": {
+          "observed": 8.11,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 37
+        },
+        "LAW-155": {
+          "observed": 5.93,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 452
+        },
+        "LAW-160": {
+          "observed": 3.88,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 45
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 46
+        },
+        "LAW-182": {
+          "observed": 1.0,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 19
+        },
+        "LAW-195": {
+          "observed": 0.013,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 3
+        },
+        "LAW-200": {
+          "observed": 35.04,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 452
+        }
+      }
+    },
+    "1GCI": {
+      "category": "xray_ultrahigh",
+      "resolution": 0.78,
+      "desc": "Glucose isomerase",
+      "acquisition": {
+        "pdb_id": "1GCI",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1GCI.pdb",
+        "sha256": "67155b6bd0085c6cbf1724082cfee040044a61672be536b93d3a191eac7a1219",
+        "bytes": 717660,
+        "fetched_at_utc": "2026-10-18T20:34:37.947092+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 1966,
+      "det_passed": 9,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.0,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 1041
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 269
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 265
+        },
+        "LAW-120": {
+          "observed": 1.99,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 799,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 2.3,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 261
+        },
+        "LAW-130": {
+          "observed": 1.53,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1966
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 265
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 234
+        },
+        "LAW-150": {
+          "observed": 7.22,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 194
+        },
+        "LAW-155": {
+          "observed": 5.43,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 1966
+        },
+        "LAW-160": {
+          "observed": 3.95,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 265
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 269
+        },
+        "LAW-182": {
+          "observed": 0.588,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 114
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 43.77,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 1966
+        }
+      }
+    },
+    "2ACE": {
+      "category": "xray_ultrahigh",
+      "resolution": 2.5,
+      "desc": "Acetylcholinesterase",
+      "acquisition": {
+        "pdb_id": "2ACE",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/2ACE.pdb",
+        "sha256": "572b0cdd389537d3ccf1da63392ed0d335ad1a2c8ce0f96685b1a907141468b3",
+        "bytes": 400059,
+        "fetched_at_utc": "2026-10-18T20:34:38.822870+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 4143,
+      "det_passed": 10,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.2,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 2064
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 527
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 525
+        },
+        "LAW-120": {
+          "observed": 2.67,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1577,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 1.34,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 523
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 4143
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 525
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 483
+        },
+        "LAW-150": {
+          "observed": 7.46,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 456
+        },
+        "LAW-155": {
+          "observed": 5.98,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 4143
+        },
+        "LAW-160": {
+          "observed": 3.87,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 525
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 527
+        },
+        "LAW-182": {
+          "observed": 0.194,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "VETO",
+          "method": "heuristic",
+          "sample_size": 227
+        },
+        "LAW-195": {
+          "observed": 0.03,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 3
+        },
+        "LAW-200": {
+          "observed": 52.81,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 4143
+        }
+      }
+    },
+    "1BPI": {
+      "category": "xray_ultrahigh",
+      "resolution": 1.09,
+      "desc": "BPTI",
+      "acquisition": {
+        "pdb_id": "1BPI",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1BPI.pdb",
+        "sha256": "2289dd009b6eae05ac142836277e23098e178185df9441e2a3b9c1bed7dd75df",
+        "bytes": 81324,
+        "fetched_at_utc": "2026-10-18T20:34:39.159490+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 460,
+      "det_passed": 10,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.84,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 226
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 58
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 57
+        },
+        "LAW-120": {
+          "observed": 3.11,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 172,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.0,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 56
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 460
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 57
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 52
+        },
+        "LAW-150": {
+          "observed": 8.7,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 46
+        },
+        "LAW-155": {
+          "observed": 5.95,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 460
+        },
+        "LAW-160": {
+          "observed": 4.02,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 57
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 58
+        },
+        "LAW-182": {
+          "observed": 0.85,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 20
+        },
+        "LAW-195": {
+          "observed": 0.028,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 3
+        },
+        "LAW-200": {
+          "observed": 48.11,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 460
+        }
+      }
+    },
+    "1TEN": {
+      "category": "xray_medium",
+      "resolution": 1.8,
+      "desc": "Tenascin",
+      "acquisition": {
+        "pdb_id": "1TEN",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1TEN.pdb",
+        "sha256": "5b2165e4e495d05e230c6438a8585966578fc70006ec228ac0a0d8b65d06c73c",
+        "bytes": 114858,
+        "fetched_at_utc": "2026-10-18T20:34:39.488285+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 715,
+      "det_passed": 9,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.1,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 352
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 90
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 89
+        },
+        "LAW-120": {
+          "observed": 3.18,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 266,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 2.27,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 88
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 715
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 88
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 84
+        },
+        "LAW-150": {
+          "observed": 8.75,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 80
+        },
+        "LAW-155": {
+          "observed": 6.13,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 715
+        },
+        "LAW-160": {
+          "observed": 3.9,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 88
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 90
+        },
+        "LAW-182": {
+          "observed": 0.75,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 32
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 41.11,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 715
+        }
+      }
+    },
+    "3LZM": {
+      "category": "xray_medium",
+      "resolution": 1.7,
+      "desc": "T4 lysozyme",
+      "acquisition": {
+        "pdb_id": "3LZM",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/3LZM.pdb",
+        "sha256": "e531a3c16462ebdc0264ef084dd55f6f924bcde5568cb125efcbfaa89d912ab8",
+        "bytes": 153495,
+        "fetched_at_utc": "2026-10-18T20:34:39.605732+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 1309,
+      "det_passed": 9,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.45,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 645
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 164
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 163
+        },
+        "LAW-120": {
+          "observed": 2.08,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 490,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.62,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 162
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1309
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 163
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 153
+        },
+        "LAW-150": {
+          "observed": 7.97,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 138
+        },
+        "LAW-155": {
+          "observed": 6.18,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 1309
+        },
+        "LAW-160": {
+          "observed": 3.88,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 163
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 164
+        },
+        "LAW-182": {
+          "observed": 0.53,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 66
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 55.15,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 1309
+        }
+      }
+    },
+    "1AKE": {
+      "category": "xray_medium",
+      "resolution": 2.0,
+      "desc": "Adenylate kinase",
+      "acquisition": {
+        "pdb_id": "1AKE",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1AKE.pdb",
+        "sha256": "651e952f55f1317f50f4e82b7f0e99053397032cd8da5b2896f79d0af9f619a9",
+        "bytes": 357777,
+        "fetched_at_utc": "2026-10-18T20:34:39.722928+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 3317,
+      "det_passed": 9,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.29,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 1672
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 428
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 426
+        },
+        "LAW-120": {
+          "observed": 3.25,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1280,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.0,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 424
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 3317
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 426
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 388
+        },
+        "LAW-150": {
+          "observed": 9.71,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 350
+        },
+        "LAW-155": {
+          "observed": 5.97,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 3317
+        },
+        "LAW-160": {
+          "observed": 3.96,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 426
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 428
+        },
+        "LAW-182": {
+          "observed": 0.483,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 178
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 75.38,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 3317
+        }
+      }
+    },
+    "2CBA": {
+      "category": "xray_medium",
+      "resolution": 1.54,
+      "desc": "Carbonic anhydrase",
+      "acquisition": {
+        "pdb_id": "2CBA",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/2CBA.pdb",
+        "sha256": "7862c050b41ed8a867555699c6a0266c7997c06f7552593febf2af9c92c6e5a8",
+        "bytes": 219510,
+        "fetched_at_utc": "2026-10-18T20:34:40.468472+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 2079,
+      "det_passed": 9,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.48,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 1010
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 258
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 256
+        },
+        "LAW-120": {
+          "observed": 3.16,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 770,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.79,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 254
+        },
+        "LAW-130": {
+          "observed": 0.48,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 2079
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 256
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 236
+        },
+        "LAW-150": {
+          "observed": 8.07,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 223
+        },
+        "LAW-155": {
+          "observed": 6.19,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 2079
+        },
+        "LAW-160": {
+          "observed": 3.9,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 256
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 258
+        },
+        "LAW-182": {
+          "observed": 0.451,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 102
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 50.64,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 2079
+        }
+      }
+    },
+    "1HHO": {
+      "category": "xray_medium",
+      "resolution": 2.1,
+      "desc": "Deoxyhemoglobin",
+      "acquisition": {
+        "pdb_id": "1HHO",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1HHO.pdb",
+        "sha256": "f2d60a04ac027f55f20295790197fa31b290fe8ddaca6c1287ce373fcb040ed1",
+        "bytes": 244296,
+        "fetched_at_utc": "2026-10-18T20:34:41.626630+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "VETO",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 2192,
+      "det_passed": 8,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.25,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 1128
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 287
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 285
+        },
+        "LAW-120": {
+          "observed": 3.07,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 857,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 1.06,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 283
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 2192
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 285
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 267
+        },
+        "LAW-150": {
+          "observed": 20.35,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "VETO",
+          "method": "deterministic",
+          "sample_size": 231
+        },
+        "LAW-155": {
+          "observed": 5.86,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 2192
+        },
+        "LAW-160": {
+          "observed": 3.97,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 285
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 287
+        },
+        "LAW-182": {
+          "observed": 0.638,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 138
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 49.89,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 2192
+        }
+      }
+    },
+    "3PGK": {
+      "category": "xray_medium",
+      "resolution": 2.5,
+      "desc": "Phosphoglycerate kinase",
+      "acquisition": {
+        "pdb_id": "3PGK",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/3PGK.pdb",
+        "sha256": "32abf08811f5a2e088cc0839a984bfd7cdf638d093dd59d9802de19ced89ba53",
+        "bytes": 294759,
+        "fetched_at_utc": "2026-10-18T20:34:41.788680+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "VETO",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 3145,
+      "det_passed": 7,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.05,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 1623
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 415
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 414
+        },
+        "LAW-120": {
+          "observed": 3.26,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1243,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 21.79,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "VETO",
+          "method": "deterministic",
+          "sample_size": 413
+        },
+        "LAW-130": {
+          "observed": 5.72,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 3145
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 414
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 378
+        },
+        "LAW-150": {
+          "observed": 38.21,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "VETO",
+          "method": "deterministic",
+          "sample_size": 335
+        },
+        "LAW-155": {
+          "observed": 5.72,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 3145
+        },
+        "LAW-160": {
+          "observed": 3.99,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 414
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 415
+        },
+        "LAW-182": {
+          "observed": 0.155,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "VETO",
+          "method": "heuristic",
+          "sample_size": 187
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 73.13,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 3145
+        }
+      }
+    },
+    "1GFL": {
+      "category": "xray_medium",
+      "resolution": 1.9,
+      "desc": "GFP",
+      "acquisition": {
+        "pdb_id": "1GFL",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1GFL.pdb",
+        "sha256": "60eb370ad1a2c7c63382399d8655e0448fc29acc2a436e1a6112a5d599390d6f",
+        "bytes": 360126,
+        "fetched_at_utc": "2026-10-18T20:34:42.039300+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 3650,
+      "det_passed": 9,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.1,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 1796
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 460
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 458
+        },
+        "LAW-120": {
+          "observed": 1.83,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1374,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 2.19,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 456
+        },
+        "LAW-130": {
+          "observed": 0.55,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 3650
+        },
+        "LAW-135": {
+          "observed": 0.44,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 458
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 418
+        },
+        "LAW-150": {
+          "observed": 16.5,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 400
+        },
+        "LAW-155": {
+          "observed": 6.06,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 3650
+        },
+        "LAW-160": {
+          "observed": 3.88,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 458
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 460
+        },
+        "LAW-182": {
+          "observed": 0.524,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 168
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 56.43,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 3650
+        }
+      }
+    },
+    "1MBO": {
+      "category": "xray_medium",
+      "resolution": 1.6,
+      "desc": "Myoglobin",
+      "acquisition": {
+        "pdb_id": "1MBO",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1MBO.pdb",
+        "sha256": "d7e07c844714def8303adb88ae4ca90d65950bf5b12aacc9dc4de2e3cee6a70c",
+        "bytes": 160947,
+        "fetched_at_utc": "2026-10-18T20:34:42.305972+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 1227,
+      "det_passed": 9,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.38,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 601
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 153
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 152
+        },
+        "LAW-120": {
+          "observed": 2.42,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 457,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.66,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 151
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1227
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 152
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 142
+        },
+        "LAW-150": {
+          "observed": 5.6,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 125
+        },
+        "LAW-155": {
+          "observed": 6.08,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 1227
+        },
+        "LAW-160": {
+          "observed": 3.91,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 152
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 153
+        },
+        "LAW-182": {
+          "observed": 0.636,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 66
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 48.69,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 1227
+        }
+      }
+    },
+    "2LYZ": {
+      "category": "xray_medium",
+      "resolution": 2.0,
+      "desc": "Hen lysozyme",
+      "acquisition": {
+        "pdb_id": "2LYZ",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/2LYZ.pdb",
+        "sha256": "722b8b6fb7d465ee577ad5af676f94c5a857360f1bee50559ce9c67af6399965",
+        "bytes": 133569,
+        "fetched_at_utc": "2026-10-18T20:34:42.402834+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 1001,
+      "det_passed": 10,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 0.77,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 504
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 129
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 128
+        },
+        "LAW-120": {
+          "observed": 5.33,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 385,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.0,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 127
+        },
+        "LAW-130": {
+          "observed": 2.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1001
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 128
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 117
+        },
+        "LAW-150": {
+          "observed": 14.29,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 105
+        },
+        "LAW-155": {
+          "observed": 6.02,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 1001
+        },
+        "LAW-160": {
+          "observed": 3.8,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 128
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 129
+        },
+        "LAW-182": {
+          "observed": 0.844,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 45
+        },
+        "LAW-195": {
+          "observed": 0.077,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 4
+        },
+        "LAW-200": {
+          "observed": 53.55,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 1001
+        }
+      }
+    },
+    "1PPE": {
+      "category": "xray_medium",
+      "resolution": 2.0,
+      "desc": "Porcine elastase",
+      "acquisition": {
+        "pdb_id": "1PPE",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1PPE.pdb",
+        "sha256": "fe51b4280055199c644214049f59a752e6124d858eaea29c1a2f721fb03ed0bb",
+        "bytes": 203958,
+        "fetched_at_utc": "2026-10-18T20:34:42.482700+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "VETO",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 1851,
+      "det_passed": 9,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.42,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 981
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 252
+        },
+        "LAW-110": {
+          "observed": 9,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "VETO",
+          "method": "deterministic",
+          "sample_size": 244
+        },
+        "LAW-120": {
+          "observed": 7.04,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 740,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 3.39,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 236
+        },
+        "LAW-130": {
+          "observed": 3.24,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1851
+        },
+        "LAW-135": {
+          "observed": 2.46,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 244
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 225
+        },
+        "LAW-150": {
+          "observed": 7.14,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 210
+        },
+        "LAW-155": {
+          "observed": 5.6,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 1851
+        },
+        "LAW-160": {
+          "observed": 7.12,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "FAIL (Advisory)",
+          "method": "advisory_experimental",
+          "sample_size": 244
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 252
+        },
+        "LAW-182": {
+          "observed": 0.571,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 86
+        },
+        "LAW-195": {
+          "observed": 0.059,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 9
+        },
+        "LAW-200": {
+          "observed": 52.44,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 1851
+        }
+      }
+    },
+    "1AON": {
+      "category": "xray_low",
+      "resolution": 3.0,
+      "desc": "GroEL-GroES complex",
+      "acquisition": {
+        "pdb_id": "1AON",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1AON.pdb",
+        "sha256": "5cddcf0ebe222238073f73f4fcc0f579a090389f9c3d152399b4e41ca4a0ed3e",
+        "bytes": 4973076,
+        "fetched_at_utc": "2026-10-18T20:34:42.666929+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 58674,
+      "det_passed": 9,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 0.98,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 31290
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 8015
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 7994
+        },
+        "LAW-120": {
+          "observed": 1.89,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 24003,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 4.41,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 7973
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 58674
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 7994
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 7245
+        },
+        "LAW-150": {
+          "observed": 5.4,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 6125
+        },
+        "LAW-155": {
+          "observed": 5.65,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 58674
+        },
+        "LAW-160": {
+          "observed": 3.88,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 7994
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 8015
+        },
+        "LAW-182": {
+          "observed": 0.088,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "VETO",
+          "method": "heuristic",
+          "sample_size": 3640
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 69.14,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 58674
+        }
+      }
+    },
+    "1FIN": {
+      "category": "xray_low",
+      "resolution": 2.3,
+      "desc": "CDK2-cyclin A",
+      "acquisition": {
+        "pdb_id": "1FIN",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1FIN.pdb",
+        "sha256": "12f7920d265a08c0145152e6f960d942a17dd947585fab0470869111e8136fca",
+        "bytes": 817776,
+        "fetched_at_utc": "2026-10-18T20:35:06.332099+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 8998,
+      "det_passed": 9,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.0,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 4414
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1116
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1112
+        },
+        "LAW-120": {
+          "observed": 2.4,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 3340,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 2.08,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1108
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 8998
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1112
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1066
+        },
+        "LAW-150": {
+          "observed": 16.1,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 994
+        },
+        "LAW-155": {
+          "observed": 6.18,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 8998
+        },
+        "LAW-160": {
+          "observed": 3.92,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 1112
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1116
+        },
+        "LAW-182": {
+          "observed": 0.355,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 512
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 89.12,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 8998
+        }
+      }
+    },
+    "1DDL": {
+      "category": "xray_low",
+      "resolution": 2.7,
+      "desc": "Dihydroorotase",
+      "acquisition": {
+        "pdb_id": "1DDL",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1DDL.pdb",
+        "sha256": "352e1d667bfabde81ddcada73592b0952725a907dd5a154d2e175227c49decd3",
+        "bytes": 441369,
+        "fetched_at_utc": "2026-10-18T20:35:07.514424+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "VETO",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 4385,
+      "det_passed": 8,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 0.92,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 2183
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 560
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 548
+        },
+        "LAW-120": {
+          "observed": 2.16,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1647,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 4.04,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 545
+        },
+        "LAW-130": {
+          "observed": 0.68,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 4385
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 548
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 530
+        },
+        "LAW-150": {
+          "observed": 18.22,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 472
+        },
+        "LAW-155": {
+          "observed": 5.96,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 4385
+        },
+        "LAW-160": {
+          "observed": 3.9,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 548
+        },
+        "LAW-170": {
+          "observed": 9,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "VETO",
+          "method": "deterministic",
+          "sample_size": 560
+        },
+        "LAW-182": {
+          "observed": 0.414,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 255
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 96.39,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 4385
+        }
+      }
+    },
+    "1NEK": {
+      "category": "xray_low",
+      "resolution": 2.6,
+      "desc": "Nek2 kinase",
+      "acquisition": {
+        "pdb_id": "1NEK",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1NEK.pdb",
+        "sha256": "be379bd72d9d0148e664b8592f89e71c4e0cbe2202b8cdbbfb5c4e1a8c08adcd",
+        "bytes": 803439,
+        "fetched_at_utc": "2026-10-18T20:35:08.965859+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 8297,
+      "det_passed": 9,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 0.81,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 4179
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1068
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1064
+        },
+        "LAW-120": {
+          "observed": 2.03,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 3196,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 3.21,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1060
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 8297
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1064
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 975
+        },
+        "LAW-150": {
+          "observed": 5.32,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 884
+        },
+        "LAW-155": {
+          "observed": 5.92,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 8297
+        },
+        "LAW-160": {
+          "observed": 3.95,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 1064
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1068
+        },
+        "LAW-182": {
+          "observed": 0.183,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "VETO",
+          "method": "heuristic",
+          "sample_size": 486
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 79.86,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 8297
+        }
+      }
+    },
+    "1BRS": {
+      "category": "xray_low",
+      "resolution": 2.0,
+      "desc": "Barnase-barstar",
+      "acquisition": {
+        "pdb_id": "1BRS",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1BRS.pdb",
+        "sha256": "0076aae54252706a8c8c02f7b1e71ce2394b0e928b413590b4ac12aade9e8f6c",
+        "bytes": 466965,
+        "fetched_at_utc": "2026-10-18T20:35:09.806378+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 4640,
+      "det_passed": 9,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.07,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 2305
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 588
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 580
+        },
+        "LAW-120": {
+          "observed": 3.33,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1748,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.7,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 572
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 4640
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 580
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 543
+        },
+        "LAW-150": {
+          "observed": 8.32,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 481
+        },
+        "LAW-155": {
+          "observed": 6.03,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 4640
+        },
+        "LAW-160": {
+          "observed": 3.9,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 580
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 588
+        },
+        "LAW-182": {
+          "observed": 0.703,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 223
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 93.91,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 4640
+        }
+      }
+    },
+    "2HBS": {
+      "category": "xray_low",
+      "resolution": 2.05,
+      "desc": "Sickle cell hemoglobin",
+      "acquisition": {
+        "pdb_id": "2HBS",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/2HBS.pdb",
+        "sha256": "b552883a48cd11bf8bc86785cc7ab5e49203e4c0dae922aaf2cc489421cd5c09",
+        "bytes": 871803,
+        "fetched_at_utc": "2026-10-18T20:35:11.384543+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 8760,
+      "det_passed": 9,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 0.76,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 4512
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1148
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1140
+        },
+        "LAW-120": {
+          "observed": 1.71,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 3428,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.18,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1132
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 8760
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1140
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1068
+        },
+        "LAW-150": {
+          "observed": 9.52,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 924
+        },
+        "LAW-155": {
+          "observed": 5.8,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 8760
+        },
+        "LAW-160": {
+          "observed": 3.89,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 1140
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1148
+        },
+        "LAW-182": {
+          "observed": 0.614,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 556
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 78.12,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 8760
+        }
+      }
+    },
+    "5A63": {
+      "category": "cryo_em",
+      "resolution": 3.4,
+      "desc": "TRPV1 channel",
+      "acquisition": {
+        "pdb_id": "5A63",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/5A63.pdb",
+        "sha256": "cc9adb1be03dc8cccf72630bea645d45afaa6e87268aad27108801836b7896f2",
+        "bytes": 915300,
+        "fetched_at_utc": "2026-10-18T20:35:12.210180+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "VETO",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "cryo_em",
+      "atoms": 9646,
+      "det_passed": 7,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 0.78,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 4818
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1223
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1217
+        },
+        "LAW-120": {
+          "observed": 1.96,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 3657,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 2.81,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1211
+        },
+        "LAW-130": {
+          "observed": 0.1,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 9646
+        },
+        "LAW-135": {
+          "observed": 0.25,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1217
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1149
+        },
+        "LAW-150": {
+          "observed": 20.32,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "VETO",
+          "method": "deterministic",
+          "sample_size": 1048
+        },
+        "LAW-155": {
+          "observed": 6.04,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 9646
+        },
+        "LAW-160": {
+          "observed": 3.88,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 1217
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 1223
+        },
+        "LAW-182": {
+          "observed": 0.129,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "VETO",
+          "method": "heuristic",
+          "sample_size": 617
+        },
+        "LAW-195": {
+          "observed": 0.917,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "VETO",
+          "method": "deterministic",
+          "sample_size": 5
+        },
+        "LAW-200": {
+          "observed": 87.47,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 9646
+        }
+      }
+    },
+    "6J6J": {
+      "category": "cryo_em",
+      "resolution": 3.2,
+      "desc": "Human 26S proteasome",
+      "acquisition": {
+        "pdb_id": "6J6J",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/6J6J.pdb",
+        "sha256": "e699b9911536491a0aa4c7267685306f6dd054bfda2cd4875d32fffe23eb4a89",
+        "bytes": 323433,
+        "fetched_at_utc": "2026-10-18T20:35:14.135421+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "cryo_em",
+      "atoms": 3548,
+      "det_passed": 8,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 0.85,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 1840
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 476
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 472
+        },
+        "LAW-120": {
+          "observed": 1.36,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1420,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 2.56,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 468
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 3548
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 472
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 412
+        },
+        "LAW-150": {
+          "observed": 5.23,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 344
+        },
+        "LAW-155": {
+          "observed": 5.71,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 3548
+        },
+        "LAW-160": {
+          "observed": 3.85,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 472
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 476
+        },
+        "LAW-182": {
+          "observed": 0.707,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 164
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 42.28,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 3548
+        }
+      }
+    },
+    "6WLC": {
+      "category": "cryo_em",
+      "resolution": 1.82,
+      "desc": "SARS-CoV-2 nucleocapsid",
+      "acquisition": {
+        "pdb_id": "6WLC",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/6WLC.pdb",
+        "sha256": "b2d6d15fcdbd8fa4edff84a18bc00b8a9abdc75dcc56a909b9f05add1a8fe9c0",
+        "bytes": 1055430,
+        "fetched_at_utc": "2026-10-18T20:35:15.047555+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 5707,
+      "det_passed": 9,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 0.65,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 2740
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 696
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 694
+        },
+        "LAW-120": {
+          "observed": 1.44,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 2084,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.29,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 692
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 5707
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 694
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 652
+        },
+        "LAW-150": {
+          "observed": 6.8,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 618
+        },
+        "LAW-155": {
+          "observed": 6.22,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 5707
+        },
+        "LAW-160": {
+          "observed": 3.86,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 694
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 696
+        },
+        "LAW-182": {
+          "observed": 0.2,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "VETO",
+          "method": "heuristic",
+          "sample_size": 300
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 95.34,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 5707
+        }
+      }
+    },
+    "7K3G": {
+      "category": "cryo_em",
+      "resolution": null,
+      "desc": "SARS-CoV-2 spike closed",
+      "acquisition": {
+        "pdb_id": "7K3G",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/7K3G.pdb",
+        "sha256": "2982f5a386ec27c096d676ec85cbf47081392446231f2787b48ad5b8ce21b62f",
+        "bytes": 2087370,
+        "fetched_at_utc": "2026-10-18T20:35:15.885146+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "nmr",
+      "atoms": 1190,
+      "det_passed": 6,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 0.77,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 615
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 155
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 150
+        },
+        "LAW-120": {
+          "observed": 0.55,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 455,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 3.45,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 145
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1190
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 150
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 150
+        },
+        "LAW-150": {
+          "observed": 51.85,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "FAIL (Advisory)",
+          "method": "advisory_experimental",
+          "sample_size": 135
+        },
+        "LAW-155": {
+          "observed": 5.86,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 1190
+        },
+        "LAW-160": {
+          "observed": 3.82,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 150
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 155
+        },
+        "LAW-182": {
+          "observed": 0.727,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 110
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 45.31,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 1190
+        }
+      }
+    },
+    "3J9I": {
+      "category": "cryo_em",
+      "resolution": 3.3,
+      "desc": "80S ribosome",
+      "acquisition": {
+        "pdb_id": "3J9I",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/3J9I.pdb",
+        "sha256": "f87dc96adccaaaefd2fa2747c2ce0a00cffca33f46bd28c5593f5939eb90ee92",
+        "bytes": 3865968,
+        "fetched_at_utc": "2026-10-18T20:35:17.639265+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "cryo_em",
+      "atoms": 46228,
+      "det_passed": 8,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 2.51,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 23436
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 5978
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 5950
+        },
+        "LAW-120": {
+          "observed": 3.75,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 17878,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 2.36,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 5922
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 46228
+        },
+        "LAW-135": {
+          "observed": 0.24,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 5950
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 5502
+        },
+        "LAW-150": {
+          "observed": 6.18,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 4984
+        },
+        "LAW-155": {
+          "observed": 5.95,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 46228
+        },
+        "LAW-160": {
+          "observed": 3.99,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 5950
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 5978
+        },
+        "LAW-182": {
+          "observed": 0.543,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 2590
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 46.28,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 46228
+        }
+      }
+    },
+    "5T4O": {
+      "category": "cryo_em",
+      "resolution": 6.9,
+      "desc": "Spliceosome",
+      "acquisition": {
+        "pdb_id": "5T4O",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/5T4O.pdb",
+        "sha256": "cec2efd1f123740bee8388abb6ff6569e52f796ad57d430110c321c59a8c1e3a",
+        "bytes": 2337093,
+        "fetched_at_utc": "2026-10-18T20:35:33.786856+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "INDETERMINATE",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "cryo_em",
+      "atoms": 23448,
+      "det_passed": 7,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [
+        "LAW-150"
+      ],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.07,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 18670
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 4778
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 4755
+        },
+        "LAW-120": {
+          "observed": 1.59,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 14288,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 1.99,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 4732
+        },
+        "LAW-130": {
+          "observed": 0.04,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 23448
+        },
+        "LAW-135": {
+          "observed": 0.61,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 4755
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 4336
+        },
+        "LAW-150": {
+          "observed": null,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "NOT_MEASURED",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no side chain with a measurable chi1 dihedral available"
+        },
+        "LAW-155": {
+          "observed": 3.77,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 23448
+        },
+        "LAW-160": {
+          "observed": 3.92,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 4755
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 4778
+        },
+        "LAW-182": {
+          "observed": 0.091,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "VETO",
+          "method": "heuristic",
+          "sample_size": 2352
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 150.62,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 23448
+        }
+      }
+    },
+    "6NB6": {
+      "category": "cryo_em",
+      "resolution": 4.2,
+      "desc": "ABC transporter",
+      "acquisition": {
+        "pdb_id": "6NB6",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/6NB6.pdb",
+        "sha256": "991c1be973ae74f87ec61fd128005cd24302d10e98409a6135337cb735a7d774",
+        "bytes": 2539917,
+        "fetched_at_utc": "2026-10-18T20:35:39.665995+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "cryo_em",
+      "atoms": 23865,
+      "det_passed": 9,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 0.93,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 14163
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 3599
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 3570
+        },
+        "LAW-120": {
+          "observed": 1.14,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 10739,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 1.92,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 3541
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 23865
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 3570
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 3366
+        },
+        "LAW-150": {
+          "observed": 8.96,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1898
+        },
+        "LAW-155": {
+          "observed": 5.08,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 23865
+        },
+        "LAW-160": {
+          "observed": 3.91,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 3570
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 3599
+        },
+        "LAW-182": {
+          "observed": 0.02,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "VETO",
+          "method": "heuristic",
+          "sample_size": 1478
+        },
+        "LAW-195": {
+          "observed": 0.105,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 48
+        },
+        "LAW-200": {
+          "observed": 141.39,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 23865
+        }
+      }
+    },
+    "7JTL": {
+      "category": "cryo_em",
+      "resolution": 2.04,
+      "desc": "SARS-CoV-2 RBD-ACE2",
+      "acquisition": {
+        "pdb_id": "7JTL",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/7JTL.pdb",
+        "sha256": "9d0bd8d6d5c7d82d4f2d0adc9321c50dee9e3f3933226a621671be9818d7e353",
+        "bytes": 330237,
+        "fetched_at_utc": "2026-10-18T20:35:45.459259+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "xray",
+      "atoms": 1622,
+      "det_passed": 10,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 0.77,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 806
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 203
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 199
+        },
+        "LAW-120": {
+          "observed": 1.53,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 601,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 1.03,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 195
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1622
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 199
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 197
+        },
+        "LAW-150": {
+          "observed": 8.15,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 184
+        },
+        "LAW-155": {
+          "observed": 6.19,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 1622
+        },
+        "LAW-160": {
+          "observed": 3.85,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 199
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 203
+        },
+        "LAW-182": {
+          "observed": 0.714,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 83
+        },
+        "LAW-195": {
+          "observed": 0.044,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 7
+        },
+        "LAW-200": {
+          "observed": 77.59,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 1622
+        }
+      }
+    },
+    "1D3Z": {
+      "category": "nmr",
+      "resolution": null,
+      "desc": "Ubiquitin NMR",
+      "acquisition": {
+        "pdb_id": "1D3Z",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1D3Z.pdb",
+        "sha256": "21099cb88231455fdfab4095dddfadcc85cc4213e105cf5f9cfff2ca21993378",
+        "bytes": 1015821,
+        "fetched_at_utc": "2026-10-18T20:35:45.595944+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "nmr",
+      "atoms": 602,
+      "det_passed": 6,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 0.54,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 298
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 76
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 75
+        },
+        "LAW-120": {
+          "observed": 1.41,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 226,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.0,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 74
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 602
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 75
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 70
+        },
+        "LAW-150": {
+          "observed": 4.41,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 68
+        },
+        "LAW-155": {
+          "observed": 6.26,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 602
+        },
+        "LAW-160": {
+          "observed": 3.91,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 75
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 76
+        },
+        "LAW-182": {
+          "observed": 0.964,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 28
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 55.84,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 602
+        }
+      }
+    },
+    "2KOX": {
+      "category": "nmr",
+      "resolution": null,
+      "desc": "GB1 domain NMR",
+      "acquisition": {
+        "pdb_id": "2KOX",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/2KOX.pdb",
+        "sha256": "d7fadf57dbf9a91d46d4246e22f5cfb5caa5aaf9ad15ba43c8e0bcaf093da939",
+        "bytes": 64008873,
+        "fetched_at_utc": "2026-10-18T20:35:50.119606+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "nmr",
+      "atoms": 602,
+      "det_passed": 6,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.92,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 298
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 76
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 75
+        },
+        "LAW-120": {
+          "observed": 3.16,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 226,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 2.7,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 74
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 602
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 75
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 70
+        },
+        "LAW-150": {
+          "observed": 7.35,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 68
+        },
+        "LAW-155": {
+          "observed": 6.16,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 602
+        },
+        "LAW-160": {
+          "observed": 3.93,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 75
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 76
+        },
+        "LAW-182": {
+          "observed": 0.964,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 28
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 41.7,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 602
+        }
+      }
+    },
+    "1GB1": {
+      "category": "nmr",
+      "resolution": null,
+      "desc": "Protein G B1 NMR",
+      "acquisition": {
+        "pdb_id": "1GB1",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1GB1.pdb",
+        "sha256": "26ad823df283b7b0ce384fdb9ab12cf103cacd61fceb12780d8843189a93133a",
+        "bytes": 4197258,
+        "fetched_at_utc": "2026-10-18T20:35:50.513575+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "nmr",
+      "atoms": 436,
+      "det_passed": 6,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 1.24,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 220
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 56
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 55
+        },
+        "LAW-120": {
+          "observed": 0.72,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 166,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.0,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 54
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 436
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 55
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 52
+        },
+        "LAW-150": {
+          "observed": 13.04,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 46
+        },
+        "LAW-155": {
+          "observed": 5.98,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 436
+        },
+        "LAW-160": {
+          "observed": 3.82,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 55
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 56
+        },
+        "LAW-182": {
+          "observed": 0.944,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 18
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 44.86,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 436
+        }
+      }
+    },
+    "2JOF": {
+      "category": "nmr",
+      "resolution": null,
+      "desc": "Trp-cage miniprotein NMR",
+      "acquisition": {
+        "pdb_id": "2JOF",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/2JOF.pdb",
+        "sha256": "2cb2ebc097abed3cd5004c6d5056e1e8e2a47bc9e7f36433bbfcbfe9cf124332",
+        "bytes": 664443,
+        "fetched_at_utc": "2026-10-18T20:35:50.887304+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "nmr",
+      "atoms": 148,
+      "det_passed": 6,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 0.52,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 77
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 20
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 19
+        },
+        "LAW-120": {
+          "observed": 1.8,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 58,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.0,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 18
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 148
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 19
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 17
+        },
+        "LAW-150": {
+          "observed": 40.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "FAIL (Advisory)",
+          "method": "advisory_experimental",
+          "sample_size": 15
+        },
+        "LAW-155": {
+          "observed": 5.5,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 148
+        },
+        "LAW-160": {
+          "observed": 3.9,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 19
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 20
+        },
+        "LAW-182": {
+          "observed": 1.0,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 8
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 29.21,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 148
+        }
+      }
+    },
+    "1L2Y": {
+      "category": "nmr",
+      "resolution": null,
+      "desc": "Villin headpiece NMR",
+      "acquisition": {
+        "pdb_id": "1L2Y",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1L2Y.pdb",
+        "sha256": "5d1bbb545a312dfff1ae1e64b6d8addecb2f561ddc4011aeb5bee9d1dfcd4438",
+        "bytes": 959202,
+        "fetched_at_utc": "2026-10-18T20:35:51.082226+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "nmr",
+      "atoms": 154,
+      "det_passed": 6,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 0.53,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 77
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 20
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 19
+        },
+        "LAW-120": {
+          "observed": 1.88,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 58,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.0,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 18
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 154
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 19
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 17
+        },
+        "LAW-150": {
+          "observed": 41.18,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "FAIL (Advisory)",
+          "method": "advisory_experimental",
+          "sample_size": 17
+        },
+        "LAW-155": {
+          "observed": 5.95,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 154
+        },
+        "LAW-160": {
+          "observed": 3.89,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 19
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 20
+        },
+        "LAW-182": {
+          "observed": 1.0,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 8
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 31.49,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 154
+        }
+      }
+    },
+    "2N0A": {
+      "category": "nmr",
+      "resolution": null,
+      "desc": "Alpha-synuclein NMR",
+      "acquisition": {
+        "pdb_id": "2N0A",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/2N0A.pdb",
+        "sha256": "cc2aaebd34924b82cc5bcd9c5a491d4f955c005c626378e361343cbe920cf9ed",
+        "bytes": 1665927,
+        "fetched_at_utc": "2026-10-18T20:35:51.202171+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "nmr",
+      "atoms": 10130,
+      "det_passed": 6,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 0.53,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 5420
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1400
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1390
+        },
+        "LAW-120": {
+          "observed": 0.51,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 4180,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 4.28,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 1380
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 10130
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1390
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 1220
+        },
+        "LAW-150": {
+          "observed": 4.76,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 1030
+        },
+        "LAW-155": {
+          "observed": 5.62,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 10130
+        },
+        "LAW-160": {
+          "observed": 3.89,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 1390
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 1400
+        },
+        "LAW-182": {
+          "observed": 0.0,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "VETO",
+          "method": "heuristic",
+          "sample_size": 550
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 395.05,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "VETO",
+          "method": "heuristic",
+          "sample_size": 10130
+        }
+      }
+    },
+    "1RVS": {
+      "category": "nmr",
+      "resolution": null,
+      "desc": "BPTI NMR",
+      "acquisition": {
+        "pdb_id": "1RVS",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/1RVS.pdb",
+        "sha256": "5203953c7022cfdf6788d6ec6f76d06d6a28dd5b076b5441a08c13a9dce16bb9",
+        "bytes": 293382,
+        "fetched_at_utc": "2026-10-18T20:35:53.278470+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "nmr",
+      "atoms": 85,
+      "det_passed": 6,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 0.76,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 44
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 11
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 10
+        },
+        "LAW-120": {
+          "observed": 0.57,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 31,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.0,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 9
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 85
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 10
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 11
+        },
+        "LAW-150": {
+          "observed": 44.44,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "FAIL (Advisory)",
+          "method": "advisory_experimental",
+          "sample_size": 9
+        },
+        "LAW-155": {
+          "observed": 5.64,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 85
+        },
+        "LAW-160": {
+          "observed": 3.82,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 10
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 11
+        },
+        "LAW-182": {
+          "observed": 1.0,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 6
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 40.89,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 85
+        }
+      }
+    },
+    "2MJB": {
+      "category": "nmr",
+      "resolution": null,
+      "desc": "Amyloid beta NMR",
+      "acquisition": {
+        "pdb_id": "2MJB",
+        "acquisition_status": "acquired",
+        "source": "https://files.rcsb.org/download/2MJB.pdb",
+        "sha256": "547b49a69c29b3f7135e197320f232d3610d9d15fa824f7760da10695d5b57af",
+        "bytes": 2013255,
+        "fetched_at_utc": "2026-10-18T20:35:54.172571+00:00",
+        "detail": null
+      },
+      "measurement_status": "measured",
+      "verdict": "PASS",
+      "coverage": 100.0,
+      "is_experimental": true,
+      "method_type": "nmr",
+      "atoms": 602,
+      "det_passed": 6,
+      "det_total": 15,
+      "contained_law_failures": [],
+      "indeterminate_causes": [],
+      "laws": {
+        "LAW-100": {
+          "observed": 0.87,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 298
+        },
+        "LAW-105": {
+          "observed": 100.0,
+          "threshold": 70.0,
+          "operator": ">=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 76
+        },
+        "LAW-110": {
+          "observed": 0,
+          "threshold": 2.0,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 75
+        },
+        "LAW-120": {
+          "observed": 1.59,
+          "threshold": 18.0,
+          "operator": "<=",
+          "units": "\u00b0",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 226,
+          "contained": true,
+          "containment_reason": "measurement-definition-repair"
+        },
+        "LAW-125": {
+          "observed": 0.0,
+          "threshold": 5.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 74
+        },
+        "LAW-130": {
+          "observed": 0.0,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "clashes/1000 atoms",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 602
+        },
+        "LAW-135": {
+          "observed": 0.0,
+          "threshold": 3.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 75
+        },
+        "LAW-145": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "deterministic",
+          "sample_size": 70
+        },
+        "LAW-150": {
+          "observed": 5.88,
+          "threshold": 20.0,
+          "operator": "<=",
+          "units": "%",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 68
+        },
+        "LAW-155": {
+          "observed": 6.13,
+          "threshold": 2.0,
+          "operator": ">=",
+          "units": "V",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 602
+        },
+        "LAW-160": {
+          "observed": 3.93,
+          "threshold": 4.5,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 75
+        },
+        "LAW-170": {
+          "observed": 0,
+          "threshold": 0.0,
+          "operator": "=",
+          "units": "count",
+          "status": "PASS",
+          "method": "advisory_experimental",
+          "sample_size": 76
+        },
+        "LAW-182": {
+          "observed": 0.964,
+          "threshold": 0.3,
+          "operator": ">=",
+          "units": "ratio",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 28
+        },
+        "LAW-195": {
+          "observed": null,
+          "threshold": 0.2,
+          "operator": "<=",
+          "units": "\u00c5",
+          "status": "NOT_APPLICABLE",
+          "method": "deterministic",
+          "sample_size": 0,
+          "reason": "no CYS-SG pair within 3.0 \u00c5 \u2014 no applicable disulfide to measure"
+        },
+        "LAW-200": {
+          "observed": 51.15,
+          "threshold": 300.0,
+          "operator": "<=",
+          "units": "\u00c5\u00b3/atom",
+          "status": "PASS",
+          "method": "heuristic",
+          "sample_size": 602
+        }
+      }
+    },
+    "AF-P04637-F1": {
+      "category": "predicted",
+      "resolution": null,
+      "desc": "p53 tumor suppressor",
+      "acquisition": {
+        "pdb_id": "AF-P04637-F1",
+        "acquisition_status": "failed",
+        "source": "https://alphafold.ebi.ac.uk/files/AF-P04637-F1-model_v4.pdb",
+        "sha256": null,
+        "bytes": null,
+        "fetched_at_utc": null,
+        "detail": "HTTPError: HTTP Error 404: Not Found"
+      },
+      "measurement_status": "NOT_MEASURED",
+      "verdict": null,
+      "laws": null,
+      "detail": "HTTPError: HTTP Error 404: Not Found"
+    },
+    "AF-P68871-F1": {
+      "category": "predicted",
+      "resolution": null,
+      "desc": "Hemoglobin beta",
+      "acquisition": {
+        "pdb_id": "AF-P68871-F1",
+        "acquisition_status": "failed",
+        "source": "https://alphafold.ebi.ac.uk/files/AF-P68871-F1-model_v4.pdb",
+        "sha256": null,
+        "bytes": null,
+        "fetched_at_utc": null,
+        "detail": "HTTPError: HTTP Error 404: Not Found"
+      },
+      "measurement_status": "NOT_MEASURED",
+      "verdict": null,
+      "laws": null,
+      "detail": "HTTPError: HTTP Error 404: Not Found"
+    },
+    "AF-P0DTC2-F1": {
+      "category": "predicted",
+      "resolution": null,
+      "desc": "SARS-CoV-2 spike",
+      "acquisition": {
+        "pdb_id": "AF-P0DTC2-F1",
+        "acquisition_status": "failed",
+        "source": "https://alphafold.ebi.ac.uk/files/AF-P0DTC2-F1-model_v4.pdb",
+        "sha256": null,
+        "bytes": null,
+        "fetched_at_utc": null,
+        "detail": "HTTPError: HTTP Error 404: Not Found"
+      },
+      "measurement_status": "NOT_MEASURED",
+      "verdict": null,
+      "laws": null,
+      "detail": "HTTPError: HTTP Error 404: Not Found"
+    },
+    "AF-Q9Y6K9-F1": {
+      "category": "predicted",
+      "resolution": null,
+      "desc": "NF-kB essential modulator",
+      "acquisition": {
+        "pdb_id": "AF-Q9Y6K9-F1",
+        "acquisition_status": "failed",
+        "source": "https://alphafold.ebi.ac.uk/files/AF-Q9Y6K9-F1-model_v4.pdb",
+        "sha256": null,
+        "bytes": null,
+        "fetched_at_utc": null,
+        "detail": "HTTPError: HTTP Error 404: Not Found"
+      },
+      "measurement_status": "NOT_MEASURED",
+      "verdict": null,
+      "laws": null,
+      "detail": "HTTPError: HTTP Error 404: Not Found"
+    },
+    "AF-P21802-F1": {
+      "category": "predicted",
+      "resolution": null,
+      "desc": "FGFR2",
+      "acquisition": {
+        "pdb_id": "AF-P21802-F1",
+        "acquisition_status": "failed",
+        "source": "https://alphafold.ebi.ac.uk/files/AF-P21802-F1-model_v4.pdb",
+        "sha256": null,
+        "bytes": null,
+        "fetched_at_utc": null,
+        "detail": "HTTPError: HTTP Error 404: Not Found"
+      },
+      "measurement_status": "NOT_MEASURED",
+      "verdict": null,
+      "laws": null,
+      "detail": "HTTPError: HTTP Error 404: Not Found"
+    },
+    "AF-O15111-F1": {
+      "category": "predicted",
+      "resolution": null,
+      "desc": "IKK-alpha",
+      "acquisition": {
+        "pdb_id": "AF-O15111-F1",
+        "acquisition_status": "failed",
+        "source": "https://alphafold.ebi.ac.uk/files/AF-O15111-F1-model_v4.pdb",
+        "sha256": null,
+        "bytes": null,
+        "fetched_at_utc": null,
+        "detail": "HTTPError: HTTP Error 404: Not Found"
+      },
+      "measurement_status": "NOT_MEASURED",
+      "verdict": null,
+      "laws": null,
+      "detail": "HTTPError: HTTP Error 404: Not Found"
+    },
+    "AF-P62988-F1": {
+      "category": "predicted",
+      "resolution": null,
+      "desc": "Ubiquitin",
+      "acquisition": {
+        "pdb_id": "AF-P62988-F1",
+        "acquisition_status": "failed",
+        "source": "https://alphafold.ebi.ac.uk/files/AF-P62988-F1-model_v4.pdb",
+        "sha256": null,
+        "bytes": null,
+        "fetched_at_utc": null,
+        "detail": "HTTPError: HTTP Error 404: Not Found"
+      },
+      "measurement_status": "NOT_MEASURED",
+      "verdict": null,
+      "laws": null,
+      "detail": "HTTPError: HTTP Error 404: Not Found"
+    },
+    "AF-P02768-F1": {
+      "category": "predicted",
+      "resolution": null,
+      "desc": "Serum albumin",
+      "acquisition": {
+        "pdb_id": "AF-P02768-F1",
+        "acquisition_status": "failed",
+        "source": "https://alphafold.ebi.ac.uk/files/AF-P02768-F1-model_v4.pdb",
+        "sha256": null,
+        "bytes": null,
+        "fetched_at_utc": null,
+        "detail": "HTTPError: HTTP Error 404: Not Found"
+      },
+      "measurement_status": "NOT_MEASURED",
+      "verdict": null,
+      "laws": null,
+      "detail": "HTTPError: HTTP Error 404: Not Found"
+    },
+    "AF-P10636-F1": {
+      "category": "predicted",
+      "resolution": null,
+      "desc": "Tau protein",
+      "acquisition": {
+        "pdb_id": "AF-P10636-F1",
+        "acquisition_status": "failed",
+        "source": "https://alphafold.ebi.ac.uk/files/AF-P10636-F1-model_v4.pdb",
+        "sha256": null,
+        "bytes": null,
+        "fetched_at_utc": null,
+        "detail": "HTTPError: HTTP Error 404: Not Found"
+      },
+      "measurement_status": "NOT_MEASURED",
+      "verdict": null,
+      "laws": null,
+      "detail": "HTTPError: HTTP Error 404: Not Found"
+    },
+    "AF-P00533-F1": {
+      "category": "predicted",
+      "resolution": null,
+      "desc": "EGFR",
+      "acquisition": {
+        "pdb_id": "AF-P00533-F1",
+        "acquisition_status": "failed",
+        "source": "https://alphafold.ebi.ac.uk/files/AF-P00533-F1-model_v4.pdb",
+        "sha256": null,
+        "bytes": null,
+        "fetched_at_utc": null,
+        "detail": "HTTPError: HTTP Error 404: Not Found"
+      },
+      "measurement_status": "NOT_MEASURED",
+      "verdict": null,
+      "laws": null,
+      "detail": "HTTPError: HTTP Error 404: Not Found"
+    }
+  }
+}

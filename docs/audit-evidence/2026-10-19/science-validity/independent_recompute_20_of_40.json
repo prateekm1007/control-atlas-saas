@@ -1,0 +1,23 @@
+{
+  "artifact": "independent-recompute-20-of-40",
+  "generated_utc": "2026-10-18T20:49:13.910554+00:00",
+  "claim_under_test": "auditor statement: 'at most 20 of 40 experimental structures could pass'",
+  "method": "apply the CURRENT modality matrix (PIL-CAL-03) to the recorded v23 per-law rows in backend/calibration/calibration_results.json; a structure could pass iff no deterministic law row (after reclassification) has status FAIL or VETO",
+  "reproduce": "python3 -c \"import json; d=json.load(open('backend/calibration/calibration_results.json')); ...\" -- see protocol \u00a71",
+  "result": {
+    "experimental_total": 40,
+    "could_pass": 0,
+    "blocked_by_law120_at_10deg": 38,
+    "blocked_by_law170": 2,
+    "blocked_structures": [
+      "1I0T",
+      "1DDL"
+    ],
+    "recorded_verdict_histogram": {
+      "VETO": 44,
+      "INDETERMINATE": 5,
+      "PASS": 1
+    }
+  },
+  "conclusion": "The 'at most 20 of 40' statement is NOT reproducible from the saved rows and current matrix rules. Corrected figure for the recorded run: 0/40 experimental could pass. See backend/calibration/protocol/evaluation_protocol_v1.md \u00a71."
+}

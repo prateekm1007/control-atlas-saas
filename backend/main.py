@@ -16,7 +16,8 @@ from tos.governance.station_sop import (
     LAW_CANON, LAW_CANON_HASH, STATION_METADATA, TOTAL_LAWS,
     DETERMINISTIC_COUNT, HEURISTIC_COUNT,
     LAW_METHOD_CLASSIFICATIONS, SCORE_DEFINITIONS,
-    ARCHITECTURE_WEIGHTS, BAYESIAN_FORMULA
+    ARCHITECTURE_WEIGHTS, BAYESIAN_FORMULA,
+    compute_law_semantic_hash
 )
 from tos.generation.dispatcher import GenerationDispatcher, SourceUnavailable
 from tos.enrichment.gemini_compiler import get_compiler
@@ -183,6 +184,10 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
             "timestamp_utc": datetime.now(timezone.utc).isoformat(),
             "governance_fingerprint": {
                 "canon_hash": LAW_CANON_HASH,
+                # WP-SCI-1: binds thresholds/units/operators/scopes/
+                # containment and modality rules, so each response can be
+                # checked against the exact law semantics in force.
+                "law_semantic_hash": compute_law_semantic_hash(),
                 "matrix_hash": compute_matrix_hash(),
                 "matrix_schema_version": get_matrix_meta()["schema_version"],
                 "policy_ref": get_matrix_meta()["policy_ref"],

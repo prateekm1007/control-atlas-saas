@@ -1,0 +1,27 @@
+{
+  "artifact": "patch-hash",
+  "generated_utc": "2026-10-18T20:49:13.910554+00:00",
+  "tracked_diff_base": "0eae6d575cd91376588fe6b36d1b9212352df7fc",
+  "tracked_patch_sha256": "548f4e2f38f24626a15209aff11d3b896737b96a56d7df129af15f8bc891943d",
+  "tracked_patch_bytes": 85083,
+  "reproduce": [
+    "git -C <clone> diff 0eae6d575cd91376588fe6b36d1b9212352df7fc",
+    "git -C <clone> diff 0eae6d575cd91376588fe6b36d1b9212352df7fc | sha256sum"
+  ],
+  "untracked_paths": [
+    "backend/calibration/README.md",
+    "backend/calibration/evaluate.py",
+    "backend/calibration/protocol/",
+    "backend/calibration/runner.py",
+    "backend/calibration/runs/",
+    "backend/tests/test_calibration_runner.py",
+    "backend/tests/test_e2e_adjudication.py",
+    "backend/tests/test_law_120_correction.py",
+    "backend/tests/test_law_160_correction.py",
+    "backend/tests/test_law_semantic_hash.py",
+    "backend/tests/test_status_semantics.py",
+    "docs/audit-evidence/2026-10-19/science-validity/",
+    "governance/law_semantic.sha256"
+  ],
+  "untracked_note": "new files (calibration runner/protocol/runs, tests, pins) are committed directly; per-file SHA-256s are recorded in the committed MANIFEST.sha256"
+}

@@ -1,0 +1,32 @@
+{
+  "runner_version": "v24-runner/1.0.0",
+  "run_type": "diagnostic",
+  "purpose": "Document corrected-metric distributions (WP-SCI-1). NOT a threshold validation: thresholds may only be re-validated via backend/calibration/protocol/evaluation_protocol_v1.md.",
+  "run_timestamp_utc": "2026-10-18T20:34:35.876655+00:00",
+  "code_sha": "0eae6d575cd91376588fe6b36d1b9212352df7fc",
+  "code_sha_source": "git rev-parse HEAD of the repository containing this runner",
+  "backend_version": "22.5.3",
+  "policy_binding": {
+    "canon_hash": "6a9cd4b4349b81de",
+    "law_semantic_hash": "3f49a7b5605e17dcf26bcd114713ad651cdc2279d684f1c681943eefa0f4379a",
+    "modality_matrix_sha256": "ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4",
+    "law_registry_sha256": "24e0761169990f16bddf73a84edf0f6092b496f60e80e7973e9685351d00ba15"
+  },
+  "environment": {
+    "python": "3.12.15",
+    "platform": "Linux-5.10.134-013.15.kangaroo.al8.x86_64-x86_64-with-glibc2.41"
+  },
+  "dataset_definition_sha256": "1acb32d260f97edbea824c719a8f500d3408ac83f30cd9b20f02793cea4337ec",
+  "config": {
+    "ingest_modes": {
+      "rcsb": "experimental",
+      "alphafold": "predicted"
+    },
+    "network_sources": {
+      "rcsb": "https://files.rcsb.org/download/{pdb_id}.pdb",
+      "alphafold": "https://alphafold.ebi.ac.uk/files/{pdb_id}-model_v4.pdb"
+    },
+    "http_timeout_s": 60
+  },
+  "expected_target_count": 50
+}

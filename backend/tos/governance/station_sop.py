@@ -97,8 +97,131 @@ IDEAL_TABLE = {"N-CA": 1.470, "CA-C": 1.525, "C-O": 1.231, "C-N": 1.329, "CA-CB"
 STANDARD_RESIDUES = {"ALA","ARG","ASN","ASP","CYS","GLN","GLU","GLY","HIS","ILE","LEU","LYS","MET","PHE","PRO","SER","THR","TRP","TYR","VAL"}
 HYDROPHOBIC_RESIDUES = {"ALA","VAL","ILE","LEU","MET","PHE","TRP","PRO"}
 
+# ═══════════════════════════════════════════════════════════════════════════
+# WP-SCI-1: Measurement-status vocabulary (Constitution §4; directive §2)
+#
+# Every law row carries exactly one of these statuses:
+#   PASS               measured and within threshold
+#   VETO               measured deterministic violation
+#   FAIL               measured failure of a non-deterministic check
+#   NOT_MEASURED       empty sample — nothing was measurable (never a zero,
+#                      never a favorable PASS)
+#   NOT_APPLICABLE     the law's scope does not apply to this structure
+#                      (e.g. LAW-195 with no disulfide pair) — recorded,
+#                      not counted as passed, not a violation
+#   MEASUREMENT_FAILED the measurement attempt itself failed (acquisition,
+#                      tooling) — an explicit non-success state
+# A missing mandatory measurement (NOT_MEASURED / MEASUREMENT_FAILED on a
+# deterministic law) prevents an authoritative PASS; the adjudicator yields
+# INDETERMINATE unless an independent measured VETO exists.
+# ═══════════════════════════════════════════════════════════════════════════
+STATUS_MEASURED_PASS        = "PASS"
+STATUS_MEASURED_VETO        = "VETO"
+STATUS_MEASURED_FAIL        = "FAIL"
+STATUS_NOT_MEASURED         = "NOT_MEASURED"
+STATUS_NOT_APPLICABLE       = "NOT_APPLICABLE"
+STATUS_MEASUREMENT_FAILED   = "MEASUREMENT_FAILED"
+
+BLOCKING_STATUSES = {STATUS_MEASURED_VETO, STATUS_MEASURED_FAIL}
+# Non-success states that block an authoritative PASS without claiming a
+# physical violation:
+INDETERMINATE_CAUSE_STATUSES = {STATUS_NOT_MEASURED, STATUS_MEASUREMENT_FAILED}
+# States that neither pass nor veto:
+NON_PARTICIPATING_STATUSES = {STATUS_NOT_APPLICABLE}
+
+# ═══════════════════════════════════════════════════════════════════════════
+# WP-SCI-1: Law containment registry (directive §1)
+#
+# A contained law is one whose measurement definition or threshold is under
+# repair and has not been re-validated by an independent calibration and
+# validation protocol. A contained law CANNOT independently issue an
+# authoritative VETO: if its failure would be the only blocking evidence,
+# the adjudicator returns INDETERMINATE with explicit containment
+# provenance instead of PASS or VETO. Containment is narrow, explicit,
+# recorded, and lifted only by a reviewed policy change once the lift
+# condition is met with evidence.
+#
+# LAW_CANON above remains byte-identical (canon hash 6a9cd4b4349b81de is
+# unchanged); containment is a separate, auditable policy layer.
+# ═══════════════════════════════════════════════════════════════════════════
+LAW_CONTAINMENT = {
+    "LAW-120": {
+        "status": "contained",
+        "reason": "measurement-definition-repair",
+        "detail": (
+            "Peptide O-C-N angle previously measured O(i)-C(i)-N(i) using the "
+            "same residue's amide nitrogen; corrected to O(i)-C(i)-N(i+1) over "
+            "valid sequential pairs (WP-SCI-1). The pinned 18.0 deg threshold "
+            "was selected from the uncorrected metric on the v23 cohort and is "
+            "NOT validated for the corrected metric."
+        ),
+        "recorded": "2026-10-19",
+        "lift_condition": (
+            "v24 diagnostic calibration recorded AND independent validation "
+            "protocol (backend/calibration/protocol/evaluation_protocol_v1.md) "
+            "acceptance criteria met on the held-out set AND reviewed policy "
+            "update lifting containment"
+        ),
+        "effect": (
+            "a measured LAW-120 VETO/FAIL alone cannot produce an authoritative "
+            "VETO; verdict becomes INDETERMINATE with containment provenance"
+        ),
+    },
+}
+
+CONTAINED_LAWS = {lid for lid, c in LAW_CONTAINMENT.items() if c.get("status") == "contained"}
+
+
 def compute_canon_hash():
     s = "".join([f"{k}|{LAW_METHOD_CLASSIFICATIONS[k]}" for k in sorted(LAW_CANON.keys())])
     return _hashlib.sha256(s.encode()).hexdigest()[:16]
 
 LAW_CANON_HASH = compute_canon_hash()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# WP-SCI-1: Semantic law hash (directive §6)
+#
+# The legacy canon hash above binds only sorted law IDs and method
+# classifications — a threshold or measurement-definition change does not
+# move it. compute_law_semantic_hash() binds MEANING: per-law IDs, titles,
+# thresholds, operators, units, scopes, types, method classifications,
+# containment records, the pinned ideal/sigma geometry tables, and the raw
+# bytes digest of the modality-specific enforcement matrix (PIL-CAL-03).
+#
+# CI pins this digest (governance/law_semantic.sha256). Any meaning or
+# threshold drift changes the digest and fails the gate until a reviewed
+# update re-pins it. Historical results remain bound to their originally
+# recorded policy hashes and are never reinterpreted under new semantics.
+# ═══════════════════════════════════════════════════════════════════════════
+def compute_law_semantic_hash() -> str:
+    import json as _json
+    from tos.governance.modality_matrix import compute_matrix_hash as _mmh
+
+    fingerprint = {
+        "schema": "law-semantic-fingerprint/1.0.0",
+        "laws": [
+            {
+                "id": lid,
+                "title": LAW_CANON[lid]["title"],
+                "threshold": LAW_CANON[lid]["threshold"],
+                "operator": LAW_CANON[lid]["operator"],
+                "unit": LAW_CANON[lid]["unit"],
+                "scope": LAW_CANON[lid]["scope"],
+                "type": LAW_CANON[lid]["type"],
+                "method_class": LAW_METHOD_CLASSIFICATIONS[lid],
+                "category": LAW_CATEGORIES[lid],
+                "containment": LAW_CONTAINMENT.get(lid),
+            }
+            for lid in sorted(LAW_CANON.keys())
+        ],
+        "ideal_table": {k: IDEAL_TABLE[k] for k in sorted(IDEAL_TABLE)},
+        "sigma_table": {k: SIGMA_TABLE[k] for k in sorted(SIGMA_TABLE)},
+        "modality_matrix_sha256": _mmh(),
+        "status_vocabulary": sorted([
+            STATUS_MEASURED_PASS, STATUS_MEASURED_VETO, STATUS_MEASURED_FAIL,
+            STATUS_NOT_MEASURED, STATUS_NOT_APPLICABLE, STATUS_MEASUREMENT_FAILED,
+        ]),
+    }
+    canonical = _json.dumps(fingerprint, sort_keys=True, separators=(",", ":"))
+    return _hashlib.sha256(canonical.encode("utf-8")).hexdigest()

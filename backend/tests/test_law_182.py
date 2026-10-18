@@ -80,7 +80,9 @@ class TestLaw182:
         assert res["sample"] == 5
 
     def test_no_hydrophobic_residues(self):
-        """Structure with only GLY/SER → no hydrophobic → ratio 1.0 → PASS."""
+        """Structure with only GLY/SER → no hydrophobic core exists.
+        WP-SCI-1: the law does not apply — NOT_APPLICABLE, not a
+        fabricated 1.0-ratio PASS of a measurement never taken."""
         atoms = [
             _make_atom("N",  "N", [0, 0, 0],  res_name="GLY", res_seq=1),
             _make_atom("CA", "C", [1.47, 0, 0], res_name="GLY", res_seq=1),
@@ -91,8 +93,8 @@ class TestLaw182:
         ]
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
         res = results["LAW-182"]
-        assert res["status"] == "PASS"
-        assert res["observed"] == 1.0
+        assert res["status"] == "NOT_APPLICABLE"
+        assert res["observed"] is None
         assert res["sample"] == 0
 
     def test_multichain_worst_governs(self):

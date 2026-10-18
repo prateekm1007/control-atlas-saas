@@ -69,11 +69,16 @@ class TestAdjudicateBasicVerdicts:
         result = adjudicate_laws(inp)
         assert result.verdict == "PASS"
 
-    def test_empty_measurements_returns_veto(self):
-        """No measurements → all laws default to FAIL → VETO."""
+    def test_empty_measurements_is_not_authoritative(self):
+        """WP-SCI-1: no measurements -> every law NOT_MEASURED -> the verdict
+        is an honest INDETERMINATE, never a fabricated VETO or PASS."""
         inp = _make_input(measurements={}, coverage=100.0)
         result = adjudicate_laws(inp)
-        assert result.verdict == "VETO"
+        assert result.verdict == "INDETERMINATE"
+        # every deterministic law is an explicit missing-measurement cause;
+        # heuristic laws cannot block a verdict either way.
+        assert len(result.indeterminate_causes) == DETERMINISTIC_COUNT
+        assert result.contained_law_failures == []
 
     def test_low_coverage_returns_indeterminate(self):
         inp = _make_input(measurements=_all_passing_measurements(), coverage=5.0)
@@ -183,31 +188,65 @@ class TestAdjudicateResultStructure:
 class TestComputeVerdict:
 
     def test_pass_with_no_failures(self):
-        rows = [{"method": "deterministic", "status": "PASS"}]
-        assert _compute_verdict(rows, 100.0) == "PASS"
+        rows = [{"law_id": "LAW-105", "method": "deterministic", "status": "PASS"}]
+        assert _compute_verdict(rows, 100.0) == ("PASS", [], [])
 
     def test_veto_with_deterministic_fail(self):
-        rows = [{"method": "deterministic", "status": "FAIL"}]
-        assert _compute_verdict(rows, 100.0) == "VETO"
+        rows = [{"law_id": "LAW-110", "method": "deterministic", "status": "FAIL"}]
+        assert _compute_verdict(rows, 100.0) == ("VETO", [], [])
 
     def test_veto_with_deterministic_veto_status(self):
-        rows = [{"method": "deterministic", "status": "VETO"}]
-        assert _compute_verdict(rows, 100.0) == "VETO"
+        rows = [{"law_id": "LAW-160", "method": "deterministic", "status": "VETO"}]
+        assert _compute_verdict(rows, 100.0) == ("VETO", [], [])
 
     def test_indeterminate_on_low_coverage(self):
-        rows = [{"method": "deterministic", "status": "PASS"}]
-        assert _compute_verdict(rows, 1.0) == "INDETERMINATE"
+        rows = [{"law_id": "LAW-105", "method": "deterministic", "status": "PASS"}]
+        assert _compute_verdict(rows, 1.0) == ("INDETERMINATE", [], [])
 
     def test_advisory_fail_does_not_veto(self):
         rows = [
-            {"method": "deterministic", "status": "PASS"},
-            {"method": "advisory_experimental", "status": "FAIL"},
+            {"law_id": "LAW-105", "method": "deterministic", "status": "PASS"},
+            {"law_id": "LAW-100", "method": "advisory_experimental", "status": "FAIL"},
         ]
-        assert _compute_verdict(rows, 100.0) == "PASS"
+        assert _compute_verdict(rows, 100.0) == ("PASS", [], [])
 
     def test_heuristic_fail_does_not_veto(self):
         rows = [
-            {"method": "deterministic", "status": "PASS"},
-            {"method": "heuristic", "status": "FAIL"},
+            {"law_id": "LAW-105", "method": "deterministic", "status": "PASS"},
+            {"law_id": "LAW-182", "method": "heuristic", "status": "FAIL"},
         ]
-        assert _compute_verdict(rows, 100.0) == "PASS"
+        assert _compute_verdict(rows, 100.0) == ("PASS", [], [])
+
+    # ── WP-SCI-1: missing-measurement and containment semantics ──────
+
+    def test_not_measured_blocks_authoritative_pass(self):
+        """A deterministic NOT_MEASURED row must prevent a PASS."""
+        rows = [
+            {"law_id": "LAW-105", "method": "deterministic", "status": "PASS"},
+            {"law_id": "LAW-120", "method": "deterministic", "status": "NOT_MEASURED"},
+        ]
+        verdict, contained, causes = _compute_verdict(rows, 100.0)
+        assert verdict == "INDETERMINATE"
+        assert causes == ["LAW-120"]
+        assert contained == []
+
+    def test_measurement_failed_blocks_authoritative_pass(self):
+        rows = [
+            {"law_id": "LAW-105", "method": "deterministic", "status": "PASS"},
+            {"law_id": "LAW-130", "method": "deterministic", "status": "MEASUREMENT_FAILED"},
+        ]
+        verdict, _, causes = _compute_verdict(rows, 100.0)
+        assert verdict == "INDETERMINATE"
+        assert causes == ["LAW-130"]
+
+    def test_not_applicable_neither_passes_nor_vetoes(self):
+        """LAW-195 with no disulfide pair is recorded, not counted as a
+        pass, and does not block the verdict by itself."""
+        rows = [
+            {"law_id": "LAW-105", "method": "deterministic", "status": "PASS"},
+            {"law_id": "LAW-195", "method": "deterministic", "status": "NOT_APPLICABLE"},
+        ]
+        verdict, contained, causes = _compute_verdict(rows, 100.0)
+        assert verdict == "PASS"
+        assert contained == []
+        assert causes == []
