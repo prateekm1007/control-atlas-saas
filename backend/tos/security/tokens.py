@@ -158,13 +158,17 @@ def _increment_rate_counter(api_key: str) -> None:
 
 # ── Original B.1 public API (signatures unchanged) ───────────────────────────
 
-def create_refinement_token(audit_id: str, user_email: Optional[str] = None) -> str:
+def create_refinement_token(audit_id: str, user_email: Optional[str] = None,
+                            extra_claims: Optional[Dict] = None) -> str:
     """
     Generate secure callback token for refinement re-upload.
 
     Args:
         audit_id: Original audit ID from failed/INDETERMINATE verdict
         user_email: Optional email for tracking
+        extra_claims: Optional additional claims (e.g. created_by_key_hash
+            for WP-2 key-scoped history). Protected base claims cannot be
+            overwritten.
 
     Returns:
         JWT token string (valid for 7 days, single-use)
@@ -183,6 +187,11 @@ def create_refinement_token(audit_id: str, user_email: Optional[str] = None) -> 
         "version":    "1.0",
         "nonce":      nonce
     }
+
+    # WP-2: merge caller-supplied claims; base claims always win.
+    for k, v in (extra_claims or {}).items():
+        if k not in payload:
+            payload[k] = v
 
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 

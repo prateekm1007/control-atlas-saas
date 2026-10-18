@@ -1844,30 +1844,21 @@ with tab_history:
     _hist_col1, _hist_col2 = st.columns([3, 1])
     with _hist_col1:
         _hist_identifier = st.text_input(
-            "Email or IP",
+            "Email",
             key="hist_identifier",
-            placeholder="you@institution.edu  or  your IP address",
-            help="Use the same email you provided when submitting refinement jobs"
+            placeholder="you@institution.edu",
+            help="Use the same email you provided when submitting refinement jobs. History is scoped to your API key (WP-2)."
         )
-    with _hist_col2:
-        st.write("")
-        st.write("")
-        _hist_use_ip = st.checkbox("Use my IP", key="hist_use_ip",
-                                   help="Look up history by IP address instead of email")
 
     if st.button("🔍 Load History", key="hist_load_btn", type="primary"):
-        if not _hist_identifier and not _hist_use_ip:
-            st.warning("Enter an email address or check 'Use my IP'")
+        if not _hist_identifier:
+            st.warning("Enter an email address")
         else:
             with st.spinner("Loading refinement history..."):
                 try:
-                    if _hist_use_ip:
-                        # Get client IP via a simple echo endpoint or use placeholder
-                        _hist_resp = api("GET", "/history/ip/client")
-                    else:
-                        import urllib.parse
-                        _encoded = urllib.parse.quote(_hist_identifier, safe="")
-                        _hist_resp = api("GET", f"/history/{_encoded}")
+                    import urllib.parse
+                    _encoded = urllib.parse.quote(_hist_identifier, safe="")
+                    _hist_resp = api("GET", f"/history/{_encoded}")
 
                     if _hist_resp and _hist_resp.get("status") == "success":
                         st.session_state["history_data"] = _hist_resp

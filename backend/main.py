@@ -97,7 +97,13 @@ def _emit_telemetry(event: str, data: dict) -> None:
 
 
 app = FastAPI(title="Toscanini OS", version=STATION_METADATA["version"])
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# WP-2: CORS origins come from ALLOWED_ORIGINS (comma-separated).
+# An empty/missing value allows NO cross-origin browser access (fail-closed).
+_ALLOWED_ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+if not _ALLOWED_ORIGINS:
+    logger.warning("ALLOWED_ORIGINS not set — cross-origin browser access is disabled (fail-closed)")
+app.add_middleware(CORSMiddleware, allow_origins=_ALLOWED_ORIGINS, allow_methods=["*"], allow_headers=["*"])
 
 def _sanitize_for_json(obj):
     import numpy as _np
@@ -335,14 +341,11 @@ async def batch_ingest(
 
     return BatchResponse(results=response_results, summary=summary)
 
-@app.get("/health")
-def health(): return {"status": "operational", "version": STATION_METADATA["version"]}
-
 @app.get("/laws")
 def get_laws(): return {"laws": LAW_CANON, "total_laws": TOTAL_LAWS, "deterministic_count": DETERMINISTIC_COUNT}
 
 @app.get("/nkg")
-def get_nkg_records():
+def get_nkg_records(_auth=Depends(verify_api_key)):
     try:
         nkg = get_nkg()
         records = nkg.read_records(limit=50)
@@ -354,7 +357,7 @@ def get_nkg_records():
 def get_definitions(): return SCORE_DEFINITIONS
 
 @app.post("/search")
-async def search(query: str = Form(...)):
+async def search(query: str = Form(...), _auth=Depends(verify_api_key)):
     from tos.discovery.resolver import DiscoveryResolver
     results = DiscoveryResolver.resolve(query)
     return {"results": results, "count": len(results)}
@@ -378,14 +381,21 @@ async def get_original_pdb(audit_id: str, _auth=Depends(verify_api_key)):
 
 @app.post("/refinement/token")
 async def generate_refinement_token(
+    request: Request,
     audit_id: str = Form(...),
     user_email: str = Form(""),
     _auth=Depends(verify_api_key)
 ):
-    """Generate a single-use refinement callback token for a given audit_id."""
+    """Generate a single-use refinement callback token for a given audit_id.
+
+    WP-2: the caller's key hash is embedded in the token claims so the
+    resulting comparison record is key-scoped for /history lookups.
+    """
     from tos.security.tokens import create_refinement_token
     try:
-        token = create_refinement_token(audit_id, user_email)
+        _caller_key = request.headers.get("X-API-Key", "")
+        extra = {"created_by_key_hash": hash_key(_caller_key)} if _caller_key else {}
+        token = create_refinement_token(audit_id, user_email, extra_claims=extra)
         return {"token": token, "audit_id": audit_id}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -444,6 +454,7 @@ async def refinement_callback(
             "refined_audit_id": refined_audit_id,
             "uploaded_at": datetime.now(timezone.utc).isoformat(),
             "user_email": user_email,
+            "created_by_key_hash": payload.get("created_by_key_hash"),  # WP-2 key-scoped history
             "filename": file.filename,
             "file_size_bytes": len(content_bytes),
             "refinement_method": "external",  # Phase B1: user-executed
@@ -493,7 +504,7 @@ async def refinement_callback(
 
 
 @app.get("/comparison/{original_id}/{refined_id}")
-async def get_comparison(original_id: str, refined_id: str):
+async def get_comparison(original_id: str, refined_id: str, _auth=Depends(verify_api_key)):
     """
     Retrieve stored comparison metadata and regenerate comparison analysis.
     
@@ -527,7 +538,7 @@ async def get_comparison(original_id: str, refined_id: str):
         return {"status": "error", "message": str(e)}, 500
 
 @app.get("/comparisons/by-original/{original_id}")
-async def list_comparisons_for_original(original_id: str):
+async def list_comparisons_for_original(original_id: str, _auth=Depends(verify_api_key)):
     """
     List all refined audits derived from a given original audit.
     
@@ -607,6 +618,7 @@ async def refinement_submit(
     user_email: str = Form(None),
     file: UploadFile = File(...),
     request: Request = None,
+    _auth=Depends(verify_api_key),
 ):
     """
     Phase B2: Submit structure for managed GPU refinement.
@@ -740,7 +752,7 @@ async def refinement_submit(
 
 
 @app.get("/refinement/status/{job_id}")
-async def refinement_status(job_id: str):
+async def refinement_status(job_id: str, _auth=Depends(verify_api_key)):
     """Poll job state from Redis state manager."""
     try:
         import redis as redis_lib, json, os
@@ -771,7 +783,7 @@ async def refinement_status(job_id: str):
                 "message": "Redis not available (B2 GPU worker not deployed)"}
 
 @app.get("/refinement/jobs/{original_audit_id}")
-async def list_jobs_for_audit(original_audit_id: str):
+async def list_jobs_for_audit(original_audit_id: str, _auth=Depends(verify_api_key)):
     """List all refinement jobs for a given original audit."""
     try:
         import redis as redis_lib, json, os
@@ -838,7 +850,7 @@ async def internal_callback(payload: dict):
 
 
 @app.get("/audit/{audit_id}")
-async def get_stored_audit(audit_id: str):
+async def get_stored_audit(audit_id: str, _auth=Depends(verify_api_key)):
     """Retrieve a previously stored audit result by ID."""
     result = get_audit_result(audit_id)
     if result:
@@ -847,22 +859,26 @@ async def get_stored_audit(audit_id: str):
 
 
 @app.get("/history/{user_email:path}")
-async def get_user_history(user_email: str):
+async def get_user_history(
+    request: Request,
+    user_email: str,
+    _auth=Depends(verify_api_key),
+):
     """
-    Retrieve full refinement history for a registered user (by email).
+    Retrieve refinement history for the CALLING API KEY (key-scoped, WP-2).
 
-    Returns all comparisons submitted by this email, sorted newest first.
-    Each entry includes original_audit_id, refined_audit_id, protocol,
-    verdict change, and timestamps.
-
-    Args:
-        user_email: URL-encoded email address
+    Access model (owner decision: key-scoped): a valid key returns only
+    comparisons created with that same key. The {user_email} path segment
+    is accepted for backward compatibility but does not widen the result
+    set. Comparisons created without a key association (legacy records,
+    anonymous submissions) are NOT returned.
     """
     try:
-        from tos.storage.comparisons import list_user_comparisons
+        from tos.storage.comparisons import list_comparisons_by_key
         from urllib.parse import unquote
         email = unquote(user_email)
-        comparisons = list_user_comparisons(email)
+        caller_key_hash = hash_key(request.headers.get("X-API-Key", ""))
+        comparisons = list_comparisons_by_key(caller_key_hash)
 
         # Enrich each comparison with verdict summary if audit is stored
         enriched = []
@@ -898,33 +914,15 @@ async def get_user_history(user_email: str):
         return {"status": "error", "message": str(e)}
 
 
-@app.get("/history/ip/{client_ip}")
-async def get_ip_history(client_ip: str):
-    """
-    Retrieve refinement history for an anonymous user (by IP).
-
-    Same structure as /history/{user_email} but keyed on IP address.
-    Used by the dashboard when no email was provided at submission.
-    """
-    try:
-        from tos.storage.comparisons import list_user_comparisons
-        # list_user_comparisons filters by user_email field —
-        # anonymous submissions store the IP in that field
-        comparisons = list_user_comparisons(client_ip)
-
-        return {
-            "status":           "success",
-            "client_ip":        client_ip,
-            "refinement_count": len(comparisons),
-            "comparisons":      comparisons,
-        }
-
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+# WP-2: /history/ip/{client_ip} was REMOVED. It was unreachable (declared
+# after /history/{user_email:path}, which captured every path) and it
+# exposed client IP addresses. The owner approved removal in the WP-2 PR
+# (brief §3 WP-2: 'The recommended option is removal, because it exposes
+# IP addresses'). Nothing re-registers it.
 
 
 @app.post("/compare")
-async def compare_audits_endpoint(baseline_id: str = Form(...), refined_id: str = Form(...)):
+async def compare_audits_endpoint(baseline_id: str = Form(...), refined_id: str = Form(...), _auth=Depends(verify_api_key)):
     """Compare two stored audits and return delta analysis."""
     baseline = get_audit_result(baseline_id)
     refined  = get_audit_result(refined_id)
@@ -949,7 +947,7 @@ async def compare_audits_endpoint(baseline_id: str = Form(...), refined_id: str 
 # ── B.6: Usage instrumentation endpoint ───────────────────────────────────────
 
 @app.get("/usage")
-async def get_usage(request: Request):
+async def get_usage(request: Request, _auth=Depends(verify_api_key)):
     """
     Return credit and quota status for the calling API key.
     Called by the dashboard sidebar widget (cached 30s client-side).

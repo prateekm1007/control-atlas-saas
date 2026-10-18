@@ -60,3 +60,21 @@ def list_user_comparisons(user_email: str) -> List[Dict]:
             if data.get("user_email") == user_email:
                 comparisons.append(data)
     return sorted(comparisons, key=lambda x: x.get("created_at", ""), reverse=True)
+
+
+def list_comparisons_by_key(key_hash: str) -> List[Dict]:
+    """WP-2: list comparisons created with a specific API key (key-scoped history).
+
+    Only records carrying a matching ``created_by_key_hash`` are returned.
+    Legacy records without the field (and anonymous submissions) are not
+    visible to any key — fail-closed.
+    """
+    if not key_hash:
+        return []
+    comparisons = []
+    for comp_file in _get_storage_dir().glob("*.json"):
+        with open(comp_file, 'r') as f:
+            data = json.load(f)
+            if data.get("created_by_key_hash") == key_hash:
+                comparisons.append(data)
+    return sorted(comparisons, key=lambda x: x.get("created_at", ""), reverse=True)
