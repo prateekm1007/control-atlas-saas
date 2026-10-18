@@ -31,7 +31,8 @@ def dispatch_job(pdb_bytes: bytes,
                  original_audit_id: str,
                  failing_laws: list,
                  user_email: Optional[str] = None,
-                 protocol_override: Optional[str] = None) -> Dict:
+                 protocol_override: Optional[str] = None,
+                 api_key_hash: Optional[str] = None) -> Dict:
     """
     Main entry point: select protocol, init job state, dispatch Celery task.
 
@@ -41,6 +42,9 @@ def dispatch_job(pdb_bytes: bytes,
         failing_laws:       List of failing law IDs
         user_email:         Optional email for notification
         protocol_override:  Force specific protocol (openmm|rosetta|both)
+        api_key_hash:       Hash of the submitter's API key (WP-2/3 key-scoped
+                            history); stored on the job record and copied onto
+                            the comparison at internal-callback time.
 
     Returns:
         dict with job_id, protocol, estimated_minutes, state
@@ -62,7 +66,8 @@ def dispatch_job(pdb_bytes: bytes,
     estimated_minutes = selection["estimated_minutes"]
 
     # Initialize job in Redis
-    create_job(job_id, original_audit_id, protocol, user_email)
+    create_job(job_id, original_audit_id, protocol, user_email,
+               created_by_key_hash=api_key_hash)
 
     logger.info(f"[{job_id}] Dispatching {protocol} job for {original_audit_id}")
 

@@ -1,10 +1,11 @@
-import sys, os, base64, json, traceback, logging, asyncio, hashlib
+import sys, os, base64, json, traceback, logging, asyncio, hashlib, time, hmac
 from pathlib import Path
 from functools import partial
 from datetime import datetime, timezone
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, field_validator, ValidationError
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -704,7 +705,8 @@ async def refinement_submit(
                 original_audit_id=audit_id,
                 failing_laws=failing_laws,
                 user_email=user_email,
-                protocol_override=protocol if protocol != "auto" else None
+                protocol_override=protocol if protocol != "auto" else None,
+                api_key_hash=_key_hash or None,  # WP-2/3: key-scoped history
             )
 
             job_id         = dispatch_result["job_id"]
@@ -806,44 +808,155 @@ async def list_jobs_for_audit(original_audit_id: str, _auth=Depends(verify_api_k
         return {"original_audit_id": original_audit_id, "error": str(e)}
 
 
-@app.post("/refinement/internal-callback")
-async def internal_callback(payload: dict):
-    """
-    Internal endpoint: called by GPU worker after execution completes.
-    Triggers re-audit and stores comparison.
-    """
-    try:
-        original_audit_id = payload["original_audit_id"]
-        refined_pdb_hex = payload["refined_pdb_hex"]
-        job_id = payload.get("job_id", "UNKNOWN")
-        user_email = payload.get("user_email")
-        protocol = payload.get("protocol", "unknown")
+# ── WP-3: internal callback security ──────────────────────────────────────────
+INTERNAL_CALLBACK_MAX_SKEW_SECONDS = 300  # reject signatures older than 5 min
 
-        # Re-audit refined structure
-        refined_bytes = bytes.fromhex(refined_pdb_hex)
-        refined_audit = _run_physics_sync(refined_bytes, f"refined_{job_id}.pdb", "experimental", "NONE")
+
+class InternalCallbackPayload(BaseModel):
+    """Body schema for /refinement/internal-callback (WP-3)."""
+    original_audit_id: str
+    refined_pdb_hex: str
+    job_id: str
+    protocol: str = "unknown"
+    user_email: str = None
+
+    @field_validator("refined_pdb_hex")
+    @classmethod
+    def _hex_must_parse_and_contain_atoms(cls, v: str) -> str:
+        try:
+            raw = bytes.fromhex(v)
+        except ValueError:
+            raise ValueError("refined_pdb_hex is not valid hexadecimal")
+        if not any(
+            line.startswith(("ATOM  ", "HETATM"))
+            for line in raw.decode("utf-8", errors="replace").splitlines()
+        ):
+            raise ValueError("refined structure contains no ATOM/HETATM records")
+        return v
+
+
+def _verify_internal_signature(raw_body: bytes, x_timestamp: str, x_signature: str) -> None:
+    """HMAC-SHA256 over 'timestamp.raw_body' with INTERNAL_CALLBACK_SECRET.
+    Raises HTTPException 401 on any failure (hmac.compare_digest)."""
+    secret = os.environ.get("INTERNAL_CALLBACK_SECRET", "")
+    if not secret:
+        logger.error("INTERNAL_CALLBACK_SECRET not set — internal callback unavailable (fail-closed)")
+        raise HTTPException(status_code=503, detail="Internal callback is not configured.")
+    if not x_timestamp or not x_signature:
+        raise HTTPException(status_code=401, detail="Missing X-Timestamp / X-Signature.")
+    try:
+        ts = int(x_timestamp)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Malformed X-Timestamp.")
+    if abs(time.time() - ts) > INTERNAL_CALLBACK_MAX_SKEW_SECONDS:
+        raise HTTPException(status_code=401, detail="Stale callback timestamp.")
+    expected = hmac.new(
+        secret.encode("utf-8"), x_timestamp.encode("utf-8") + b"." + raw_body, hashlib.sha256
+    ).hexdigest()
+    if not hmac.compare_digest(expected, x_signature):
+        raise HTTPException(status_code=401, detail="Invalid callback signature.")
+
+
+def _get_job_record(job_id: str):
+    """Fetch a job record from the Redis job store.
+    Returns the dict, or None when the job is unknown.
+    Raises RuntimeError when the store itself is unreachable."""
+    import redis as redis_lib
+    try:
+        r = redis_lib.from_url(
+            os.environ.get("REDIS_URL", "redis://redis:6379/0"), decode_responses=True
+        )
+        raw = r.get(f"job:{job_id}")
+    except Exception as e:
+        raise RuntimeError(f"job store unavailable: {e}")
+    return json.loads(raw) if raw else None
+
+
+@app.post("/refinement/internal-callback")
+async def internal_callback(request: Request):
+    """
+    Internal endpoint: called by the GPU worker after execution completes.
+    Triggers re-audit and stores comparison.
+
+    WP-3 hardening (order matters):
+      1. HMAC-SHA256 signature over '<X-Timestamp>.<raw body>' using
+         INTERNAL_CALLBACK_SECRET — 401 on missing/stale/mismatched.
+      2. Pydantic body validation (valid hex containing ATOM records) — 422.
+      3. original_audit_id must exist in the audit store — 422.
+      4. job_id must exist in the job store — 422 (503 if store unreachable).
+      5. Re-audit, store comparison (stamped with the submitter's key hash
+         when the job record carries it), return refined audit id.
+    """
+    raw_body = await request.body()
+
+    # 1. Signature first — never parse or process untrusted input.
+    _verify_internal_signature(
+        raw_body,
+        request.headers.get("X-Timestamp", ""),
+        request.headers.get("X-Signature", ""),
+    )
+
+    # 2. Body validation.
+    try:
+        payload = InternalCallbackPayload.model_validate_json(raw_body)
+    except ValidationError as e:
+        # Sanitize: error dicts may embed non-serializable exception objects.
+        detail = [
+            {"loc": [str(x) for x in err.get("loc", [])],
+             "msg": err.get("msg", ""), "type": err.get("type", "")}
+            for err in e.errors()
+        ]
+        raise HTTPException(status_code=422, detail=detail)
+
+    # 3. Original audit must exist.
+    original = get_audit_result(payload.original_audit_id)
+    if not original:
+        raise HTTPException(
+            status_code=422,
+            detail=f"original_audit_id {payload.original_audit_id} not found in audit store",
+        )
+
+    # 4. Job must exist in the job store.
+    try:
+        job = _get_job_record(payload.job_id)
+    except RuntimeError as e:
+        logger.error(f"Internal callback job-store failure: {e}")
+        raise HTTPException(status_code=503, detail="Job store unavailable.")
+    if job is None:
+        raise HTTPException(
+            status_code=422,
+            detail=f"job_id {payload.job_id} not found in job store",
+        )
+
+    # 5. Re-audit refined structure and store the comparison.
+    try:
+        refined_bytes = bytes.fromhex(payload.refined_pdb_hex)
+        refined_audit = _run_physics_sync(
+            refined_bytes, f"refined_{payload.job_id}.pdb", "experimental", "NONE"
+        )
         refined_audit_id = refined_audit["governance"]["audit_id"]
 
-        # Store comparison
         comparison_data = {
-            "original_audit_id": original_audit_id,
+            "original_audit_id": payload.original_audit_id,
             "refined_audit_id": refined_audit_id,
-            "job_id": job_id,
-            "protocol": protocol,
+            "job_id": payload.job_id,
+            "protocol": payload.protocol,
             "refinement_method": "managed_gpu",
-            "user_email": user_email,
+            "user_email": payload.user_email,
+            "created_by_key_hash": job.get("created_by_key_hash"),  # WP-2 key-scoped history
             "status": "complete"
         }
 
-        store_comparison(original_audit_id, refined_audit_id, comparison_data)
+        store_comparison(payload.original_audit_id, refined_audit_id, comparison_data)
 
         return {
             "status": "success",
-            "original_audit_id": original_audit_id,
+            "original_audit_id": payload.original_audit_id,
             "refined_audit_id": refined_audit_id,
-            "comparison_url": f"/compare?baseline={original_audit_id}&refined={refined_audit_id}"
+            "comparison_url": f"/compare?baseline={payload.original_audit_id}&refined={refined_audit_id}"
         }
-
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Internal callback error: {str(e)}")
         return {"status": "error", "message": str(e)}, 500

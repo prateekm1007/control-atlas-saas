@@ -230,15 +230,13 @@ ROUTE_MATRIX = [
     # ── removed in WP-2 (was unreachable; exposed IPs). The path now falls
     #    through to the /history/{user_email:path} catch-all and is key-scoped.
     ("GET",  "/history/ip/1.2.3.4",           401, {200}),
-    # ── WP-3 (stacked PR) HMAC-secures this route; asserted there. In the
-    #    WP-2 state it accepts an arbitrary JSON body (known gap) — xfailed.
-    ("POST", "/refinement/internal-callback", 422, {422}),
+    # ── WP-3: HMAC-secured. Without a signature: 401 when the server secret is
+    #    configured, 503 when it is not (both fail-closed; never 2xx).
+    ("POST", "/refinement/internal-callback", {401, 503}, {401, 503}),
 ]
 
 # Rows pending a stacked work package — reported xfail until then.
-XFAIL_PENDING = {
-    ("POST", "/refinement/internal-callback"): "WP-3 adds HMAC auth",
-}
+XFAIL_PENDING = {}
 
 
 def _route_entries():
@@ -262,10 +260,11 @@ class TestRouteCoverage:
         """Every route: exact status without a key, non-auth status with one."""
         if (method, path) in XFAIL_PENDING:
             pytest.xfail(XFAIL_PENDING[(method, path)])
+        no_key = {no_key} if isinstance(no_key, int) else no_key
         fn = getattr(api_client, method.lower())
         r_no_key = fn(path)
-        assert r_no_key.status_code == no_key, \
-            f"{method} {path}: no-key status {r_no_key.status_code} != {no_key}"
+        assert r_no_key.status_code in no_key, \
+            f"{method} {path}: no-key status {r_no_key.status_code} not in {no_key}"
 
         r_key = fn(path, headers={"X-API-Key": VALID_KEY})
         assert r_key.status_code in with_key, \

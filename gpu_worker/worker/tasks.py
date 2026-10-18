@@ -9,6 +9,10 @@ Changes from Week 7:
 """
 import os
 import signal
+import json
+import time
+import hmac
+import hashlib
 import logging
 import subprocess
 import tempfile
@@ -280,22 +284,47 @@ def execute_rosetta(self, job_id: str, pdb_bytes_hex: str, xml_protocol: str):
 @app.task(name="worker.tasks.auto_callback")
 def auto_callback(execution_result: dict, original_audit_id: str,
                   user_email: str = None):
-    """Post-execution: send refined PDB to brain for re-audit."""
+    """Post-execution: send refined PDB to brain for re-audit.
+
+    WP-3: the callback is authenticated with an HMAC-SHA256 signature over
+    '<unix timestamp>.<raw body>' using INTERNAL_CALLBACK_SECRET, sent as
+    X-Timestamp / X-Signature. The brain rejects missing, stale (>300 s)
+    or mismatched signatures. Without the secret configured the worker
+    refuses to send (fail-closed) — never an unsigned callback.
+    """
     job_id = execution_result.get("job_id", "UNKNOWN")
 
     if execution_result.get("status") != "success":
         logger.error(f"[{job_id}] Execution failed — skipping callback")
         return {"status": "skipped", "reason": "execution_failed"}
 
+    secret = os.environ.get("INTERNAL_CALLBACK_SECRET", "")
+    if not secret:
+        logger.error(f"[{job_id}] INTERNAL_CALLBACK_SECRET not set — refusing to send unsigned callback")
+        update_job(job_id, state=STATE_FAILED,
+                   error="Worker misconfigured: INTERNAL_CALLBACK_SECRET missing")
+        return {"status": "failed", "error": "worker missing INTERNAL_CALLBACK_SECRET"}
+
     try:
+        body = json.dumps({
+            "original_audit_id": original_audit_id,
+            "refined_pdb_hex":   execution_result["refined_pdb_hex"],
+            "job_id":            job_id,
+            "protocol":          execution_result.get("protocol"),
+            "user_email":        user_email
+        }).encode("utf-8")
+        timestamp = str(int(time.time()))
+        signature = hmac.new(
+            secret.encode("utf-8"), timestamp.encode("utf-8") + b"." + body, hashlib.sha256
+        ).hexdigest()
+
         response = requests.post(
             f"{BRAIN_URL}/refinement/internal-callback",
-            json={
-                "original_audit_id": original_audit_id,
-                "refined_pdb_hex":   execution_result["refined_pdb_hex"],
-                "job_id":            job_id,
-                "protocol":          execution_result.get("protocol"),
-                "user_email":        user_email
+            data=body,
+            headers={
+                "Content-Type": "application/json",
+                "X-Timestamp":  timestamp,
+                "X-Signature":  signature,
             },
             timeout=120
         )

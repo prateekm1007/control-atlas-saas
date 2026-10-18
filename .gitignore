@@ -11,6 +11,8 @@ backend/nkg/piu_moat.jsonl
 *.pdb
 *.cif
 *.mmcif
+# WP-3/WP-4: real structure fixtures used by the test suite are tracked
+!backend/tests/fixtures/*.pdb
 
 # --- PYTHON ---
 __pycache__/
