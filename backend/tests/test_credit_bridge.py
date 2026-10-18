@@ -43,9 +43,9 @@ def test_gpu_tier_ordering():
 
 def test_free_tier_matches_anon():
     """free tier GPU runs must equal BETA_CREDITS_ANON (3) for consistency."""
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../gpu_worker"))
+    # WP-9: single credits module — tos_credits.credits is the only copy.
     from tos.saas.key_store import GPU_TIER_CREDITS
-    from worker.credits import BETA_CREDITS_ANON
+    from tos_credits.credits import BETA_CREDITS_ANON
     assert GPU_TIER_CREDITS["free"] == BETA_CREDITS_ANON
 
 def test_tier_limits_has_gpu_runs():

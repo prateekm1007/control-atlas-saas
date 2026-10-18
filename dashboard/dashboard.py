@@ -1412,10 +1412,20 @@ with tab_refine:
                 try:
                     # ── B5: Credit check before generation ───────────────
                     # byoc_credit_check
+                    # WP-9: single credits module (backend/tos_credits/credits.py);
+                    # the duplicate worker.credits copies were removed.
                     import sys as _nbsys
-                    _nbsys.path.insert(0, "/app/gpu_worker")
+                    from pathlib import Path as _nbPath
+                    _backend_dir = str(_nbPath(__file__).resolve().parent.parent / "backend")
+                    if _backend_dir not in _nbsys.path:
+                        _nbsys.path.insert(0, _backend_dir)
                     try:
-                        from worker.credits import check_credits, deduct_credits
+                        from tos_credits.credits import check_credits, deduct_credits
+                    except ImportError:
+                        # Credits module not available in this environment — allow
+                        check_credits = None
+                        deduct_credits = None
+                    if check_credits is not None:
                         _nb_identifier = (
                             st.session_state.get("b1_email") or
                             st.session_state.get("b2_email") or
@@ -1429,10 +1439,9 @@ with tab_refine:
                                 f"Credits remaining: {_nb_credit_check['credits_remaining']}"
                             )
                             st.stop()
-                    except ImportError:
-                        # Credits module not available in this environment — allow
-                        _nb_identifier  = "anonymous"
-                        _nb_credit_check = {"allowed": True}
+                    else:
+                        _nb_identifier = "anonymous"
+                        _nb_credit_check = {"allowed": True, "credits_remaining": 0}
 
                     from notebook_generator import generate_notebook_bytes, get_platform_redirect_url
                     _nb_bytes = generate_notebook_bytes(

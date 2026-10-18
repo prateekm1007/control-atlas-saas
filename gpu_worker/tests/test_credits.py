@@ -4,6 +4,9 @@ Run: python3 tests/test_credits.py
 """
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# WP-9: the single credits module lives in backend/tos_credits/credits.py;
+# the gpu_worker/worker/credits.py duplicate was removed.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'backend'))
 
 passed = 0
 failed = 0
@@ -21,7 +24,7 @@ def run_test(name, fn):
 print("\n=== CREDITS + COST TEST SUITE (Week 11) ===\n")
 
 def t1():
-    from worker.credits import get_credits, BETA_CREDITS_EMAIL
+    from tos_credits.credits import get_credits, BETA_CREDITS_EMAIL
     import secrets
     uid = f"test_{secrets.token_hex(4)}@test.com"
     rec = get_credits(uid)
@@ -31,7 +34,7 @@ def t1():
 run_test("New email user gets beta credits", t1)
 
 def t2():
-    from worker.credits import get_credits, BETA_CREDITS_ANON
+    from tos_credits.credits import get_credits, BETA_CREDITS_ANON
     import secrets
     ip = f"192.168.{secrets.token_hex(1)}.{secrets.token_hex(1)}"
     rec = get_credits(ip)
@@ -40,7 +43,7 @@ def t2():
 run_test("Anonymous user gets anon credits", t2)
 
 def t3():
-    from worker.credits import check_credits
+    from tos_credits.credits import check_credits
     import secrets
     uid = f"test_{secrets.token_hex(4)}@test.com"
     result = check_credits(uid, "openmm")
@@ -49,7 +52,7 @@ def t3():
 run_test("Credit check allows new user", t3)
 
 def t4():
-    from worker.credits import get_credits, deduct_credits, BETA_CREDITS_EMAIL
+    from tos_credits.credits import get_credits, deduct_credits, BETA_CREDITS_EMAIL
     import secrets
     uid = f"test_{secrets.token_hex(4)}@test.com"
     get_credits(uid)
@@ -60,7 +63,7 @@ def t4():
 run_test("Credit deduction works", t4)
 
 def t5():
-    from worker.credits import get_credits, deduct_credits, check_credits
+    from tos_credits.credits import get_credits, deduct_credits, check_credits
     import secrets
     uid = f"exhausted_{secrets.token_hex(4)}@test.com"
     get_credits(uid)
@@ -73,7 +76,7 @@ def t5():
 run_test("Exhausted credits blocked", t5)
 
 def t6():
-    from worker.credits import get_usage_stats
+    from tos_credits.credits import get_usage_stats
     import secrets
     uid = f"stats_{secrets.token_hex(4)}@test.com"
     stats = get_usage_stats(uid)
