@@ -18,7 +18,7 @@ from tos.governance.station_sop import (
     LAW_METHOD_CLASSIFICATIONS, SCORE_DEFINITIONS,
     ARCHITECTURE_WEIGHTS, BAYESIAN_FORMULA
 )
-from tos.generation.dispatcher import GenerationDispatcher
+from tos.generation.dispatcher import GenerationDispatcher, SourceUnavailable
 from tos.enrichment.gemini_compiler import get_compiler
 from tos.utils.type_guards import force_bytes
 from tos.nkg.manager import get_nkg
@@ -281,7 +281,22 @@ async def ingest(mode: str = Form(...), candidate_id: str = Form(...), t3_catego
         validate_upload(file)
         content = await file.read()
         await enforce_size_limit(content)
-    else: content, _, _ = GenerationDispatcher.acquire(candidate_id, None)
+    else:
+        # WP-4: unknown/unreachable candidate -> 503 naming the sources tried.
+        # No verdict is produced, nothing is written to the NKG or comparisons.
+        try:
+            content, _, _ = GenerationDispatcher.acquire(candidate_id, None)
+        except SourceUnavailable as e:
+            logger.warning(f"Ingest refused (source unavailable): {e}")
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "source_unavailable",
+                    "candidate_id": e.candidate_id,
+                    "sources_tried": e.sources,
+                    "message": "No structure source could provide this candidate. Nothing was scored or recorded.",
+                },
+            )
     return await asyncio.get_event_loop().run_in_executor(None, partial(_run_physics_sync, content, candidate_id, mode, t3_category))
 
 

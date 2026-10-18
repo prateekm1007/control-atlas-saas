@@ -5,6 +5,23 @@ import re
 logger = logging.getLogger("toscanini.dispatcher")
 
 
+class SourceUnavailable(Exception):
+    """WP-4: raised when every structure source for a candidate fails.
+
+    The route layer turns this into HTTP 503 with the list of sources that
+    were tried. No verdict is produced, nothing is written to the NKG, and
+    no comparison is recorded — a fabricated structure must never be scored.
+    """
+
+    def __init__(self, candidate_id: str, sources: list):
+        self.candidate_id = candidate_id
+        self.sources = list(sources)
+        super().__init__(
+            f"All structure sources exhausted for '{candidate_id}' "
+            f"(tried: {', '.join(self.sources)})"
+        )
+
+
 def _is_rcsb_id(candidate_id: str) -> bool:
     """Detect 4-character PDB IDs (e.g. 4HHB, 1CRN, 2PTC)."""
     clean = candidate_id.strip().upper()
@@ -55,8 +72,8 @@ class GenerationDispatcher:
                 logger.warning(f"RCSB fetch failed ({url}): {e}")
                 continue
 
-        logger.warning(f"❌ RCSB exhausted for {pdb_id}. Deploying mock.")
-        return GenerationDispatcher._mock(pdb_id)
+        # WP-4: never fabricate a structure — fail loudly instead.
+        raise SourceUnavailable(pdb_id, urls)
 
     @staticmethod
     def _acquire_afdb(candidate_id: str):
@@ -90,14 +107,5 @@ class GenerationDispatcher:
                 logger.warning(f"AFDB segment failed: {e}")
                 continue
 
-        logger.warning(f"❌ All AFDB sources exhausted for {candidate_id}. Deploying mock.")
-        return GenerationDispatcher._mock(candidate_id)
-
-    @staticmethod
-    def _mock(candidate_id: str):
-        mock = (
-            b"ATOM      1  N   MET A   1       0.000   0.000   0.000  1.00 50.00           N\n"
-            b"ATOM      2  CA  MET A   1       1.458   0.000   0.000  1.00 50.00           C\n"
-            b"END\n"
-        )
-        return (mock, candidate_id, "pdb")
+        # WP-4: never fabricate a structure — fail loudly instead.
+        raise SourceUnavailable(candidate_id, urls)
