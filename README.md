@@ -98,7 +98,7 @@ Scanned from `os.environ` / `os.getenv` across `backend/`, `dashboard/`,
 | `ALLOWED_ORIGINS` | brain | Comma-separated CORS origins; empty = no cross-origin browser access |
 | `INTERNAL_CALLBACK_SECRET` | brain + gpu_worker | Shared HMAC secret for `/refinement/internal-callback` (WP-3) |
 | `GEMINI_API_KEY` | brain | Enrichment compiler; degrades to templates if unset |
-| `TOSCANINI_JWT_SECRET` | brain | B1 callback-token signing secret (has a dev default — set it in production) |
+| `TOSCANINI_JWT_SECRET` | brain | B1 callback-token signing secret — **required, no default** (WP-13): missing or <32 chars fails closed (503 on token routes) |
 | `CALLBACK_RATE_LIMIT` | brain | Max B1 callbacks per key per hour (default 10) |
 | `TOSCANINI_DATA_DIR` | brain | Writable data dir (audits, comparisons, NKG, telemetry) |
 | `TOSCANINI_NKG_PATH` | brain | Optional NKG ledger path override |

@@ -24,6 +24,17 @@ os.environ.setdefault(
     os.path.join(tempfile.gettempdir(), "toscanini-test-data"),
 )
 
+# WP-13 (SEC-015): the JWT signing secret has NO default anymore — token
+# modules fail closed without it. Tests inject this EXPLICIT, test-only
+# secret here, before any test module imports tos.security.tokens.
+# It is deliberately not a valid production value and must never be used
+# outside the test environment. The fail-closed gate itself is exercised by
+# test_wp13_jwt_secret_gate.py via monkeypatch (delete/shorten the variable).
+os.environ.setdefault(
+    "TOSCANINI_JWT_SECRET",
+    "test-only-wp13-secret-0123456789abcdef0123456789abcdef-NOT-FOR-PRODUCTION",
+)
+
 import pytest
 import numpy as np
 import sys

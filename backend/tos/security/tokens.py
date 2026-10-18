@@ -10,6 +10,15 @@ Hardening (B.6):
 - NEW: _get_rate_dir() lazy path — safe for host tests
 - PRESERVED: all original functions unchanged (create_refinement_token,
   validate_refinement_token, revoke_token, get_token_stats)
+
+Hardening (WP-13 / SEC-015):
+- REMOVED: hardcoded development fallback for TOSCANINI_JWT_SECRET.
+  The secret is read lazily via _get_jwt_secret() and is REQUIRED:
+  missing or weak (<32 chars) configuration fails closed with
+  TokenSecretConfigurationError instead of silently signing tokens
+  under a public dev value.
+- Token format, expiry, purpose, single-use, ownership-claim, and
+  rate-limit semantics are UNCHANGED.
 """
 import jwt
 import time
@@ -21,10 +30,52 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, List
 
 import os
-SECRET_KEY = os.environ.get(
-    "TOSCANINI_JWT_SECRET",
-    "toscanini-phase-b1-secret-SETMEINENV"
-)
+
+
+class TokenSecretConfigurationError(RuntimeError):
+    """Raised when TOSCANINI_JWT_SECRET is missing or fails the strength floor.
+
+    WP-13 (SEC-015): the signing secret is a REQUIRED configuration item.
+    There is no default value: a deployment without a compliant secret must
+    fail closed (refusal to sign or validate tokens), never fall back to a
+    publicly-known development value.
+    """
+
+
+# WP-13: minimum entropy floor for the HS256 signing secret. 32 bytes of
+# arbitrary (non-encoded) material; operators are encouraged to use
+# `secrets.token_urlsafe(48)` or a managed secret generator.
+JWT_SECRET_MIN_LENGTH = 32
+
+
+def _get_jwt_secret() -> str:
+    """Read TOSCANINI_JWT_SECRET lazily at use time; fail closed when absent
+    or below the strength floor.
+
+    WP-13 (SEC-015): the previous module-level
+    `SECRET_KEY = os.environ.get("TOSCANINI_JWT_SECRET", "<public dev literal>")`
+    silently signed production tokens with a hardcoded, publicly-known value
+    when the variable was unset. Tokens signed under a known secret are
+    forgeable, so the fallback is REMOVED, not just changed.
+    """
+    secret = os.environ.get("TOSCANINI_JWT_SECRET", "")
+    if not secret.strip():
+        raise TokenSecretConfigurationError(
+            "TOSCANINI_JWT_SECRET is not configured. Refusing to sign or "
+            "validate callback tokens (fail-closed). Set a strong secret "
+            "(>= %d chars, e.g. `python3 -c 'import secrets; "
+            "print(secrets.token_urlsafe(48))'`) in the brain service "
+            "environment." % JWT_SECRET_MIN_LENGTH
+        )
+    if len(secret) < JWT_SECRET_MIN_LENGTH:
+        raise TokenSecretConfigurationError(
+            "TOSCANINI_JWT_SECRET does not meet the security requirement: "
+            "got %d chars, need >= %d. Refusing to sign or validate callback "
+            "tokens (fail-closed)." % (len(secret), JWT_SECRET_MIN_LENGTH)
+        )
+    return secret
+
+
 ALGORITHM = "HS256"
 TOKEN_EXPIRY_DAYS = 7
 
@@ -193,7 +244,7 @@ def create_refinement_token(audit_id: str, user_email: Optional[str] = None,
         if k not in payload:
             payload[k] = v
 
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(payload, _get_jwt_secret(), algorithm=ALGORITHM)
 
 
 def validate_refinement_token(token: str, consume: bool = False) -> Dict:
@@ -221,7 +272,7 @@ def validate_refinement_token(token: str, consume: bool = False) -> Dict:
         )
 
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, _get_jwt_secret(), algorithms=[ALGORITHM])
     except jwt.ExpiredSignatureError:
         raise ValueError("Token has expired (7-day limit exceeded). Generate a new token.")
     except jwt.InvalidTokenError as e:

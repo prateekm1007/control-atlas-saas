@@ -426,12 +426,19 @@ async def generate_refinement_token(
     WP-2: the caller's key hash is embedded in the token claims so the
     resulting comparison record is key-scoped for /history lookups.
     """
-    from tos.security.tokens import create_refinement_token
+    from tos.security.tokens import (
+        create_refinement_token,
+        TokenSecretConfigurationError,
+    )
     try:
         _caller_key = request.headers.get("X-API-Key", "")
         extra = {"created_by_key_hash": hash_key(_caller_key)} if _caller_key else {}
         token = create_refinement_token(audit_id, user_email, extra_claims=extra)
         return {"token": token, "audit_id": audit_id}
+    except TokenSecretConfigurationError as e:
+        # WP-13 (SEC-015): missing/weak signing secret is a service
+        # configuration failure -> 503 fail-closed, not a client error.
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
