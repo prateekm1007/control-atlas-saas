@@ -1,0 +1,87 @@
+{
+  "artifact": "automated_test_check_summary",
+  "generated": "2026-10-19",
+  "command": "cd backend && python -m pytest tests/ -q  (TOSCANINI_DATA_DIR set to a writable tmp dir by conftest)",
+  "chain_tip": "c8faf2f19469d26e43f668bdd3013b542821c3d8",
+  "counts_by_head": [
+    {
+      "head": "2195a04 (baseline)",
+      "passed": 244,
+      "failed": 9,
+      "skipped": 5,
+      "errors": 1,
+      "note": "9x PDFCertificate NameError (reportlab absent); 1x b1 script-as-test collection error"
+    },
+    {
+      "head": "1425e15 (WP-2)",
+      "passed": 269
+    },
+    {
+      "head": "04a3f01 (WP-3)",
+      "passed": 282
+    },
+    {
+      "head": "ab53180 (WP-4)",
+      "passed": 287
+    },
+    {
+      "head": "47bb20e (WP-5)",
+      "passed": 294
+    },
+    {
+      "head": "3d238ab (WP-6)",
+      "passed": 304
+    },
+    {
+      "head": "33366e3 (WP-7, fresh-venv CI simulation)",
+      "passed": 312,
+      "failed": 0,
+      "errors": 0
+    },
+    {
+      "head": "76083e4 (WP-8)",
+      "passed": 355
+    },
+    {
+      "head": "027a37a (WP-9)",
+      "passed": 355
+    },
+    {
+      "head": "014b155 (WP-10)",
+      "passed": 355,
+      "skipped": 5
+    },
+    {
+      "head": "fd59206 (WP-12)",
+      "ci_run": 39155133102,
+      "ci_conclusion": "success",
+      "note": "first slashed-branch push run; Unit Tests + Hash Lock + gitleaks green in GitHub CI"
+    },
+    {
+      "head": "2c156b5 (WP-13)",
+      "passed": 367,
+      "skipped": 5,
+      "note": "+12 WP-13 secret-gate tests"
+    },
+    {
+      "head": "c8faf2f (WP-14)",
+      "passed": 383,
+      "skipped": 5,
+      "note": "+16 deploy-gate policy assertions; 0 failed, 0 errors"
+    }
+  ],
+  "skip_reasons": "all 5 skips carry reason strings in-suite (06_ci/final_rerun.txt of the local evidence package records them)",
+  "hermeticity_note": "SEC-021 (open): suite is non-hermetic on reused runners (credit-ledger depletion) - fresh-runner regime is the CI-equivalent condition; both regimes documented in the local package and the findings register.",
+  "protected_hashes_at_chain_tip": {
+    "canon": "6a9cd4b4349b81de",
+    "matrix": "ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4",
+    "verified_at": [
+      "2195a04",
+      "014b155",
+      "4993cb3",
+      "fd59206",
+      "2c156b5",
+      "c8faf2f"
+    ]
+  }
+}

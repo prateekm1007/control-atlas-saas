@@ -1,0 +1,77 @@
+{
+  "artifact": "patch_hashes_and_reproduction",
+  "generated": "2026-10-19",
+  "note": "Patch BODIES are intentionally NOT committed here. Each patch is reproducible from the commit chain with the commands below; only SHA-256 fingerprints are published. Historical local package also holds ready-made patch files under the same hashes.",
+  "hashes": {
+    "WP-1": {
+      "range": "2195a04..ab5bc32",
+      "pr": 1,
+      "sha256": "21637de6ad31588cab4041939b67eb66c7fc6c1d85684277c7e916ea5f578734"
+    },
+    "WP-2": {
+      "range": "ab5bc32..1425e15",
+      "pr": 2,
+      "sha256": "c80644f5c67877c8e4c02a5770116e3b5f461e999e4cf8f1ad9d14644ecb2b39"
+    },
+    "WP-3": {
+      "range": "1425e15..04a3f01",
+      "pr": 3,
+      "sha256": "1a857314e1b1ac40ec50a4187d0ca511205cae0c709063e14b40dbef164e26c1"
+    },
+    "WP-4": {
+      "range": "04a3f01..ab53180",
+      "pr": 4,
+      "sha256": "b6f566990a935d3b57a3d8437e0d9f768255d1ca7809deede96fe108f66d8f60"
+    },
+    "WP-5": {
+      "range": "ab53180..47bb20e",
+      "pr": 5,
+      "sha256": "8cad32fbde92ce93a22810e761823e3ae07d10f233a2e20abce8981d7683bcd2"
+    },
+    "WP-6": {
+      "range": "47bb20e..3d238ab",
+      "pr": 6,
+      "sha256": "95dd5a267b0f6642f69d8d86edcd9abeb72757d46b39e21fbfff31a2fd511256"
+    },
+    "WP-7": {
+      "range": "3d238ab..33366e3",
+      "pr": 7,
+      "sha256": "afea4e9fa73637713917e5d50cc4ca7aa4c4249bd1feb0bf3128e342d7e3b3c6"
+    },
+    "WP-8": {
+      "range": "33366e3..76083e4",
+      "pr": 8,
+      "sha256": "ead4f364b06d82d391949d3a4365d8927865024e32c0cd1a691974629c3ad199"
+    },
+    "WP-9": {
+      "range": "76083e4..027a37a",
+      "pr": 9,
+      "sha256": "d9ffc9c45af8651146c4f0a29565e834e72f60fcee697906f7e2837d10ab285a"
+    },
+    "WP-10": {
+      "range": "027a37a..014b155",
+      "pr": 10,
+      "sha256": "633400e364da968dfd0a06d0c0d1dbeebb3c7bf82420316291787a3d4cef1885"
+    },
+    "WP-12": {
+      "range": "014b155..fd59206",
+      "pr": 12,
+      "sha256": "05217f6fa3fac356a766aa1cf6e3288f85881688c1b1f5da038d35dd4765cc4b"
+    },
+    "WP-13": {
+      "range": "fd59206..2c156b5",
+      "pr": 13,
+      "sha256": "26d604493075a5952776dde18b96c42757f9aaa1e8161fdf57e8a6173912c23b"
+    },
+    "WP-14": {
+      "range": "2c156b5..c8faf2f",
+      "pr": 14,
+      "sha256": "4a721fbfa8a992c09bf7e72f9cb5729b4c2bdcb5b8e17274ded856fee0d78484"
+    }
+  },
+  "reproduce": [
+    "git clone https://github.com/prateekm1007/control-atlas-saas",
+    "git diff <base>..<head>   # per-WP ranges in wp_scope_manifest.json -> sha256sum must match patch_hashes.json",
+    "commit-faithful chain (first 10 WPs): git am --keep-cr combined-chain-2195a04..014b155.mbox reproduces tree b2019910... == 014b155 exactly"
+  ]
+}
