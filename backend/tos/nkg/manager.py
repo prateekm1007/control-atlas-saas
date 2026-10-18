@@ -5,24 +5,77 @@ from ..governance.constants import AuditConstants
 
 logger = logging.getLogger("toscanini.nkg")
 
+# WP-6: only these verdicts may enter the ledger.
+VALID_VERDICTS = {"PASS", "VETO", "INDETERMINATE"}
+# WP-6: SHA-256 of empty input — proves the "structure" never had content.
+EMPTY_SOURCE_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+
 class NKGManager:
     def __init__(self, path="/app/nkg/piu_moat.jsonl"):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
+    def _already_recorded(self, artifact_hash: str, outcome_category: str) -> bool:
+        """WP-6 duplicate policy (idempotent): a record with the same
+        artifact hash AND outcome category is never written twice."""
+        if not self.path.exists():
+            return False
+        with open(self.path, "r") as f:
+            for line in f:
+                try:
+                    rec = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if rec.get("artifact_hash") == artifact_hash and \
+                   rec.get("outcome_category") == outcome_category:
+                    return True
+        return False
+
     def record_audit(self, payload):
+        """Append one audit record to the NKG ledger.
+
+        WP-6 validation — raises ValueError (record NOT written) when:
+          - the verdict is missing or not one of PASS / VETO / INDETERMINATE
+            (previously a missing verdict silently defaulted to VETO);
+          - the structure hash is missing or equals the SHA-256 of empty
+            input;
+          - the provenance byte count is zero.
+
+        Duplicate policy (idempotent): a record with the same artifact hash
+        and outcome category is never written twice — returns False instead.
+        """
         verdict = payload.get("verdict", {})
         governance = payload.get("governance", {})
         provenance = payload.get("provenance", {})
         tier3 = payload.get("tier3", {})
         architecture = payload.get("architecture", {})
-        v = verdict.get("binary", "VETO")
+
+        v = verdict.get("binary")
+        if v not in VALID_VERDICTS:
+            raise ValueError(
+                f"NKG rejected: verdict {v!r} is not one of {sorted(VALID_VERDICTS)}"
+            )
+
+        source_hash = provenance.get("hash", "")
+        if not source_hash or source_hash == EMPTY_SOURCE_SHA256:
+            raise ValueError("NKG rejected: empty or blank-input structure hash")
+        byte_count = provenance.get("byte_count")
+        if byte_count == 0:
+            raise ValueError("NKG rejected: zero source bytes")
+
+        artifact_hash = source_hash[:AuditConstants.HASH_LEN]
+        outcome_category = "SUCCESS" if v == "PASS" else "VETO"
+        if self._already_recorded(artifact_hash, outcome_category):
+            logger.info(f"NKG: duplicate suppressed for {artifact_hash} ({outcome_category})")
+            return False
+
         phys = verdict.get("physical_score", 0)
         conf = verdict.get("confidence_score", 0)
         
         record = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "artifact_hash": provenance.get("hash", "UNKNOWN")[:AuditConstants.HASH_LEN],
+            "artifact_hash": artifact_hash,
             "program_id": governance.get("program_id", "UNKNOWN"),
             "program_state": governance.get("state", "UNKNOWN"),
             "outcome_category": "SUCCESS" if v == "PASS" else "VETO",
@@ -101,5 +154,9 @@ class NKGManager:
 _nkg = None
 def get_nkg():
     global _nkg
-    if _nkg is None: _nkg = NKGManager()
+    if _nkg is None:
+        # WP-6: path override for host/test environments. Production default
+        # stays /app/nkg (nkg_data volume) unless TOSCANINI_NKG_PATH is set.
+        default_path = os.environ.get("TOSCANINI_NKG_PATH", "/app/nkg/piu_moat.jsonl")
+        _nkg = NKGManager(path=default_path)
     return _nkg

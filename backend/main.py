@@ -363,13 +363,29 @@ async def batch_ingest(
 @app.get("/laws")
 def get_laws(): return {"laws": LAW_CANON, "total_laws": TOTAL_LAWS, "deterministic_count": DETERMINISTIC_COUNT}
 
+# ── WP-6: public NKG field whitelist ─────────────────────────────────────────
+# Only customer-relevant fields leave the service: no internal hashes
+# (artifact_hash), no internal governance identifiers (program_id,
+# program_state), no internal policy internals (s8_tax_applied).
+PUBLIC_NKG_FIELDS = (
+    "timestamp", "outcome_category", "failure_class", "physical_score",
+    "confidence_score", "epi_index", "architecture", "description",
+)
+
+
+def _public_nkg_record(rec: dict) -> dict:
+    return {k: rec[k] for k in PUBLIC_NKG_FIELDS if k in rec}
+
+
 @app.get("/nkg")
 def get_nkg_records(_auth=Depends(verify_api_key)):
     try:
         nkg = get_nkg()
         records = nkg.read_records(limit=50)
-        return {"vetoes": records.get("vetoes", []), "successes": records.get("successes", []), 
-                "total_vetoes": len(records.get("vetoes", [])), "total_successes": len(records.get("successes", []))}
+        return {"vetoes": [_public_nkg_record(r) for r in records.get("vetoes", [])],
+                "successes": [_public_nkg_record(r) for r in records.get("successes", [])],
+                "total_vetoes": len(records.get("vetoes", [])),
+                "total_successes": len(records.get("successes", []))}
     except: return {"vetoes": [], "successes": []}
 
 @app.get("/definitions")
