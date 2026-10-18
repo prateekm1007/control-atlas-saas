@@ -1,0 +1,14 @@
+# WP-10: keep Docker build contexts small and free of research/logs.
+.git
+.venv
+venv
+__pycache__
+*.pyc
+scripts/research/
+archives/
+results/
+entries/
+*.log
+*.bak
+*.v2bak
+.gitleaks

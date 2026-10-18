@@ -1,5 +1,0 @@
-Library Filtering Report
-Total: 10
-Passed: 1
-Rejected: 9
-Errors: 0
