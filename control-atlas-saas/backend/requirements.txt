@@ -1,9 +1,0 @@
-fastapi
-uvicorn
-python-multipart
-biopython
-numpy
-PyYAML
-google-generativeai
-fpdf2
-requests

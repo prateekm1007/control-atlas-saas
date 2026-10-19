@@ -1,1 +1,0 @@
-EXPLANATION = {"title": "Hydrophobic Burial", "principle": "Non-polar residues must be buried.", "rationale": "The hydrophobic effect drives folding. Surface-exposed hydrophobic patches lead to immediate aggregation."}
