@@ -20,14 +20,14 @@ Legend: `[x]` done, evidence linked · `[ ]` open · `[owner]` blocked on owner
 
 ## AlphaFold acquisition
 
-- [ ] **11. Metadata-first lookup** (`/api/prediction/{uniprot}`, select by `modelEntityId` + `latestVersion`, `cifUrl`); no `data[0]`; content-based format detection; URL/version/SHA-256 recorded
-- [ ] **12. Field names verified against official schema** (`alphafold.ebi.ac.uk/api-doc`)
-- [ ] **13. Maintained mmCIF parser in lock file**
-- [ ] **14. AF-P0DTC2-F1 fail closed + migrated identifier recorded; AF-P62988-F1 UniProt status checked**
+- [x] **11. Metadata-first lookup** — evidence: `evidence/item-11/` (live-verified: Q5VSL9/P69905 v6 cif; no model_v4, no data[0], JSON refused)
+- [x] **12. Field names verified** — against the LIVE API (schema page unreachable from this env); fields_present logged per acquisition
+- [x] **13. gemmi==0.6.7 in lock file** — mmCIF via gemmi CIF API, PDB-path-identical semantics
+- [x] **14. Fail-closed cohort cases** — P0DTC2 migrated id AF-0000000365840314 recorded; P62988 UniProt Inactive recorded (cohort disposition: item 16 owner)
 
 ## Runner (PR-3)
 
-- [ ] **15. Runner hardening** — fail if run dir exists; content-based format detection (no hardcoded `origin.pdb`); record executing backend's commit; exit non-zero on any failure; `complete` only at 50/50
+- [x] **15. Runner hardening** — evidence: `evidence/item-15/` (no overwrite; content format; engine-commit provenance + dirty-tree gate; complete only at 50/50)
 
 ## Cohort (after 3–15)
 

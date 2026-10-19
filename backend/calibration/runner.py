@@ -45,6 +45,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import tos  # noqa: E402  (provenance: the ENGINE actually imported)
 from tos.engine.adjudicator import adjudicate_laws, AdjudicationInput
 from tos.engine.tier1_measurements import Tier1Measurements
 from tos.ingestion.processor import IngestionProcessor
@@ -56,10 +57,16 @@ from tos.governance.station_sop import (
     compute_law_semantic_hash,
 )
 from tos.governance.modality_matrix import compute_matrix_hash
+from tos.generation.afdb import (  # noqa: E402
+    AFDBUnavailable,
+    detect_structure_format,
+    fetch_prediction,
+    uniprot_entry_type,
+)
 
-RUNNER_VERSION = "v24-runner/1.0.0"
+RUNNER_VERSION = "v25-runner/1.0.0"
 RCSB_URL = "https://files.rcsb.org/download/{pdb_id}.pdb"
-ALPHAFOLD_URL = "https://alphafold.ebi.ac.uk/files/{pdb_id}-model_v4.pdb"
+AFDB_API = "https://alphafold.ebi.ac.uk/api/prediction/{uniprot}"
 HTTP_TIMEOUT_S = 60
 USER_AGENT = ("toscanini-calibration-runner/1.0 (scientific evidence run; "
               "contact: repository owner)")
@@ -70,20 +77,86 @@ def _sha256(data: bytes) -> str:
 
 
 def _git_output(*args: str) -> str | None:
-    """Best-effort git metadata; returns None outside a git checkout."""
+    """Best-effort git metadata of the repo containing the IMPORTED tos
+    package; returns None outside a git checkout."""
     try:
+        engine_repo = Path(tos.__file__).resolve().parents[2]
         return subprocess.run(
-            ["git", "-C", str(Path(__file__).resolve().parents[2]), *args],
+            ["git", "-C", str(engine_repo), *args],
             capture_output=True, text=True, check=True,
         ).stdout.strip()
     except Exception:
         return None
 
 
+def _engine_provenance() -> dict:
+    """P0 item 15: record the commit of the code that will ACTUALLY run.
+
+    The v24 run recorded the runner checkout's HEAD while the working
+    tree contained uncommitted engine changes, so its report numbers
+    were untethered from any reproducible commit. Provenance is now
+    taken from the imported tos package's repository, and the tree
+    state is RECORDED (working_tree_clean + tree_status). The CLI
+    entrypoint refuses to start an evidence run on a dirty tree.
+    """
+    code_sha = _git_output("rev-parse", "HEAD")
+    if code_sha is None:
+        raise SystemExit(
+            "calibration runs require a git checkout of the engine "
+            "(could not resolve the repository of the imported tos package)")
+    status = _git_output("status", "--porcelain") or ""
+    return {
+        "code_sha": code_sha,
+        "code_sha_source": (
+            "git rev-parse HEAD of the repository containing the IMPORTED "
+            "tos engine package"
+        ),
+        "working_tree_clean": not status,
+        "tree_status": status.splitlines()[:50],
+    }
+
+
 def target_source_url(pdb_id: str) -> str:
     if pdb_id.startswith("AF-"):
-        return ALPHAFOLD_URL.format(pdb_id=pdb_id)
+        # P0 item 11: metadata-first acquisition; the file URL is only
+        # known after selecting the entry by modelEntityId/latestVersion.
+        accession = pdb_id.replace("AF-", "").split("-F")[0]
+        return AFDB_API.format(uniprot=accession)
     return RCSB_URL.format(pdb_id=pdb_id)
+
+
+def _acquire_afdb_remote(pdb_id: str, record: dict) -> bytes | None:
+    """Metadata-first AF acquisition; updates the record in place."""
+    try:
+        pred = fetch_prediction(pdb_id)
+    except AFDBUnavailable as exc:
+        record["detail"] = f"{type(exc).__name__}: {exc}"[:300]
+        record["afdb_record"] = exc.record
+        if exc.record.get("migrated_identifier"):
+            record["migrated_identifier"] = exc.record["migrated_identifier"]
+        # Item 14: record WHY (informational UniProt status, e.g. the
+        # P62988 merged-entry case) so cohort decisions are auditable.
+        accession = pdb_id.replace("AF-", "").split("-F")[0]
+        entry_type = uniprot_entry_type(accession)
+        if entry_type is not None:
+            record["uniprot_entry_type"] = entry_type
+        return None
+    record.update({
+        "acquisition_status": "acquired",
+        "source": pred.source_url,
+        "sha256": pred.sha256,
+        "bytes": len(pred.content),
+        "afdb": {
+            "model_entity_id": pred.model_entity_id,
+            "latest_version": pred.latest_version,
+            "requested_entity_id": pred.requested_entity_id,
+            "uniprot_accession": pred.uniprot_accession,
+            "global_metric_value": pred.global_metric_value,
+            "format": pred.fmt,
+            "fields_present": list(pred.fields_present),
+        },
+    })
+    return pred.content
 
 
 def acquire_coordinates(pdb_id: str, source_dir: Path | None,
@@ -111,6 +184,15 @@ def acquire_coordinates(pdb_id: str, source_dir: Path | None,
         if data is None:
             record["detail"] = f"no local file {pdb_id}.pdb/.cif in {source_dir}"
             return record, None
+    elif pdb_id.startswith("AF-"):
+        # P0 item 11: metadata-first AFDB acquisition (no hardcoded
+        # model_v4 URLs). The record carries URL, entity, version,
+        # SHA-256, and — on failure — migrated identifiers and the
+        # UniProt status (item 14).
+        data = _acquire_afdb_remote(pdb_id, record)
+        if data is None:
+            return record, None
+        record["fetched_at_utc"] = datetime.now(timezone.utc).isoformat()
     else:
         url = target_source_url(pdb_id)
         record["source"] = url
@@ -141,8 +223,13 @@ def measure_target(content: bytes, ingest_mode: str) -> dict:
 
     Mirrors backend/main.py::_run_physics_sync (stages 1-4) without any
     HTTP, persistence, PDF, or narrative side effects.
+
+    P0 item 15: the input filename is derived from the CONTENT-detected
+    format (the hardcoded "origin.pdb" mislabeled mmCIF input).
     """
-    structure = IngestionProcessor.run(content, "origin.pdb", "Audit", ingest_mode)
+    fmt = detect_structure_format(content)
+    structure = IngestionProcessor.run(
+        content, f"structure.{fmt}", "Audit", ingest_mode)
     is_experimental = bool(getattr(structure.confidence, "is_experimental", False))
     method_type = getattr(structure.confidence, "method", "predicted") \
         if is_experimental else "predicted"
@@ -190,22 +277,27 @@ def run_calibration(dataset: dict, out_dir: Path,
                     source_dir: Path | None = None,
                     prior_digests: dict | None = None) -> tuple[dict, int]:
     """Execute the full calibration. Returns (run_document, exit_code)."""
-    out_dir.mkdir(parents=True, exist_ok=True)
+    # P0 item 15: never overwrite an existing run — evidence runs are
+    # append-only. A re-run must choose a new directory.
+    if out_dir.exists():
+        raise SystemExit(
+            f"refusing to overwrite existing run directory: {out_dir}. "
+            "Calibration runs are evidence artifacts; use a new directory.")
+    out_dir.mkdir(parents=True)
     coord_manifest_path = out_dir / "coordinate_manifest.json"
     prior_digests = prior_digests or {}
 
-    code_sha = _git_output("rev-parse", "HEAD")
+    provenance = _engine_provenance()
     run_manifest = {
         "runner_version": RUNNER_VERSION,
         "run_type": "diagnostic",
         "purpose": (
-            "Document corrected-metric distributions (WP-SCI-1). NOT a "
+            "Document corrected-metric distributions. NOT a "
             "threshold validation: thresholds may only be re-validated via "
             "backend/calibration/protocol/evaluation_protocol_v1.md."
         ),
         "run_timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "code_sha": code_sha,
-        "code_sha_source": "git rev-parse HEAD of the repository containing this runner",
+        **provenance,
         "backend_version": STATION_METADATA["version"],
         "policy_binding": {
             "canon_hash": LAW_CANON_HASH,
@@ -224,7 +316,13 @@ def run_calibration(dataset: dict, out_dir: Path,
             json.dumps(dataset, sort_keys=True).encode("utf-8")),
         "config": {
             "ingest_modes": {"rcsb": "experimental", "alphafold": "predicted"},
-            "network_sources": {"rcsb": RCSB_URL, "alphafold": ALPHAFOLD_URL},
+            "network_sources": {
+                "rcsb": RCSB_URL,
+                "alphafold": (
+                    "metadata-first: " + AFDB_API +
+                    " -> select by modelEntityId + latestVersion -> cifUrl"
+                ),
+            },
             "http_timeout_s": HTTP_TIMEOUT_S,
         },
         "expected_target_count": sum(len(v) for v in dataset.values()),
@@ -281,6 +379,9 @@ def run_calibration(dataset: dict, out_dir: Path,
     acquired = sum(1 for r in results.values()
                    if r["acquisition"]["acquisition_status"] == "acquired")
     measured = sum(1 for r in results.values() if r["measurement_status"] == "measured")
+    # P0 item 15: complete ONLY at the full expected target count with
+    # zero failures — e.g. 50 of 50 for the v25 cohort.
+    all_measured = (measured == run_manifest["expected_target_count"])
     run_document = {
         "meta": {
             **run_manifest,
@@ -291,7 +392,7 @@ def run_calibration(dataset: dict, out_dir: Path,
             "acquired": acquired,
             "measured": measured,
             "acquisition_failures": len(failures),
-            "run_status": "complete" if not failures else "incomplete",
+            "run_status": "complete" if (all_measured and not failures) else "incomplete",
             "verdicts": _verdict_histogram(results),
             "failures": failures,
         },
@@ -334,14 +435,26 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--dataset", default="v23",
                         choices=["v23"], help="dataset definition to run")
-    parser.add_argument("--out", default=str(here / "runs" / "v24"),
-                        help="output run directory")
+    parser.add_argument("--out", default=str(here / "runs" / "v25"),
+                        help="output run directory (must not already exist)")
     parser.add_argument("--source-dir", default=None,
                         help="local directory of pre-fetched coordinate files "
                              "(<pdb_id>.pdb); skips network acquisition")
     parser.add_argument("--verify-digests-from", default=None,
                         help="prior coordinate_manifest.json to verify digests against")
     args = parser.parse_args(argv)
+
+    # P0 item 15: evidence runs refuse a dirty engine tree — the recorded
+    # code_sha must describe the code that actually measured. (This is
+    # exactly the v24 provenance hole: post-fix numbers under a pre-fix SHA.)
+    provenance = _engine_provenance()
+    if not provenance["working_tree_clean"]:
+        shown = "\n  ".join(provenance["tree_status"][:20])
+        print(
+            "refusing to run a calibration on a dirty working tree:\n"
+            f"  engine repo @ {provenance['code_sha'][:8]}:\n  {shown}\n"
+            "  commit or stash, then re-run.", file=sys.stderr)
+        return 2
 
     if args.dataset == "v23":
         from calibration.dataset_v23 import CALIBRATION_DATASET
