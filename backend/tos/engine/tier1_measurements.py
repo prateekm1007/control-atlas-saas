@@ -126,7 +126,13 @@ class Tier1Measurements:
         method = getattr(structure.confidence, "method", "predicted")
         is_experimental = (method != "predicted")
         core = residues if is_experimental else [r for r in residues if r["_conf"] >= 70]
-        coverage = 100.0 if is_experimental else (len(core) / len(residues) * 100)
+        # P0 item 9: the coverage denominator is the SOURCE residue count
+        # (ATOM records + retained HETATM polymer residues in the source
+        # file), not the parsed-residue count — unparseable coordinate
+        # lines or dropped records must not silently inflate LAW-105.
+        source_residues = getattr(structure, "source_residue_count", None)
+        coverage_denominator = source_residues if source_residues else len(residues)
+        coverage = 100.0 if is_experimental else (len(core) / coverage_denominator * 100)
 
         results = {}
 
@@ -165,11 +171,15 @@ class Tier1Measurements:
 
         # ═══════════════════════════════════════════════════════════
         # LAW-105: Reliability Coverage
+        # P0 item 9: sample reports parsed residues; the observed value
+        # is computed against SOURCE residues (see coverage_denominator
+        # above), including retained HETATM-mapped ones.
         # ═══════════════════════════════════════════════════════════
         results["LAW-105"] = {
             "observed": round(coverage, 2),
             "status": "PASS" if coverage >= 70.0 else "FAIL",
-            "sample": len(residues)
+            "sample": len(residues),
+            "sample_source_residues": coverage_denominator
         }
 
         # ═══════════════════════════════════════════════════════════

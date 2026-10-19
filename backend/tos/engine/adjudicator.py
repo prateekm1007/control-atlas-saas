@@ -197,8 +197,13 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
             default_method=method,
         )
 
-        # PIL-CAL-03: Advisory laws cannot VETO — normalize status
-        raw_status = m.get("status", "FAIL")
+        # PIL-CAL-03: Advisory laws cannot VETO — normalize status.
+        # P0 item 8: a present-but-malformed row (no status key) is
+        # NOT_MEASURED, not "measured and failed" — mirroring the
+        # absent-law default above. Fail-closed behavior is preserved:
+        # NOT_MEASURED on a deterministic law blocks an authoritative
+        # PASS via the indeterminate-causes path.
+        raw_status = m.get("status", STATUS_NOT_MEASURED)
         if method == "advisory_experimental" and raw_status == "VETO":
             raw_status = "FAIL (Advisory)"
 
@@ -224,7 +229,7 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
         if "reason" in m:
             row["reason"] = m["reason"]
         res_t1.append(row)
-        if m.get("status", "FAIL") in ("FAIL", "VETO") and row["method"] == "deterministic":
+        if raw_status in ("FAIL", "VETO") and row["method"] == "deterministic":
             failing_det.append(f"{lid}: {LAW_CANON[lid]['title']}")
 
     # ── Stage 4: Scoring ─────────────────────────────────────────────────

@@ -65,6 +65,13 @@ class Structure:
     atoms: List[Atom]
     audit_id: str
     confidence: ConfidenceProfile
+    # P0 item 9: number of distinct polymer residues present in the SOURCE
+    # file (ATOM records + retained HETATM polymer records), counted from
+    # the raw records before per-atom parse filtering. The coverage
+    # denominator uses this so that unparseable coordinate lines or
+    # dropped records cannot silently inflate LAW-105. None when the
+    # source carried no polymer residues at all.
+    source_residue_count: Optional[int] = None
 
 def _classify_method(lines: List[str]) -> str:
     """Classifies acquisition method. Default is predicted."""
@@ -100,6 +107,7 @@ class IngestionProcessor:
         lines = content.decode(errors="ignore").splitlines()
         atoms = []
         best_by_key = {}
+        source_residue_keys = set()
 
         # Pre-classify for filtering logic
         method = _classify_method(lines)
@@ -123,6 +131,17 @@ class IngestionProcessor:
                 res_name = MODIFIED_RESIDUE_PARENTS[het_name]
             else:
                 continue
+
+            # P0 item 9: count SOURCE residues from the raw record keys,
+            # independent of coordinate parse success, so the coverage
+            # denominator cannot be silently shrunk by unparseable lines.
+            try:
+                _src_chain = line[21:22].strip() or "A"
+                _src_seq = int(line[22:26].strip())
+                _src_icode = line[26:27].strip()
+                source_residue_keys.add((_src_chain, _src_seq, _src_icode))
+            except (ValueError, IndexError):
+                pass
 
             try:
                 atom_name = line[12:16].strip()
@@ -172,5 +191,6 @@ class IngestionProcessor:
         return Structure(
             atoms=atoms,
             audit_id=f"AUD-{audit_id}",
-            confidence=ConfidenceProfile(b_values, is_experimental, method, resolution)
+            confidence=ConfidenceProfile(b_values, is_experimental, method, resolution),
+            source_residue_count=len(source_residue_keys) if source_residue_keys else None
         )
