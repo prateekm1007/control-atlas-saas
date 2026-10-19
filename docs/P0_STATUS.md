@@ -16,7 +16,7 @@ Legend: `[x]` done, evidence linked · `[ ]` open · `[owner]` blocked on owner
 - [x] **7. Dead `_law_155` removed** + uniqueness test — evidence: `evidence/item-7/` (472/5/0 × 3 runs; credits isolation defect also fixed)
 - [x] **8. Honest statuses complete** — evidence: `evidence/item-8/` (inventory + adjudicator defaults; 481/5/0)
 - [x] **9. Coverage denominator from source residues** — evidence: `evidence/item-9/` (incl. HETATM-mapped)
-- [ ] **10. pLDDT scope verified for LAW-130/155/200** — evidence recorded; semantics change is an owner decision
+- [owner] **10. pLDDT scope LAW-130/155/200** — verified + pinned; owner must choose all-atoms vs core (evidence: `evidence/item-10/DECISION_REQUIRED.md`)
 
 ## AlphaFold acquisition
 

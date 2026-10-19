@@ -1,0 +1,17 @@
+parsed residues: 30  core (pLDDT>=70): 20
+
+LAW-105 coverage (core/source): 66.67%
+
+LAW-155 Voxel Occupancy (threshold >= 2.0 voxels/residue):
+  all atoms :    2.57  -> PASS   (current behavior)
+  core only :    3.35  -> PASS   (if core-filtered)
+
+LAW-200 Packing Quality (threshold <= 300 A^3/atom):
+  all atoms :    477.01  -> VETO   (current behavior)
+  core only :     68.09  -> PASS   (if core-filtered)
+
+Verdict-relevant divergence:
+  LAW-155: same   LAW-200: DIVERGES
+
+Owner decision required: keep all-atoms scope (current) or apply the
+core filter consistently. See evidence/item-10/DECISION_REQUIRED.md.
