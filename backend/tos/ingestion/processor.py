@@ -4,6 +4,26 @@ from typing import List, Optional
 import uuid
 import re
 
+# P0 item 5 (2026-10-19 audit): HETATM records that are polymer
+# constituents are RETAINED and mapped to their parent amino acid.
+# Selenomethionine is the canonical case: it is a normal Met side chain
+# with Se replacing S, deposited as HETATM MSE — dropping it silently
+# deletes residues from the chain and fabricates backbone gaps.
+# Waters, ligands, ions, and nucleotides have no amino-acid parent and
+# remain excluded. D-amino-acid variants (DAL, DLE, ...) are
+# deliberately NOT mapped: LAW-145 must be able to flag them.
+MODIFIED_RESIDUE_PARENTS = {
+    "MSE": "MET",  # selenomethionine
+    "SEC": "CYS",  # selenocysteine
+    "PYL": "LYS",  # pyrrolysine
+    "HYP": "PRO",  # 4-hydroxyproline (collagen)
+    "CME": "CYS", "CSO": "CYS", "CSD": "CYS",  # modified cysteines
+    "OCS": "CYS", "CSX": "CYS", "CAS": "CYS", "CSM": "CYS",
+    "MLY": "LYS", "M3L": "LYS", "KCX": "LYS",  # modified lysines
+    "SEP": "SER", "TPO": "THR", "PTR": "TYR",  # phosphorylated
+    "PCA": "GLU", "NLE": "LEU",  # pyroglutamate, norleucine
+}
+
 @dataclass
 class Atom:
     """Industrial-grade Atom representation for forensic audit."""
@@ -68,11 +88,14 @@ class IngestionProcessor:
         1. MODEL 1 Selection: Stops at ENDMDL (NMR Safety).
         2. Hydrogen Exclusion: Prevents LAW-130 inflation.
         3. Method Classification: Categorizes data regime.
+        4. HETATM Retention (P0 item 5): polymer-associated modified
+           residues (MSE, SEC, ...) are kept and mapped to their parent
+           amino acid; waters/ligands/ions stay excluded.
         """
         lines = content.decode(errors="ignore").splitlines()
         atoms = []
         b_values = []
-        
+
         # Pre-classify for filtering logic
         method = _classify_method(lines)
         is_experimental = (method != "predicted")
@@ -82,19 +105,28 @@ class IngestionProcessor:
             # 🛡️ MODEL 1 ISOLATION: Stop after first model
             if line.startswith("ENDMDL"):
                 break
-            
-            if not line.startswith("ATOM  "):
+
+            record_type = line[:6]
+            if record_type == "ATOM  ":
+                res_name = line[17:20].strip()
+            elif record_type == "HETATM":
+                # P0 item 5: keep only polymer-associated modified
+                # residues, mapped to their parent amino acid.
+                het_name = line[17:20].strip()
+                if het_name not in MODIFIED_RESIDUE_PARENTS:
+                    continue
+                res_name = MODIFIED_RESIDUE_PARENTS[het_name]
+            else:
                 continue
 
             try:
                 atom_name = line[12:16].strip()
                 element = line[76:78].strip().upper()
-                
+
                 # 🛡️ HYDROGEN FILTERING: NMR/AF3 models often include H/D
                 if element in ("H", "D"):
                     continue
 
-                res_name = line[17:20].strip()
                 chain_id = line[21:22].strip() or "A"
                 res_seq = int(line[22:26].strip())
                 icode = line[26:27].strip()

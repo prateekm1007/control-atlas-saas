@@ -11,7 +11,7 @@ Legend: `[x]` done, evidence linked · `[ ]` open · `[owner]` blocked on owner
 
 - [x] **3. v24 marked superseded** — `backend/calibration/runs/v24/calibration_v24_SUPERSEDED.md` (JSON untouched). Evidence: `evidence/item-3/`
 - [x] **4. File-order residue ordering** — evidence: `evidence/item-4/` (17 new tests; 452/5/0 full suite; 1PPE raw-bytes proof committed)
-- [ ] **5. HETATM retention incl. MSE→parent** — acceptance: 1A8O chain A = 70 residues
+- [x] **5. HETATM retention incl. MSE→parent** — evidence: `evidence/item-5/` (1A8O chain A = 70 residues on pinned real bytes; 459/5/0 full suite)
 - [ ] **6. Altloc selection** — one conformer per atom (highest occupancy, then first), applied everywhere
 - [ ] **7. Dead `_law_155` removed** + every-LAW-ID-exactly-one-definition test
 - [ ] **8. Honest statuses complete** — per-law inventory; LAW-110 by observed peptide bonds; adjudicator absent/malformed default NOT_MEASURED
