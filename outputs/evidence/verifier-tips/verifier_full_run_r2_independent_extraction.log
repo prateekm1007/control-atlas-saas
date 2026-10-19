@@ -1,0 +1,12 @@
+   OK: dataset_v23.py = 3a5358374b2037b9475bd2d494754944485da5ac
+   OK: docs/P0_STATUS.md = 22ca8ce9c0c79ba396e8a4569f419d9fa6f01d0a
+== [4/4] Verifying constitution counting conventions (locale: C.UTF-8) ==
+   OK: domain bytes=622 chars=615 words=84 lines=11/12/9 blob=211ad2c5d4b4
+   OK: engineering bytes=20572 chars=20564 words=2784 lines=178/179/129 blob=b6bb35e84956
+   (convention: bytes | UTF-8 chars | whitespace-split words | LF / split-elements / non-blank lines)
+(network re-checks skipped; run with --network to enable)
+
+RESULT: ALL CHECKS PASSED
+This verifies the bundle's internal integrity and its git/bundle/blob
+provenance. Independent acceptance still requires the auditor to run
+this verifier on independently delivered bytes.

@@ -1,0 +1,19 @@
+grammar: all entry lines match  [name.bundle]="40-hex-tip"  exactly
+grammar: no line begins with a bracket-less fragment (corruption) 
+key count: exactly 6
+key set: equals the six expected bundle names (no extra, none missing)
+tip pin: chore-hygiene-2026-10-19.bundle -> abc450ea45183e9cebf3da8a6e20878d2d18a1bf  OK
+tip pin: integration-p0-hardening-2026-10-19.bundle -> 0eae6d575cd91376588fe6b36d1b9212352df7fc  OK
+tip pin: main.bundle -> 2195a048e87dcec4aa63e8dc7981b3bb6d237ca0  OK
+tip pin: policy-engineering-constitution.bundle -> 4993cb3b6954ffb8ecad281817b2c59f1f8fc041  OK
+tip pin: science-law-validity-wp15.bundle -> 296f10c4f2c87df2003c1a9d0150edc0b54a13d9  OK
+tip pin: science-p0-correctness-2026-10-19.bundle -> ebc1fd79f20b9a6b6a262a70ce6942ba069d19e9  OK
+bundle file present: 06-git-bundles/chore-hygiene-2026-10-19.bundle
+bundle file present: 06-git-bundles/integration-p0-hardening-2026-10-19.bundle
+bundle file present: 06-git-bundles/main.bundle
+bundle file present: 06-git-bundles/policy-engineering-constitution.bundle
+bundle file present: 06-git-bundles/science-law-validity-wp15.bundle
+bundle file present: 06-git-bundles/science-p0-correctness-2026-10-19.bundle
+
+RESULT: TIPS ARRAY TEST PASSED — exactly six keys, each a bundle
+name mapped to its pinned tip; no mangled entries.

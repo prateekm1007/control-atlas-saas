@@ -1,0 +1,26 @@
+# --- 2. git bundles ----------------------------------------------------------$
+note "== [2/4] Verifying git bundles and pinned tips =="$
+declare -A TIPS=($
+  [main.bundle]="2195a048e87dcec4aa63e8dc7981b3bb6d237ca0"$
+  [science-p0-correctness-2026-10-19.bundle]="ebc1fd79f20b9a6b6a262a70ce6942ba069d19e9"$
+  [science-law-validity-wp15.bundle]="296f10c4f2c87df2003c1a9d0150edc0b54a13d9"$
+  [chore-hygiene-2026-10-19.bundle]="abc450ea45183e9cebf3da8a6e20878d2d18a1bf"$
+  [policy-engineering-constitution.bundle]="4993cb3b6954ffb8ecad281817b2c59f1f8fc041"$
+  [integration-p0-hardening-2026-10-19.bundle]="0eae6d575cd91376588fe6b36d1b9212352df7fc"$
+)$
+TMP="$(mktemp -d)"$
+trap 'rm -rf "$TMP"' EXIT$
+git init -q "$TMP/scratch" 2>/dev/null || true   # context repo for bundle verify$
+for b in "${!TIPS[@]}"; do$
+    f="$HERE/06-git-bundles/$b"$
+    if git -C "$TMP/scratch" bundle verify "$f" >/dev/null 2>&1; then$
+        tip="$(git bundle list-heads "$f" 2>/dev/null | awk '{print $1}' | head -1)"$
+        if [ "$tip" = "${TIPS[$b]}" ]; then$
+            note "   OK: $b @ $tip"$
+        else$
+            bad "$b tip $tip != pinned ${TIPS[$b]}"$
+        fi$
+    else$
+        bad "$b is not a valid bundle"$
+    fi$
+done$

@@ -1,0 +1,46 @@
+From f2a87fea68ee6b5b48e31af72859b1455d9f429a Mon Sep 17 00:00:00 2001
+From: Z User <z@container>
+Date: Mon, 19 Oct 2026 22:02:14 +0000
+Subject: [PATCH 0/1] U9: runner provenance manifest (base science/p0-correctness-2026-10-19 @ ebc1fd79)
+
+U9 (Round-11): runner provenance, delivered as a patch with a
+demonstration manifest.
+
+What it adds (base science/p0-correctness-2026-10-19 @ ebc1fd79):
+- build_provenance_manifest() / write_provenance_manifest(): a standalone
+  provenance record composing engine provenance (code_sha + tree state),
+  sanitized git context (credential-stripped remotes, branch, describe),
+  runtime (python + implementation + platform), material dependency
+  versions (numpy/gemmi; explicitly 'unavailable' when missing), and the
+  policy-binding hashes (canon, law semantic, modality matrix).
+- --emit-provenance PATH CLI: writes the manifest and exits 0 without
+  running a calibration; records tree state instead of refusing it.
+- run_manifest.json now also carries the git block and dependencies.
+
+Demonstration manifest: runner_provenance_demo.json (same directory) was
+produced by running the committed patch itself:
+  python3 backend/calibration/runner.py --emit-provenance <path>
+It records code_sha f2a87fea... (this patch, clean tree), sanitized
+remotes, Python 3.12.15/CPython, numpy 2.1.3, gemmi 0.7.5, and the
+policy hashes.
+
+Tests: backend/tests/test_runner_provenance.py (6 tests) plus the
+existing runner suites (test_runner_hardening.py,
+test_calibration_runner.py, 11 tests) — all passing in this environment
+on commit f2a87fe.
+
+Patch only; merge is owner-gated. No secrets appear in any artifact
+(PAT used for the evidence push is never written to any file).
+
+
+Z User (1):
+  U9 (Round-11): standalone runner provenance manifest
+
+ backend/calibration/runner.py           | 114 ++++++++++++++++++++++++
+ backend/tests/test_runner_provenance.py |  88 ++++++++++++++++++
+ 2 files changed, 202 insertions(+)
+ create mode 100644 backend/tests/test_runner_provenance.py
+
+-- 
+2.47.3
+

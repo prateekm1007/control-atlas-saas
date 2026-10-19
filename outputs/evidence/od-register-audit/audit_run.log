@@ -1,0 +1,38 @@
+== U5 register audit of tree: . ==
+scope: current user-facing delivery; sealed r1/r2 archives excluded (historical)
+
+-- [1] retired D-xx labels outside INTERNAL_CROSSWALK.md --
+OK: no D-xx label appears in any user-facing document
+
+-- [2] OD-xx occurrence inventory (files mentioning each ID) --
+OD-01: INTERNAL_CROSSWALK.md OWNER_DECISIONS.md READING_NOTE_session3_2026-10-20.md 
+OD-02: OWNER_DECISIONS.md READING_NOTE_session3_2026-10-20.md 
+OD-03: INTERNAL_CROSSWALK.md OWNER_DECISIONS.md 
+OD-04: INTERNAL_CROSSWALK.md OWNER_DECISIONS.md 
+OD-05: INTERNAL_CROSSWALK.md OWNER_DECISIONS.md 
+OD-06: INTERNAL_CROSSWALK.md OWNER_DECISIONS.md 
+OD-07: INTERNAL_CROSSWALK.md OWNER_DECISIONS.md 
+OD-08: INTERNAL_CROSSWALK.md OWNER_DECISIONS.md 
+OD-09: INTERNAL_CROSSWALK.md OWNER_DECISIONS.md 
+OD-10: INTERNAL_CROSSWALK.md OWNER_DECISIONS.md 
+OD-11: INTERNAL_CROSSWALK.md OWNER_DECISIONS.md 
+OD-12: INTERNAL_CROSSWALK.md OWNER_DECISIONS.md 
+OD-13: INTERNAL_CROSSWALK.md OWNER_DECISIONS.md 
+OD-14: INTERNAL_CROSSWALK.md OWNER_DECISIONS.md READING_NOTE_session3_2026-10-20.md 
+OD-15: OWNER_DECISIONS.md 
+OD-16: INTERNAL_CROSSWALK.md OWNER_DECISIONS.md 
+OD-17: INTERNAL_CROSSWALK.md OWNER_DECISIONS.md 
+OD-18: INTERNAL_CROSSWALK.md OWNER_DECISIONS.md 
+OD-19: INTERNAL_CROSSWALK.md OWNER_DECISIONS.md 
+OD-20: OWNER_DECISIONS.md 
+OD-21: OWNER_DECISIONS.md READING_NOTE_session3_2026-10-20.md 
+
+-- [3] targeted collision checks --
+OK: OD-16 never co-occurs with metadata/integrity in user-facing files
+    (the collision is documented only inside INTERNAL_CROSSWALK.md, as U5 permits)
+OK: OD-17 never co-occurs with merge/deploy
+OK: every OD ID used is within OD-01..OD-21
+OK: register table has exactly 21 OD rows
+OK: every register row shows status OPEN
+
+RESULT: U5 REGISTER AUDIT PASSED

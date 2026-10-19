@@ -1,0 +1,51 @@
+From 240d710c19afff6ec704da04a1f39b49a2fb2010 Mon Sep 17 00:00:00 2001
+From: Z User <z@container>
+Date: Mon, 19 Oct 2026 22:06:34 +0000
+Subject: [PATCH 0/1] N8: per-residue altloc policy (fresh implementation; base science/p0-correctness-2026-10-19 @ ebc1fd79)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+U9 (Round-11): per-residue altlocs (N8) on a feature patch.
+
+Provenance note (honest): the original N8 branch tip e9985c6 was lost
+with the prior sandbox reset and is NOT restored or claimed. This is a
+FRESH implementation on the science tip; commit SHAs differ from the
+lost series by construction.
+
+What it adds:
+- An opt-in per_residue conformer-selection policy in
+  backend/tos/ingestion/processor.py, shared by the PDB and mmCIF parse
+  paths via _select_conformers(). One altloc ID per residue chosen by
+  TOTAL occupancy (first-seen on ties); blank-altloc atoms are shared
+  and always kept; the per-atom rule still applies within survivors.
+- The DEFAULT policy stays per_atom (P0 item 6 invariant, unchanged);
+  flipping the engine default changes measurement semantics and is
+  owner-gated.
+- backend/tests/test_altloc_per_residue.py: 12 tests (chimera
+  prevention, blank-altloc retention, tie-break, no-duplicate-keys
+  guarantee, mmCIF parity, default unchanged incl. the pinned 3ERD
+  tie assertion).
+
+Test evidence (this environment, commit 240d710):
+- tests/test_altloc_per_residue.py + tests/test_altloc_selection.py:
+  20 passed.
+- Full backend suite: 4 failed / 514 passed / 5 skipped. The 4 failures
+  (test_b6_regression.py::TestUsageWidget) are PRE-EXISTING at base
+  ebc1fd79 in this environment — verified by running the same tests on
+  the unmodified base — and are unrelated to conformer selection.
+
+Patch only; merge is owner-gated.
+
+
+Z User (1):
+  N8 (Round-11): per-residue alternate-conformer selection policy
+
+ backend/tests/test_altloc_per_residue.py | 197 +++++++++++++++++++++++
+ backend/tos/ingestion/processor.py       | 121 ++++++++++----
+ 2 files changed, 289 insertions(+), 29 deletions(-)
+ create mode 100644 backend/tests/test_altloc_per_residue.py
+
+-- 
+2.47.3
+

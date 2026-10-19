@@ -1,0 +1,261 @@
+From f2a87fea68ee6b5b48e31af72859b1455d9f429a Mon Sep 17 00:00:00 2001
+From: Z User <z@container>
+Date: Mon, 19 Oct 2026 22:02:04 +0000
+Subject: [PATCH 1/1] U9 (Round-11): standalone runner provenance manifest
+
+Adds build_provenance_manifest()/write_provenance_manifest() and a
+--emit-provenance CLI path: sanitized git context (credential-stripped
+remotes, branch, describe), runtime (python + implementation + platform),
+material dependency versions (numpy/gemmi, explicitly 'unavailable' when
+missing), and the policy-binding hashes, composed with the existing
+engine provenance (code_sha + tree state). run_manifest.json now also
+carries the git block and dependencies.
+
+Delivered as a patch only (owner-gated merge); base
+science/p0-correctness-2026-10-19 @ ebc1fd79.
+---
+ backend/calibration/runner.py           | 114 ++++++++++++++++++++++++
+ backend/tests/test_runner_provenance.py |  88 ++++++++++++++++++
+ 2 files changed, 202 insertions(+)
+ create mode 100644 backend/tests/test_runner_provenance.py
+
+diff --git a/backend/calibration/runner.py b/backend/calibration/runner.py
+index bd2ca67..3bffeed 100644
+--- a/backend/calibration/runner.py
++++ b/backend/calibration/runner.py
+@@ -116,6 +116,99 @@ def _engine_provenance() -> dict:
+     }
+ 
+ 
++def _sanitize_git_url(url: str) -> str:
++    """Strip credentials from a git remote URL (EC §3: no secrets in
++    reports, artifacts, or logs). Handles scheme URLs with userinfo
++    (https://user:pass@host/..., https://token@host/...) and scp-style
++    URLs (git@host:path)."""
++    import re
++    from urllib.parse import urlsplit, urlunsplit
++    # scp-style first (no scheme): user@host:path
++    url = re.sub(r"^[^/@\s]+@(?=[^/]+:)", "", url)
++    try:
++        parts = urlsplit(url)
++    except ValueError:
++        return "<unparseable remote url>"
++    if parts.username is None and parts.password is None:
++        return url
++    host = parts.hostname or ""
++    if parts.port:
++        host = f"{host}:{parts.port}"
++    return urlunsplit((parts.scheme, host, parts.path,
++                       parts.query, parts.fragment))
++
++
++def _git_context() -> dict:
++    """Sanitized git context of the engine repository. Remote URLs are
++    credential-stripped before they enter any artifact."""
++    branch = _git_output("rev-parse", "--abbrev-ref", "HEAD")
++    describe = _git_output("describe", "--tags", "--always", "--dirty")
++    remotes_raw = _git_output("remote", "-v") or ""
++    remotes: dict[str, str] = {}
++    for line in remotes_raw.splitlines():
++        parts = line.split()
++        if len(parts) >= 2 and parts[0] not in remotes:
++            remotes[parts[0]] = _sanitize_git_url(parts[1])
++    return {
++        "branch": branch,
++        "describe": describe,
++        "remotes": remotes,
++    }
++
++
++def _dependency_versions() -> dict:
++    """Best-effort versions of dependencies material to measurement
++    (EC §6: dependency/runtime versions where material). A dependency
++    that cannot be imported is recorded explicitly as unavailable —
++    never silently omitted."""
++    out: dict[str, str] = {}
++    for name in ("numpy", "gemmi"):
++        try:
++            module = __import__(name)
++            out[name] = str(getattr(module, "__version__", "unknown"))
++        except Exception as exc:  # pragma: no cover - environment-specific
++            out[name] = f"unavailable ({type(exc).__name__})"
++    return out
++
++
++def build_provenance_manifest() -> dict:
++    """U9 (Round-11): complete standalone provenance record.
++
++    Composes the engine provenance (code_sha + tree state) with the
++    sanitized git context, the runtime, the material dependency
++    versions, and the policy-binding hashes. Safe to persist anywhere:
++    it contains no credentials (remotes are sanitized; no environment
++    variables or tokens are recorded)."""
++    return {
++        "schema": "toscanini-runner-provenance/1.0.0",
++        "generated_utc": datetime.now(timezone.utc).isoformat(),
++        "runner_version": RUNNER_VERSION,
++        "engine": _engine_provenance(),
++        "git_context": _git_context(),
++        "runtime": {
++            "python": platform.python_version(),
++            "python_implementation": platform.python_implementation(),
++            "platform": platform.platform(),
++        },
++        "dependencies": _dependency_versions(),
++        "policy_binding": {
++            "canon_hash": LAW_CANON_HASH,
++            "law_semantic_hash": compute_law_semantic_hash(),
++            "modality_matrix_sha256": compute_matrix_hash(),
++        },
++    }
++
++
++def write_provenance_manifest(out_path: Path) -> dict:
++    """Write the standalone provenance manifest as JSON; returns it."""
++    manifest = build_provenance_manifest()
++    out_path = Path(out_path)
++    out_path.parent.mkdir(parents=True, exist_ok=True)
++    out_path.write_text(
++        json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
++    return manifest
++
++
+ def target_source_url(pdb_id: str) -> str:
+     if pdb_id.startswith("AF-"):
+         # P0 item 11: metadata-first acquisition; the file URL is only
+@@ -310,8 +403,11 @@ def run_calibration(dataset: dict, out_dir: Path,
+         },
+         "environment": {
+             "python": platform.python_version(),
++            "python_implementation": platform.python_implementation(),
+             "platform": platform.platform(),
+         },
++        "git": _git_context(),
++        "dependencies": _dependency_versions(),
+         "dataset_definition_sha256": _sha256(
+             json.dumps(dataset, sort_keys=True).encode("utf-8")),
+         "config": {
+@@ -442,8 +538,26 @@ def main(argv: list[str] | None = None) -> int:
+                              "(<pdb_id>.pdb); skips network acquisition")
+     parser.add_argument("--verify-digests-from", default=None,
+                         help="prior coordinate_manifest.json to verify digests against")
++    parser.add_argument("--emit-provenance", default=None, metavar="PATH",
++                        help="write a standalone provenance manifest to PATH "
++                             "and exit 0 without running a calibration "
++                             "(records the tree state faithfully instead "
++                             "of refusing; remotes are credential-stripped)")
+     args = parser.parse_args(argv)
+ 
++    # U9 (Round-11): provenance emission is a RECORD, not an evidence run —
++    # it never refuses a dirty tree, it records it. Useful for CI stamps
++    # and for demonstrating provenance capture without a full run.
++    if args.emit_provenance:
++        manifest = write_provenance_manifest(Path(args.emit_provenance))
++        print(json.dumps({
++            "written": args.emit_provenance,
++            "schema": manifest["schema"],
++            "code_sha": manifest["engine"]["code_sha"],
++            "working_tree_clean": manifest["engine"]["working_tree_clean"],
++        }))
++        return 0
++
+     # P0 item 15: evidence runs refuse a dirty engine tree — the recorded
+     # code_sha must describe the code that actually measured. (This is
+     # exactly the v24 provenance hole: post-fix numbers under a pre-fix SHA.)
+diff --git a/backend/tests/test_runner_provenance.py b/backend/tests/test_runner_provenance.py
+new file mode 100644
+index 0000000..e1a86c3
+--- /dev/null
++++ b/backend/tests/test_runner_provenance.py
+@@ -0,0 +1,88 @@
++"""
++U9 (Round-11, 2026-10-20): runner provenance manifest.
++
++  - build_provenance_manifest composes every required block
++  - git remote URLs are sanitized of credentials (EC §3: no secrets in
++    reports, artifacts, or logs)
++  - the serialized manifest carries no userinfo in any remote URL
++  - dependency versions are recorded, or explicitly "unavailable" —
++    never silently omitted
++  - --emit-provenance writes the manifest and exits 0 WITHOUT running a
++    calibration and WITHOUT refusing a dirty tree (it records the state)
++"""
++import json
++from urllib.parse import urlsplit
++
++from calibration.runner import (
++    _sanitize_git_url,
++    build_provenance_manifest,
++    main,
++    write_provenance_manifest,
++)
++
++
++def test_sanitize_strips_userinfo():
++    assert (_sanitize_git_url("https://user:secret@github.com/o/r.git")
++            == "https://github.com/o/r.git")
++    assert (_sanitize_git_url("https://token@github.com/o/r.git")
++            == "https://github.com/o/r.git")
++    assert (_sanitize_git_url("https://github.com/o/r.git")
++            == "https://github.com/o/r.git")
++    assert _sanitize_git_url("git@github.com:o/r.git") == "github.com:o/r.git"
++    assert _sanitize_git_url("ssh://git@github.com/o/r.git") == \
++        "ssh://github.com/o/r.git"
++
++
++def test_manifest_has_required_blocks():
++    m = build_provenance_manifest()
++    for key in ("schema", "generated_utc", "runner_version", "engine",
++                "git_context", "runtime", "dependencies", "policy_binding"):
++        assert key in m, f"missing block: {key}"
++    assert m["schema"] == "toscanini-runner-provenance/1.0.0"
++    assert len(m["engine"]["code_sha"]) == 40
++    assert m["engine"]["code_sha_source"]
++    assert "python" in m["runtime"]
++    assert "python_implementation" in m["runtime"]
++    assert "platform" in m["runtime"]
++
++
++def test_manifest_remotes_carry_no_userinfo():
++    m = build_provenance_manifest()
++    assert m["git_context"]["remotes"], "expected at least one remote"
++    for name, url in m["git_context"]["remotes"].items():
++        # any scheme-style URL must parse with no username/password
++        if "://" in url:
++            parts = urlsplit(url)
++            assert parts.username is None and parts.password is None, \
++                f"userinfo survived sanitization in remote {name}: {url}"
++        # no @ before the first path separator in any form
++        authority = url.split("://")[-1].split("/")[0]
++        assert "@" not in authority, \
++            f"userinfo survived sanitization in remote {name}: {url}"
++
++
++def test_dependencies_recorded_explicitly():
++    deps = build_provenance_manifest()["dependencies"]
++    assert "numpy" in deps and "gemmi" in deps
++    for name, version in deps.items():
++        assert version, f"dependency {name} recorded with empty version"
++
++
++def test_write_provenance_manifest_roundtrip(tmp_path):
++    out = tmp_path / "nested" / "provenance.json"
++    written = write_provenance_manifest(out)
++    loaded = json.loads(out.read_text(encoding="utf-8"))
++    assert loaded == written
++    assert loaded["schema"] == "toscanini-runner-provenance/1.0.0"
++    assert loaded["engine"]["code_sha"] == written["engine"]["code_sha"]
++
++
++def test_emit_provenance_cli_writes_manifest(tmp_path):
++    out = tmp_path / "prov" / "demo.json"
++    rc = main(["--emit-provenance", str(out)])
++    assert rc == 0
++    m = json.loads(out.read_text(encoding="utf-8"))
++    assert m["schema"].startswith("toscanini-runner-provenance/")
++    assert len(m["engine"]["code_sha"]) == 40
++    # the CLI summary and the file agree
++    assert "working_tree_clean" in m["engine"]
+-- 
+2.47.3
+

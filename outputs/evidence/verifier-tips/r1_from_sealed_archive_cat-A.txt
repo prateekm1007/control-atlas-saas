@@ -1,0 +1,130 @@
+#!/usr/bin/env bash$
+# Portable verifier for control-atlas-evidence-2026-10-20-round9.tar.gz$
+#$
+# Verifies, WITHOUT network access to GitHub:$
+#   1. every file in this bundle matches MANIFEST.sha256 (SHA-256)$
+#   2. the git bundles are valid and contain the pinned branch tips$
+#   3. the four pinned governance blobs verify inside the bundled git data$
+#   4. the two constitution counting conventions verify byte-exact$
+# Optionally, with --network:$
+#   5. re-downloads the 4 exemplar coordinates from RCSB and re-hashes them$
+#      against the table digests (full 40-target re-derivation is in$
+#      reproduce-clean-checkout.sh)$
+#$
+# Usage: bash verifier.sh [--network]$
+# Exit code 0 = all checks pass. Requires: bash, sha256sum, git, python3.$
+set -uo pipefail$
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"$
+FAIL=0$
+note() { printf '%s\n' "$*"; }$
+bad()  { printf 'FAIL: %s\n' "$*"; FAIL=1; }$
+$
+# --- 1. manifest verification -----------------------------------------------$
+note "== [1/4] Verifying MANIFEST.sha256 (all bundled files) =="$
+if command -v sha256sum >/dev/null 2>&1; then$
+    if (cd "$HERE" && sha256sum --quiet -c MANIFEST.sha256); then$
+        note "   OK: all manifest entries match"$
+    else$
+        bad "manifest digest mismatch (see lines above)"$
+    fi$
+else$
+    bad "sha256sum not available"$
+fi$
+$
+# --- 2. git bundles ----------------------------------------------------------$
+note "== [2/4] Verifying git bundles and pinned tips =="$
+declare -A TIPS=($
+  [main.bundle]="2195a048e87dcec4aa63e8dc7981b3bb6d237ca0"$
+  [science-p0-correctness-2026-10-19.bundle]="ebc1fd79f20b9a6b6a262a70ce6942ba069d19e9"$
+  [science-law-validity-wp15.bundle]="296f10c4f2c87df2003c1a9d0150edc0b54a13d9"$
+  [chore-hygiene-2026-10-19.bundle]="abc450ea45183e9cebf3da8a6e20878d2d18a1bf"$
+  [policy-engineering-constitution.bundle]="4993cb3b6954ffb8ecad281817b2c59f1f8fc041"$
+  [integration-p0-hardening-2026-10-19.bundle]="0eae6d575cd91376588fe6b36d1b9212352df7fc"$
+)$
+TMP="$(mktemp -d)"$
+trap 'rm -rf "$TMP"' EXIT$
+git init -q "$TMP/scratch" 2>/dev/null || true   # context repo for bundle verify$
+for b in "${!TIPS[@]}"; do$
+    f="$HERE/06-git-bundles/$b"$
+    if git -C "$TMP/scratch" bundle verify "$f" >/dev/null 2>&1; then$
+        tip="$(git bundle list-heads "$f" 2>/dev/null | awk '{print $1}' | head -1)"$
+        if [ "$tip" = "${TIPS[$b]}" ]; then$
+            note "   OK: $b @ $tip"$
+        else$
+            bad "$b tip $tip != pinned ${TIPS[$b]}"$
+        fi$
+    else$
+        bad "$b is not a valid bundle"$
+    fi$
+done$
+$
+# --- 3. pinned blobs from bundle data ---------------------------------------$
+note "== [3/4] Verifying pinned governance blobs from bundled git data =="$
+git clone -q "$HERE/06-git-bundles/main.bundle" "$TMP/main" 2>/dev/null$
+git clone -q "$HERE/06-git-bundles/science-p0-correctness-2026-10-19.bundle" "$TMP/sci" 2>/dev/null$
+git clone -q "$HERE/06-git-bundles/policy-engineering-constitution.bundle" "$TMP/pol" 2>/dev/null$
+chk_blob() { # repo ref expected name$
+    got="$(git -C "$1" rev-parse "$2" 2>/dev/null)"$
+    if [ "$got" = "$3" ]; then note "   OK: $4 = $got"; else bad "$4: $got != $3"; fi$
+}$
+chk_blob "$TMP/main" "origin/main:constitution.md" \$
+    "211ad2c5d4b40059d9f3f03de12e0701f9235bc7" "constitution.md (domain)"$
+chk_blob "$TMP/pol" "origin/policy/engineering-constitution:ENGINEERING_CONSTITUTION.md" \$
+    "b6bb35e84956d84a8c9d9e65734c212baf3ed075" "ENGINEERING_CONSTITUTION.md"$
+chk_blob "$TMP/sci" "origin/science/p0-correctness-2026-10-19:backend/calibration/dataset_v23.py" \$
+    "3a5358374b2037b9475bd2d494754944485da5ac" "dataset_v23.py"$
+chk_blob "$TMP/sci" "origin/science/p0-correctness-2026-10-19:docs/P0_STATUS.md" \$
+    "22ca8ce9c0c79ba396e8a4569f419d9fa6f01d0a" "docs/P0_STATUS.md"$
+$
+# --- 4. constitution counting conventions ------------------------------------$
+note "== [4/4] Verifying constitution counting conventions =="$
+python3 - "$HERE" <<'PY' || FAIL=1$
+import hashlib, os, sys$
+here = sys.argv[1]$
+def counts(p):$
+    data = open(p, "rb").read(); text = data.decode("utf-8")$
+    return (len(data), len(text), text.count("\n"), len(text.split("\n")),$
+            len([l for l in text.split("\n") if l.strip()]),$
+            hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest())$
+d = counts(os.path.join(here, "01-constitution-reading/constitution.domain.md"))$
+e = counts(os.path.join(here, "01-constitution-reading/ENGINEERING_CONSTITUTION.md"))$
+ok = True$
+exp_d = (622, 615, 11, 12, 9, "211ad2c5d4b40059d9f3f03de12e0701f9235bc7")$
+exp_e = (20572, 20564, 178, 179, 129, "b6bb35e84956d84a8c9d9e65734c212baf3ed075")$
+if d != exp_d:$
+    print(f"FAIL: domain constitution counts {d} != {exp_d}"); ok = False$
+else:$
+    print(f"   OK: domain 622/615/11/12/9 blob={d[5][:12]}M-bM-^@M-&")$
+if e != exp_e:$
+    print(f"FAIL: engineering constitution counts {e} != {exp_e}"); ok = False$
+else:$
+    print(f"   OK: engineering 20572/20564/178/179/129 blob={e[5][:12]}M-bM-^@M-&")$
+sys.exit(0 if ok else 1)$
+PY$
+$
+# --- optional network re-check of exemplar coordinates -----------------------$
+if [ "${1:-}" = "--network" ]; then$
+    note "== [extra] Re-downloading 4 exemplar coordinates from RCSB =="$
+    for id in 1EJG 3NIR 1I0T 2VB1; do$
+        exp="$(python3 -c "$
+import json$
+t = json.load(open('$HERE/02-n7-od16-cohort-audit/n7_od16_40target_table.json'))$
+print([r['c5_coordinate_sha256_fresh'] for r in t['rows'] if r['pdb_id']=='$id'][0])")"$
+        got="$(curl -fsSL "https://files.rcsb.org/download/$id.pdb" | sha256sum | awk '{print $1}')"$
+        if [ "$got" = "$exp" ]; then note "   OK: $id coordinate digest matches table"$
+        else bad "$id digest $got != table $exp"; fi$
+    done$
+else$
+    note "(network re-checks skipped; run with --network to enable)"$
+fi$
+$
+note ""$
+if [ "$FAIL" -eq 0 ]; then$
+    note "RESULT: ALL CHECKS PASSED"$
+    note "This verifies the bundle's internal integrity and its git/bundle/blob"$
+    note "provenance. Independent acceptance still requires the auditor to run"$
+    note "this verifier on independently delivered bytes."$
+else$
+    note "RESULT: FAILURES PRESENT (see above)"$
+fi$
+exit "$FAIL"$

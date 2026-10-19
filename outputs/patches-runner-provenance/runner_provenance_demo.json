@@ -1,0 +1,32 @@
+{
+  "schema": "toscanini-runner-provenance/1.0.0",
+  "generated_utc": "2026-10-19T22:02:08.207830+00:00",
+  "runner_version": "v25-runner/1.0.0",
+  "engine": {
+    "code_sha": "f2a87fea68ee6b5b48e31af72859b1455d9f429a",
+    "code_sha_source": "git rev-parse HEAD of the repository containing the IMPORTED tos engine package",
+    "working_tree_clean": true,
+    "tree_status": []
+  },
+  "git_context": {
+    "branch": "feature/runner-provenance",
+    "describe": "v23.2.0-stable-candidate-46-gf2a87fe",
+    "remotes": {
+      "origin": "https://github.com/prateekm1007/control-atlas-saas.git"
+    }
+  },
+  "runtime": {
+    "python": "3.12.15",
+    "python_implementation": "CPython",
+    "platform": "Linux-5.10.134-013.15.kangaroo.al8.x86_64-x86_64-with-glibc2.41"
+  },
+  "dependencies": {
+    "numpy": "2.1.3",
+    "gemmi": "0.7.5"
+  },
+  "policy_binding": {
+    "canon_hash": "6a9cd4b4349b81de",
+    "law_semantic_hash": "3f49a7b5605e17dcf26bcd114713ad651cdc2279d684f1c681943eefa0f4379a",
+    "modality_matrix_sha256": "ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4"
+  }
+}
