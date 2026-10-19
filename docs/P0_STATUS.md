@@ -13,7 +13,7 @@ Legend: `[x]` done, evidence linked · `[ ]` open · `[owner]` blocked on owner
 - [x] **4. File-order residue ordering** — evidence: `evidence/item-4/` (17 new tests; 452/5/0 full suite; 1PPE raw-bytes proof committed)
 - [x] **5. HETATM retention incl. MSE→parent** — evidence: `evidence/item-5/` (1A8O chain A = 70 residues on pinned real bytes; 459/5/0 full suite)
 - [x] **6. Altloc selection** — evidence: `evidence/item-6/` (real 3ERD fixture; 8 tests; 467/5/0 full suite)
-- [ ] **7. Dead `_law_155` removed** + every-LAW-ID-exactly-one-definition test
+- [x] **7. Dead `_law_155` removed** + uniqueness test — evidence: `evidence/item-7/` (472/5/0 × 3 runs; credits isolation defect also fixed)
 - [ ] **8. Honest statuses complete** — per-law inventory; LAW-110 by observed peptide bonds; adjudicator absent/malformed default NOT_MEASURED
 - [ ] **9. Coverage denominator from source residues** (incl. HETATM-mapped)
 - [ ] **10. pLDDT scope verified for LAW-130/155/200** — evidence recorded; semantics change is an owner decision
