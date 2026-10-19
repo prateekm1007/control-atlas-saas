@@ -17,12 +17,32 @@ from pathlib import Path
 from typing import Optional, Dict
 from datetime import datetime, timezone
 
-CREDITS_DIR   = Path(os.environ.get("TOSCANINI_DATA_DIR", "/app/data")) / "credits"
-CREDITS_DIR.mkdir(parents=True, exist_ok=True)
-
 # Beta allocation
 BETA_CREDITS_EMAIL = 10
 BETA_CREDITS_ANON  = 3
+
+
+def _credits_dir() -> Path:
+    """Resolve the credits directory at CALL time from the environment.
+
+    P0 item 7 follow-up (2026-10-19 audit): the directory used to be
+    resolved at IMPORT time and module-cached. Because main.py imports
+    this module lazily inside /refinement/submit, the first test to reach
+    that endpoint pinned the credits path to ITS environment for the
+    whole session, defeating the per-test TOSCANINI_DATA_DIR isolation
+    that test fixtures set up and leaking credit balances across tests
+    and across pytest runs (observed: test_ids'
+    test_job_id_is_full_uuid_hex failing with 402 only in full-suite
+    runs, depending on how many earlier sessions had deducted from the
+    pinned file). Per-call resolution makes each submit read the CURRENT
+    environment, which is both what tests already assumed and what a
+    config change at runtime should do. Importing this module no longer
+    creates directories as a side effect.
+    """
+    d = Path(os.environ.get("TOSCANINI_DATA_DIR", "/app/data")) / "credits"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
 
 # Cost per protocol (GPU minutes)
 PROTOCOL_COST = {
@@ -37,7 +57,7 @@ PROTOCOL_COST = {
 def _credit_file(identifier: str) -> Path:
     """Get credit file path for a user identifier."""
     safe_id = identifier.replace("@", "_at_").replace(".", "_").replace("/", "_")
-    return CREDITS_DIR / f"{safe_id}.json"
+    return _credits_dir() / f"{safe_id}.json"
 
 
 def get_credits(identifier: str) -> Dict:
