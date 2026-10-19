@@ -15,6 +15,10 @@ class Atom:
     chain_id: str
     insertion_code: str
     b_iso: float
+    # P0 item 4: mmCIF label_seq_id — the authoritative sequence position
+    # for residue ordering when the source is mmCIF (None for PDB sources,
+    # where file order is authoritative). See coord_math.get_sequential_residues.
+    label_seq_id: Optional[int] = None
 
 class ConfidenceProfile:
     """Discriminates method-specific behaviors and carries structural metadata."""

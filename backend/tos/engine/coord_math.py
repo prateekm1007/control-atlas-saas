@@ -14,6 +14,12 @@ References:
 import numpy as np
 from typing import List, Optional, Tuple, Set
 
+# Maximum C(i)-N(i+1) distance for a genuine peptide bond (Engh & Huber
+# ideal 1.329 A; the 2.0 A bound matches the LAW-110 backbone-gap
+# criterion). Used to validate that a file-order residue pair is truly
+# bonded before measuring peptide-plane geometry.
+PEPTIDE_BOND_MAX_ANGSTROM = 2.0
+
 
 def distance(a: np.ndarray, b: np.ndarray) -> float:
     """
@@ -148,26 +154,32 @@ def get_chains(atoms) -> Set[str]:
 def residues_are_adjacent(chain_a: str, seq_a: int, icode_a: str,
                           chain_b: str, seq_b: int, icode_b: str) -> bool:
     """
-    Sequence-adjacency predicate for backbone continuity (WP-SCI-1).
+    No-missing-span predicate for file-order-consecutive residues
+    (P0 item 4, 2026-10-19 audit).
 
-    True only when residue B is the immediate sequential successor of
-    residue A within the SAME chain, honoring PDB insertion codes.
-    A gap in residue numbering (missing residue span, e.g. 45 -> 67) is
-    NOT adjacent: absent density is not a physical chain break, and the
-    caller must skip such pairs instead of measuring across them.
+    Callers iterate residues in FILE ORDER within one chain (see
+    get_sequential_residues / Tier1Measurements._extract), which is the
+    depositor's chemical bond order. This predicate answers a narrower
+    question: is there a MISSING RESIDUE SPAN between two
+    file-order-consecutive residues, i.e. numbering that jumps by more
+    than one base number (45 -> 67)?
 
-    This is the single shared definition used by every inter-residue
-    measurement (LAW-110, LAW-120, LAW-125, LAW-135, LAW-160).
+    Alphabetical insertion-code comparison is intentionally REMOVED.
+    Insertion codes cannot be ordered by string comparison because real
+    deposits list insertion-coded residues either side of their base
+    number: 1PPE chain E file order is 183, 184A, 184, 185 (sha256
+    fe51b428..., evidence/item-4/). Only the file order is ground truth;
+    pair-level chemical validation is done with C-N bond distances
+    (peptide_bonded).
 
-    Decision table (exact semantics preserved from the historical
-    Tier1Measurements._is_sequential, now centralized):
-      - chain mismatch                        -> False (never join chains)
-      - seq_b == seq_a + 1, no icode on B     -> True  (plain successor,
-        with or without an insertion code on A)
-      - seq_a == seq_b and icode_b > icode_a  -> True  (insertion-code
-        successors of the same residue number, e.g. 99 -> 99A)
-      - anything else (including seq gaps, icode on B with seq_b == seq_a + 1)
-                                              -> False
+    Decision table:
+      - chain mismatch            -> False (never join chains)
+      - seq_b - seq_a > 1         -> False (missing span: absent density,
+                                    not a physical chain break; caller
+                                    skips instead of measuring across)
+      - anything else (seq_b - seq_a in {..., -1, 0, 1}, any icodes)
+                                  -> True  (no missing span; measure the
+                                    pair — geometry decides pass/break)
 
     Args:
         chain_a, seq_a, icode_a: chain ID, residue sequence number and
@@ -175,25 +187,53 @@ def residues_are_adjacent(chain_a: str, seq_a: int, icode_a: str,
         chain_b, seq_b, icode_b: same for the second residue.
 
     Returns:
-        True when the pair is immediately sequential within one chain.
+        True when the pair is file-order-consecutive with no missing
+        residue span between them.
     """
     if chain_a != chain_b:
         return False
-    if seq_b - seq_a == 1 and not icode_a and not icode_b:
-        return True
-    if seq_a == seq_b and icode_b > icode_a:
-        return True
-    if seq_b - seq_a == 1 and icode_a and not icode_b:
-        return True
-    return False
+    if seq_b - seq_a > 1:
+        return False
+    return True
+
+
+def peptide_bonded(atoms_r1: dict, atoms_r2: dict) -> bool:
+    """
+    Chemical validation that residue 2 follows residue 1 (P0 item 4).
+
+    True when the C(i)-N(i+1) distance is within the peptide-bond
+    tolerance (PEPTIDE_BOND_MAX_ANGSTROM). Used by the peptide-plane
+    measurements (LAW-120 O-C-N / CA-C-N, LAW-125 phi/psi, LAW-135
+    omega) so that angles are only ever measured across a genuine bond,
+    never across a discontinuity — the same class of defect as the
+    repaired intra-residue pseudo-angle.
+
+    Args:
+        atoms_r1: atom_name -> position dict of residue i (needs "C").
+        atoms_r2: atom_name -> position dict of residue i+1 (needs "N").
+
+    Returns:
+        True when C(i)-N(i+1) is a peptide bond. Missing C or N atoms
+        return False (cannot validate -> do not measure).
+    """
+    if "C" not in atoms_r1 or "N" not in atoms_r2:
+        return False
+    return distance(atoms_r1["C"], atoms_r2["N"]) <= PEPTIDE_BOND_MAX_ANGSTROM
 
 
 def get_sequential_residues(atoms, chain_id: str) -> List[Tuple[int, str, str]]:
     """
-    Return an ordered list of residues in a chain.
+    Return an ordered list of residues in a chain, in FILE ORDER.
 
     Each entry is (res_seq, insertion_code, res_name).
-    Sorted by (res_seq, insertion_code) to handle insertion codes correctly.
+
+    P0 item 4: residues are returned in order of first appearance in the
+    source file, NOT sorted by (res_seq, insertion_code). Real deposits
+    list insertion-coded residues before their base number (1PPE chain E:
+    183, 184A, 184, 185), so any (res_seq, icode) sort silently re-pairs
+    the peptide bonds and fabricates backbone gaps. mmCIF inputs ordered
+    by label_seq_id set Atom.label_seq_id, which takes precedence when
+    present.
 
     Args:
         atoms: list of Atom objects
@@ -205,6 +245,7 @@ def get_sequential_residues(atoms, chain_id: str) -> List[Tuple[int, str, str]]:
     """
     seen = set()
     residues = []
+    pending_label_seq: dict = {}
     for atom in atoms:
         if atom.chain_id != chain_id:
             continue
@@ -212,9 +253,14 @@ def get_sequential_residues(atoms, chain_id: str) -> List[Tuple[int, str, str]]:
         if key not in seen:
             seen.add(key)
             residues.append((atom.res_seq, atom.insertion_code, atom.res_name))
+            label = getattr(atom, "label_seq_id", None)
+            if label is not None:
+                pending_label_seq[key] = label
 
-    # Sort by sequence number, then insertion code
-    residues.sort(key=lambda r: (r[0], r[1]))
+    if pending_label_seq:
+        # mmCIF: label_seq_id is the authoritative sequence position.
+        residues.sort(key=lambda r: pending_label_seq.get(
+            (r[0], r[1]), float("inf")))
     return residues
 
 

@@ -32,7 +32,7 @@ WP-SCI-1 measurement-definition repairs:
 from .coord_math import (
     distance, angle_deg, dihedral_deg,
     get_atom_pos, get_chains, get_sequential_residues,
-    residues_are_adjacent,
+    residues_are_adjacent, peptide_bonded,
     CHI1_ATOMS, NO_CHI1_RESIDUES
 )
 import numpy as np
@@ -82,6 +82,7 @@ class Tier1Measurements:
     @staticmethod
     def _extract(structure):
         res_map = {}
+        chain_first_seen = {}
         for a in structure.atoms:
             k = (a.chain_id, a.res_seq, a.insertion_code)
             if k not in res_map:
@@ -90,11 +91,21 @@ class Tier1Measurements:
                     "_seq": a.res_seq, "_icode": a.insertion_code,
                     "_conf_acc": [], "_atoms": {}
                 }
+                chain_first_seen.setdefault(a.chain_id, len(chain_first_seen))
             res_map[k]["_atoms"][a.atom_name] = a.pos
             res_map[k]["_conf_acc"].append(a.b_iso)
         for r in res_map.values():
             r["_conf"] = float(np.mean(r["_conf_acc"]))
-        return sorted(res_map.values(), key=lambda x: (x["_chain"], x["_seq"], x["_icode"]))
+        # P0 item 4: residues are returned in FILE ORDER (order of first
+        # appearance), grouped by chain in first-appearance order — NOT
+        # sorted by (chain, res_seq, icode). Deposits exist that list an
+        # insertion-coded residue before its base number (1PPE chain E:
+        # 183, 184A, 184, 185); any (res_seq, icode) sort re-pairs the
+        # peptide bonds and fabricates backbone gaps. mmCIF structures
+        # whose atoms carry label_seq_id are ordered by it instead (see
+        # coord_math.get_sequential_residues).
+        return sorted(res_map.values(),
+                      key=lambda r: chain_first_seen[r["_chain"]])
 
     @staticmethod
     def run_full_audit(structure, user_intent="NONE"):
@@ -204,12 +215,16 @@ class Tier1Measurements:
                 angle_sq_diffs.append((measured - ideal) ** 2)
 
         # Peptide angles across valid sequential pairs only: same chain,
-        # immediate successor per the shared adjacency predicate
-        # (insertion codes honored, missing spans skipped, chains never
-        # joined).
+        # no missing span (file order), AND chemically bonded — C(i)-N(i+1)
+        # within the peptide-bond tolerance (P0 item 4). Angles are never
+        # measured across a discontinuity: a pseudo-angle against the
+        # Engh-Huber peptide ideal is exactly the defect class repaired in
+        # WP-SCI-1.
         for i in range(len(core) - 1):
             r1, r2 = core[i], core[i + 1]
             if not Tier1Measurements._is_sequential(r1, r2):
+                continue
+            if not peptide_bonded(r1["_atoms"], r2["_atoms"]):
                 continue
             if "C" in r1["_atoms"] and "N" in r2["_atoms"]:
                 if "O" in r1["_atoms"]:
@@ -245,6 +260,10 @@ class Tier1Measurements:
             p, c, n = core[i - 1], core[i], core[i + 1]
             if not (Tier1Measurements._is_sequential(p, c) and
                     Tier1Measurements._is_sequential(c, n)):
+                continue
+            # P0 item 4: phi/psi only across genuinely bonded pairs.
+            if not (peptide_bonded(p["_atoms"], c["_atoms"]) and
+                    peptide_bonded(c["_atoms"], n["_atoms"])):
                 continue
             if ("C" not in p["_atoms"] or
                     not all(k in c["_atoms"] for k in ["N", "CA", "C"]) or
@@ -420,6 +439,9 @@ class Tier1Measurements:
         for i in range(len(core) - 1):
             r1, r2 = core[i], core[i + 1]
             if not Tier1Measurements._is_sequential(r1, r2):
+                continue
+            # P0 item 4: omega only across a genuinely bonded pair.
+            if not peptide_bonded(r1["_atoms"], r2["_atoms"]):
                 continue
             if not all(a in r1["_atoms"] for a in ["CA", "C"]):
                 continue

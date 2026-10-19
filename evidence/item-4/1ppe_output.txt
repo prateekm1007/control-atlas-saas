@@ -1,0 +1,89 @@
+file: /home/z/my-project/pdb-evidence/1PPE.pdb
+sha256: fe51b4280055199c644214049f59a752e6124d858eaea29c1a2f721fb03ed0bb
+bytes: 203958
+digest matches expected: True
+byte count matches expected: True
+
+== chain E insertion-code regions, FILE ORDER ==
+  180   MET
+  181   PHE
+  182   CYS
+  183   ALA
+  184A  GLY
+  184   TYR
+  185   LEU
+  186   GLU
+  187   GLY
+  188A  GLY
+  188   LYS
+  189   ASP
+  190   SER
+  216   GLY
+  217   SER
+  219   GLY
+  220   CYS
+  221A  ALA
+  221   GLN
+  222   LYS
+  223   ASN
+  224   LYS
+
+== bonded C-N distances, FILE ORDER (window pairs only) ==
+  179   -> 180    C-N =  1.335 A   PEPTIDE BOND
+  180   -> 181    C-N =  1.335 A   PEPTIDE BOND
+  181   -> 182    C-N =  1.282 A   PEPTIDE BOND
+  182   -> 183    C-N =  1.328 A   PEPTIDE BOND
+  183   -> 184A   C-N =  1.349 A   PEPTIDE BOND
+  184A  -> 184    C-N =  1.351 A   PEPTIDE BOND
+  184   -> 185    C-N =  1.313 A   PEPTIDE BOND
+  185   -> 186    C-N =  1.308 A   PEPTIDE BOND
+  186   -> 187    C-N =  1.306 A   PEPTIDE BOND
+  187   -> 188A   C-N =  1.341 A   PEPTIDE BOND
+  188A  -> 188    C-N =  1.312 A   PEPTIDE BOND
+  188   -> 189    C-N =  1.322 A   PEPTIDE BOND
+  189   -> 190    C-N =  1.299 A   PEPTIDE BOND
+  190   -> 191    C-N =  1.343 A   PEPTIDE BOND
+  215   -> 216    C-N =  1.343 A   PEPTIDE BOND
+  216   -> 217    C-N =  1.282 A   PEPTIDE BOND
+  217   -> 219    C-N =  1.331 A   PEPTIDE BOND
+  219   -> 220    C-N =  1.322 A   PEPTIDE BOND
+  220   -> 221A   C-N =  1.263 A   PEPTIDE BOND
+  221A  -> 221    C-N =  1.333 A   PEPTIDE BOND
+  221   -> 222    C-N =  1.303 A   PEPTIDE BOND
+  222   -> 223    C-N =  1.277 A   PEPTIDE BOND
+  223   -> 224    C-N =  1.323 A   PEPTIDE BOND
+  224   -> 225    C-N =  1.323 A   PEPTIDE BOND
+
+== same coordinates under the REMOVED (res_seq, icode) sort ==
+  179   -> 180    C-N =  1.335 A   peptide bond
+  180   -> 181    C-N =  1.335 A   peptide bond
+  181   -> 182    C-N =  1.282 A   peptide bond
+  182   -> 183    C-N =  1.328 A   peptide bond
+  183   -> 184    C-N =  4.476 A   FABRICATED GAP
+  184   -> 184A   C-N =  5.808 A   FABRICATED GAP
+  184A  -> 185    C-N =  4.368 A   FABRICATED GAP
+  185   -> 186    C-N =  1.308 A   peptide bond
+  186   -> 187    C-N =  1.306 A   peptide bond
+  187   -> 188    C-N =  3.216 A   FABRICATED GAP
+  188   -> 188A   C-N =  4.891 A   FABRICATED GAP
+  188A  -> 189    C-N =  4.457 A   FABRICATED GAP
+  189   -> 190    C-N =  1.299 A   peptide bond
+  190   -> 191    C-N =  1.343 A   peptide bond
+  215   -> 216    C-N =  1.343 A   peptide bond
+  216   -> 217    C-N =  1.282 A   peptide bond
+  217   -> 219    C-N =  1.331 A   peptide bond
+  219   -> 220    C-N =  1.322 A   peptide bond
+  220   -> 221    C-N =  2.894 A   FABRICATED GAP
+  221   -> 221A   C-N =  5.027 A   FABRICATED GAP
+  221A  -> 222    C-N =  4.058 A   FABRICATED GAP
+  222   -> 223    C-N =  1.277 A   peptide bond
+  223   -> 224    C-N =  1.323 A   peptide bond
+  224   -> 225    C-N =  1.323 A   peptide bond
+
+== CA-CA across the insertion pairs (file order) ==
+  183   -> 184A   CA-CA =  3.814 A
+  184A  -> 184    CA-CA =  3.812 A
+  187   -> 188A   CA-CA =  3.820 A
+  188A  -> 188    CA-CA =  3.858 A
+  220   -> 221A   CA-CA =  3.693 A
+  221A  -> 221    CA-CA =  3.801 A

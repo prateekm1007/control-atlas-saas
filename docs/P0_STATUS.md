@@ -10,7 +10,7 @@ Legend: `[x]` done, evidence linked · `[ ]` open · `[owner]` blocked on owner
 ## Engine correctness
 
 - [x] **3. v24 marked superseded** — `backend/calibration/runs/v24/calibration_v24_SUPERSEDED.md` (JSON untouched). Evidence: `evidence/item-3/`
-- [ ] **4. File-order residue ordering** — replace `(res_seq, icode)` sort in `coord_math.py` / `tier1_measurements.py`; remove alphabetical icode logic; synthetic fixture 183/184A/184/185 → zero breaks; commit raw 1PPE evidence
+- [x] **4. File-order residue ordering** — evidence: `evidence/item-4/` (17 new tests; 452/5/0 full suite; 1PPE raw-bytes proof committed)
 - [ ] **5. HETATM retention incl. MSE→parent** — acceptance: 1A8O chain A = 70 residues
 - [ ] **6. Altloc selection** — one conformer per atom (highest occupancy, then first), applied everywhere
 - [ ] **7. Dead `_law_155` removed** + every-LAW-ID-exactly-one-definition test
