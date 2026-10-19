@@ -6,6 +6,7 @@ python-multipart>=0.0.6
 requests>=2.31.0,<3.0
 google-generativeai>=0.3.0
 fpdf2>=2.7.4
+gemmi>=0.6.6,<0.7
 numpy>=1.24.0,<3.0
 scipy>=1.10.0,<2.0
 matplotlib>=3.7.0

@@ -1,0 +1,18 @@
+=== AF-Q5VSL9-F1 ===
+  ACQUIRED  entity=AF-Q5VSL9-F1 v6
+  url=https://alphafold.ebi.ac.uk/files/AF-Q5VSL9-F1-model_v6.cif
+  fmt=cif  bytes=776095  sha256=eb8fb8051faeabf3...
+  uniprot=Q5VSL9  globalMetric=80.88
+=== AF-P0DTC2-F1 ===
+  FAIL-CLOSED  AlphaFold DB acquisition failed for P0DTC2: requested entity AF-P0DTC2-F1 not served (API returned: ['AF-0000000365840314'])
+  migrated_identifier=AF-0000000365840314
+  uniprot_entry_type=UniProtKB reviewed (Swiss-Prot)
+=== AF-P62988-F1 ===
+  FAIL-CLOSED  AlphaFold DB acquisition failed for P62988: metadata HTTP 404
+  uniprot_entry_type=Inactive
+=== AF-P69905-F1 ===
+  ACQUIRED  entity=AF-P69905-F1 v6
+  url=https://alphafold.ebi.ac.uk/files/AF-P69905-F1-model_v6.cif
+  fmt=cif  bytes=137559  sha256=eb7adbdd79775b0d...
+  uniprot=P69905  globalMetric=98.06
+done

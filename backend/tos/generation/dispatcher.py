@@ -2,6 +2,8 @@ import requests
 import logging
 import re
 
+from .afdb import fetch_prediction, AFDBUnavailable
+
 logger = logging.getLogger("toscanini.dispatcher")
 
 
@@ -77,35 +79,29 @@ class GenerationDispatcher:
 
     @staticmethod
     def _acquire_afdb(candidate_id: str):
-        """Fetch AlphaFold prediction from EBI AFDB."""
-        clean_id = candidate_id.replace("AF-", "").replace("-F1", "").strip()
+        """Fetch an AlphaFold prediction via metadata-first acquisition.
 
-        urls = [
-            f"https://alphafold.ebi.ac.uk/files/AF-{clean_id}-F1-model_v4.pdb",
-            f"https://alphafold.ebi.ac.uk/files/AF-{clean_id}-F1-model_v4.cif",
-            f"https://alphafold.ebi.ac.uk/api/prediction/{clean_id}",
-        ]
-
-        for url in urls:
-            try:
-                logger.info(f"AFDB Acquisition: {url}")
-                res = requests.get(url, timeout=15)
-                if res.status_code == 200:
-                    content = res.content
-                    if "application/json" in res.headers.get("Content-Type", ""):
-                        data = res.json()
-                        if isinstance(data, list) and len(data) > 0:
-                            actual_url = data[0].get("pdbUrl")
-                            if actual_url:
-                                content = requests.get(actual_url, timeout=15).content
-
-                    if len(content) > 200:
-                        fmt = "cif" if ".cif" in url else "pdb"
-                        logger.info(f"✅ AFDB Success: {len(content)} bytes ({fmt})")
-                        return (content, candidate_id, fmt)
-            except Exception as e:
-                logger.warning(f"AFDB segment failed: {e}")
-                continue
-
-        # WP-4: never fabricate a structure — fail loudly instead.
-        raise SourceUnavailable(candidate_id, urls)
+        P0 item 11: the hardcoded model_v4 file URLs are gone. The
+        acquisition now queries /api/prediction/{uniprot}, selects the
+        entry by `modelEntityId` (never data[0]) and `latestVersion`,
+        downloads its `cifUrl`, and detects the format from the
+        content. JSON is never accepted as a structure; every failure
+        fails closed through SourceUnavailable with the AFDB record
+        attached (including migrated identifiers, item 14).
+        """
+        try:
+            pred = fetch_prediction(candidate_id)
+        except AFDBUnavailable as exc:
+            sources = [exc.record.get("api_url"),
+                       exc.record.get("cif_url") or
+                       "https://alphafold.ebi.ac.uk/files/"]
+            # Attach the structured AFDB record (migrated identifiers,
+            # fields present, versions) for the caller to log.
+            exc.sources = [s for s in sources if s]
+            raise SourceUnavailable(candidate_id, exc.sources) from exc
+        fmt = "cif" if pred.fmt == "cif" else "pdb"
+        logger.info(
+            "AFDB Success: %s v%s (%s, %d bytes, sha256 %s...)",
+            pred.model_entity_id, pred.latest_version, fmt,
+            len(pred.content), pred.sha256[:12])
+        return (pred.content, candidate_id, fmt)

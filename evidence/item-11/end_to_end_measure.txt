@@ -1,0 +1,9 @@
+acquired: AF-P69905-F1 v6 cif 137559 bytes
+verdict: PASS
+coverage: 99.3  atoms: 1077
+LAW-105: observed=99.3 status=PASS sample=142
+LAW-110: observed=0 status=PASS sample=141
+LAW-120: observed=1.59 status=PASS sample=421
+LAW-155: observed=5.75 status=PASS sample=1077
+LAW-160: observed=3.9 status=PASS sample=141
+LAW-200: observed=46.23 status=PASS sample=1077
