@@ -119,6 +119,11 @@ def get_atom_pos(atoms, chain_id: str, res_seq: int,
     """
     Locate a specific atom and return its position.
 
+    P0 item 6: when several records match (alternate conformers), the
+    retained atom is the one with the HIGHEST occupancy, ties resolved to
+    the FIRST record in file order — the same rule the parser and
+    _extract apply. Previously this returned the first match blindly.
+
     Args:
         atoms: list of Atom objects (from IngestionProcessor)
         chain_id: chain identifier (e.g., "A")
@@ -129,13 +134,15 @@ def get_atom_pos(atoms, chain_id: str, res_seq: int,
     Returns:
         numpy array of shape (3,) with atom position, or None if not found.
     """
+    best = None
     for atom in atoms:
         if (atom.chain_id == chain_id and
                 atom.res_seq == res_seq and
                 atom.atom_name == atom_name and
                 atom.insertion_code == insertion_code):
-            return atom.pos
-    return None
+            if best is None or atom.occupancy > best.occupancy:
+                best = atom
+    return best.pos if best is not None else None
 
 
 def get_chains(atoms) -> Set[str]:
@@ -269,6 +276,10 @@ def get_residue_atoms(atoms, chain_id: str, res_seq: int,
     """
     Return a dictionary of atom_name -> position for all atoms in a residue.
 
+    P0 item 6: alternate conformers are collapsed to one atom per name —
+    highest occupancy, then first in file order. Previously this kept the
+    LAST matching record, disagreeing with get_atom_pos (first match).
+
     Args:
         atoms: list of Atom objects
         chain_id: chain identifier
@@ -279,13 +290,15 @@ def get_residue_atoms(atoms, chain_id: str, res_seq: int,
         dict mapping atom name strings to numpy position arrays.
         Example: {"N": array([1,2,3]), "CA": array([4,5,6]), ...}
     """
-    result = {}
+    selected = {}
     for atom in atoms:
         if (atom.chain_id == chain_id and
                 atom.res_seq == res_seq and
                 atom.insertion_code == insertion_code):
-            result[atom.atom_name] = atom.pos
-    return result
+            incumbent = selected.get(atom.atom_name)
+            if incumbent is None or atom.occupancy > incumbent.occupancy:
+                selected[atom.atom_name] = atom
+    return {name: atom.pos for name, atom in selected.items()}
 
 
 # ═══════════════════════════════════════════════════════════════

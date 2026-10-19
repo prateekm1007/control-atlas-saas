@@ -89,13 +89,23 @@ class Tier1Measurements:
                 res_map[k] = {
                     "_name": a.res_name, "_chain": a.chain_id,
                     "_seq": a.res_seq, "_icode": a.insertion_code,
-                    "_conf_acc": [], "_atoms": {}
+                    "_records": [],
                 }
                 chain_first_seen.setdefault(a.chain_id, len(chain_first_seen))
-            res_map[k]["_atoms"][a.atom_name] = a.pos
-            res_map[k]["_conf_acc"].append(a.b_iso)
+            res_map[k]["_records"].append(a)
         for r in res_map.values():
-            r["_conf"] = float(np.mean(r["_conf_acc"]))
+            # P0 item 6: one conformer per atom — highest occupancy, then
+            # first in file order (the same rule as the parser,
+            # get_atom_pos, and get_residue_atoms). _conf averages the
+            # B-factors of the RETAINED atoms only.
+            selected = {}
+            for a in r["_records"]:
+                incumbent = selected.get(a.atom_name)
+                if incumbent is None or a.occupancy > incumbent.occupancy:
+                    selected[a.atom_name] = a
+            r["_atoms"] = {name: atom.pos for name, atom in selected.items()}
+            r["_conf_acc"] = [atom.b_iso for atom in selected.values()]
+            r["_conf"] = float(np.mean(r["_conf_acc"])) if r["_conf_acc"] else 0.0
         # P0 item 4: residues are returned in FILE ORDER (order of first
         # appearance), grouped by chain in first-appearance order — NOT
         # sorted by (chain, res_seq, icode). Deposits exist that list an

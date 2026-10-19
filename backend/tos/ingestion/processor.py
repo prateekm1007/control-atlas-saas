@@ -39,6 +39,11 @@ class Atom:
     # for residue ordering when the source is mmCIF (None for PDB sources,
     # where file order is authoritative). See coord_math.get_sequential_residues.
     label_seq_id: Optional[int] = None
+    # P0 item 6: alternate-conformer identifier (PDB column 17) and
+    # occupancy (columns 55-60). One conformer per atom is retained —
+    # highest occupancy, then first in file — everywhere in the engine.
+    altloc: str = " "
+    occupancy: float = 1.0
 
 class ConfidenceProfile:
     """Discriminates method-specific behaviors and carries structural metadata."""
@@ -94,7 +99,7 @@ class IngestionProcessor:
         """
         lines = content.decode(errors="ignore").splitlines()
         atoms = []
-        b_values = []
+        best_by_key = {}
 
         # Pre-classify for filtering logic
         method = _classify_method(lines)
@@ -127,6 +132,7 @@ class IngestionProcessor:
                 if element in ("H", "D"):
                     continue
 
+                altloc = line[16:17] or " "
                 chain_id = line[21:22].strip() or "A"
                 res_seq = int(line[22:26].strip())
                 icode = line[26:27].strip()
@@ -134,18 +140,34 @@ class IngestionProcessor:
                 x = float(line[30:38].strip())
                 y = float(line[38:46].strip())
                 z = float(line[46:54].strip())
+                occ_field = line[54:60].strip()
+                occupancy = float(occ_field) if occ_field else 1.0
                 b_iso = float(line[60:66].strip()) if line[60:66].strip() else 0.0
 
                 atom_obj = Atom(
                     atom_name=atom_name, element=element, pos=np.array([x, y, z]),
                     res_name=res_name, res_seq=res_seq, chain_id=chain_id,
-                    insertion_code=icode, b_iso=b_iso
+                    insertion_code=icode, b_iso=b_iso,
+                    altloc=altloc, occupancy=occupancy
                 )
-                atoms.append(atom_obj)
-                b_values.append(b_iso)
+
+                # P0 item 6: exactly one conformer per atom — highest
+                # occupancy wins, ties keep the FIRST record in file order.
+                # Selection happens at parse time so that every consumer
+                # of structure.atoms (LAW-130/155/200 included) sees one
+                # atom per (chain, residue, atom_name).
+                key = (chain_id, res_seq, icode, atom_name)
+                incumbent = best_by_key.get(key)
+                if incumbent is None:
+                    best_by_key[key] = len(atoms)
+                    atoms.append(atom_obj)
+                elif atom_obj.occupancy > atoms[incumbent].occupancy:
+                    atoms[incumbent] = atom_obj
             except (ValueError, IndexError):
                 continue
 
+        # Confidence reflects the RETAINED conformers only.
+        b_values = [a.b_iso for a in atoms]
         audit_id = str(uuid.uuid4())[:8]
         return Structure(
             atoms=atoms,
