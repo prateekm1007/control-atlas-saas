@@ -31,12 +31,12 @@ Legend: `[x]` done, evidence linked · `[ ]` open · `[owner]` blocked on owner
 
 ## Cohort (after 3–15)
 
-- [ ] **16. Cohort rebuild per `protocol/evaluation_protocol_v1.md`** — 1I0T removed with recorded reason; PISCES-style quality filter; held-out split before threshold work. **[owner] all numeric criteria**
+- [owner] **16. Cohort rebuild** — proposal written: `backend/calibration/protocol/cohort_v25_proposal.md` (1I0T removal verified + recorded; P0DTC2/P62988 dispositions verified live; ALL numeric criteria + split fraction await owner). Held-out split NOT written — blocked on owner per direction
 
 ## Hygiene
 
-- [ ] **17. Nested `control-atlas-saas/` removed in its own PR** (83 tracked files) + grep evidence
-- [ ] **18. Junk files removed**
+- [x] **17. Nested copy removed** — branch `chore/hygiene-2026-10-19` (86 deletions, grep evidence: zero references)
+- [x] **18. Junk files removed** — render tarball, test_sieve.sh, run_full_atlas.ps1 (deferred-with-reasons list in evidence)
 
 ## Owner gates (not started by coder)
 
