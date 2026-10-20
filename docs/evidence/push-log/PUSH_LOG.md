@@ -120,3 +120,33 @@
 - CI observed: gate run on b12f30e = FAILURE with the same two baseline causes recorded at
   P-012-CONFIRM (A-02 HEAD-tree key; main's stale lock). P0_STATUS section 7's own content
   is documentation-only and not implicated.
+
+## 2026-10-20T11:34:40Z | P-015-CONFIRM | push-confirm | branch=proposal/ec16-ec26-enforcement remote_sha=a0e321c0ef08cd3430e7910936075994791fd8df credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/proposal/ec16-ec26-enforcement -> a0e321c0ef08cd3430e7910936075994791fd8df (re-verified at CONFIRM write time)"
+
+- Confirms the push that published a0e321c (the P-012/P-013/P-014-CONFIRM entries commit;
+  commit author time 10:32:13Z; push time not observed — the accepting ref-update moment is
+  not established by any artifact, mirroring the P-011-CONFIRM reconciliation).
+- The ref was observed at a0e321c by the Round-18 session at fetch time and re-verified via
+  the ls-remote above immediately before this entry was written; no intervening push of this
+  branch was detected (single-writer pre-check for the Round-18 rebase passed).
+- CI observed on a0e321c via the commits API (check-runs endpoint, queried 2026-10-20 ~11:35Z):
+  total_count = 0. The branch carries the pre-release gate triggers, which do not match this
+  branch name — the exact trigger defect this package documents. No CI claim is made for any
+  commit at or below a0e321c; the first CI run for this series will be the Round-18 gate on
+  the rebased tip.
+
+## 2026-10-20T11:34:40Z | P-016-INTENT | push-intent | branch=proposal/ec16-ec26-enforcement head_at_intent=RECORDED-BELOW remote_tip_expected=a0e321c0ef08cd3430e7910936075994791fd8df credential=OWNER-PAT-1 authorized_by="auditor Round-18 direction 1 (rebase proposal onto main eb6d6a9; remove every .github change; gate on exact tip; merge when green)"
+
+- This push REPLACES the branch history: the 11-commit series (09aa6b5..4a14455 after rebase)
+  is rebased onto main eb6d6a9 plus one Round-18 adjustment commit carrying this entry, so the
+  push is a force-update of the ref (no fast-forward is possible). Force-with-lease is bound to
+  remote_tip_expected=a0e321c... per the single-writer rule; the push is ABORTED if the remote
+  tip differs.
+- head_at_intent is the carrying commit itself and cannot be known pre-push (self-reference
+  limit, PUSH_LOG_SCHEMA.md); the deferred value is recorded by the next CONFIRM entry for this
+  branch or, as the schema's disclosed limitation allows, in the round report and worklog.
+- Content of the adjustment commit (disclosed pre-push): two `google-generativeai` install-line
+  tokens removed from proposals/remediation workflow documents per the Round-18
+  documentation-exemption decision; remediation README supersession corrections; this push-log
+  append; SHA256SUMS regenerated to match the tip. No .github change (the rebased series carries
+  main's .github byte-identically).

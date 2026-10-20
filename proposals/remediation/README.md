@@ -47,3 +47,37 @@ alone protects nothing:
 2. The amendment document's EC-25 section is corrected in the same direction, and the
    `[ain]` claim is now backed by exact tracked-file evidence (path, blob SHA, line) instead
    of a worklog citation.
+
+## 2026-10-20 Round-18 rebase corrections (recorded, append-only style)
+
+This package was authored against `main` @ `2195a048` (pre-release baseline). Since then the
+Round-17 release merge (`d292a38`, merged to `main`, now `eb6d6a9`) landed the live remediation
+this directory proposed:
+
+1. `.github/workflows/deploy.yml` on `main` is `workflow_dispatch`-only (no push/pull_request/
+   workflow_run triggers, no EC2/ssh/secret references) — the `deploy.dispatch-only.yml` draft
+   here is superseded by the shipped version and is retained as a historical document only.
+2. `.github/workflows/toscanini-gate.yml` on `main` triggers on `push.branches: ["**"]` and
+   `pull_request.branches: ["**"]` and installs the lock + dev requirements — the `on:`-block
+   fix proposed in `toscanini-gate.branch-triggers.yml` is likewise superseded and retained as
+   a historical document only.
+
+Corrections to the table above, per the auditor's 2026-10-20 documentation-exemption decision
+("code, configuration, and workflow references" to the removed provider are not permitted
+outside `docs/`; the auditor's acceptance grep for that decision — its exact pattern and the
+removal record are entry R10 of `docs/evidence/ec16-ec26/RECEIPT.md` — must return no match
+introduced by this package):
+
+- `fixtures/toscanini_gate_AIN_DEFECT.yml` and `toscanini-gate.branch-triggers.yml` each
+  carried the pre-release hand-written install line ending in the removed provider SDK
+  package token. That token is removed in this rebase commit (R10). Both files are therefore
+  NO LONGER byte-exact
+  copies of any historical blob; the properties they exist to reproduce — the `on:`-block
+  defects (`push.branches: ["*"]`, `pull_request.branches: "ain]"`) in the fixture, and the
+  repaired `["**"]`/`["main"]` filters with no `ain]` fragment in the proposed fix — are
+  unchanged and remain machine-verified by AT-14 on every run of the acceptance suite.
+- `fixtures/deploy_on_push_VIOLATION.yml` is untouched (it contains no provider reference);
+  it reproduces the PRE-RELEASE deploy defect and is likewise a historical document now that
+  `main` ships the dispatch-only workflow.
+- Nothing in this directory is a live workflow; the activation plan above is historical
+  (steps 1–2 were executed by the Round-17 release merge, not by this package).
