@@ -133,3 +133,11 @@
   root `SHA256SUMS` (artifact manifest). `.github/` is byte-identical to main (verified empty diff
   before commit). D-5 status updates recorded in the reading note + this index's inventory
   (EC-17/EC-22/EC-25 ACTIVE; eight remain PROPOSED).
+
+## 2026-10-20T11:28:30Z | P-015-CONFIRM | push-confirm | branch=proposal/ec16-ec26-enforcement-rebased remote_sha=0f1e9a8856bafec592c657270e5799734ed61d6a credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/proposal/ec16-ec26-enforcement-rebased -> 0f1e9a8856bafec592c657270e5799734ed61d6a (11:27:51Z)"
+
+- Push issued 11:27:49Z, remote accepted 11:27:51Z (new ref, as recorded in the INTENT's
+  expected_remote_tip_before_push=ABSENT). Pre-push D-7 check: main was at
+  eb6d6a9fc42681558e55f085b804f9cc2334c924 exactly as expected (ls-remote 11:26:52Z).
+- CI: gate expected on this push (main's trigger list is branches: ["**"]); run ID to be
+  recorded in the round report once observed via the Actions API.
