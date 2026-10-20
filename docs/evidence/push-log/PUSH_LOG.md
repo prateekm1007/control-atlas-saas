@@ -227,3 +227,11 @@
   append; manifest refresh. The declared base for the EC-21 check is the main-line base
   f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd (ancestral from this stacked tip and on
   origin/main); the stacked intermediate (fix/mainline-r18) is disclosed in the PR body.
+
+## 2026-10-20T14:29:49Z | P-029-INTENT | push-intent | branch=activation/ec21-r18 head_at_intent=DEFERRED base=075f1065c38b7f0135b092daa1dd443b79a7a6ff expected_remote_tip_before_push=075f1065c38b7f0135b092daa1dd443b79a7a6ff credential=OWNER-PAT-1 authorized_by="Round-18 direction 6 (EC-21) continuation: the acceptance gate flagged the Enforcement label (declared INERT vs computed LIVE — the activated workflow invokes the checker script); label corrected to the computed truth"
+
+- Push 2 content (disclosed pre-push): INDEX.md EC-21 Enforcement label INERT -> LIVE
+  (the activated live workflow invokes scripts/ci/check_declared_base.py on this tree;
+  policy status stays PROPOSED per the auditor ruling); this push-log append; manifest
+  refresh. Single-writer guard: expected remote tip 075f1065c38b7f0135b092daa1dd443b79a7a6ff;
+  push ABORTED on deviation.
