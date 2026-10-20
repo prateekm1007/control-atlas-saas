@@ -67,3 +67,20 @@
 - Prior entries, including P-011 itself, are preserved unchanged per the append-only rule;
   the parent-version check (`evidence_sequence_check.py --parent-prefix` against
   `17eb881:docs/evidence/push-log/PUSH_LOG.md`) enforces this from this commit forward.
+
+## 2026-10-20T10:22:09Z | P-012-INTENT | push-intent | branch=docs/owner-decisions head_at_intent=4f54616079ded81d120b6b3b6aa64fae40ddc4a4 credential=OWNER-PAT-1 authorized_by="auditor direction 2026-10-20 + register rev 7 Part 8 (this file's sibling branch record)"
+
+- Register rev 7 (adjudications + A-rows + authorization reconciliation + blockers) is pushed
+  FIRST so the scoped authorization for the proposal-branch pushes is public before they occur.
+
+## 2026-10-20T10:22:09Z | P-013-INTENT | push-intent | branch=proposal/ec16-ec26-enforcement head_at_intent=RECORDED-BELOW credential=OWNER-PAT-1 authorized_by="auditor direction 2026-10-20 section 3 (scoped corrections), reconciled in register rev 7 Part 8"
+
+- This push carries the 3.1–3.9 correction commits, the acceptance-loop evidence, and the
+  INTENT records themselves. head_at_intent is finalized by the carrying commit (a pre-push
+  entry cannot know its own commit's hash); the CONFIRM entry records the remote-verified
+  full SHA after the push returns (two-phase schema, PUSH_LOG_SCHEMA.md).
+
+## 2026-10-20T10:22:09Z | P-014-INTENT | push-intent | branch=governance/canonical-docs head_at_intent=07c3fbe6eb20c5a5d4b03dae0a2c1a743edbea10 credential=OWNER-PAT-1 authorized_by="standing rev-6 list + auditor direction 2026-10-20 item 8 (P0_STATUS update)"
+
+- P0_STATUS.md gains the amendment-cycle section (actual statuses; CI NOT RUN; blockers
+  preserved).

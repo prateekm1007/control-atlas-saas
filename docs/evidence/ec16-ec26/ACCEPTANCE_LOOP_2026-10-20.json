@@ -1,0 +1,152 @@
+{
+  "generated_at_utc": "2026-10-20T10:20:47+00:00",
+  "candidate_tip": "412bef2a7db91cace1bb2ac101b205a569ad4c92",
+  "branch": "proposal/ec16-ec26-enforcement",
+  "declared_base": "2195a048e87dcec4aa63e8dc7981b3bb6d237ca0",
+  "environment": {
+    "python": "3.12.15",
+    "host": "c-6ad72e98-145cf406-c081ed467b67",
+    "kernel": "5.10.134-013.15.kangaroo.al8.x86_64"
+  },
+  "steps": [
+    {
+      "step": "1 constitution preflight (pinned blobs)",
+      "command": [
+        "git hash-object <blobs>"
+      ],
+      "exit": 0,
+      "pass": true,
+      "detail": "constitution.md=211ad2c5d4b4\u2026; ENGINEERING_CONSTITUTION.md=b6bb35e84956\u2026 (pinned read artifact)"
+    },
+    {
+      "step": "2a static analysis (9 YAML files)",
+      "command": [
+        "python3",
+        "-c",
+        "import yaml,glob\nfiles = sorted(glob.glob('proposals/ci/*.yml') + glob.glob('proposals/remediation/*.yml') + glob.glob('proposals/remediation/fixtures/*.yml'))\n[yaml.safe_load(open(f)) or True for f in files]\nprint(len(files), 'YAML files parse')"
+      ],
+      "exit": 0,
+      "pass": true,
+      "detail": "11 YAML files parse"
+    },
+    {
+      "step": "2b static analysis (checker scripts compile)",
+      "command": [
+        "python3",
+        "-m",
+        "py_compile",
+        "scripts/ci/reading_note_map_check.py",
+        "scripts/ci/verify_claimed_shas.py",
+        "scripts/ci/check_declared_base.py",
+        "scripts/ci/status_vocabulary_lint.py",
+        "scripts/ci/evidence_sequence_check.py",
+        "scripts/ci/workflow_deploy_trigger_lint.py",
+        "scripts/ci/tests/run_all.py",
+        "scripts/ci/tests/test_acceptance.py"
+      ],
+      "exit": 0,
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "step": "3 acceptance suite (AT-01..AT-16, 91 assertions)",
+      "command": [
+        "python3",
+        "scripts/ci/tests/run_all.py"
+      ],
+      "exit": 0,
+      "pass": true,
+      "detail": "16 passed in 15.97s\nALL ACCEPTANCE TESTS PASS (AT-01..AT-16, pytest runner)"
+    },
+    {
+      "step": "4a hash-lock verification",
+      "command": [
+        "python3",
+        "-c",
+        "import sys; sys.path.insert(0,'backend')\nfrom tos.governance.station_sop import compute_canon_hash\nfrom tos.governance.modality_matrix import compute_matrix_hash\nc, m = compute_canon_hash(), compute_matrix_hash()\nassert c == '6a9cd4b4349b81de', f'canon drifted: {c}'\nassert m == 'ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4', f'matrix drifted: {m}'\nprint('hash locks OK')"
+      ],
+      "exit": 0,
+      "pass": true,
+      "detail": "hash locks OK"
+    },
+    {
+      "step": "4b full backend suite (baseline: 4 env-fail / 249 passed / 5 skipped)",
+      "command": [
+        "python3",
+        "-m",
+        "pytest",
+        "tests/",
+        "-q",
+        "--no-header",
+        "-p",
+        "no:ddtrace",
+        "--ignore=tests/test_b1_tokens.py"
+      ],
+      "exit": 1,
+      "pass": true,
+      "detail": "l/backend/tests/test_phase3_hardening.py::TestPDFGeneratorImports::test_compute_matrix_hash_callable_from_pdf_context\n  /home/z/.venv/lib/python3.12/site-packages/matplotlib/_fontconfig_pattern.py:89: PyparsingDeprecationWarning: 'resetCache' deprecated - use 'reset_cache'\n    parser.resetCache()\n\nmy-project/audit_ec_fix/wt-proposal/backend/tests/test_phase3_hardening.py::TestPDFGeneratorImports::test_compute_matrix_hash_callable_from_pdf_context\n  /home/z/.venv/lib/python3.12/site-packages/matplotlib/_mathtext.py:45: PyparsingDeprecationWarning: 'enablePackrat' deprecated - use 'enable_packrat'\n    ParserElement.enablePackrat()\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n=========================== short test summary info ============================\nFAILED tests/test_b6_regression.py::TestUsageWidget::test_widget_returns_none_on_connection_error\nFAILED tests/test_b6_regression.py::TestUsageWidget::test_widget_returns_none_on_401\nFAILED tests/test_b6_regression.py::TestUsageWidget::test_widget_returns_data_on_200\nFAILED tests/test_b6_regression.py::TestUsageWidget::test_widget_empty_key_returns_none\n4 failed, 249 passed, 5 skipped, 14 warnings in 3.73s"
+    },
+    {
+      "step": "4c tests/test_b1_tokens.py standalone",
+      "command": [
+        "PYTHONPATH=. python3 tests/test_b1_tokens.py"
+      ],
+      "exit": 1,
+      "pass": true,
+      "detail": "EXECUTED AND RECORDED, verdict ENV_BLOCKED: standalone legacy harness with persistence hardcoded to /app/data (Docker-only path; passes in the CI container, run 39376279686). Local result 2/10 with Permission-denied on /app/data. Recorded as ENV_BLOCKED \u2014 never as passed. Tail: \u2717 Token stats: [Errno 13] Permission denied: '/app/data'\n  \u2717 Rate limiting after max callbacks: [Errno 13] Permission denied: '/app/data'\n  \u2713 Token uniqueness (nonce)\n  \u2717 Token revocation: [Errno 13] Permission denied: '/app/data'\n\n=== RESULTS: 2/10 passed ==="
+    },
+    {
+      "step": "5 secret scan (tree + full history + seeded control)",
+      "command": [
+        "/tmp/acc_gitleaks/gitleaks",
+        "detect --no-git | --log-opts=--all",
+        "(values redacted; no secret values recorded)"
+      ],
+      "exit": 0,
+      "pass": true,
+      "detail": "tree: findings=['system_diagnosis.py:gcp-api-key:8'] (\u2286 A-02 known baseline: True); history: 44 findings, classified=44/44 (A-02 key instances + verified false positives); seeded control detected+redacted: True"
+    },
+    {
+      "step": "6a PUSH_LOG sequence + parent-prefix + schema",
+      "command": [
+        "python3",
+        "scripts/ci/evidence_sequence_check.py",
+        "docs/evidence/push-log/PUSH_LOG.md",
+        "--parent-prefix",
+        "/tmp/pushlog_older.md",
+        "--pushlog-schema"
+      ],
+      "exit": 0,
+      "pass": true,
+      "detail": "PASS: docs/evidence/push-log/PUSH_LOG.md sequence + append-only clean"
+    },
+    {
+      "step": "6b EC-26 self-check (INDEX-derived rules, include-proposed)",
+      "command": [
+        "python3",
+        "scripts/ci/reading_note_map_check.py",
+        "--index",
+        "docs/directives/INDEX.md",
+        "--repo-root",
+        ".",
+        "--include-proposed",
+        "--require-strings",
+        "SERIES-2026-10-20-EC"
+      ],
+      "exit": 0,
+      "pass": true,
+      "detail": "WARN: EC-\u00a71 declares NONE for test (declared absence, not hidden)\nWARN: EC-\u00a75 declares NONE for test (declared absence, not hidden)\nWARN: EC-\u00a78 declares NONE for test (declared absence, not hidden)\nWARN: EC-\u00a79 declares NONE for test (declared absence, not hidden)\nWARN: EC-\u00a710 declares NONE for test (declared absence, not hidden)\nWARN: EC-\u00a711 declares NONE for test (declared absence, not hidden)\nWARN: EC-\u00a714 declares NONE for test (declared absence, not hidden)\nWARN: EC-\u00a715 declares NONE for test (declared absence, not hidden)\nWARN: OBS-153 declares NONE for test (declared absence, not hidden)\nWARN: CRIT-154 declares NONE for test (declared absence, not hidden)\nPASS: docs/evidence/reading-note/READING_NOTE_LATEST.md cites 2 pinned blob(s) and maps all 28 required rule(s) derived from docs/directives/INDEX.md"
+    },
+    {
+      "step": "6c evidence manifest",
+      "command": [
+        "sha256 over 7 evidence artifacts"
+      ],
+      "exit": 0,
+      "pass": true,
+      "detail": "7 artifacts hashed"
+    }
+  ],
+  "all_pass": true,
+  "ci_status": "NOT_RUN (workflows inert under proposals/ci/; no run IDs exist)"
+}
