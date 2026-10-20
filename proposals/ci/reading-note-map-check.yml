@@ -2,15 +2,27 @@
 name: EC26 reading note maps rules
 on:
   pull_request:
-    paths: ['docs/evidence/**/READING_NOTE*', 'docs/directives/INDEX.md']
+    paths: ['docs/evidence/reading-note/**', 'docs/directives/INDEX.md', 'scripts/ci/**']
+permissions:
+  contents: read
 jobs:
   map:
+    name: EC-26 reading note maps rules to checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: |
-          # In-force rule IDs and pinned blobs are read from the directive index / PR body:
+      - name: Derive required rule set from the canonical index (never from the PR body)
+        run: |
+          # Fail closed if the machine-readable inventory is missing:
+          grep -q "BEGIN RULE INVENTORY" docs/directives/INDEX.md || {
+            echo "FAIL: rule inventory block missing from docs/directives/INDEX.md"; exit 1; }
           python3 scripts/ci/reading_note_map_check.py \
-            --note docs/evidence/reading-note/READING_NOTE_LATEST.md \
-            --blobs b6bb35e8,211ad2c5 \
-            --rules-file <(grep -oE 'EC-[0-9]+' /tmp/pr_body.md | sort -u)
+            --index docs/directives/INDEX.md \
+            --repo-root .
+      - name: Self-test mode (this package maps its own PROPOSED rules too)
+        run: |
+          python3 scripts/ci/reading_note_map_check.py \
+            --index docs/directives/INDEX.md \
+            --repo-root . \
+            --include-proposed \
+            --require-strings "SERIES-2026-10-20-EC"

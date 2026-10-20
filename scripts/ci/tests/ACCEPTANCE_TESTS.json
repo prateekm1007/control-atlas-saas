@@ -1,0 +1,69 @@
+{
+  "_comment": "Acceptance-test registry for the EC-16..EC-26 enforcement scaffolding. Parsed by scripts/ci/reading_note_map_check.py: every AT-nn named in docs/directives/INDEX.md must be a key here (missing checks fail closed). 'node' entries are pytest node IDs on the exact candidate (EC-20 executes them via scripts/ci/verify_claimed_shas.py --run-tests).",
+  "tests": {
+    "AT-01": {
+      "name": "EC-16/EC-19 claimed-SHA extraction, offline verification, directive fields",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at01_claimed_shas"
+    },
+    "AT-02": {
+      "name": "EC-21 declared-base ancestry (local object + merge-base)",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at02_declared_base"
+    },
+    "AT-03": {
+      "name": "EC-25 deploy-trigger lint (push/workflow_run flagged; PR-trigger and test jobs accepted)",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at03_deploy_lint"
+    },
+    "AT-04": {
+      "name": "EC-22 status vocabulary (RUN_PASS run id, percentage, clean scan, pre-existing)",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at04_status_vocabulary"
+    },
+    "AT-05": {
+      "name": "EC-18 evidence sequence (monotonic timestamps, drift, RECONSTRUCTED)",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at05_sequence"
+    },
+    "AT-06": {
+      "name": "EC-26 reading-note mapping (blob citations, rule mappings)",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at06_reading_note"
+    },
+    "AT-07": {
+      "name": "PR template carries the required machine-readable fields",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at07_pr_template"
+    },
+    "AT-08": {
+      "name": "EC-26 fail-closed negatives: missing note, missing blob, unmapped rule, empty inventory, duplicate IDs, malformed row, unknown status, missing enforcement/test",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at08_reading_note_failclosed"
+    },
+    "AT-09": {
+      "name": "EC-20 acceptance tests EXECUTED on the candidate: missing test fails, failing test fails, pass produces evidence record (command argv, SHA, counts, exit)",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at09_acceptance_tests_executed"
+    },
+    "AT-10": {
+      "name": "EC-21 remote base verification, stack-parent validation, shallow-history fail-closed, malformed SHA",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at10_declared_base_remote_stack"
+    },
+    "AT-11": {
+      "name": "EC-22 manifest-backed statuses: unknown token, fabricated run ID, wrong-SHA run, non-success run, unsupported percentage, uncited clean scan, unsupported pre-existing",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at11_status_manifest"
+    },
+    "AT-12": {
+      "name": "EC-16 strict SHA lists (any malformed entry rejects the whole list) + fail-closed remote errors + exact returned-SHA match",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at12_strict_sha_lists"
+    },
+    "AT-13": {
+      "name": "EC-18/EC-24 append-only parent-prefix check + push-log two-phase truthfulness (P-011 confirmation carries the real full SHA)",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at13_append_only_pushlog"
+    },
+    "AT-14": {
+      "name": "EC-25 remediation: push-triggered deploy fixture flagged; dispatch-only fixture accepted; gate trigger fix contains no 'ain]' defect",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at14_deploy_remediation"
+    },
+    "AT-15": {
+      "name": "EC-23 workflow structure: action pinned to a verified 40-hex commit, least-privilege permissions, full-history + all-refs steps, seeded-secret detection test",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at15_gitleaks_pinned_full_coverage"
+    },
+    "AT-16": {
+      "name": "Inventory consistency: workflow/checker/test counts in README, receipt, index agree with the actual tree",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at16_inventory_counts"
+    }
+  }
+}
