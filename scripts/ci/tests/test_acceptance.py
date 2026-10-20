@@ -773,3 +773,39 @@ def test_at20_pushlog_schema_hardening():
     real = os.path.join(REPO, "docs", "evidence", "push-log", "PUSH_LOG.md")
     r = run("evidence_sequence_check.py", real, "--pushlog-schema")
     check("AT-20", "the real mainline push log passes the hardened schema", r.returncode == 0, r.stdout)
+
+
+# ------------------------------------ AT-19 (EC-22 Status-summary, Round-19)
+
+def _empty_manifest():
+    f = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+    f.write('{"runs": {}}')
+    f.close()
+    return f.name
+
+
+def test_at19_status_summary_grammar():
+    """Round-19: PR-body Status-summary lines carry the EC-22 vocabulary.
+
+    The PR template declares the vocabulary for Status-summary; the lint now
+    enforces the same grammar as STATUS: lines, so off-vocabulary tokens
+    (e.g. ACTIVATION_PENDING) in a PR body or report fail machine-side.
+    """
+    # 1. off-vocabulary token in a Status-summary line is flagged
+    bad = tmpfile("Status-summary: ACTIVATION_PENDING(branch=x, sha=" + "1" * 40 + ")\n")
+    r = run("status_vocabulary_lint.py", bad, "--runs-manifest", _empty_manifest())
+    check("AT-19", "off-vocabulary Status-summary token flagged",
+          r.returncode == 1 and "ACTIVATION_PENDING" in r.stdout, r.stdout)
+    # 2. vocabulary-compliant Status-summary passes
+    good = tmpfile("Status-summary: NOT_RUN (activation workflow not yet rerun on the fixed candidate)\n")
+    r = run("status_vocabulary_lint.py", good, "--runs-manifest", _empty_manifest())
+    check("AT-19", "compliant Status-summary passes", r.returncode == 0, r.stdout)
+    # 3. RUN_PASS inside Status-summary needs run_id + sha and a manifest hit
+    rp = tmpfile("Status-summary: RUN_PASS (run_id=123, sha=" + "a" * 40 + ")\n")
+    r = run("status_vocabulary_lint.py", rp, "--runs-manifest", _empty_manifest())
+    check("AT-19", "RUN_PASS in Status-summary is validated against the runs manifest",
+          r.returncode == 1 and "not found in the runs manifest" in r.stdout, r.stdout)
+    # 4. PUSHED / MERGED tokens pass without a manifest record
+    pm = tmpfile("Status-summary: PUSHED\nStatus-summary: MERGED\n")
+    r = run("status_vocabulary_lint.py", pm, "--runs-manifest", _empty_manifest())
+    check("AT-19", "PUSHED/MERGED Status-summary tokens pass", r.returncode == 0, r.stdout)

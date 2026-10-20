@@ -88,9 +88,10 @@ and its verbatim failure-pattern text is preserved untouched.
   match the committed content of 18 of its 23 entries (verified: `git show a0e321c:<path>` hashes
   equal the worktree hashes and differ from the manifest for files untouched since `412bef2`).
   The manifest was regenerated from actual committed content on this branch (same 23 paths);
-  `sha256sum -c SHA256SUMS` = 23/23 OK after regeneration. The stale manifest was a pre-existing
-  defect of the proposal package (manifest generated against a non-committed working-tree state);
-  recorded here rather than silently corrected.
+  `sha256sum -c SHA256SUMS` = 23/23 OK after regeneration. The stale manifest was a
+  pre-existing defect of the proposal package, base=a0e321c0ef08cd3430e7910936075994791fd8df
+  (the manifest had been generated against a non-committed working-tree state); recorded
+  here rather than silently corrected.
 - Status updates applied per auditor ruling D-5 (2026-10-20): EC-17/EC-22/EC-25 ACTIVE in
   `docs/directives/INDEX.md` inventory and the reading note; the other eight remain PROPOSED
   pending Direction-6 activation runs. `.github/` diff vs `eb6d6a9`: empty (byte-identical).

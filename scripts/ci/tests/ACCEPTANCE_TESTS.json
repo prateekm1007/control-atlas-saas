@@ -76,6 +76,10 @@
     "AT-20": {
       "name": "EC-18/EC-24 push-log schema hardening (Round-19): duplicate ENTRY-IDs, CONFIRM entries missing branch/remote_sha/credential/evidence, INTENT entries missing branch/credential, ENTRY-IDs outside the P- grammar, and CONFIRMs with nothing to confirm all FAIL; an unpaired INTENT is reported PENDING without implying the two-phase protocol is complete; the real mainline log passes",
       "node": "scripts/ci/tests/test_acceptance.py::test_at20_pushlog_schema_hardening"
+    },
+    "AT-19": {
+      "name": "EC-22 Status-summary grammar (Round-19): PR-body Status-summary lines carry the same vocabulary as STATUS: lines -- off-vocabulary tokens (e.g. ACTIVATION_PENDING) fail, NOT_RUN/PUSHED/MERGED pass, RUN_PASS inside Status-summary is validated against the runs manifest",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at19_status_summary_grammar"
     }
   }
 }
