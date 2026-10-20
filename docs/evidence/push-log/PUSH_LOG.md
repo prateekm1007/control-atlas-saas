@@ -84,3 +84,39 @@
 
 - P0_STATUS.md gains the amendment-cycle section (actual statuses; CI NOT RUN; blockers
   preserved).
+
+## 2026-10-20T10:32:13Z | P-012-CONFIRM | push-confirm | branch=docs/owner-decisions remote_sha=78b147d55660dc79c2f5aada368d8499339bc339 credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/docs/owner-decisions -> 78b147d55660dc79c2f5aada368d8499339bc339 (10:28:46Z)"
+
+- Push issued 10:28:44Z, remote accepted by 10:28:46Z (fast-forward a99348f..78b147d).
+- Content: merge b421237 (reconciliation with the concurrent Round-15/16 writer) + Part 10
+  incident note. INTENT P-012 was committed when the local tip was 4f54616; the tip then
+  advanced by the reconciliation merge + Part 10 after the first push attempt was REJECTED
+  (non-fast-forward: the concurrent writer had pushed a99348f at 10:03:38Z). No force-push
+  was used at any point.
+- CI observed on this push: Toscanini Stability Gate run 39408223554 = FAILURE (both jobs).
+  Cause analysis from the run record: (a) Secret Scan fails on the HEAD-tree A-02
+  former-provider key (system_diagnosis.py:8) — the documented un-remediated main-based
+  baseline; (b) Unit Tests fail at "Install dependencies (lock + dev)" — main's stale
+  dependency lock (fixed on the unmerged science line). Both failures also occurred on the
+  concurrent writer's own commits (runs 39399258526, 39406712201) and neither is caused by
+  rev 7's content (the register touches only docs/decisions/OWNER_DECISIONS.md).
+  The carried gate trigger (branches: ["**"], from the concurrent writer's commits) is what
+  made these nested-branch pushes run CI at all.
+
+## 2026-10-20T10:32:13Z | P-013-CONFIRM | push-confirm | branch=proposal/ec16-ec26-enforcement remote_sha=dab33d946fe31891efbd6e4917e360abcb1872c1 credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/proposal/ec16-ec26-enforcement -> dab33d946fe31891efbd6e4917e360abcb1872c1 (10:28:58Z)"
+
+- Push issued 10:28:56Z, remote accepted by 10:28:58Z (fast-forward 17eb881..dab33d9).
+  The INTENT's deferred head_at_intent is hereby recorded: dab33d946fe31891efbd6e4917e360abcb1872c1.
+- CI observed on this push: ZERO check runs (verified via the commits API) — this branch
+  still carries main's un-remediated gate triggers, which do not match nested branch names
+  (the exact defect recorded in proposals/remediation/). CI status for the correction cycle
+  remains NOT_RUN, exactly as stated in LOCAL_TEST_LOG.md.
+
+## 2026-10-20T10:32:13Z | P-014-CONFIRM | push-confirm | branch=governance/canonical-docs remote_sha=b12f30e95255b0c5d31a70cb9b6bb42776aac9a6 credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/governance/canonical-docs -> b12f30e95255b0c5d31a70cb9b6bb42776aac9a6 (10:29:25Z)"
+
+- Push issued 10:29:05Z; first attempt REJECTED (non-fast-forward: concurrent writer had
+  advanced f368bd2 -> 5e156ba with the same gate-carry/reading-note set); reconciled by
+  merge (no force-push) and accepted at 10:29:25Z.
+- CI observed: gate run on b12f30e = FAILURE with the same two baseline causes recorded at
+  P-012-CONFIRM (A-02 HEAD-tree key; main's stale lock). P0_STATUS section 7's own content
+  is documentation-only and not implicated.
