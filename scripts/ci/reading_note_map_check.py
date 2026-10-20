@@ -57,17 +57,23 @@ def _path_exists(repo: str, path: str) -> bool:
 
 
 def _yaml_doc(repo: str, filespec: str):
-    """Load a workflow YAML from @REF when given (explicit pin wins), else the working tree."""
+    """Load a workflow YAML for a reference.
+
+    Round-18: the working tree is authoritative when the file exists in it (the exact
+    candidate's content); an @REF pin is a fallback for files that live only on another
+    ref (e.g. procedural pointers to other branches). This keeps the check verifiable
+    in any checkout that contains the file, even when the pinned remote-tracking ref is
+    not fetched locally.
+    """
     fpath, _, ref = (filespec.rpartition("@") if "@" in filespec else (filespec, "", ""))
-    if ref:
-        t = subprocess.run(["git", "show", f"{ref}:{fpath}"], capture_output=True, text=True,
-                           cwd=repo).stdout
-        if not t:
-            return None
-        return yaml.safe_load(t) or {}
     fp = os.path.join(repo, fpath)
     if os.path.exists(fp):
         return yaml.safe_load(open(fp, encoding="utf-8")) or {}
+    if ref:
+        t = subprocess.run(["git", "show", f"{ref}:{fpath}"], capture_output=True, text=True,
+                           cwd=repo).stdout
+        if t:
+            return yaml.safe_load(t) or {}
     return None
 
 
