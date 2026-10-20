@@ -5,6 +5,42 @@ FAILS on the existing `main` baseline (its `deploy.yml` triggers a deploy on eve
 The full remediation is therefore prepared here as an inert, reviewed patch set. Nothing in
 this directory is a live workflow; nothing here merges or deploys anything.
 
+## STATUS (2026-10-20, Round-18 correction — read before citing anything below)
+
+**The gate/defect half of this package is HISTORICAL AND SUPERSEDED.** It was written
+against the pre-release mainline `main @ 2195a048e87dcec4aa63e8dc7981b3bb6d237ca0`
+(gate blob `b86274ef3bd29f4eb4c534e71327a5d4a72fb812`, deploy blob
+`838627b460a374b2c789f73cdbcad3c8c38abc4d`). The released mainline
+(`d292a38…`, merged as `f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd`) already repaired
+both defects, verified on the live tree:
+
+- `.github/workflows/toscanini-gate.yml` on `main @ f535a71` carries
+  `push.branches: ["**"]` AND `pull_request.branches: ["**"]` — the `["*"]` / `ain]`
+  defects below no longer exist on main. The two files
+  `toscanini-gate.branch-triggers.yml` and `fixtures/toscanini_gate_AIN_DEFECT.yml`
+  are retained ONLY as historical evidence of the pre-release defect (exact source
+  blobs cited above); they are not an apply target anymore.
+- `.github/workflows/deploy.yml` on `main @ f535a71` is `workflow_dispatch`-only and
+  intentionally performs NO deployment (inert by design, auditor Round-17 direction 2a).
+  `fixtures/deploy_on_push_VIOLATION.yml` remains a byte-exact copy of the OLD
+  push-triggered deploy (blob `838627b4…`) kept so AT-14 can prove the lint flags it.
+
+**What is actually in force vs actually running on `main` today (do not conflate):**
+
+| Thing | Status | Evidence |
+|---|---|---|
+| EC-25 (no ungated deploy on push) | In force as POLICY (auditor D-5, 2026-10-20) | register rev 7+, `docs/decisions/OWNER_DECISIONS.md` |
+| `deploy.yml` on main | Dispatch-only, inert — no deploy logic, no push/workflow_run trigger | live blob on `main @ f535a71` |
+| Toscanini Stability Gate | The ONLY live automated enforcement running on every push/PR (`["**"]`): secret scan, unit tests, canon/matrix hash locks | live blob on `main @ f535a71` |
+| `no-deploy-on-push-lint.yml` and the other `proposals/ci/*.yml` drafts | INERT — under `proposals/`, GitHub Actions never reads them | path + `proposals/ci/README.md` move-map |
+| The deploy-trigger lint (`scripts/ci/workflow_deploy_trigger_lint.py`) | Script exists; wired into live CI only by `.github/workflows/acceptance-gate.yml` (Round-18). Before Round-18 it was NOT invoked by any live workflow | live workflow on the Round-18 branch |
+
+Nothing in this directory merges or deploys anything, and no file here is a live
+enforcement point by virtue of existing. An `ACTIVE`/in-force policy status never
+implies that the automation named in these drafts is running (EC-26 discipline:
+policy status and enforcement status are recorded separately in
+`docs/directives/INDEX.md`).
+
 ## Contents
 
 | File | Purpose |
