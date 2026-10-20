@@ -1,0 +1,53 @@
+{
+  "_comment": "Machine-readable push-log reconciliation record (Round-18, 2026-10-20). Consumed by scripts/ci/evidence_sequence_check.py --pushlog-schema --remote-slug. Classes: SUPERSEDED-BY-DOCUMENTED-REBUILD (recorded SHA verified on the remote but no longer on the branch's current lineage because the branch was rebuilt/advanced through a documented no-force-push-replacement event) and CONFIRMED-BY-LATER-EVIDENCE (intent confirmed by evidence outside the log). Every entry carries a pointer to the documenting evidence. The human-readable record is PUSH_LOG_RECONCILIATION.md in this directory; INCIDENTS.md INC-2 documents the P-015-CONFIRM collision. IDs are never reused.",
+  "entries": [
+    {
+      "entry_id": "P-006",
+      "branch": "docs/owner-decisions",
+      "sha": "0dcc5a10756871f2b2dd239b1858cf8aae6de41a",
+      "class": "SUPERSEDED-BY-DOCUMENTED-REBUILD",
+      "pointer": "INCIDENTS.md INC-2; PUSH_LOG.md P-012-CONFIRM body (reconciliation merge b421237); docs/directives/INDEX.md SERIES-2026-10-20-R17 row (register rebuilt, merged as eb6d6a9)",
+      "recorded_at_utc": "2026-10-20T13:32:54Z"
+    },
+    {
+      "entry_id": "P-010",
+      "branch": "docs/owner-decisions",
+      "sha": "0773f0b1ca698829ae20b59660798dc8b6504675",
+      "class": "SUPERSEDED-BY-DOCUMENTED-REBUILD",
+      "pointer": "docs/directives/INDEX.md SERIES-2026-10-20-R17 row (register rev 6 superseded by the rebuild merged as eb6d6a9)",
+      "recorded_at_utc": "2026-10-20T13:32:54Z"
+    },
+    {
+      "entry_id": "P-012-CONFIRM",
+      "branch": "docs/owner-decisions",
+      "sha": "78b147d55660dc79c2f5aada368d8499339bc339",
+      "class": "SUPERSEDED-BY-DOCUMENTED-REBUILD",
+      "pointer": "docs/directives/INDEX.md SERIES-2026-10-20-R17 row (same rebuild event as P-010)",
+      "recorded_at_utc": "2026-10-20T13:32:54Z"
+    },
+    {
+      "entry_id": "P-011-CONFIRM",
+      "branch": "proposal/ec16-ec26-enforcement",
+      "sha": "17eb88184c9f461c6bc9ee592f916f7ff4c921c4",
+      "class": "SUPERSEDED-BY-DOCUMENTED-REBUILD",
+      "pointer": "INCIDENTS.md INC-2; docs/directives/INDEX.md SERIES-2026-10-20-R17 row (D-4 rebase onto eb6d6a9; original branch later advanced to c4a0fcc per its own P-016-INTENT); PUSH_LOG_RECONCILIATION.md section 1",
+      "recorded_at_utc": "2026-10-20T13:32:54Z"
+    },
+    {
+      "entry_id": "P-013-CONFIRM",
+      "branch": "proposal/ec16-ec26-enforcement",
+      "sha": "dab33d946fe31891efbd6e4917e360abcb1872c1",
+      "class": "SUPERSEDED-BY-DOCUMENTED-REBUILD",
+      "pointer": "Same replacement event as P-011-CONFIRM (see PUSH_LOG_RECONCILIATION.md section 2)",
+      "recorded_at_utc": "2026-10-20T13:32:54Z"
+    },
+    {
+      "entry_id": "P-014-CONFIRM",
+      "branch": "governance/canonical-docs",
+      "sha": "b12f30e95255b0c5d31a70cb9b6bb42776aac9a6",
+      "class": "SUPERSEDED-BY-DOCUMENTED-REBUILD",
+      "pointer": "docs/directives/INDEX.md SERIES-2026-10-20-R17 row (docs-only rebase d51ad7c merged as b851e01)",
+      "recorded_at_utc": "2026-10-20T13:32:54Z"
+    }
+  ]
+}
