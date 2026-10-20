@@ -374,3 +374,45 @@
   (disclosed limitation of the two-phase protocol, never backdated). Until then
   the branch tip pushed by this INTENT is disclosed as PENDING by the
   evidence-sequence checker — that is the designed, truthful state.
+
+
+## 2026-10-20T19:01:00Z | P-066-CONFIRM | push-confirm | branch=repair/round19-mainline-acceptance remote_sha=ab63821ef6283087ce921605bc0831564f5bf18a credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/repair/round19-mainline-acceptance -> ab63821ef6283087ce921605bc0831564f5bf18a (re-verified 2026-10-20T18:55:22Z after the push returned; the push was an ordinary fast-forward 0fe4840..ab63821, single-writer pre-checked, main verified untouched at f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd immediately before and after); push-event checks on this exact head: Toscanini Stability Gate run 39478971128 conclusion=success, Governance Acceptance run 39478971175 conclusion=FAILURE; PR-event checks on this exact head: gate run 39478981191 success, governance-acceptance run 39478981169 FAILURE"
+
+- Two-phase completion for the Round-21-followup push declared by P-066-INTENT
+  (head_at_intent=DEFERRED; the pushed tip is recorded here after the push
+  returned, never backdated).
+- The Governance Acceptance failure is recorded HONESTLY and is repaired by the
+  follow-up push declared below: (a) the package manifest was regenerated while
+  `scripts/ci/tests/conftest.py` was still untracked, so the manifest carried 45
+  entries against a 46-file scope ("required package file missing from the
+  manifest"); (b) the active merge-intent P-061 resolved to 0fe4840 while the
+  candidate had advanced to ab63821 — the checker's own remediation applies:
+  "redeclare the merge-intent on the exact final candidate before merging"
+  (P-067/P-068 below). The Stability Gate (secret scan, unit tests, hash locks)
+  passed on this exact head.
+- This entry confirms THAT push; it does not confirm any later tip of this
+  branch.
+
+## 2026-10-20T19:01:30Z | P-067 | intent-reconcile | voids=P-061 branch=repair/round19-mainline-acceptance credential=OWNER-PAT-1 evidence="the P-061 merge-intent rode 0fe4840 (expected_head=DEFERRED resolved to its introducing commit), which the P-066 soundness-repair push superseded; the checker requires the active merge-intent to declare the exact final candidate, so P-061 is voided and redeclared as P-068 on this push"
+
+- Truthful void record: nothing about P-061's content is rewritten; the record
+  remains in the log and its supersession is explicit.
+
+## 2026-10-20T19:02:00Z | P-068 | merge-intent | target=main pr=30 source_branch=repair/round19-mainline-acceptance expected_pre_merge_base=f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-21 directions 6 and 9 (merge only after the Round-21 blockers are fixed, the full gate passes on the final SHA, the post-merge main transition is demonstrated, and the required independent approval is recorded; merge through the protected PR mechanism with a MERGE COMMIT; after that merge, PRs #31-#36 revalidate serially against the resulting main; EC-21 is not waived)"
+
+- Redeclaration on the exact final candidate (expected_head=DEFERRED resolves to
+  the commit introducing this record). The merge itself is executed only through
+  the protected PR mechanism after the complete gate is green on this exact
+  candidate AND the required independent approval exists (GitHub reports no
+  approving review; none will be manufactured).
+
+## 2026-10-20T19:02:30Z | P-069-INTENT | push-intent | branch=repair/round19-mainline-acceptance head_at_intent=DEFERRED expected_remote_tip_before_push=ab63821ef6283087ce921605bc0831564f5bf18a credential=OWNER-PAT-1 authorized_by="auditor Round-19 direction 7 and Round-21 direction 8 (continuation): the two CI failures observed on ab63821 (manifest scope, stale merge-intent) are repaired and re-verified on the exact final candidate; no direct push to main; no force-push; merges only through the reviewed PR path"
+
+- This push carries: P-066-CONFIRM, this void + redeclaration pair, this INTENT,
+  the corrected package manifest (46 scope files including the restored
+  conftest), and the regenerated evidence table. No source, workflow, or
+  documentation content changes beyond the push log and its manifest/evidence
+  regeneration.
+- ID selection: P-066..P-069 verified unused across the published branch logs.
+- head_at_intent is DEFERRED per the two-phase schema; if this branch is pushed
+  again, P-069-CONFIRM records the remote-verified tip after that push returns.
