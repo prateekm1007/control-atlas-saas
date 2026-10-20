@@ -1,6 +1,9 @@
 # P0_STATUS — Implementation Status, Blockers, Test Evidence, Candidate SHAs
 
-**Status date:** 2026-10-20 (Round 14)
+**Status date:** 2026-10-20 (Round 21; earlier-round sections 1–8 below are retained
+as historical evidence — the per-round state is cumulative, and each section
+carries its own round label; the CURRENT state is sections 9–10 plus the
+Round-21 evidence table)
 **Authority:** OD-01 target layout; maintained per the Engineering
 Constitution (EC §6, §12, §14). Decision status lives in
 `docs/decisions/OWNER_DECISIONS.md` (canonical copy on the
@@ -181,3 +184,33 @@ and NOT closed by this work: the independent r2 archive verification and the
 portable 40-row cohort metadata table remain OPEN; A-01 remains ACCEPTED
 RISK (no rotation reminder, per direction 8); the scientific hard stop is
 preserved in full.
+
+## 10. Round-21 acceptance-defect repair (added 2026-10-20, SERIES-2026-10-20-R21)
+
+Auditor ruling: **PR #30 is not approved for merge yet.** Round 20's green CI
+was real but necessary-not-sufficient; the independent review found three
+critical defects in the new controls plus the unproven protected-main merge
+transition. This section records the Round-21 repair, implemented on the same
+branch `repair/round19-mainline-acceptance` (fix-forward from `62fab8a…`;
+no merge approved; no direct push to main; no force-push).
+
+| Direction | Defect found by the audit | Fix on this candidate |
+|---|---|---|
+| 3 | The EC-23 control checker could print the report's `Secret` field value in its failure path (disclosing the very secret it detected); a requested capture log was only checked when present; the HEAD-tree clean path trusted scanner exit status | `secret_control_check.py` rewritten: NO path prints `Secret`/`Match` values or raw report/log bytes (safe metadata + booleans only); `--log-file` requested-but-missing/unreadable FAILS closed; the HEAD-tree and clean-repo negative controls now require the report to exist, parse, and contain zero findings (exit status alone is never trusted); the workflow routes the HEAD-tree result through the hardened negative mode with its capture log. AT-25 (10 checks incl. stdout/stderr key-absence proofs on every failure path) |
+| 4 | EC-24 accepted any unpaired intent as declaring the branch tip (an old intent could cover later commits); CONFIRMs paired by branch/FIFO rather than identifier; `expected_remote_tip_before_push` was unvalidated | Identifier pairing (`P-058-CONFIRM` consumes exactly `P-058-INTENT`); the single accepted terminal intent must be INTRODUCED BY THE EXACT CANDIDATE (a later commit without a new intent FAILS), declare `expected_remote_tip_before_push` equal to the newest recorded branch state (an intervening ref update or stale declaration FAILS; ABSENT requires no prior record), and the checked remote tip must be the exact expected tip; excess unmatched intents FAIL unless voided by the new `intent-reconcile` verb; terminal state labeled PENDING, never COMPLETE. AT-26 (8 checks) |
+| 5 | `HISTORICAL` only proved the SHA was not the live tip — not that the push was real; runs absent from the manifest were tolerated as unverified; failed runs were not distinguished | Every HISTORICAL confirmation must be proven: ancestry from the live tip, or a reviewed `evidence-back` record (new verb) whose SHA is a real remote commit (object store or the commits API) with run citations verified; every run cited anywhere in an entry (field or body) must verify via the manifest, else the Actions API (`--repo` + token) — an unverifiable citation FAILS the gate (a manifest omission is never an approval); failed/cancelled runs are disclosed and cannot prove a push; run `head_branch` connects a SHA to its branch. The four off-lineage legacy confirmations (P-011/P-012/P-013/P-014) are backed by reviewed records P-062..P-065 (commits-API existence + push-event run connections, honestly dated). AT-27 (8 checks) |
+| 6 | The post-merge `main` push had no demonstrated declaration path | New `merge-intent` verb (P-061 pre-declares the future reviewed merge of PR #30: base `f535a71…`, head DEFERRED-resolved to the exact final candidate). On the source branch the active merge-intent must bind the exact candidate and the declared base must be the live target tip; on `main`, a push is DECLARED only by a VERIFIED merge-intent: the candidate must be a merge commit whose parents are the declared base + approved head, the intent must ride the PR branch history, and the PR must be merged with an approving non-author review (GitHub API in CI; fixtures in tests). Raced/unrelated/direct/unapproved updates FAIL. Deterministic AT-28 (8 checks: legitimate merge, unapproved, author-approval, unmerged PR, raced main, direct push, source binding, stale intent) |
+| 7 | EC-26 checked triggers and branch filters but not path filters or filter types | ACTIVE workflow references must declare `~governs=` (the changes they enforce); `paths`/`paths-ignore` filters that exclude a governed path FAIL; `~governs=**` (tree-wide) cannot be satisfied by a restrictive paths filter; branch/path filters of invalid TYPE (dict/int) FAIL; unknown annotation keys FAIL. All ACTIVE rows in the INDEX inventory now carry `~governs=`. AT-29 (9 checks) |
+| 8 | Status/evidence misalignment: P0_STATUS top metadata referred to Round 14; INDEX R19/R20 wording ambiguous; register lacked the Round-21 adjudication; no durable evidence table | This section + the top metadata correction; INDEX R19 row now reads CLOSE-OUT REJECTED / R20 SUPERSEDED-BY-R21 / new SERIES-2026-10-20-R21 row (all explicit that nothing is live on `main`); register **rev 10 Part 13** appended (decision status distinct from implementation, exact candidate, CI status, main-activation status); the Round-21 evidence table is GENERATED FROM LIVE EVIDENCE (ls-remote + the Actions API at generation time; generator committed, output committed as `docs/evidence/ec16-ec26/R21_EVIDENCE_TABLE.md`); schema v4; reading note replaced for this cycle; SHA256SUMS regenerated. The PAT-hygiene sweep is recorded in the coder report as a LOCAL claim only — GitHub CI does not independently verify it, and no token value appears in any file, worklog, or the evidence table |
+| 9 | Merge gating | PR #30 remains UNAPPROVED: the full gate must pass on the exact final candidate, the post-merge `main` transition must be demonstrated (AT-28 + the pre-declared P-061), and the required independent review must be recorded; merge only through the protected PR mechanism with a MERGE COMMIT. After that merge: PRs #31–#36 revalidate serially against the resulting `main` with fresh exact-head results, their declared bases updated, and their own merge-intents declared before merging; EC-21 is not waived; #23–#29 close only on proven unique-content coverage |
+
+**Acceptance suite:** AT-01..AT-29 (29 pytest groups; `run_all.py` and
+`ACCEPTANCE_TESTS.json` updated). Local result on the exact working tree
+before commit: 29/29 passed (~38s, Python 3.12.15, pytest 9.x). No result is
+claimed for CI runs that have not yet executed on the final candidate SHA.
+
+**Unchanged program-level state:** the scientific hard stop is preserved in
+full; A-01 remains ACCEPTED RISK (no rotation reminder, per the Round-21
+PAT instruction); A-02 issuer-side revocation, the independent r2 archive
+verification, the portable 40-row cohort metadata table, and the EC2
+deployment secrets remain OPEN and are not closed by this work.

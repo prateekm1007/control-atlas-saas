@@ -246,3 +246,92 @@
   push-log at 2026-10-20T16:33:00Z (fresh fetch + census; highest previously
   used identifier remains P-049 on fix/mainline-r18; P-050..P-058 were
   introduced by this branch's Round-20 entries).
+
+
+## 2026-10-20T18:08:27Z | P-059-CONFIRM | push-confirm | branch=repair/round19-mainline-acceptance remote_sha=62fab8a5ad0c07c71a508cb34b93e1a4af24e73e credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/repair/round19-mainline-acceptance -> 62fab8a5ad0c07c71a508cb34b93e1a4af24e73e (re-verified 2026-10-20T18:08:27Z; the push was an ordinary fast-forward c1680ea..62fab8a, single-writer pre-checked, main verified untouched at f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd immediately before and after); push-event checks on this exact head: Toscanini Stability Gate run 39458583995 and Governance Acceptance run 39458583993, both conclusion=success, created 2026-10-20T16:34:06Z; PR-event checks on this exact head: gate run 39458592968, governance-acceptance run 39458593293 (created 16:34:10Z); reopened-event re-verification after the Round-20 body update: gate run 39459283515, governance-acceptance run 39459283617 (created 16:38:52Z/16:38:53Z, all nine governance jobs success)"
+
+- Two-phase completion for the push declared by P-059-INTENT (head_at_intent=DEFERRED;
+  the tip is recorded here after the push returned, never backdated). The push carried
+  only the P-058-CONFIRM + P-059-INTENT push-log completion and the regenerated
+  manifest digest. This entry confirms THAT push; it does not confirm any later tip.
+
+
+## 2026-10-20T18:08:28Z | P-060-INTENT | push-intent | branch=repair/round19-mainline-acceptance head_at_intent=DEFERRED expected_remote_tip_before_push=62fab8a5ad0c07c71a508cb34b93e1a4af24e73e credential=OWNER-PAT-1 authorized_by="auditor Round-21 directions 1-10 (repair the three critical acceptance defects: EC-23 secret-value disclosure and report validation, EC-24 identifier pairing + terminal-intent binding + historical proof, EC-26 path-filter coverage; prove the protected-main merge transition; align status and evidence; no direct push to main; no force-push; merges only through the reviewed PR path)"
+
+- This entry pre-declares the Round-21 repair push of this branch. The push carries:
+  the EC-23 control-checker disclosure fix (no Secret/Match values on any path,
+  fail-closed capture logs, verified-empty HEAD-tree reports), the EC-24 identifier
+  pairing + terminal-intent exact-candidate binding + expected_remote_tip_before_push
+  validation + multiple-intent rejection (intent-reconcile verb), the EC-24 historical
+  proof layer (evidence-back verb, run verification via manifest + Actions API,
+  failed runs disclosed and never proof), the protected-main merge transition
+  (merge-intent verb + verified merge-commit/approval checks), the EC-26 ~governs=
+  path-filter coverage and invalid-filter rejection, AT-25..AT-29, schema v4, the
+  evidence-back records P-062..P-065 below, register rev 10 Part 13, P0_STATUS
+  section 10, the corrected INDEX rows, the Round-21 reading note, and the generated
+  Round-21 evidence table.
+- head_at_intent is DEFERRED per the two-phase schema; the tip is disclosed as PENDING
+  by the evidence-sequence checker until a next legitimate push delivers P-060-CONFIRM
+  (labeled PENDING, never COMPLETE; do not manufacture a push merely to eliminate a
+  correctly disclosed terminal PENDING, per the Round-21 adjudication).
+
+
+## 2026-10-20T18:08:29Z | P-061 | merge-intent | target=main pr=30 source_branch=repair/round19-mainline-acceptance expected_pre_merge_base=f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-21 directions 6 and 9 (merge only after the Round-21 blockers are fixed, the full gate passes on the final SHA, the post-merge main transition is demonstrated, and the required independent approval is recorded; merge through the protected PR mechanism with a MERGE COMMIT; after that merge, PRs #31-#36 revalidate serially against the resulting main with fresh exact-head results and their own merge-intents before merging; EC-21 is not waived)"
+
+- expected_head=DEFERRED: the head is the commit that introduces this record (a record
+  cannot embed its own commit's SHA); the checker resolves it via the introducing
+  commit and the PR's head SHA at merge time must equal it. If the candidate advances
+  past this commit, this merge-intent becomes stale and a new one must be declared on
+  the exact final candidate before merging (the checker fails the stale one).
+- expected_pre_merge_base is the live main tip at declaration time (f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd, verified by
+  fresh ls-remote immediately before this record was written); if main moves before the
+  merge, this intent fails its base verification and must be redeclared after a rebase.
+- The merge itself is NOT performed by the writer: it awaits the auditor's approval,
+  the required independent review recorded on PR #30, and execution through GitHub's
+  protected PR merge (merge-commit strategy). The post-merge push event on main is
+  declared by THIS record once the checker verifies the merge commit's parents, the
+  PR's merged state, and the approving non-author review.
+
+
+## 2026-10-20T18:08:29Z | P-062 | evidence-back | backs=P-011-CONFIRM branch=proposal/ec16-ec26-enforcement remote_sha=17eb88184c9f461c6bc9ee592f916f7ff4c921c4 credential=OWNER-PAT-1 evidence="GET /repos/prateekm1007/control-atlas-saas/commits/17eb88184c9f461c6bc9ee592f916f7ff4c921c4 -> HTTP 200 (real remote commit; verified 2026-10-20T17:47:00Z); Actions runs on this exact head: NONE (queried ?head_sha=17eb8818...: zero runs -- the pre-gate-trigger era); the branch was later rebuilt by the parallel writer with a force-with-lease update a0e321c -> c4a0fcc (auditor Round-17 direction D-4 context; INCIDENT-2026-10-20-P015-COLLISION.md section 3 records the deviation); the pre-rebuild chain, including this SHA, is preserved in the shared object store of the audited clones and in the Round-16/17 durability bundles"
+
+- Round-21 direction 5: P-011-CONFIRM is a HISTORICAL confirmation whose SHA is no longer on
+  proposal/ec16-ec26-enforcement's current lineage (the branch was rebuilt under reviewed auditor directions).
+  This record is the reviewed, evidence-backed reconciliation the hardened checker
+  requires: the SHA is a real remote commit (proof cited above, re-verifiable via the
+  commits API and the run records), the original entry stays unchanged, and nothing is
+  backdated. Where a run is cited, its head_branch connects the SHA to the claimed
+  branch; a failed run conclusion is disclosed and is not counted as proof.
+
+
+## 2026-10-20T18:08:30Z | P-063 | evidence-back | backs=P-012-CONFIRM branch=docs/owner-decisions remote_sha=78b147d55660dc79c2f5aada368d8499339bc339 credential=OWNER-PAT-1 evidence="GET /repos/prateekm1007/control-atlas-saas/commits/78b147d55660dc79c2f5aada368d8499339bc339 -> HTTP 200 (real remote commit; verified 2026-10-20T17:47:00Z); Actions run 39408223554: Toscanini Stability Gate, event=push, head_sha=78b147d55660dc79c2f5aada368d8499339bc339, head_branch=docs/owner-decisions, conclusion=failure -- the push EVENT on the exact branch and head proves the ref pointed here (the failed check is the known gate-trigger defect of that era and is disclosed, not counted as proof of a successful gate); the branch was later rebuilt as the canonical register (auditor Round-17 direction D-4; the divergent parallel copy is recorded in the register and P0_STATUS)"
+
+- Round-21 direction 5: P-012-CONFIRM is a HISTORICAL confirmation whose SHA is no longer on
+  docs/owner-decisions's current lineage (the branch was rebuilt under reviewed auditor directions).
+  This record is the reviewed, evidence-backed reconciliation the hardened checker
+  requires: the SHA is a real remote commit (proof cited above, re-verifiable via the
+  commits API and the run records), the original entry stays unchanged, and nothing is
+  backdated. Where a run is cited, its head_branch connects the SHA to the claimed
+  branch; a failed run conclusion is disclosed and is not counted as proof.
+
+
+## 2026-10-20T18:08:31Z | P-064 | evidence-back | backs=P-013-CONFIRM branch=proposal/ec16-ec26-enforcement remote_sha=dab33d946fe31891efbd6e4917e360abcb1872c1 credential=OWNER-PAT-1 evidence="GET /repos/prateekm1007/control-atlas-saas/commits/dab33d946fe31891efbd6e4917e360abcb1872c1 -> HTTP 200 (real remote commit; verified 2026-10-20T17:47:00Z); Actions runs on this exact head: NONE (queried ?head_sha=dab33d94...: zero runs); the branch's later history is the force-with-lease rebuild recorded in INCIDENT-2026-10-20-P015-COLLISION.md section 3; the SHA is preserved in the shared object store and the Round-16/17 durability bundles"
+
+- Round-21 direction 5: P-013-CONFIRM is a HISTORICAL confirmation whose SHA is no longer on
+  proposal/ec16-ec26-enforcement's current lineage (the branch was rebuilt under reviewed auditor directions).
+  This record is the reviewed, evidence-backed reconciliation the hardened checker
+  requires: the SHA is a real remote commit (proof cited above, re-verifiable via the
+  commits API and the run records), the original entry stays unchanged, and nothing is
+  backdated. Where a run is cited, its head_branch connects the SHA to the claimed
+  branch; a failed run conclusion is disclosed and is not counted as proof.
+
+
+## 2026-10-20T18:08:32Z | P-065 | evidence-back | backs=P-014-CONFIRM branch=governance/canonical-docs remote_sha=b12f30e95255b0c5d31a70cb9b6bb42776aac9a6 credential=OWNER-PAT-1 evidence="GET /repos/prateekm1007/control-atlas-saas/commits/b12f30e95255b0c5d31a70cb9b6bb42776aac9a6 -> HTTP 200 (real remote commit; verified 2026-10-20T17:47:00Z); Actions run 39408297643: Toscanini Stability Gate, event=push, head_sha=b12f30e95255b0c5d31a70cb9b6bb42776aac9a6, head_branch=governance/canonical-docs, conclusion=failure -- the push EVENT on the exact branch and head proves the ref pointed here (the failed check is the known gate-trigger defect of that era, disclosed); the branch was later rebuilt per the auditor's Round-17 direction D-4 (canonical governance documents series)"
+
+- Round-21 direction 5: P-014-CONFIRM is a HISTORICAL confirmation whose SHA is no longer on
+  governance/canonical-docs's current lineage (the branch was rebuilt under reviewed auditor directions).
+  This record is the reviewed, evidence-backed reconciliation the hardened checker
+  requires: the SHA is a real remote commit (proof cited above, re-verifiable via the
+  commits API and the run records), the original entry stays unchanged, and nothing is
+  backdated. Where a run is cited, its head_branch connects the SHA to the claimed
+  branch; a failed run conclusion is disclosed and is not counted as proof.

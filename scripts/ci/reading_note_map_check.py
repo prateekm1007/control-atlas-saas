@@ -95,13 +95,66 @@ def _on_block(doc: dict):
     return None
 
 
-def _validate_triggers(filespec: str, doc: dict, events: list[str],
-                       branch: str, findings: list[str]):
-    """Round-20: the live workflow must actually run on every declared event.
+def _github_glob_match(path: str, pattern: str) -> bool:
+    """GitHub path-filter semantics: '*' and '?' do not cross '/', '**' does."""
+    rx = ""
+    i = 0
+    while i < len(pattern):
+        c = pattern[i]
+        if c == "*":
+            if pattern[i:i + 3] == "**/":
+                rx += r"(?:[^/]+/)*"
+                i += 3
+            elif pattern[i:i + 2] == "**":
+                rx += ".*"
+                i += 2
+            else:
+                rx += "[^/]*"
+                i += 1
+        elif c == "?":
+            rx += "[^/]"
+            i += 1
+        else:
+            rx += re.escape(c)
+            i += 1
+    return re.fullmatch(rx, path) is not None
 
-    Fails closed for: manual-only workflows (workflow_dispatch and friends),
-    missing declared events, and branch filters that exclude the enforcement
-    branch (branches / branches-ignore).
+
+def _representative_path(glob: str) -> str:
+    """A concrete path the governed glob certainly matches (for filter checks)."""
+    if "**" in glob or "*" in glob or "?" in glob:
+        if glob.endswith("/**"):
+            return glob[:-3] + "/X"
+        return re.sub(r"\*+", "X", glob).replace("?", "X")
+    return glob
+
+
+def _pattern_list(value, key: str, filespec: str, ev: str, findings: list[str]):
+    """Validate a filter's TYPE (GitHub accepts a string or list of strings only)."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list) and all(isinstance(x, str) for x in value):
+        return value
+    findings.append(f"workflow {filespec} trigger {ev} has an INVALID filter type for "
+                    f"{key}: expected a string or list of strings, got "
+                    f"{type(value).__name__} (malformed filters must not evade the "
+                    f"liveness check)")
+    return []
+
+
+def _validate_triggers(filespec: str, doc: dict, events: list[str],
+                       branch: str, findings: list[str],
+                       governs: list[str] | None = None):
+    """Round-20/21: the live workflow must actually run on every declared event,
+    with branch coverage AND path coverage of the governed changes.
+
+    Fails closed for: manual-only workflows, missing declared events, branch
+    filters that exclude the enforcement branch (branches / branches-ignore),
+    path filters that exclude a governed path (paths / paths-ignore), and
+    filter values of an invalid type (a dict or int filter must not silently
+    pass the check).
     """
     on_val = _on_block(doc)
     if on_val is None:
@@ -124,19 +177,47 @@ def _validate_triggers(filespec: str, doc: dict, events: list[str],
             continue
         cfg = on_val.get(ev)
         if cfg is None or not isinstance(cfg, dict):
-            continue  # event with no filter: runs for every branch
-        pats = cfg.get("branches")
-        if isinstance(pats, list) and pats:
-            if not any(fnmatch.fnmatchcase(branch, str(p)) for p in pats):
-                findings.append(f"workflow {filespec} trigger {ev} filters branches "
-                                f"{pats}, which exclude the enforcement branch "
-                                f"{branch!r} (disabled for the required branch)")
-        pats = cfg.get("branches-ignore")
-        if isinstance(pats, list) and pats:
-            if any(fnmatch.fnmatchcase(branch, str(p)) for p in pats):
-                findings.append(f"workflow {filespec} trigger {ev} ignores the "
-                                f"enforcement branch {branch!r} "
-                                f"(branches-ignore {pats})")
+            continue  # event with no filter: runs for every branch and path
+        # --- branch coverage (Round-20) with type validation (Round-21)
+        pats = _pattern_list(cfg.get("branches"), "branches", filespec, ev, findings)
+        if pats and not any(fnmatch.fnmatchcase(branch, str(p)) for p in pats):
+            findings.append(f"workflow {filespec} trigger {ev} filters branches "
+                            f"{pats}, which exclude the enforcement branch "
+                            f"{branch!r} (disabled for the required branch)")
+        pats = _pattern_list(cfg.get("branches-ignore"), "branches-ignore",
+                             filespec, ev, findings)
+        if pats and any(fnmatch.fnmatchcase(branch, str(p)) for p in pats):
+            findings.append(f"workflow {filespec} trigger {ev} ignores the "
+                            f"enforcement branch {branch!r} "
+                            f"(branches-ignore {pats})")
+        # --- path coverage (Round-21 direction 7): the governed changes must
+        # not be excluded by paths / paths-ignore filters.
+        if governs:
+            paths = _pattern_list(cfg.get("paths"), "paths", filespec, ev, findings)
+            ignores = _pattern_list(cfg.get("paths-ignore"), "paths-ignore",
+                                    filespec, ev, findings)
+            for g in governs:
+                rep = _representative_path(g)
+                if ignores and any(_github_glob_match(rep, p) for p in ignores):
+                    findings.append(
+                        f"workflow {filespec} trigger {ev} paths-ignore {ignores} "
+                        f"excludes the governed path {rep} (rule {g!r}) -- the "
+                        f"claimed enforcement would not run on the changes it "
+                        f"is supposed to enforce")
+                if paths:
+                    if g == "**":
+                        if "**" not in paths:
+                            findings.append(
+                                f"workflow {filespec} trigger {ev} restricts paths to "
+                                f"{paths} but the enforcement governs the whole tree "
+                                f"(~governs=**); only an unrestricted or '**' filter "
+                                f"covers it")
+                    elif not any(_github_glob_match(rep, p) for p in paths):
+                        findings.append(
+                            f"workflow {filespec} trigger {ev} filters paths {paths}, "
+                            f"which exclude the governed path {rep} -- the claimed "
+                            f"enforcement would not run on the changes it is supposed "
+                            f"to enforce")
 
 
 def resolve_refs(value: str, repo: str, require_live: bool = False,
@@ -157,6 +238,12 @@ def resolve_refs(value: str, repo: str, require_live: bool = False,
     the live workflow must be triggered by each declared event with branch
     filters covering the enforcement branch. Without the annotation the
     reference fails -- path + job existence alone no longer proves liveness.
+
+    Round-21 path-coverage fix (direction 7): an ACTIVE rule's workflow
+    reference must additionally declare the changes it governs
+    (`~governs=<glob>+<glob>` suffix), and the live workflow's path filters
+    (paths / paths-ignore) must not exclude them. Multiple `~key=value`
+    annotations may appear in any order; unknown annotation keys fail closed.
     """
     findings = []
     items = [v.strip() for v in ITEM_SPLIT.split(value) if v.strip()]
@@ -178,9 +265,24 @@ def resolve_refs(value: str, repo: str, require_live: bool = False,
             if not _path_exists(repo, target):
                 findings.append(f"named enforcement file does not exist: {target}")
         elif kind == "workflow":
-            base, _, ev_spec = target.partition("~events=")
-            events = ([e.strip() for e in ev_spec.split("+") if e.strip()]
-                      if ev_spec else None)
+            # parse annotations: FILE#JOB[@ref]~key=value~key=value
+            parts = target.split("~")
+            base = parts[0]
+            ann: dict[str, str] = {}
+            for seg in parts[1:]:
+                k, _, v = seg.partition("=")
+                if not k or not _:
+                    findings.append(f"malformed annotation {seg!r} in {item!r} "
+                                    f"(need ~key=value)")
+                elif k not in ("events", "governs"):
+                    findings.append(f"unknown annotation key {k!r} in {item!r} "
+                                    f"(allowed: events, governs)")
+                else:
+                    ann[k] = v
+            events = ([e.strip() for e in ann["events"].split("+") if e.strip()]
+                      if "events" in ann else None)
+            governs = ([g.strip() for g in ann["governs"].split("+") if g.strip()]
+                       if "governs" in ann else None)
             filespec_all, _, job = base.rpartition("#")
             filespec, _, ref = (filespec_all.rpartition("@")
                                 if "@" in filespec_all else (filespec_all, "", ""))
@@ -195,6 +297,10 @@ def resolve_refs(value: str, repo: str, require_live: bool = False,
                                     f"event token(s) {bad} (allowed: "
                                     f"{sorted(TRIGGER_EVENTS)})")
                     events = None
+            if governs is not None and not governs:
+                findings.append(f"workflow reference {item!r} declares an empty "
+                                f"~governs= annotation (fail closed)")
+                governs = None
             if require_live:
                 if ref:
                     findings.append(f"ACTIVE rule pins its workflow to @{ref}; the live "
@@ -214,6 +320,12 @@ def resolve_refs(value: str, repo: str, require_live: bool = False,
                                     f"'~events=push+pull_request'); path + job existence "
                                     f"alone does not prove liveness: {item}")
                     continue
+                if governs is None:
+                    findings.append(f"ACTIVE rule's workflow reference must declare the "
+                                    f"changes it governs (append '~governs=<glob>+…') so "
+                                    f"that restrictive path filters cannot silently "
+                                    f"exclude them: {item}")
+                    continue
             doc = _yaml_doc(repo, filespec_all)
             if doc is None:
                 findings.append(f"named workflow file does not exist: {filespec}")
@@ -226,7 +338,7 @@ def resolve_refs(value: str, repo: str, require_live: bool = False,
                     findings.append(f"workflow job not found: {job!r} in {filespec}")
                 elif events:
                     _validate_triggers(filespec, doc, events,
-                                       enforcement_branch, findings)
+                                       enforcement_branch, findings, governs=governs)
         elif kind == "pytest":
             node_file = target.split("::", 1)[0]
             if not _path_exists(repo, node_file):

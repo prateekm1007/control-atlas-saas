@@ -1044,25 +1044,25 @@ def test_at23_workflow_trigger_liveness():
     # 1. valid push/PR workflow with matching annotation passes
     write_wf("name: gate\non:\n  push:\n    branches: ['**']\n  pull_request:\n"
              "    branches: ['**']\n" + job)
-    idx("workflow:.github/workflows/gate.yml#secret-scan~events=push+pull_request")
+    idx("workflow:.github/workflows/gate.yml#secret-scan~events=push+pull_request~governs=**")
     r = run_idx()
     check("AT-23", "valid push/PR workflow with declared events passes",
           r.returncode == 0, r.stdout)
     # 2. path-correct, job exists, but MANUAL-ONLY -> fails
     write_wf("name: gate\non:\n  workflow_dispatch:\n" + job)
-    idx("workflow:.github/workflows/gate.yml#secret-scan~events=push+pull_request")
+    idx("workflow:.github/workflows/gate.yml#secret-scan~events=push+pull_request~governs=**")
     r = run_idx()
     check("AT-23", "manual-only (workflow_dispatch) workflow fails",
           r.returncode == 1 and "NOT triggered by" in r.stdout, r.stdout)
     # 3. push trigger with a branch filter excluding main -> fails
     write_wf("name: gate\non:\n  push:\n    branches: [feature-x]\n" + job)
-    idx("workflow:.github/workflows/gate.yml#secret-scan~events=push")
+    idx("workflow:.github/workflows/gate.yml#secret-scan~events=push~governs=**")
     r = run_idx()
     check("AT-23", "branch filter excluding the enforcement branch fails",
           r.returncode == 1 and "exclude the enforcement branch" in r.stdout, r.stdout)
     # 4. branches-ignore covering main -> fails
     write_wf("name: gate\non:\n  push:\n    branches-ignore: [main]\n" + job)
-    idx("workflow:.github/workflows/gate.yml#secret-scan~events=push")
+    idx("workflow:.github/workflows/gate.yml#secret-scan~events=push~governs=**")
     r = run_idx()
     check("AT-23", "branches-ignore covering the enforcement branch fails",
           r.returncode == 1 and "ignores the enforcement branch" in r.stdout, r.stdout)
@@ -1079,19 +1079,19 @@ def test_at23_workflow_trigger_liveness():
           r.returncode == 1 and "unknown event token" in r.stdout, r.stdout)
     # 7. list-form on: [push, pull_request] passes
     write_wf("name: gate\non: [push, pull_request]\n" + job)
-    idx("workflow:.github/workflows/gate.yml#secret-scan~events=push+pull_request")
+    idx("workflow:.github/workflows/gate.yml#secret-scan~events=push+pull_request~governs=**")
     r = run_idx()
     check("AT-23", "list-form on: [push, pull_request] passes",
           r.returncode == 0, r.stdout)
     # 8. no on: block at all -> fails
     write_wf("name: gate\n" + job)
-    idx("workflow:.github/workflows/gate.yml#secret-scan~events=push")
+    idx("workflow:.github/workflows/gate.yml#secret-scan~events=push~governs=**")
     r = run_idx()
     check("AT-23", "workflow with no on: block fails",
           r.returncode == 1 and "no 'on:' triggers" in r.stdout, r.stdout)
     # 9. pull_request declared but workflow only has push -> fails
     write_wf("name: gate\non:\n  push:\n" + job)
-    idx("workflow:.github/workflows/gate.yml#secret-scan~events=pull_request")
+    idx("workflow:.github/workflows/gate.yml#secret-scan~events=pull_request~governs=**")
     r = run_idx()
     check("AT-23", "declared pull_request missing from the workflow fails",
           r.returncode == 1 and "NOT triggered by 'pull_request'" in r.stdout, r.stdout)
@@ -1153,27 +1153,57 @@ def test_at24_pushlog_remote_verification():
     check("AT-24", "stale confirmation is HISTORICAL and the undeclared current tip FAILS",
           r.returncode == 1 and "HISTORICAL" in r.stdout and "UNDECLARED" in r.stdout,
           r.stdout)
-    # 3. same stale confirmation, but the current tip carries an unpaired INTENT -> PENDING pass
-    pend = log_with("## 2026-10-20T10:00:00Z | P-3-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
+    # 3. (Round-21 direction 4) the current tip carries an unpaired terminal
+    #    INTENT introduced by the exact candidate, with a verified pre-push tip
+    #    -> PENDING pass. The log must live in a git repository so the checker
+    #    can bind the intent to the commit that introduced it.
+    logdir = os.path.join(src, "docs", "evidence", "push-log")
+    os.makedirs(logdir, exist_ok=True)
+    logpath = os.path.join(logdir, "PUSH_LOG.md")
+
+    def commit_log(text, tag):
+        open(logpath, "w").write(text)
+        sp.run(["git", "-C", src, "add", "docs"], check=True)
+        sp.run(["git", "-C", src, "-c", "user.email=t@t", "-c", "user.name=t",
+                "commit", "-q", "--allow-empty", "-m", tag], check=True)
+        return sp.run(["git", "-C", src, "rev-parse", "HEAD"],
+                      capture_output=True, text=True).stdout.strip()
+
+    def push_b():
+        sp.run(["git", "-C", src, "push", "-q", bare, "HEAD:refs/heads/b"], check=True)
+
+    cA = commit_log("## 2026-10-20T10:00:00Z | P-3-INTENT | push-intent | "
+                    "branch=b expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n", "log A")
+    push_b()
+    cB = commit_log("## 2026-10-20T10:00:00Z | P-3-INTENT | push-intent | "
+                    "branch=b expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
                     "## 2026-10-20T11:00:00Z | P-3-CONFIRM | push-confirm | branch=b remote_sha=%s "
                     "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b -> %s\"\n"
-                    "## 2026-10-20T12:00:00Z | P-4-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n" % (s1, s1))
-    r = rv(pend)
-    check("AT-24", "tip declared by an unpaired INTENT is PENDING, not a failure",
-          r.returncode == 0 and "PENDING" in r.stdout and "P-4-INTENT" in r.stdout,
-          r.stdout)
-    # 4. RECONCILE declaring the current tip -> passes; RECONCILE does not consume INTENTs
-    rec = log_with("## 2026-10-20T10:00:00Z | P-5-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
-                   "## 2026-10-20T11:00:00Z | P-5-CONFIRM | push-confirm | branch=b remote_sha=%s "
-                   "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b -> %s\"\n"
-                   "## 2026-10-20T12:00:00Z | P-6 | push-reconcile | branch=b remote_sha=%s "
-                   "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b -> %s verified now\"\n"
-                   "## 2026-10-20T13:00:00Z | P-7-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
-                   % (s1, s1, s2, s2))
-    r = rv(rec)
-    check("AT-24", "RECONCILE declaring the current tip passes and leaves INTENTs unconsumed",
-          r.returncode == 0 and "CURRENT" in r.stdout and "P-7-INTENT" in r.stdout
-          and "PENDING" in r.stdout, r.stdout)
+                    "## 2026-10-20T12:00:00Z | P-4-INTENT | push-intent | branch=b "
+                    "expected_remote_tip_before_push=%s credential=OWNER-PAT-1\n" % (cA, cA, cA),
+                    "log B")
+    push_b()
+    r = run("evidence_sequence_check.py", logpath, "--pushlog-schema", "--remote-verify",
+            "--remote", bare, "--branch", "b", "--expect-tip", cB)
+    check("AT-24", "tip declared by a terminal INTENT bound to the exact candidate is PENDING, not a failure",
+          r.returncode == 0 and "PENDING" in r.stdout and "P-4-INTENT" in r.stdout
+          and "BOUND" in r.stdout, r.stdout)
+    # 4. RECONCILE for the branch does not consume the terminal INTENT
+    cC = commit_log("## 2026-10-20T10:00:00Z | P-3-INTENT | push-intent | "
+                    "branch=b expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+                    "## 2026-10-20T11:00:00Z | P-3-CONFIRM | push-confirm | branch=b remote_sha=%s "
+                    "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b -> %s\"\n"
+                    "## 2026-10-20T11:30:00Z | P-6 | push-reconcile | branch=b remote_sha=%s "
+                    "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b -> %s verified now\"\n"
+                    "## 2026-10-20T12:00:00Z | P-7-INTENT | push-intent | branch=b "
+                    "expected_remote_tip_before_push=%s credential=OWNER-PAT-1\n"
+                    % (cA, cA, cB, cB, cB), "log C")
+    push_b()
+    r = run("evidence_sequence_check.py", logpath, "--pushlog-schema", "--remote-verify",
+            "--remote", bare, "--branch", "b", "--expect-tip", cC)
+    check("AT-24", "a RECONCILE never consumes the terminal INTENT (PENDING preserved)",
+          r.returncode == 0 and "PENDING" in r.stdout and "P-7-INTENT" in r.stdout
+          and "P-6" in r.stdout, r.stdout)
     # 5. mismatched branch: CONFIRM claims branch=b but the evidence names only branch=c
     mism = log_with("## 2026-10-20T10:00:00Z | P-8-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
                     "## 2026-10-20T11:00:00Z | P-8-CONFIRM | push-confirm | branch=b remote_sha=%s "
@@ -1220,11 +1250,605 @@ def test_at24_pushlog_remote_verification():
     r = rv(cur, tip=s1)
     check("AT-24", "candidate that is not the live tip fails",
           r.returncode == 1 and "not the expected candidate" in r.stdout, r.stdout)
-    # 12. the real mainline log classifies every confirmation without fabricating
-    #     (classification-only: the CI push-log-integrity job additionally enforces
-    #     tip declaration with --branch/--expect-tip from the event context, which
-    #     a PR-event merge checkout cannot reproduce here)
+    # 12. the real mainline log classifies every confirmation without fabricating.
+    #     The off-lineage historical SHAs must exist in the local object store for
+    #     the evidence-back proof (a CI checkout of all branch tips does not fetch
+    #     unreachable commits; there the full verification -- including the commits
+    #     API -- is performed by the push-log-integrity job, which always runs with
+    #     --repo and a token in the same workflow).
     real = os.path.join(REPO, "docs", "evidence", "push-log", "PUSH_LOG.md")
-    r = run("evidence_sequence_check.py", real, "--pushlog-schema", "--remote-verify")
-    check("AT-24", "the real mainline log passes remote classification (no fabrication)",
+    r = run("evidence_sequence_check.py", real, "--pushlog-schema")
+    check("AT-24", "the real mainline log passes the schema (identifier pairing)",
           r.returncode == 0, r.stdout)
+    have_hist = sp.run(["git", "-C", REPO, "cat-file", "-e",
+                        "17eb88184c9f461c6bc9ee592f916f7ff4c921c4^{commit}"],
+                       capture_output=True).returncode == 0
+    if have_hist:
+        r = run("evidence_sequence_check.py", real, "--pushlog-schema", "--remote-verify")
+        check("AT-24", "the real mainline log passes remote classification (no fabrication)",
+              r.returncode == 0, r.stdout)
+    else:
+        print("AT-24 NOTE: off-lineage historical objects absent from this checkout; "
+              "the full remote classification runs in the push-log-integrity CI job "
+              "(--repo + token + manifest)")
+
+
+# ------------------------------------------- AT-25 (EC-23 disclosure, Round-21)
+
+def test_at25_secret_control_disclosure():
+    """Round-21 direction 3: the EC-23 control checker must NEVER print
+    Secret/Match field values or raw key material on ANY path (success or
+    failure); a requested capture log must exist and be readable (fail
+    closed); missing or malformed reports fail; the negative mode requires a
+    parsed empty-finding report rather than a trusted exit status."""
+    import subprocess as sp
+    # synthetic test key, never a real credential; assembled from two
+    # non-adjacent parts so the tracked source bytes cannot match the
+    # generic-api-key/aws-access-token rules (same discipline as the seeded
+    # workflow control)
+    KEY = "AKIA" + "ZZR21SYNTHETICKEYQQ7X"
+    d = tempfile.mkdtemp()
+
+    def write_json(name, obj):
+        p = os.path.join(d, name)
+        json.dump(obj, open(p, "w"))
+        return p
+
+    def write_raw(name, text):
+        p = os.path.join(d, name)
+        open(p, "w").write(text)
+        return p
+
+    def ctrl(mode, *args):
+        env = dict(os.environ)
+        env["SEEDED_KEY"] = KEY
+        return subprocess.run(
+            [PY, os.path.join(CI, "secret_control_check.py"), mode, *args],
+            capture_output=True, text=True, env=env, shell=False)
+
+    finding_ok = [{"RuleID": "aws-access-token", "File": "fixture.txt",
+                   "StartLine": 1, "Secret": "REDACTED", "Match": "REDACTED"}]
+    log_ok = write_raw("scan.log", "scanner output with no key material\n")
+
+    # 1. success path: PASS and the key never appears in stdout/stderr
+    r = ctrl("positive", "--report", write_json("ok.json", finding_ok),
+             "--exit-code", "101", "--log-file", log_ok)
+    check("AT-25", "redacted positive control passes",
+          r.returncode == 0 and "PASS" in r.stdout, r.stdout + r.stderr)
+    check("AT-25", "the synthetic key never appears in the checker output (success path)",
+          KEY not in r.stdout and KEY not in r.stderr, r.stdout + r.stderr)
+    # 2. report Secret field carries the raw key -> FAIL, key never printed
+    leak_secret = [{"RuleID": "aws-access-token", "File": "fixture.txt",
+                    "StartLine": 1, "Secret": KEY, "Match": "REDACTED"}]
+    r = ctrl("positive", "--report", write_json("leak_secret.json", leak_secret),
+             "--exit-code", "101")
+    check("AT-25", "Secret field carrying the raw key fails redaction",
+          r.returncode == 1 and "redaction FAILED" in r.stdout, r.stdout)
+    check("AT-25", "the leaked Secret value is never printed",
+          KEY not in r.stdout and KEY not in r.stderr, r.stdout + r.stderr)
+    # 3. Match field carries the raw key -> FAIL, key never printed
+    leak_match = [{"RuleID": "aws-access-token", "File": "fixture.txt",
+                   "StartLine": 1, "Secret": "REDACTED", "Match": KEY}]
+    r = ctrl("positive", "--report", write_json("leak_match.json", leak_match),
+             "--exit-code", "101")
+    check("AT-25", "Match field carrying the raw key fails redaction",
+          r.returncode == 1 and "redaction FAILED" in r.stdout, r.stdout)
+    check("AT-25", "the leaked Match value is never printed",
+          KEY not in r.stdout and KEY not in r.stderr, r.stdout + r.stderr)
+    # 4. raw key present in the report BYTES (extra field) -> FAIL, not printed
+    r = ctrl("positive", "--report",
+             write_raw("leak_bytes.json", json.dumps(finding_ok)[:-1] + ', "Extra": "%s"}' % KEY),
+             "--exit-code", "101")
+    check("AT-25", "raw key in the report bytes fails redaction without being printed",
+          r.returncode == 1 and KEY not in r.stdout and KEY not in r.stderr,
+          r.stdout + r.stderr)
+    # 5. raw key in the captured scanner log -> FAIL, not printed
+    leaky_log = write_raw("leaky.log", "scanning...\nfound key %s in fixture\n" % KEY)
+    r = ctrl("positive", "--report", write_json("ok2.json", finding_ok),
+             "--exit-code", "101", "--log-file", leaky_log)
+    check("AT-25", "raw key in the captured log fails redaction without being printed",
+          r.returncode == 1 and KEY not in r.stdout and KEY not in r.stderr,
+          r.stdout + r.stderr)
+    # 6. requested capture log MISSING -> fail closed
+    r = ctrl("positive", "--report", write_json("ok3.json", finding_ok),
+             "--exit-code", "101", "--log-file", os.path.join(d, "missing.log"))
+    check("AT-25", "a requested but missing capture log fails closed",
+          r.returncode == 1 and "MISSING" in r.stdout, r.stdout)
+    # 7. malformed report (not JSON) -> FAIL
+    r = ctrl("positive", "--report", write_raw("bad.json", "not json at all"),
+             "--exit-code", "101")
+    check("AT-25", "malformed positive report fails",
+          r.returncode == 1 and "parseable JSON" in r.stdout, r.stdout)
+    # 8. missing report -> FAIL
+    r = ctrl("positive", "--report", os.path.join(d, "absent.json"), "--exit-code", "101")
+    check("AT-25", "missing positive report fails",
+          r.returncode == 1 and "absent" in r.stdout, r.stdout)
+    # 9. negative mode: findings present -> FAIL; missing report -> FAIL;
+    #    malformed -> FAIL; requested log missing -> FAIL
+    r = ctrl("negative", "--report", write_json("neg_find.json", finding_ok),
+             "--exit-code", "0")
+    check("AT-25", "negative control with findings fails",
+          r.returncode == 1 and "finding(s)" in r.stdout, r.stdout)
+    r = ctrl("negative", "--report", os.path.join(d, "absent2.json"), "--exit-code", "0")
+    check("AT-25", "negative control with a missing report fails (exit status alone is not trusted)",
+          r.returncode == 1 and "absent" in r.stdout, r.stdout)
+    r = ctrl("negative", "--report", write_raw("neg_bad.json", "{oops"),
+             "--exit-code", "0")
+    check("AT-25", "negative control with a malformed report fails",
+          r.returncode == 1, r.stdout)
+    r = ctrl("negative", "--report", write_json("neg_ok.json", []),
+             "--exit-code", "0", "--log-file", os.path.join(d, "missing2.log"))
+    check("AT-25", "negative control with a requested-but-missing log fails closed",
+          r.returncode == 1 and "MISSING" in r.stdout, r.stdout)
+    # 10. negative success: parsed empty report + existing log -> PASS, no key
+    r = ctrl("negative", "--report", write_json("neg_clean.json", []),
+             "--exit-code", "0", "--log-file", log_ok)
+    check("AT-25", "verified-empty negative control passes without printing the key",
+          r.returncode == 0 and KEY not in r.stdout and KEY not in r.stderr,
+          r.stdout + r.stderr)
+
+
+# --------------------------------- AT-26 (EC-24 intent binding, Round-21)
+
+def test_at26_intent_binding_and_pairing():
+    """Round-21 direction 4: confirmations pair their OWN identifier's intent;
+    the single accepted terminal intent must be introduced by the exact
+    candidate and declare the verified pre-push tip; excess unmatched intents
+    fail unless voided; a stale intent can never declare later commits."""
+    import subprocess as sp
+    d = tempfile.mkdtemp()
+    bare = os.path.join(d, "remote.git")
+    sp.run(["git", "init", "-q", "--bare", bare], check=True)
+    src = os.path.join(d, "src")
+    sp.run(["git", "init", "-q", "-b", "main", src], check=True)
+    logdir = os.path.join(src, "docs", "evidence", "push-log")
+    os.makedirs(logdir, exist_ok=True)
+    logpath = os.path.join(logdir, "PUSH_LOG.md")
+
+    def commit_log(text, tag):
+        open(logpath, "w").write(text)
+        sp.run(["git", "-C", src, "add", "docs"], check=True)
+        sp.run(["git", "-C", src, "-c", "user.email=t@t", "-c", "user.name=t",
+                "commit", "-q", "--allow-empty", "-m", tag], check=True)
+        return sp.run(["git", "-C", src, "rev-parse", "HEAD"],
+                      capture_output=True, text=True).stdout.strip()
+
+    def push(refspec="HEAD:refs/heads/b"):
+        sp.run(["git", "-C", src, "push", "-q", bare, refspec], check=True)
+
+    def chk(tip):
+        return run("evidence_sequence_check.py", logpath, "--pushlog-schema",
+                   "--remote-verify", "--remote", bare, "--branch", "b",
+                   "--expect-tip", tip)
+
+    # 1. identifier pairing: a CONFIRM with a DIFFERENT id must not consume the intent
+    t = ("## 2026-10-20T10:00:00Z | P-1-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
+         "## 2026-10-20T11:00:00Z | P-9-CONFIRM | push-confirm | branch=b remote_sha="
+         + "a" * 40 + " credential=OWNER-PAT-1 evidence=\"ls-remote b -> " + "a" * 40 + "\"\n")
+    f = tmpfile(t, ".md")
+    r = run("evidence_sequence_check.py", f, "--pushlog-schema")
+    check("AT-26", "a confirmation must match its own intent identifier (no cross-consumption)",
+          r.returncode == 1 and "identifier P-9" in r.stdout, r.stdout)
+    # 2. correct identifier pairing passes schema
+    t2 = t.replace("P-9-CONFIRM", "P-1-CONFIRM")
+    f2 = tmpfile(t2, ".md")
+    r = run("evidence_sequence_check.py", f2, "--pushlog-schema")
+    check("AT-26", "matching identifier pairing passes",
+          r.returncode == 0, r.stdout)
+    # 3. legitimate terminal flow: intent -> confirm -> terminal intent on the exact candidate
+    a = commit_log("## 2026-10-20T10:00:00Z | P-2-INTENT | push-intent | branch=b "
+                   "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n", "A")
+    push()
+    b = commit_log("## 2026-10-20T10:00:00Z | P-2-INTENT | push-intent | branch=b "
+                   "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+                   "## 2026-10-20T11:00:00Z | P-2-CONFIRM | push-confirm | branch=b remote_sha=%s "
+                   "credential=OWNER-PAT-1 evidence=\"git ls-remote r refs/heads/b -> %s\"\n"
+                   "## 2026-10-20T12:00:00Z | P-3-INTENT | push-intent | branch=b "
+                   "expected_remote_tip_before_push=%s credential=OWNER-PAT-1\n" % (a, a, a), "B")
+    push()
+    r = chk(b)
+    check("AT-26", "terminal intent bound to the exact candidate is accepted as PENDING",
+          r.returncode == 0 and "PENDING" in r.stdout and "P-3-INTENT" in r.stdout
+          and "BOUND" in r.stdout, r.stdout)
+    # 4. a LATER commit without a new intent: the old intent must not declare it
+    c = commit_log(open(logpath).read(), "C")  # same log, new commit on top
+    push()
+    r = chk(c)
+    check("AT-26", "a stale intent cannot declare later commits (candidate advanced)",
+          r.returncode == 1 and "does not bind to the candidate" in r.stdout
+          and "undeclared" in r.stdout, r.stdout)
+    # 5. expected_remote_tip_before_push must match the newest recorded branch state
+    bad_exp = ("## 2026-10-20T10:00:00Z | P-4-INTENT | push-intent | branch=b "
+               "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+               "## 2026-10-20T11:00:00Z | P-4-CONFIRM | push-confirm | branch=b remote_sha=%s "
+               "credential=OWNER-PAT-1 evidence=\"git ls-remote r refs/heads/b -> %s\"\n"
+               "## 2026-10-20T12:00:00Z | P-5-INTENT | push-intent | branch=b "
+               "expected_remote_tip_before_push=%s credential=OWNER-PAT-1\n"
+               % (a, a, "f" * 40))
+    e = commit_log(bad_exp, "E")
+    push()
+    r = chk(e)
+    check("AT-26", "a declared pre-push tip that mismatches the recorded state fails",
+          r.returncode == 1 and "intervening ref update or a stale declaration" in r.stdout,
+          r.stdout)
+    # 6. multiple unmatched intents fail...
+    two = ("## 2026-10-20T10:00:00Z | P-6-INTENT | push-intent | branch=b "
+           "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+           "## 2026-10-20T10:30:00Z | P-7-INTENT | push-intent | branch=b "
+           "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n")
+    g = commit_log(two, "G")
+    push()
+    r = chk(g)
+    check("AT-26", "multiple unmatched intents for the branch under test fail",
+          r.returncode == 1 and "multiple unmatched intents" in r.stdout, r.stdout)
+    # 7. ...unless the excess intents are voided by intent-reconcile records
+    voided = two + ("## 2026-10-20T10:40:00Z | P-8 | intent-reconcile | voids=P-6-INTENT "
+                    "branch=b credential=OWNER-PAT-1 evidence=\"superseded by P-7 on the same push\"\n")
+    h = commit_log(voided, "H")
+    push()
+    r = chk(h)
+    check("AT-26", "excess unmatched intents voided by intent-reconcile are tolerated",
+          r.returncode == 0 and "PENDING" in r.stdout and "P-7-INTENT" in r.stdout,
+          r.stdout)
+    # 8. ABSENT declared while a prior record exists fails
+    absent_bad = ("## 2026-10-20T10:00:00Z | P-10-INTENT | push-intent | branch=b "
+                  "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+                  "## 2026-10-20T11:00:00Z | P-10-CONFIRM | push-confirm | branch=b remote_sha=%s "
+                  "credential=OWNER-PAT-1 evidence=\"git ls-remote r refs/heads/b -> %s\"\n"
+                  "## 2026-10-20T12:00:00Z | P-11-INTENT | push-intent | branch=b "
+                  "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n" % (a, a))
+    i2 = commit_log(absent_bad, "I")
+    push()
+    r = chk(i2)
+    check("AT-26", "ABSENT pre-push tip contradicted by a prior record fails",
+          r.returncode == 1 and "already records branch state" in r.stdout, r.stdout)
+
+
+# ------------------------------ AT-27 (EC-24 historical proof, Round-21)
+
+def test_at27_historical_proof():
+    """Round-21 direction 5: a HISTORICAL confirmation must be proven real --
+    ancestry from the live tip, or a reviewed evidence-back record whose SHA
+    exists; every cited run must verify (manifest, else fail closed); failed
+    runs are disclosed and cannot prove a push; dangling backing fails."""
+    import subprocess as sp
+    d = tempfile.mkdtemp()
+    bare = os.path.join(d, "remote.git")
+    sp.run(["git", "init", "-q", "--bare", bare], check=True)
+    src = os.path.join(d, "src")
+    sp.run(["git", "init", "-q", "-b", "main", src], check=True)
+
+    def commit(repo, tag, path=None, text=None):
+        if path and text is not None:
+            os.makedirs(os.path.dirname(os.path.join(repo, path)), exist_ok=True)
+            open(os.path.join(repo, path), "w").write(text)
+            sp.run(["git", "-C", repo, "add", "docs"], check=True)
+        sp.run(["git", "-C", repo, "-c", "user.email=t@t", "-c", "user.name=t",
+                "commit", "-q", "--allow-empty", "-m", tag], check=True)
+        return sp.run(["git", "-C", repo, "rev-parse", "HEAD"],
+                      capture_output=True, text=True).stdout.strip()
+
+    logrel = "docs/evidence/push-log/PUSH_LOG.md"
+    logpath = os.path.join(src, logrel)
+    # build an off-lineage history: root -> A pushed to b, then b rewritten to B
+    # (root exists so the reset below always has a parent to fall back to)
+    commit(src, "root")
+    a = commit(src, "A")
+    sp.run(["git", "-C", src, "push", "-q", bare, a + ":refs/heads/b"], check=True)
+    sp.run(["git", "-C", src, "reset", "-q", "--hard", "HEAD~1"], check=True)
+    b = commit(src, "B")
+    sp.run(["git", "-C", src, "push", "-q", "--force", bare, b + ":refs/heads/b"], check=True)
+    # A is off b's lineage but still in src's object store
+
+    def logtext(extra):
+        return ("## 2026-10-20T10:00:00Z | P-1-INTENT | push-intent | branch=b "
+                "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+                "## 2026-10-20T11:00:00Z | P-1-CONFIRM | push-confirm | branch=b remote_sha=%s "
+                "credential=OWNER-PAT-1 evidence=\"git ls-remote r refs/heads/b -> %s\"\n" % (a, a)
+                + extra)
+
+    def run_with(extra_text, *extra_args):
+        c = commit(src, "log", path=logrel, text=logtext(extra_text))
+        sp.run(["git", "-C", src, "push", "-q", "--force", bare, c + ":refs/heads/b"],
+               check=True)
+        return run("evidence_sequence_check.py", logpath, "--pushlog-schema",
+                   "--remote-verify", "--remote", bare, "--branch", "b",
+                   "--expect-tip", c, *extra_args)
+
+    # 1. off-lineage HISTORICAL without an evidence-back -> FAIL
+    r = run_with("")
+    check("AT-27", "an off-lineage historical confirmation without backing fails",
+          r.returncode == 1 and "no reviewed evidence-back record supports it" in r.stdout,
+          r.stdout)
+    # 2. with a matching evidence-back (SHA exists in the object store) -> PASS
+    back = ("## 2026-10-20T12:00:00Z | P-2 | evidence-back | backs=P-1-CONFIRM branch=b "
+            "remote_sha=%s credential=OWNER-PAT-1 evidence=\"branch rebuilt per reviewed "
+            "direction; commit %s preserved in the object store\"\n" % (a, a))
+    r = run_with(back)
+    check("AT-27", "an evidence-backed off-lineage historical confirmation passes",
+          r.returncode == 0 and "SUPPORTED-BY-EVIDENCE-BACK" in r.stdout, r.stdout)
+    # 3. evidence-back for a SHA that exists nowhere -> FAIL
+    ghost = ("## 2026-10-20T12:00:00Z | P-3 | evidence-back | backs=P-1-CONFIRM branch=b "
+             "remote_sha=%s credential=OWNER-PAT-1 evidence=\"fabricated backing\"\n"
+             % ("e" * 40))
+    r = run_with(ghost)
+    check("AT-27", "an evidence-back for a nonexistent SHA fails (fail closed)",
+          r.returncode == 1 and "not present in the local object store" in r.stdout,
+          r.stdout)
+    # 4. dangling evidence-back (backs a nonexistent entry) -> FAIL
+    dangling = ("## 2026-10-20T12:00:00Z | P-4 | evidence-back | backs=P-99-CONFIRM "
+                "branch=b remote_sha=%s credential=OWNER-PAT-1 evidence=\"x\"\n" % a)
+    r = run_with(dangling)
+    check("AT-27", "a dangling evidence-back fails",
+          r.returncode == 1 and "dangling backing" in r.stdout, r.stdout)
+    # 5. a cited run OUTSIDE the manifest with no API configured -> FAIL (5.6)
+    man = tmpfile(json.dumps({"runs": {"111111": {"head_sha": a, "conclusion": "success"}}}),
+                  ".json")
+    cite = ("## 2026-10-20T12:00:00Z | P-5 | evidence-back | backs=P-1-CONFIRM branch=b "
+            "remote_sha=%s credential=OWNER-PAT-1 evidence=\"run 222222 on this head\"\n" % a)
+    r = run_with(cite, "--runs-manifest", man)
+    check("AT-27", "a cited run outside the manifest window with no API fails the gate",
+          r.returncode == 1 and "could not be verified" in r.stdout
+          and "manifest omission is never an approval" in r.stdout, r.stdout)
+    # 6. a cited run whose head_sha contradicts the recorded SHA -> FAIL
+    bad_man = tmpfile(json.dumps({"runs": {"222222": {"head_sha": "b" * 40,
+                                                     "conclusion": "success"}}}), ".json")
+    r = run_with(cite, "--runs-manifest", bad_man)
+    check("AT-27", "a cited run with a contradicting head_sha fails",
+          r.returncode == 1 and "evidence does not support the recorded SHA" in r.stdout,
+          r.stdout)
+    # 7. a cited run on the exact head with a FAILED conclusion is disclosed,
+    #    does not prove the push, and cannot replace the backing requirement
+    fail_man = tmpfile(json.dumps({"runs": {"222222": {"head_sha": a,
+                                                      "conclusion": "failure"}}}), ".json")
+    r = run_with("", "--runs-manifest", fail_man) if False else None
+    # (the P-1-CONFIRM itself carries no citation; use a citing variant)
+    cite_fail = ("## 2026-10-20T10:00:00Z | P-6-INTENT | push-intent | branch=b "
+                 "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+                 "## 2026-10-20T11:00:00Z | P-6-CONFIRM | push-confirm | branch=b remote_sha=%s "
+                 "credential=OWNER-PAT-1 evidence=\"git ls-remote r refs/heads/b -> %s; "
+                 "gate run 222222\"\n" % (a, a))
+    c6 = commit(src, "log6", path=logrel, text=cite_fail)
+    sp.run(["git", "-C", src, "push", "-q", "--force", bare, c6 + ":refs/heads/b"], check=True)
+    r = run("evidence_sequence_check.py", logpath, "--pushlog-schema", "--remote-verify",
+            "--remote", bare, "--branch", "b", "--expect-tip", c6,
+            "--runs-manifest", fail_man)
+    check("AT-27", "a failed cited run is disclosed and cannot prove the push (backing still required)",
+          r.returncode == 1 and "cannot prove a successful push" in r.stdout
+          and "no reviewed evidence-back" in r.stdout, r.stdout)
+    # 8. a SUCCESSFUL run on the exact head plus a back -> PASS with connection
+    ok_man = tmpfile(json.dumps({"runs": {"222222": {"head_sha": a, "head_branch": "b",
+                                                    "conclusion": "success"}}}), ".json")
+    both = cite_fail + ("## 2026-10-20T12:00:00Z | P-7 | evidence-back | backs=P-6-CONFIRM "
+                        "branch=b remote_sha=%s credential=OWNER-PAT-1 evidence=\"run 222222 "
+                        "connects the head to branch b\"\n" % a)
+    c7 = commit(src, "log7", path=logrel, text=both)
+    sp.run(["git", "-C", src, "push", "-q", "--force", bare, c7 + ":refs/heads/b"], check=True)
+    r = run("evidence_sequence_check.py", logpath, "--pushlog-schema", "--remote-verify",
+            "--remote", bare, "--branch", "b", "--expect-tip", c7,
+            "--runs-manifest", ok_man)
+    check("AT-27", "a verified successful run on the exact head connects the push to the branch",
+          r.returncode == 0 and "CONNECTED-BY-RUN 222222" in r.stdout, r.stdout)
+
+
+# ------------------------------ AT-28 (protected-main merge, Round-21)
+
+def test_at28_merge_transition():
+    """Round-21 direction 6: a push to the protected main is declared ONLY by a
+    verified merge-intent -- the candidate must be a merge commit of the
+    declared pre-merge base and the declared approved PR head, the intent must
+    ride the PR branch, and the PR must be merged with an approving non-author
+    review. Raced/unrelated updates and unapproved merges FAIL."""
+    import subprocess as sp
+    d = tempfile.mkdtemp()
+    bare = os.path.join(d, "remote.git")
+    sp.run(["git", "init", "-q", "--bare", bare], check=True)
+    src = os.path.join(d, "src")
+    sp.run(["git", "init", "-q", "-b", "main", src], check=True)
+
+    def commit(tag, path=None, text=None):
+        if path and text is not None:
+            os.makedirs(os.path.dirname(os.path.join(src, path)), exist_ok=True)
+            open(os.path.join(src, path), "w").write(text)
+            sp.run(["git", "-C", src, "add", "docs"], check=True)
+        sp.run(["git", "-C", src, "-c", "user.email=t@t", "-c", "user.name=t",
+                "commit", "-q", "--allow-empty", "-m", tag], check=True)
+        return sp.run(["git", "-C", src, "rev-parse", "HEAD"],
+                      capture_output=True, text=True).stdout.strip()
+
+    def push(refspec, force=False):
+        sp.run(["git", "-C", src, "push", "-q"] + (["--force"] if force else []) +
+               [bare, refspec], check=True)
+
+    logrel = "docs/evidence/push-log/PUSH_LOG.md"
+    logpath = os.path.join(src, logrel)
+
+    # ---- build: main@base, feat@head2 carrying P-1-INTENT + P-2 merge-intent
+    base = commit("base")
+    push("HEAD:refs/heads/main")
+    sp.run(["git", "-C", src, "checkout", "-q", "-b", "feat"], check=True)
+    # expected_head=DEFERRED: the head is the commit that introduces the
+    # merge-intent itself (a record cannot embed its own commit's SHA; the
+    # checker resolves DEFERRED via the introducing commit)
+    mi = ("## 2026-10-20T10:00:00Z | P-1-INTENT | push-intent | branch=feat "
+          "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+          "## 2026-10-20T11:00:00Z | P-2 | merge-intent | target=main pr=7 "
+          "source_branch=feat expected_pre_merge_base=%s expected_head=DEFERRED "
+          "credential=OWNER-PAT-1 authorized_by=\"auditor direction 6\"\n" % base)
+    head2 = commit("merge-intent", path=logrel, text=mi)
+    push("HEAD:refs/heads/feat")
+
+    def chk(branch, tip, pr_file=None, rev_file=None):
+        extra = []
+        if pr_file:
+            extra += ["--pr-json", pr_file]
+        if rev_file:
+            extra += ["--reviews-json", rev_file]
+        return run("evidence_sequence_check.py", logpath, "--pushlog-schema",
+                   "--remote-verify", "--remote", bare, "--branch", branch,
+                   "--expect-tip", tip, *extra)
+
+    # ---- phase 1: PRE-MERGE, on the source branch (main still at base)
+    r = chk("feat", head2)
+    check("AT-28", "on the source branch the merge-intent binds the exact candidate and base",
+          r.returncode == 0 and "future reviewed merge" in r.stdout, r.stdout)
+    # a stale merge-intent (candidate advanced past the DEFERRED head) fails
+    head3 = commit("after-intent", path=logrel, text=mi)
+    push("HEAD:refs/heads/feat", force=True)
+    r = chk("feat", head3)
+    check("AT-28", "a stale merge-intent on an advanced candidate fails (redeclare before merging)",
+          r.returncode == 1 and "redeclare the merge-intent" in r.stdout, r.stdout)
+    sp.run(["git", "-C", src, "reset", "-q", "--hard", head2], check=True)
+    push("HEAD:refs/heads/feat", force=True)
+
+    # ---- phase 2: the reviewed merge lands on main
+    sp.run(["git", "-C", src, "checkout", "-q", "main"], check=True)
+    sp.run(["git", "-C", src, "-c", "user.email=t@t", "-c", "user.name=t",
+            "merge", "-q", "--no-ff", "-m", "merge pr 7", "feat"], check=True)
+    m = sp.run(["git", "-C", src, "rev-parse", "HEAD"],
+               capture_output=True, text=True).stdout.strip()
+    push("HEAD:refs/heads/main")
+    pr_ok = tmpfile(json.dumps({"merged": True, "user": {"login": "author"},
+                                "head": {"sha": head2, "ref": "feat"},
+                                "base": {"ref": "main"}}), ".json")
+    rev_ok = tmpfile(json.dumps([{"state": "APPROVED",
+                                  "user": {"login": "reviewer"}}]), ".json")
+    rev_author = tmpfile(json.dumps([{"state": "APPROVED",
+                                      "user": {"login": "author"}}]), ".json")
+    rev_none = tmpfile(json.dumps([{"state": "COMMENTED",
+                                    "user": {"login": "reviewer"}}]), ".json")
+    pr_open = tmpfile(json.dumps({"merged": False, "user": {"login": "author"},
+                                  "head": {"sha": head2, "ref": "feat"},
+                                  "base": {"ref": "main"}}), ".json")
+    r = chk("main", m, pr_ok, rev_ok)
+    check("AT-28", "a legitimate reviewed-PR merge of the declared base+head passes on main",
+          r.returncode == 0 and "MERGE-VERIFIED" in r.stdout
+          and "DECLARED" in r.stdout, r.stdout)
+    r = chk("main", m, pr_ok, rev_none)
+    check("AT-28", "a merge without an approving review fails",
+          r.returncode == 1 and "no approving review" in r.stdout, r.stdout)
+    r = chk("main", m, pr_ok, rev_author)
+    check("AT-28", "an approval from the PR author does not satisfy independence",
+          r.returncode == 1 and "no approving review" in r.stdout, r.stdout)
+    r = chk("main", m, pr_open, rev_ok)
+    check("AT-28", "a merge-intent whose PR is not merged fails",
+          r.returncode == 1 and "is not merged" in r.stdout, r.stdout)
+
+    # ---- phase 3: raced main (a commit lands after the declared base)
+    sp.run(["git", "-C", src, "reset", "-q", "--hard", base], check=True)
+    commit("racer")
+    push("HEAD:refs/heads/main", force=True)
+    sp.run(["git", "-C", src, "-c", "user.email=t@t", "-c", "user.name=t",
+            "merge", "-q", "--no-ff", "-m", "merge pr 7 (raced)", "feat"], check=True)
+    m2 = sp.run(["git", "-C", src, "rev-parse", "HEAD"],
+                capture_output=True, text=True).stdout.strip()
+    push("HEAD:refs/heads/main", force=True)
+    r = chk("main", m2, pr_ok, rev_ok)
+    check("AT-28", "a merge onto a raced main (first parent != declared base) fails",
+          r.returncode == 1 and "not the declared pre-merge base" in r.stdout, r.stdout)
+
+    # ---- phase 4: an unrelated direct (non-merge) push to main
+    sp.run(["git", "-C", src, "reset", "-q", "--hard", base], check=True)
+    direct = commit("direct push")
+    push("HEAD:refs/heads/main", force=True)
+    r = chk("main", direct, pr_ok, rev_ok)
+    check("AT-28", "a direct non-merge push to main fails",
+          r.returncode == 1 and "not a merge commit" in r.stdout, r.stdout)
+
+def test_at29_path_filter_liveness():
+    """Round-21 direction 7: an ACTIVE workflow reference must declare ~governs=,
+    and the live workflow's paths/paths-ignore filters must not exclude the
+    governed changes; filter values of an invalid type FAIL."""
+    d = tempfile.mkdtemp()
+    os.makedirs(os.path.join(d, ".github", "workflows"), exist_ok=True)
+    wf = os.path.join(d, ".github", "workflows", "gate.yml")
+    reg = {"tests": {}}
+    open(os.path.join(d, "registry.json"), "w").write(json.dumps(reg))
+    os.makedirs(os.path.join(d, "docs", "directives"), exist_ok=True)
+
+    def write_wf(text):
+        open(wf, "w").write(text)
+
+    def idx(enf):
+        open(os.path.join(d, "docs", "directives", "INDEX.md"), "w").write(
+            "# index\n<!-- BEGIN RULE INVENTORY -->\n"
+            "reading-note-path: docs/note.md\n"
+            "pinned-blobs: b6bb35e84956d84a8c9d9e65734c212baf3ed075\n"
+            "| Rule ID | Status | Enforcement point(s) | Acceptance test(s) |\n"
+            "|---|---|---|---|\n"
+            "| EC-X | ACTIVE | " + enf + " | NONE |\n"
+            "<!-- END RULE INVENTORY -->\n")
+        open(os.path.join(d, "docs", "note.md"), "w").write(
+            "blob b6bb35e84956d84a8c9d9e65734c212baf3ed075 read\n| EC-X | -> mapped |\n")
+
+    def run_idx():
+        return run("reading_note_map_check.py", "--index", "docs/directives/INDEX.md",
+                   "--repo-root", d, "--registry", "registry.json")
+
+    job = "jobs:\n  gate-job:\n    name: Gate Job\n    runs-on: ubuntu-latest\n"
+    base_on = "on:\n  push:\n    branches: ['**']\n  pull_request:\n    branches: ['**']\n"
+    # 1. ACTIVE reference without ~governs= fails
+    write_wf("name: gate\n" + base_on + job)
+    idx("workflow:.github/workflows/gate.yml#gate-job~events=push+pull_request")
+    r = run_idx()
+    check("AT-29", "ACTIVE workflow reference without ~governs fails",
+          r.returncode == 1 and "must declare the changes it governs" in r.stdout, r.stdout)
+    # 2. paths filter excluding the governed path fails
+    write_wf("name: gate\non:\n  push:\n    branches: ['**']\n    paths: [docs/other/**]\n"
+             "  pull_request:\n    branches: ['**']\n" + job)
+    idx("workflow:.github/workflows/gate.yml#gate-job~events=push+pull_request"
+        "~governs=docs/evidence/push-log/**")
+    r = run_idx()
+    check("AT-29", "a paths filter excluding the governed path fails",
+          r.returncode == 1 and "exclude the governed path" in r.stdout, r.stdout)
+    # 3. paths-ignore covering the governed path fails
+    write_wf("name: gate\non:\n  push:\n    branches: ['**']\n"
+             "    paths-ignore: [docs/evidence/**]\n  pull_request:\n    branches: ['**']\n" + job)
+    idx("workflow:.github/workflows/gate.yml#gate-job~events=push+pull_request"
+        "~governs=docs/evidence/push-log/PUSH_LOG.md")
+    r = run_idx()
+    check("AT-29", "a paths-ignore filter covering the governed path fails",
+          r.returncode == 1 and "paths-ignore" in r.stdout
+          and "excludes the governed path" in r.stdout, r.stdout)
+    # 4. covering paths filter passes
+    write_wf("name: gate\non:\n  push:\n    branches: ['**']\n"
+             "    paths: [docs/evidence/**, scripts/**]\n  pull_request:\n    branches: ['**']\n"
+             + job)
+    idx("workflow:.github/workflows/gate.yml#gate-job~events=push+pull_request"
+        "~governs=docs/evidence/push-log/**+scripts/ci/evidence_sequence_check.py")
+    r = run_idx()
+    check("AT-29", "a paths filter covering every governed path passes",
+          r.returncode == 0, r.stdout)
+    # 5. no path filters at all passes
+    write_wf("name: gate\n" + base_on + job)
+    idx("workflow:.github/workflows/gate.yml#gate-job~events=push+pull_request"
+        "~governs=docs/evidence/push-log/**")
+    r = run_idx()
+    check("AT-29", "an unfiltered workflow passes for any governed set",
+          r.returncode == 0, r.stdout)
+    # 6. tree-wide governance (~governs=**) with a restrictive paths filter fails
+    write_wf("name: gate\non:\n  push:\n    branches: ['**']\n    paths: [docs/**]\n"
+             "  pull_request:\n    branches: ['**']\n" + job)
+    idx("workflow:.github/workflows/gate.yml#gate-job~events=push+pull_request~governs=**")
+    r = run_idx()
+    check("AT-29", "tree-wide governance cannot be satisfied by a restrictive paths filter",
+          r.returncode == 1 and "governs the whole tree" in r.stdout, r.stdout)
+    # 7. INVALID filter types fail even when they would otherwise pass
+    write_wf("name: gate\non:\n  push:\n    branches: {wrong: type}\n"
+             "  pull_request:\n    branches: ['**']\n" + job)
+    idx("workflow:.github/workflows/gate.yml#gate-job~events=push+pull_request~governs=**")
+    r = run_idx()
+    check("AT-29", "an invalid branch-filter type fails",
+          r.returncode == 1 and "INVALID filter type" in r.stdout, r.stdout)
+    write_wf("name: gate\non:\n  push:\n    branches: ['**']\n    paths: 123\n"
+             "  pull_request:\n    branches: ['**']\n" + job)
+    idx("workflow:.github/workflows/gate.yml#gate-job~events=push+pull_request~governs=**")
+    r = run_idx()
+    check("AT-29", "an invalid paths-filter type fails",
+          r.returncode == 1 and "INVALID filter type" in r.stdout, r.stdout)
+    # 8. unknown annotation key fails closed
+    idx("workflow:.github/workflows/gate.yml#gate-job~events=push+pull_request"
+        "~governs=**~unexpected=xyz")
+    r = run_idx()
+    check("AT-29", "an unknown annotation key fails closed",
+          r.returncode == 1 and "unknown annotation key" in r.stdout, r.stdout)

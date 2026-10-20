@@ -96,6 +96,26 @@
     "AT-24": {
       "name": "EC-24 remote-ref verification (CURRENT/HISTORICAL classification; stale-but-undeclared tip fails; PENDING declared tip passes; RECONCILE records; mismatched branch, fabricated evidence, unpaired confirm, unreachable remote, contradicting run evidence all fail)",
       "node": "scripts/ci/tests/test_acceptance.py::test_at24_pushlog_remote_verification"
+    },
+    "AT-25": {
+      "name": "EC-23 secret-control disclosure: Secret/Match values never printed on any path; fail-closed capture logs and report validation",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at25_secret_control_disclosure"
+    },
+    "AT-26": {
+      "name": "EC-24 identifier pairing + terminal-intent exact-candidate binding + pre-push-tip validation + multiple-intent rejection",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at26_intent_binding_and_pairing"
+    },
+    "AT-27": {
+      "name": "EC-24 historical proof: ancestry or reviewed evidence-back; run verification fail-closed; failed runs disclosed, never proof",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at27_historical_proof"
+    },
+    "AT-28": {
+      "name": "EC-24 protected-main merge transition: verified merge-intent, raced/unrelated/unapproved merges fail",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at28_merge_transition"
+    },
+    "AT-29": {
+      "name": "EC-26 path-filter coverage (~governs=) and invalid filter types fail closed",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at29_path_filter_liveness"
     }
   }
 }

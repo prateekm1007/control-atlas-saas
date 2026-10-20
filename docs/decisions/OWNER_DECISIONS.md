@@ -568,3 +568,105 @@ deployment, no v25 calibration, no held-out evaluation, no threshold or
 cohort changes, no law-semantic changes, no golden-artifact regeneration.
 The independent r2 archive verification and the portable 40-row cohort
 metadata table remain OPEN and are not closed by this governance work.
+
+## Part 13 — Round-21 records (AUDITOR-ADJUDICATED, 2026-10-20; register rev 10)
+
+### 13.1 The ruling
+
+The auditor ruled: **PR #30 is not approved for merge yet.** Round-20's green
+CI results are real but necessary, not sufficient — the independent review
+found defects not covered by the acceptance tests: (a) the EC-23 control
+checker could disclose the very secret it detects in its failure path
+(critical); (b) EC-24 did not bind an unpaired intent to the current
+candidate, did not pair confirmations to their own intent identifiers, and
+did not validate `expected_remote_tip_before_push` (critical); (c) `HISTORICAL`
+did not prove a historical push was real and absent manifest runs were
+tolerated as unverified (critical); (d) the protected-main merge transition
+was unproven; (e) EC-26 lacked path-filter and invalid-filter-type
+validation; (f) status records required reconciliation. This Part records the
+adjudication and the Round-21 repair; per the discipline of Part 12.5, the
+decision status, policy status, implementation status, exact candidate, CI
+status, and main-activation status are recorded separately below.
+
+### 13.2 Repairs implemented on the Round-21 candidate (branch
+`repair/round19-mainline-acceptance`, fix-forward from `62fab8a…`)
+
+1. **EC-23 disclosure fix (direction 3):** the control checker prints no
+   `Secret`/`Match` values or raw report/log bytes on any path; a requested
+   capture log must exist and be readable (fail closed); the HEAD-tree clean
+   path requires the report to exist, parse, and carry zero findings — scanner
+   exit status alone is never trusted. AT-25 proves the synthetic key never
+   reaches stdout/stderr on success or failure paths.
+2. **EC-24 binding fix (direction 4):** identifier pairing; the single
+   accepted terminal intent must be introduced by the exact candidate under
+   test, declare the verified pre-push tip (matching the newest recorded
+   branch state; no intervening ref update), and the live remote tip must be
+   the exact expected tip; excess unmatched intents FAIL unless voided by an
+   `intent-reconcile` record; the terminal state is labeled PENDING, never
+   COMPLETE, and no push is manufactured merely to eliminate a correctly
+   disclosed terminal PENDING (auditor adjudication). AT-26.
+3. **EC-24 historical proof (direction 5):** a HISTORICAL confirmation is
+   proven by ancestry from the live tip, or — off the lineage — by a reviewed
+   `evidence-back` record whose SHA is a real remote commit (object store or
+   the commits API); every run citation anywhere in an entry verifies via the
+   manifest, else the Actions API; failed/cancelled runs are disclosed and
+   cannot prove a push; a manifest omission fails the gate. The four
+   off-lineage legacy confirmations are backed by reviewed records
+   P-062..P-065. AT-27.
+4. **Protected-main merge transition (direction 6):** the `merge-intent` verb
+   pre-declares a reviewed merge (P-061: PR #30, base `f535a71…`, head
+   DEFERRED-resolved to the exact final candidate). A push to `main` is
+   DECLARED only by a VERIFIED merge-intent: merge-commit parents = declared
+   base + approved head; the intent rides the PR branch; the PR is merged
+   with an approving non-author review. Raced, unrelated, direct, or
+   unapproved updates FAIL. Deterministic AT-28 covers the legitimate merge
+   and every failure class. The merge itself is NOT performed by the writer.
+5. **EC-26 path coverage (direction 7):** ACTIVE workflow references declare
+   `~governs=`; restrictive or invalid path/branch filters FAIL. AT-29.
+   Policy status and enforcement status remain recorded separately; a checker
+   running on a feature branch activates nothing.
+6. **Status and evidence alignment (direction 8):** P0_STATUS top metadata
+   corrected and section 10 added; INDEX R19 row reads CLOSE-OUT REJECTED and
+   R20 SUPERSEDED-BY-R21 with nothing live on `main`; this Part 13 appended;
+   push-log schema v4; the Round-21 reading note replaces the prior one; the
+   Round-21 evidence table is generated from live evidence (generator +
+   committed output). The PAT-hygiene sweep remains a LOCAL coder claim —
+   GitHub CI does not independently verify it; no token value appears in any
+   repository file, worklog, or evidence artifact.
+
+### 13.3 Adjudication table (direction 10)
+
+| Rule | Decision status | Policy status | Implementation status | Live on main |
+|---|---|---|---|---|
+| EC-23 | PROPOSED until the secret-disclosure regression is fixed and the exact-candidate scan controls pass | PROPOSED | disclosure fix + report validation on the Round-21 candidate (AT-25); the exact-candidate CI run is the completing evidence | NO |
+| EC-24 | PROPOSED until intent binding, identifier pairing, historical verification, reconciliation validation, and the protected-main transition pass | PROPOSED | all five layers implemented (AT-26/AT-27/AT-28); exact-candidate CI run is the completing evidence | NO |
+| EC-26 | PROPOSED until trigger, branch, and relevant path-filter checks pass on the exact candidate | PROPOSED | trigger + branch + path-filter + invalid-type validation implemented (AT-23/AT-29) | NO |
+| EC-16 / EC-19 / EC-20 / EC-21 | PROPOSED until their reviewed and rebased activation candidates pass all required checks | PROPOSED | live jobs run on the repair branch's own events; activation candidates await the post-#30 serial revalidation | NO |
+| EC-17 / EC-22 / EC-25 | In force as policy under earlier auditor decisions | ACTIVE | live jobs run on the repair branch's own pushes/PRs only | NO (until PR #30 merges and the post-merge verification succeeds) |
+
+### 13.4 Merge path (binding)
+
+PR #30 merges only after: the Round-21 blockers are fixed on the exact final
+candidate; the full Stability Gate and Governance Acceptance pass on that
+SHA's push and PR events; the post-merge `main` transition is demonstrated
+(AT-28 plus the pre-declared P-061); and the required independent approval is
+recorded on the PR. The merge is executed only through GitHub's protected PR
+mechanism with a MERGE COMMIT. After that merge: PRs #31–#36 revalidate
+serially against the resulting `main` (declared bases updated; fresh
+exact-head results; their own merge-intents declared before each merges;
+EC-21 is not waived); PRs #23–#29 close only after a path-by-path diff proves
+their unique changes are covered and their historical refs/evidence are
+preserved.
+
+### 13.5 Standing items — UNCHANGED
+
+A-01 remains ACCEPTED RISK: the owner rotates the PAT at the owner's
+pleasure; no rotation reminder, no rotation initiation, no credential
+operations; the token value is never written into the repository or any
+evidence. The scientific hard stop is preserved in full: no production
+deployment, no v25 calibration, no held-out evaluation, no threshold or
+cohort changes, no law-semantic changes, no golden-artifact regeneration
+without their approved gates. The independent r2 evidence-archive
+verification, the portable 40-row cohort metadata table, A-02 issuer-side
+revocation, and the EC2 deployment secrets remain OPEN and are not closed by
+this governance work.

@@ -55,7 +55,7 @@ permissions:
 
 jobs:
   acceptance-suite:
-    name: Acceptance suite (AT-01..AT-20)
+    name: Acceptance suite (AT-01..AT-29)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -153,6 +153,7 @@ jobs:
                   data = json.load(resp)
               for run in data.get("workflow_runs", []):
                   runs[str(run["id"])] = {"head_sha": run["head_sha"],
+                                          "head_branch": run.get("head_branch"),
                                           "conclusion": run["conclusion"]}
               if len(data.get("workflow_runs", [])) < 100:
                   break
@@ -167,9 +168,19 @@ jobs:
         # live tip must be declared (unpaired INTENT => PENDING, disclosed; an
         # undeclared tip -- the Round-19 follow-up-push class -- FAILS); cited
         # run IDs are checked against the manifest (contradicting head FAILS).
+        # Round-21 directions 4-6: confirmations pair their own identifier's
+        # intent; the terminal intent must be introduced by the exact candidate
+        # and declare the verified pre-push tip; HISTORICAL confirmations off
+        # the current lineage require a reviewed evidence-back whose SHA is a
+        # real remote commit; every cited run verifies via the manifest, else
+        # the Actions API (--repo + GH_TOKEN) -- a manifest omission is never
+        # an approval; a push to main is declared only by a VERIFIED
+        # merge-intent (merge-commit parents, merged PR, approving non-author
+        # review).
         env:
           BRANCH_UNDER_TEST: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
           EXPECTED_TIP: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           if git rev-parse --verify HEAD~1 >/dev/null 2>&1 \
@@ -179,12 +190,14 @@ jobs:
               docs/evidence/push-log/PUSH_LOG.md --pushlog-schema --remote-verify \
               --branch "$BRANCH_UNDER_TEST" --expect-tip "$EXPECTED_TIP" \
               --runs-manifest runs_manifest.json \
+              --repo "${{ github.repository }}" --api-token-env GH_TOKEN \
               --parent-prefix "$RUNNER_TEMP/pushlog_prev.md"
           else
             python3 scripts/ci/evidence_sequence_check.py \
               docs/evidence/push-log/PUSH_LOG.md --pushlog-schema --remote-verify \
               --branch "$BRANCH_UNDER_TEST" --expect-tip "$EXPECTED_TIP" \
-              --runs-manifest runs_manifest.json
+              --runs-manifest runs_manifest.json \
+              --repo "${{ github.repository }}" --api-token-env GH_TOKEN
           fi
 
   ec25-trigger-lint:
@@ -363,8 +376,13 @@ jobs:
           RC=$?
           set -e
           python3 "$GITHUB_WORKSPACE/scripts/ci/secret_control_check.py" negative \
-            --report /tmp/clean_report.json --exit-code "$RC"
+            --report /tmp/clean_report.json --exit-code "$RC" \
+            --log-file /tmp/clean_scan.log
       - name: HEAD-tree scan of the exact candidate (fails on any finding)
+        # Round-21 direction 3.4: a scanner exit code of 0 is NOT sufficient to
+        # claim success. The report must exist, parse, and conform to the
+        # empty-finding schema; the captured log must exist and be readable
+        # (fail closed) -- all verified by secret_control_check.py negative.
         run: |
           set -uo pipefail
           set +e
@@ -372,19 +390,16 @@ jobs:
             --report-path /tmp/headtree_report.json --report-format json > /tmp/headtree_scan.log 2>&1
           RC=$?
           set -e
-          if [ "$RC" -eq 0 ]; then
-            echo "PASS: HEAD tree clean"
-          elif [ "$RC" -eq 101 ]; then
+          if [ "$RC" -eq 101 ]; then
             echo "FAIL: HEAD tree has findings (baseline classification below; see the report artifact)"
             python3 scripts/ci/secret_baseline_check.py \
               --report /tmp/headtree_report.json \
               --baseline docs/evidence/ec16-ec26/secret_scan_baseline.json || true
             exit 1
-          else
-            echo "FAIL: scanner execution error (exit $RC) is not a pass"
-            tail -20 /tmp/headtree_scan.log || true
-            exit 1
           fi
+          python3 scripts/ci/secret_control_check.py negative \
+            --report /tmp/headtree_report.json --exit-code "$RC" \
+            --log-file /tmp/headtree_scan.log
       - name: All-refs full-history scan against the reviewed fingerprint allowlist
         # Round-20 direction 3: the Round-19 docs//evidence/ category exemption
         # is REPLACED by the explicit reviewed allowlist
