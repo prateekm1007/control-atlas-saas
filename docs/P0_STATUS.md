@@ -124,3 +124,35 @@ r2 archive acceptance remains BLOCKED pending independent verifier execution aga
 delivered bytes; the hard stop (OD-16) is in force; no merge to `main`, no deployment, no
 v25 calibration, no held-out evaluation, no threshold/cohort changes, no golden-artifact
 regeneration occurred in this cycle.
+
+## 8. Round-18 cycle (added 2026-10-20, SERIES-2026-10-20-R18)
+
+Auditor Round-18 directions 1–7. Branch `fix/mainline-r18` (base exactly
+`main @ f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd`; fix-forward — no reset, no
+force-push, no merge of the divergent `c4a0fcc` history). Statuses below follow the
+EC-22 machine-checkable grammar and are validated by the Round-18 acceptance gate
+against a runs manifest built from the live Actions API.
+
+### 8.1 What changed on the mainline repair branch
+
+| Direction | Change | Status |
+|---|---|---|
+| 2 (preflight) | Both constitutions + AGENTS.md + 5 governance docs re-read in full from pinned sources, fresh evidence with real read windows | STATUS: NOT_RUN (no CI claim attached to a reading) |
+| 3A | Provider-SDK install references removed from the two remaining non-documentation package files (ported selectively from `c4a0fcc`, no history merge) | STATUS: NOT_RUN |
+| 3B | Remediation docs corrected: pre-release fragments labeled HISTORICAL/SUPERSEDED with exact source SHAs; in-force policy separated from running automation | STATUS: NOT_RUN |
+| 3C | Governed-artifact scope defined (`scripts/ci/manifest_check.py`); manifest regenerated over the complete package; checker rejects missing/duplicate/stale/unlisted | STATUS: NOT_RUN |
+| 3D | Acceptance protection added to ACTIVE CI (`.github/workflows/acceptance-gate.yml`: acceptance suite, inventory validation, deploy-trigger lint, manifest verify, push-log protocol, status lint) | STATUS: NOT_RUN |
+| 4 | INC-1 (PR #17 merge bypassed required review — administrator push; merge endpoint was blocked) + INC-2 (P-015-CONFIRM collision) recorded append-only; `--pushlog-schema` extended (INTENT→CONFIRM pairing, remote verification, PENDING ≠ COMPLETE) | STATUS: NOT_RUN |
+| 5 | EC-20 collection root cause proven from run 39417492355 (`gpu_worker/tests/test_credits.py` raises SystemExit at import → pytest INTERNALERROR); collection scoped to the acceptance suite; consolidated EC-16/19/20 candidate to replace PRs #18–#20 | STATUS: NOT_RUN |
+| 6 | EC-18/21/23/24/26 fixes rebuilt on new branches off the repair tip (no force-push of published branches); auditor adjudications recorded in the register rev 8 | STATUS: NOT_RUN |
+| 7 | PAT A-01 unchanged (`ACCEPTED RISK`, no rotation reminders); hard stop (OD-16) maintained; archive verification + portable 40-row metadata table remain OUTSTANDING | STATUS: NOT_RUN |
+
+### 8.2 Acceptance-suite extension (Round-18)
+
+AT-01..AT-19 (registry `scripts/ci/tests/ACCEPTANCE_TESTS.json`). New: AT-17 (an ACTIVE
+rule mapped only to inert `proposals/ci/` drafts fails; a lying Enforcement label fails),
+AT-18 (LIVE requires the actual active workflow trigger + job), AT-19 (suite-scoped
+collection with fail-closed collection errors and out-of-suite rejection). The rule
+inventory in `docs/directives/INDEX.md` is extended with a computed `Enforcement` column
+that is validated against the tree on every run — normative policy status and enforcement
+status are now recorded and checked separately.

@@ -1,17 +1,23 @@
-# OWNER_DECISIONS — Consolidated Decision Register (rev 7)
+# OWNER_DECISIONS — Consolidated Decision Register (rev 8)
 
-**Provenance.** This is the single consolidated decision register, rev 7.
-Rev 7 (this revision) appends the 2026-10-20 auditor adjudications of the
+**Provenance.** This is the single consolidated decision register, rev 8.
+Rev 8 (this revision) appends the Round-18 records (Part 11): the auditor's
+2026-10-20 activation rulings on EC-16…EC-26 (accept / accepted-in-principle /
+not accepted with binding fix directions), the merge-and-push-log incident
+records (INC-1/INC-2), and the Round-18 discipline statements. Rev 7 (whose
+text is preserved below) appended the 2026-10-20 auditor adjudications of the
 EC-16…EC-26 amendment proposals and the two meta-amendments (Part 6), the
 updated owner/auditor action rows (Part 7), the push-authorization
 reconciliation (Part 8), and the preserved-blockers statement (Part 9).
-Rev 7 supersedes rev 6 (Round 14, published as `0773f0b`) on this same
+Rev 7 superseded rev 6 (Round 14, published as `0773f0b`) on this same
 canonical path; rev 6 in turn superseded rev 5 (drafted in Round 13, never published before that
 branch) on this same canonical path; rev 4 (delivered on
 `evidence/round9-r2-2026-10-20` @ `7e3a3395…`, `outputs/OWNER_DECISIONS.md`)
-remains a sealed historical record and is not amended. Per the Round-13
-direction 5, this branch (`docs/owner-decisions`) is the **canonical
-location** of the register at path `docs/decisions/OWNER_DECISIONS.md`.
+remains a sealed historical record and is not amended. From the Round-17
+release merge (`eb6d6a9`, containing the D-4 rebuild), the canonical location
+of the register is the mainline path `docs/decisions/OWNER_DECISIONS.md` (the
+governance series is merged; the `docs/owner-decisions` branch remains a
+preserved historical lineage).
 Internal `D-xx` labels remain retired from user-facing text (see
 `INTERNAL_CROSSWALK.md` in the r2 evidence archive). No OD number is ever
 reused.
@@ -322,3 +328,50 @@ is not present in this environment and is NOT evaluated here. Reconciliation = a
 force-push, per the A-09 discipline. Attribution of the concurrent pushes follows A-09:
 git identity alone does not establish credential identity; the owner's token-history
 review remains the authority.
+
+## Part 11 — Round-18 activation rulings + incident records (AUDITOR-ADJUDICATED, 2026-10-20)
+
+The user's Round-18 instruction delegates these decisions to the auditor. They are recorded
+as **`AUDITOR-ADJUDICATED` under delegated authority, dated 2026-10-20**. No owner signature
+is claimed or implied. Decision status and implementation status remain separate per Part 5
+discipline: nothing below activates an amendment; each item becomes in force only through
+the auditor's recorded activation after its exact final candidate passes the required
+validation gates.
+
+| Item | Decision | Binding direction (auditor, 2026-10-20) |
+|---|---|---|
+| EC-16 | Blocked — not activated | The EC-16 specific check passes on `c5df584…` but the shared EC-20 job fails on all three candidates (PRs #18–#20). Fix the test collection/execution first; consolidate the duplicate activation workflow into ONE candidate; old PRs/branches stay as historical evidence and are marked superseded once the single candidate includes all required checks and passes on its exact SHA. |
+| EC-18 | Not accepted — fix and rerun | Run `39417275781` failed because the checker treated headings/examples in `PUSH_LOG_SCHEMA.md` and `LOCAL_TEST_LOG.md` as log entries and compared historic entry times with the wrong carrying-commit time. Fix file selection (genuine log files only) and event-time validation (validate against the commit that introduced the record). Preserve the append-only prefix; never rewrite old entries to satisfy the checker; distinguish reconstruction from contemporaneous evidence. |
+| EC-19 | Blocked — shares the EC-20 fix | Specific field/SHA checks pass on `925a775…`; the shared EC-20 job failure must be fixed and the whole workflow rerun on the exact candidate. |
+| EC-20 | Not accepted — fix collection | Run `39417492355` failed to collect the named tests. Root cause to be proven from exact evidence (broad root-level pytest collection hitting `gpu_worker/tests/test_credits.py`, whose import-time exit aborts collection); scope collection to the intended acceptance-test suite; validate every requested node ID; execute the named tests; capture exit status and counts; fail closed when collection or execution cannot be verified. |
+| EC-21 | Accepted in principle — NOT ACTIVE | Rule-specific check passed on `7f5d50c…` (run `39417494195`) and both ordinary gate jobs passed. Keep PROPOSED until: rebase after the mainline repair, push-intent/confirmation evidence reconciled, and all checks pass on the exact final candidate. Then update the register and merge only through the required PR review path if the full candidate is green. |
+| EC-23 | Not accepted — fix and rerun | Run `39417292155` failed all three relevant jobs: (a) all-refs scan found 43 historical findings; (b) the positive control's seeded example key was allowlisted by Gitleaks and NOT detected; (c) the pinned action attempted to install from a URL containing `vv8.30.1` and failed with HTTP 404. Fix the installation path and version semantics; replace the allowlisted fixture with a safe synthetic fixture the pinned scanner is confirmed to detect (value redacted); classify all historical findings from evidence without exposing credential material; do NOT blanket-ignore results or claim the scan is trustworthy until both controls work. Genuine credential revocation remains a separate security requirement (A-02). |
+| EC-24 | Not accepted — fix checker | Run `39417295180` passed but does not prove the push-confirm protocol is complete: the live activation branch's log ends with an intent entry and has no matching confirmation for that branch's push. Require a confirmation with the full remote SHA and actual remote-ref evidence; a schema pass while a push remains unconfirmed must report PENDING, not complete. |
+| EC-26 | Not accepted yet — strengthen semantics | Run `39417497346` failed on workflow-reference resolution; the modified run `39418218748` passed after adding the documented cross-branch fetch (environment repair only). The checker must add negative tests for ACTIVE rules mapped only to inert files under `proposals/ci/`, verify the actual active workflow trigger/job, and the index must separate normative policy status from enforcement status so `ACTIVE` cannot be misread as proof that automation is active. EC-26 remains PROPOSED until the revised checker passes. |
+| EC-17, EC-22, EC-25 | Remain in force | Under the earlier auditor ruling (D-5). Their POLICY status is recorded separately from whether the enforcement automation is actually active (Round-18 Enforcement column in `docs/directives/INDEX.md`). |
+
+### Part 11a — Round-18 incident and discipline records
+
+1. **INC-1 (merge-process deviation).** PR #17's mainline merge SHA is `f535a71…`; it passed
+   its ordinary gate (run `39415713844`), but the merged tree retained defects, and the
+   merge was executed by an administrator push that bypassed the required approving review
+   (branch protection required one approving review; the merge endpoint was blocked).
+   Recorded as an incident in `docs/evidence/push-log/INCIDENTS.md` (append-only). Do not
+   repeat an administrator push that bypasses required review; do not rewrite or delete the
+   existing historical evidence. Future merges must use the required review-and-check path.
+2. **INC-2 (push-log collision).** The two competing `P-015-CONFIRM` records (main's for
+   `proposal/ec16-ec26-enforcement-rebased` @ `0f1e9a88…`; the `c4a0fcc` history's for
+   `proposal/ec16-ec26-enforcement` @ `a0e321c0…`) are preserved as-is; the histories are NOT
+   combined; the collision is documented in `docs/evidence/push-log/PUSH_LOG_RECONCILIATION.md`
+   (+ machine-readable `.json`). All new events use globally unused IDs starting at P-017.
+3. **PAT (A-01) — unchanged.** The owner rotates the PAT when the owner pleases. A-01 stays
+   `ACCEPTED RISK`; rotation is NOT called overdue and no rotation reminders are issued.
+   The token value is never written or reproduced anywhere. The PAT decision is separate
+   from the issuer-side revocation evidence still required for the former provider key
+   (A-02): the Round-17 report does not establish that revocation occurred, and the
+   requirement stays open.
+4. **Scientific hard stop (OD-16) — unchanged.** No law-semantic changes, calibration,
+   v25 execution, threshold or cohort changes, held-out evaluation, golden-artifact
+   regeneration, or deployment. The previously outstanding independent archive verification
+   and portable 40-row metadata table remain outstanding and are NOT completed by any
+   governance work.
