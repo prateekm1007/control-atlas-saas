@@ -33,7 +33,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install fpdf2 numpy fastapi uvicorn python-multipart scipy requests google-generativeai
+          pip install fpdf2 numpy fastapi uvicorn python-multipart scipy requests
 
       - name: Run unit tests
         run: cd backend && python -m pytest tests/ -v --tb=short
