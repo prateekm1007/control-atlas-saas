@@ -335,3 +335,26 @@
   (final outcomes + the disclosed-defect register); this append; manifest refresh.
   Single-writer guard: remote tip expected exactly b3f399d… (full value in the commit);
   push ABORTED on deviation.
+
+## 2026-10-20T15:18:49Z | P-048-CONFIRM | push-confirm | branch=fix/mainline-r18 remote_sha=5539b011553b11898fd117fd1aa7c8804b29cfaf credential=OWNER-PAT-1 evidence="git rev-parse 5539b01 (captured programmatically this time); check-runs API runs 39443533044/39443532915 observed on this exact SHA"
+
+- CORRECTION of P-041-CONFIRM (preserved unchanged above): P-041-CONFIRM recorded
+  remote_sha=5539b01a42839bb0cc2ea7a75de44492f0462a44 — ANOTHER hand-typed wrong tail
+  (the same transcription-defect class as P-026/P-029; the discipline "capture
+  programmatically, never type" was stated in P-035 and then violated again here). The
+  actual push-9 tip is 5539b011553b11898fd117fd1aa7c8804b29cfaf (runs 39443533044/39443532915 among others were observed on
+  exactly this SHA). This entry is the authoritative confirmation of the P-041 intent;
+  P-041-CONFIRM is superseded via the reconciliation record (append-only, never edited).
+  The repeated defect is recorded in the round report as a process finding.
+
+## 2026-10-20T15:18:49Z | P-046-CONFIRM | push-confirm | branch=fix/mainline-r18 remote_sha=b3f399d8290bbd6b77f88578e823e1b18c0c3a2d credential=OWNER-PAT-1 evidence="git rev-parse b3f399d (captured programmatically); the push-10 tip is an ancestor of the current tip"
+
+- Push 10 accepted as a fast-forward 5539b01 -> b3f399d8290bbd6b77f88578e823e1b18c0c3a2d (guard held). Completes the P-046
+  pair (omitted when push 11 was issued — the recurring gap, again disclosed here).
+
+## 2026-10-20T15:18:49Z | P-049-INTENT | push-intent | branch=fix/mainline-r18 head_at_intent=DEFERRED base=b3f399d8290bbd6b77f88578e823e1b18c0c3a2d expected_remote_tip_before_push=b3f399d8290bbd6b77f88578e823e1b18c0c3a2d credential=OWNER-PAT-1 authorized_by="Round-18 direction 4 continuation: P-041 transcription correction (P-048-CONFIRM + reconciliation suppression), P-046 pair completion"
+
+- Push 12 content (disclosed pre-push): this append (P-048-CONFIRM, P-046-CONFIRM, this
+  INTENT); PUSH_LOG_RECONCILIATION.json gains the P-041-CONFIRM suppression entry
+  (pointer: P-048-CONFIRM); manifest refresh. Single-writer guard: remote tip expected
+  exactly b3f399d8290bbd6b77f88578e823e1b18c0c3a2d; push ABORTED on deviation.
