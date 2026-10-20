@@ -292,3 +292,23 @@
   P-026-CONFIRM suppression entry (pointer: P-035-CONFIRM); this INTENT; manifest
   refresh. Single-writer guard: remote tip expected exactly b3c7634... (full value
   captured programmatically below); push ABORTED on deviation.
+
+## 2026-10-20T14:54:04Z | P-036-CONFIRM | push-confirm | branch=fix/mainline-r18 remote_sha=b3c763480c615b2a2f6c54c3bfa2a2a016a08cb4 credential=OWNER-PAT-1 evidence="git rev-parse b3c7634 (captured programmatically; the push-7 tip is an ancestor of the current tip)"
+
+- Push 7 accepted as a fast-forward 2efbbb7 -> b3c763480c615b2a2f6c54c3bfa2a2a016a08cb4 (guard held). This CONFIRM completes
+  the P-036 pair (it was omitted when push 8 was issued — the recurring process gap,
+  now closed by the standing rule: never append a new INTENT before the previous push's
+  CONFIRM).
+
+## 2026-10-20T14:54:04Z | P-039-CONFIRM | push-confirm | branch=fix/mainline-r18 remote_sha=aa510f7533d5d4fd63db9b8bf8d027219c16d500 credential=OWNER-PAT-1 evidence="git rev-parse aa510f7 (captured programmatically; the push-8 tip is an ancestor of the current tip)"
+
+- Push 8 accepted as a fast-forward b3c763480c615b2a2f6c54c3bfa2a2a016a08cb4 -> aa510f7533d5d4fd63db9b8bf8d027219c16d500 (guard held). Completes the P-039 pair.
+
+## 2026-10-20T14:54:04Z | P-041-INTENT | push-intent | branch=fix/mainline-r18 head_at_intent=DEFERRED base=aa510f7533d5d4fd63db9b8bf8d027219c16d500 expected_remote_tip_before_push=aa510f7533d5d4fd63db9b8bf8d027219c16d500 credential=OWNER-PAT-1 authorized_by="Round-18 direction 4 continuation: reconciliation-gated truthfulness/verification (a superseded CONFIRM's defective value is not evidence); completing the P-036/P-039 pairs"
+
+- Push 9 content (disclosed pre-push): evidence_sequence_check.py — reconciled CONFIRM
+  entries are skipped by BOTH the truthfulness check and the remote-verification loop
+  (previously the ABSENT path returned before the reconciliation check — found by the
+  CI run on aa510f7, exactly the fail-closed behavior working); this append completes
+  the P-036/P-039 pairs; manifest refresh. Single-writer guard: remote tip expected
+  exactly aa510f7533d5d4fd63db9b8bf8d027219c16d500; push ABORTED on deviation.
