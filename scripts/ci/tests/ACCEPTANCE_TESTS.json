@@ -68,6 +68,10 @@
     "AT-18": {
       "name": "EC-20 per-file scoped collection (Round-19): an unrelated legacy module that sys.exit()s at import time cannot abort collection of the named acceptance tests; naming a test inside an unimportable module or a missing file still fails closed",
       "node": "scripts/ci/tests/test_acceptance.py::test_at18_scoped_collection"
+    },
+    "AT-17": {
+      "name": "EC-26 ACTIVE-liveness (Round-19): an ACTIVE rule citing workflow:proposals/ci/... (inert draft), an @ref-pinned workflow, or a live-path file absent from the tree FAILS; citing the live unpinned .github/workflows file with the named job PASSES; PROPOSED rules may still cite inert drafts",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at17_active_workflow_liveness"
     }
   }
 }

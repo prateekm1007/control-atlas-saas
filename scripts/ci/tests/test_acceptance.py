@@ -665,3 +665,70 @@ def test_at18_scoped_collection():
     r = run("verify_claimed_shas.py", "--body", body, "--check-tests", "--evidence-out", ev, cwd=proj)
     check("AT-18", "named test file that does not exist fails closed",
           r.returncode == 1 and "does not exist" in r.stdout, r.stdout)
+
+
+# --------------------------------------- AT-17 (EC-26 ACTIVE-liveness, Round-19)
+
+def test_at17_active_workflow_liveness():
+    """ACTIVE rules must map to LIVE workflows, not inert proposals drafts.
+
+    Round-19 direction 6 (EC-26): the checker previously verified only that a
+    referenced file/job EXISTS, so an ACTIVE rule citing
+    workflow:proposals/ci/... passed even though that workflow is inert.
+    """
+    import yaml as _yaml
+    d = tempfile.mkdtemp()
+    # live workflow with the job an ACTIVE rule may cite
+    os.makedirs(os.path.join(d, ".github", "workflows"), exist_ok=True)
+    open(os.path.join(d, ".github", "workflows", "gate.yml"), "w").write(
+        "name: gate\non:\n  push:\njobs:\n  secret-scan:\n    name: Secret Scan\n"
+        "    runs-on: ubuntu-latest\n")
+    # inert draft under proposals/ (what an ACTIVE rule must NOT cite)
+    os.makedirs(os.path.join(d, "proposals", "ci"), exist_ok=True)
+    open(os.path.join(d, "proposals", "ci", "draft.yml"), "w").write(
+        "name: draft\non:\n  push:\njobs:\n  claimed-shas:\n    runs-on: ubuntu-latest\n")
+    reg = {"tests": {}}
+    open(os.path.join(d, "registry.json"), "w").write(json.dumps(reg))
+    os.makedirs(os.path.join(d, "docs", "directives"), exist_ok=True)
+
+    def idx(rows):
+        body = "\n".join(f"| {rid} | {st} | {enf} | NONE |" for rid, st, enf in rows)
+        text = ( "# index\n<!-- BEGIN RULE INVENTORY -->\n"
+                 "reading-note-path: docs/note.md\n"
+                 "pinned-blobs: b6bb35e84956d84a8c9d9e65734c212baf3ed075\n"
+                 "| Rule ID | Status | Enforcement point(s) | Acceptance test(s) |\n"
+                 "|---|---|---|---|\n" + body + "\n<!-- END RULE INVENTORY -->\n" )
+        open(os.path.join(d, "docs", "directives", "INDEX.md"), "w").write(text)
+        note_lines = ["blob b6bb35e84956d84a8c9d9e65734c212baf3ed075 read"]
+        note_lines += [f"| {rid} | -> mapped |" for rid, _, _ in rows]
+        open(os.path.join(d, "docs", "note.md"), "w").write("\n".join(note_lines) + "\n")
+
+    def run_idx():
+        return run("reading_note_map_check.py", "--index", "docs/directives/INDEX.md",
+                   "--repo-root", d, "--registry", "registry.json", "--include-proposed")
+
+    # 1. ACTIVE rule citing an inert proposals/ draft MUST FAIL
+    idx([("EC-X", "ACTIVE", "workflow:proposals/ci/draft.yml#claimed-shas")])
+    r = run_idx()
+    check("AT-17", "ACTIVE rule citing an inert proposals/ workflow fails",
+          r.returncode == 1 and "outside the live CI path" in r.stdout, r.stdout)
+    # 2. ACTIVE rule citing a ref-pinned workflow MUST FAIL (pin can diverge from live)
+    idx([("EC-X", "ACTIVE", "workflow:.github/workflows/gate.yml@origin/main#secret-scan")])
+    r = run_idx()
+    check("AT-17", "ACTIVE rule citing an @ref-pinned workflow fails",
+          r.returncode == 1 and "pins its workflow" in r.stdout, r.stdout)
+    # 3. ACTIVE rule citing a live working-tree workflow with the named job PASSES
+    idx([("EC-X", "ACTIVE", "workflow:.github/workflows/gate.yml#secret-scan")])
+    r = run_idx()
+    check("AT-17", "ACTIVE rule citing the live unpinned workflow passes",
+          r.returncode == 0, r.stdout)
+    # 4. PROPOSED rule citing an inert draft is still ALLOWED (activation path)
+    idx([("EC-X", "PROPOSED", "workflow:proposals/ci/draft.yml#claimed-shas")])
+    r = run_idx()
+    check("AT-17", "PROPOSED rule citing an inert proposals/ workflow is allowed",
+          r.returncode == 0, r.stdout)
+    # 5. ACTIVE rule citing a live-path workflow that is missing from the tree fails
+    idx([("EC-X", "ACTIVE", "workflow:.github/workflows/not-there.yml#some-job")])
+    r = run_idx()
+    check("AT-17", "ACTIVE rule citing a live-path file absent from the tree fails",
+          r.returncode == 1 and "absent from the working tree" in r.stdout, r.stdout)

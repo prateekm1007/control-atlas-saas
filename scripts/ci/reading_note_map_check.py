@@ -9,6 +9,9 @@ Auditor revision 2026-10-20 (fail-closed redesign):
       script:PATH / procedural:PATH  -> PATH must exist (relative to repo root)
       workflow:FILE#JOB              -> JOB must exist in workflow FILE
       pytest:NODE                    -> the file part of NODE must exist
+    For ACTIVE rules, a `workflow:` reference must additionally be LIVE: unpinned,
+    under `.github/workflows/`, and present in the working tree (Round-19 fix --
+    a `proposals/ci/...` reference is inert and must not satisfy an ACTIVE rule).
   - Every acceptance test named in the inventory must EXIST:
       AT-nn    -> key in scripts/ci/tests/ACCEPTANCE_TESTS.json
       pytest:NODE / workflow:FILE#JOB -> as above
@@ -70,8 +73,18 @@ def _yaml_doc(repo: str, filespec: str):
     return None
 
 
-def resolve_refs(value: str, repo: str):
-    """Validate each named reference in a cell. Returns (findings, none_declared)."""
+def resolve_refs(value: str, repo: str, require_live: bool = False):
+    """Validate each named reference in a cell. Returns (findings, none_declared).
+
+    Round-19 EC-26 fix: when require_live is set (rule status ACTIVE), a
+    `workflow:FILE#JOB` reference must be a LIVE workflow -- unpinned (no
+    @<ref>), located under `.github/workflows/`, and present in the working
+    tree. GitHub Actions runs only `.github/workflows/`; a `proposals/ci/...`
+    draft is inert no matter how correct its contents are, and an @<ref> pin
+    can name a branch whose version has the job while the live working-tree
+    version does not. PROPOSED rules may still cite inert drafts (their
+    activation path is the reviewed copy into the live path).
+    """
     findings = []
     items = [v.strip() for v in ITEM_SPLIT.split(value) if v.strip()]
     if not items:
@@ -99,6 +112,19 @@ def resolve_refs(value: str, repo: str):
             if not filespec or not job:
                 findings.append(f"malformed workflow reference {item!r} (need file#JOB)")
                 continue
+            if require_live:
+                if ref:
+                    findings.append(f"ACTIVE rule pins its workflow to @{ref}; the live "
+                                    f"working-tree version must be cited: {item}")
+                    continue
+                if not filespec.startswith(".github/workflows/"):
+                    findings.append(f"ACTIVE rule cites a workflow outside the live CI path "
+                                    f".github/workflows/ (inert draft?): {item}")
+                    continue
+                if not os.path.exists(os.path.join(repo, filespec)):
+                    findings.append(f"ACTIVE rule's workflow is absent from the working tree "
+                                    f"(not live on this candidate): {item}")
+                    continue
             doc = _yaml_doc(repo, filespec_all)
             if doc is None:
                 findings.append(f"named workflow file does not exist: {filespec}")
@@ -209,8 +235,9 @@ def main() -> int:
         return 1
 
     for r in required:
+        require_live = r["status"] == "ACTIVE"
         for cell, kind in ((r["enforcement"], "enforcement"), (r["tests"], "test")):
-            refs, none_declared = resolve_refs(cell, repo)
+            refs, none_declared = resolve_refs(cell, repo, require_live=require_live)
             for f in refs:
                 findings.append(f"{r['id']} {kind}: {f}")
             if none_declared:
