@@ -1,0 +1,24 @@
+# INERT DRAFT — activates only on owner approval (EC-21), see move-map in proposals/ci/README.md
+name: EC21 declared base
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+permissions:
+  contents: read
+jobs:
+  declared-base:
+    name: EC-21 base is remote-verified, ancestral, and on the declared stack line
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # COMPLETE history is a precondition of the checker (shallow fails closed)
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr_body.md"
+          GIT_TERMINAL_PROMPT=0 python3 scripts/ci/check_declared_base.py \
+            --declaration "$RUNNER_TEMP/pr_body.md" \
+            --repo-slug "${{ github.repository }}" \
+            --head HEAD
