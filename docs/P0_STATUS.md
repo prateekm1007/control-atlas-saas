@@ -93,3 +93,34 @@ this round (domain `211ad2c5…`, engineering `b6bb35e8…`); the Round-14
 reading note citing every EC/OBS/CRIT ID enforced is committed to the
 H-1, OD-07, governance, and register branches at
 `docs/audit-evidence/2026-10-20/constitution-reading-note-round14.md`.
+
+## 7. Amendment-package correction cycle (added 2026-10-20, SERIES-2026-10-20-EC-FIX)
+
+Branch `proposal/ec16-ec26-enforcement` (base `main` @ `2195a048…`, tip advanced from
+`17eb881…` by the 3.1–3.9 correction commits — exact tips in the push log and round report;
+all commits appended, no force-push):
+
+| Item | State on the branch tip |
+|---|---|
+| EC-16…EC-26 + R-AS/R-DL adjudications | Recorded in register **rev 7** (`docs/owner-decisions` @ `4f546160…`); amendments remain PROPOSED / inert |
+| 3.1 EC-26 | Rule inventory derived from `docs/directives/INDEX.md`; fail-closed reading-note checker; canonical reading note (real read window recorded); PR-body input removed |
+| 3.2 EC-20 | Named acceptance tests EXECUTED via pytest on the exact candidate (evidence JSON: argv, SHA, counts, exit) |
+| 3.3 EC-21 | Remote base verification (exact returned-SHA match; fail-closed error taxonomy), line-unique Stack-parent validation, shallow fail-closed |
+| 3.4 EC-22 | Machine-checkable `STATUS:` grammar validated against a runs manifest built from Actions records; progress computed, not asserted |
+| 3.5 EC-16 | Strict per-entry SHA lists (any malformed entry rejects the list); 404/422 = absent vs 401/403/429/5xx = VERIFICATION_FAILURE; least-privilege workflows |
+| 3.6 EC-18/24 | Parent-prefix append-only check; two-phase push log (INTENT/CONFIRM); truthful P-011-CONFIRM with remote-verified SHA + timestamp reconciliation |
+| 3.7 EC-25 | Inert dispatch-only deploy remediation + gate-trigger fix under `proposals/remediation/`; lint activation preconditioned on the remediation; `[ain]` claim backed by exact path/blob/line evidence and de-misattributed |
+| 3.8 EC-23 | Action pinned to API-verified commit `ff98106e…`; binary checksum-pinned (official checksums.txt); all-refs job (`--log-opts=--all`); seeded positive + clean negative controls |
+| 3.9 | Counts corrected (SEVEN workflow drafts / six checkers — receipt R8/R9, append-only); acceptance suite AT-01…AT-16 (91 assertions) all passing locally; CI = NOT RUN (no run IDs exist; no CI-pass claim) |
+
+**Test evidence (local, exact commands in `docs/evidence/ec16-ec26/LOCAL_TEST_LOG.md` on the
+proposal branch):** `python3 scripts/ci/tests/run_all.py` → 16 groups / 91 `check()`
+assertions / 0 failed (Python 3.12.15, pytest 9.0.2). GitHub Actions for the correction
+commits: **NOT RUN** — the amendment workflows are inert drafts under `proposals/ci/`; no
+check-run claim is made for any commit in this cycle.
+
+**Unchanged program-level state:** the 40-row cohort metadata table remains OUTSTANDING;
+r2 archive acceptance remains BLOCKED pending independent verifier execution against the
+delivered bytes; the hard stop (OD-16) is in force; no merge to `main`, no deployment, no
+v25 calibration, no held-out evaluation, no threshold/cohort changes, no golden-artifact
+regeneration occurred in this cycle.
