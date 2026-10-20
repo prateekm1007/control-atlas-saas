@@ -21,7 +21,7 @@ duplicating a byte-identical file (a git no-op).
 | Engineering Constitution blob re-verified | 2026-10-20 ~09:5x | `ENGINEERING_CONSTITUTION.md` @ `policy/engineering-constitution` → blob `b6bb35e84956d84a8c9d9e65734c212baf3ed075` (178 lines) |
 | Complete re-read of both documents | 2026-10-20 ~09:5x | content unchanged from Rounds 13/14/15 (blob IDs identical) |
 | Proposed amendments tip re-verified | 2026-10-20 ~09:5x | `proposal/ec16-ec26-enforcement` @ `17eb8818` (unchanged from the Round-15 full read; still NOT in force) |
-| First edit after the re-read | 2026-10-20 ~10:0x | this reading note (governance branch); no repo file was modified before this point in this session |
+| First edit after the re-read | 2026-10-20 ~10:0x | this reading note (governance and register branches); no repo file was modified before this point in this session |
 
 ## 2. Round-16 pre-coding verification (EC §2)
 
