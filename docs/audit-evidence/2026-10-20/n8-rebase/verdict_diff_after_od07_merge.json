@@ -1,0 +1,908 @@
+{
+  "cohort": "pinned v23 experimental cohort (40 targets, backend/calibration/dataset_v23.py blob 3a535837...)",
+  "source": "https://files.rcsb.org/download/<ID>.pdb (canonical)",
+  "policies_compared": [
+    "per_atom",
+    "per_residue"
+  ],
+  "total_targets": 40,
+  "audited": 40,
+  "fetch_errors": 0,
+  "targets_with_altloc_residues": 13,
+  "verdict_changes": 0,
+  "any_differences": 2,
+  "verdict_diff_detail": [
+    {
+      "pdb_id": "1EJG",
+      "verdict_changed": false,
+      "verdict_per_atom": "PASS",
+      "verdict_per_residue": "PASS",
+      "det_score_per_atom": 83,
+      "det_score_per_residue": 83,
+      "failing_det_per_atom": [],
+      "failing_det_per_residue": [],
+      "atom_count_per_atom": 330,
+      "atom_count_per_residue": 327,
+      "law_status_diff": {}
+    },
+    {
+      "pdb_id": "3NIR",
+      "verdict_changed": false,
+      "verdict_per_atom": "PASS",
+      "verdict_per_residue": "PASS",
+      "det_score_per_atom": 83,
+      "det_score_per_residue": 83,
+      "failing_det_per_atom": [],
+      "failing_det_per_residue": [],
+      "atom_count_per_atom": 330,
+      "atom_count_per_residue": 327,
+      "law_status_diff": {}
+    }
+  ],
+  "rows": [
+    {
+      "pdb_id": "2VB1",
+      "altloc_records": 1440,
+      "residues_with_altloc": 57,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 83,
+        "det_passed": 10,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 1001
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 83,
+        "det_passed": 10,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 1001
+      }
+    },
+    {
+      "pdb_id": "1EJG",
+      "altloc_records": 381,
+      "residues_with_altloc": 17,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 83,
+        "det_passed": 10,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 330
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 83,
+        "det_passed": 10,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 327
+      }
+    },
+    {
+      "pdb_id": "2OV0",
+      "altloc_records": 56,
+      "residues_with_altloc": 18,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 807
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 807
+      }
+    },
+    {
+      "pdb_id": "1I0T",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "VETO",
+        "det_score": 16,
+        "det_passed": 2,
+        "coverage_pct": 100.0,
+        "failing_det": [
+          "LAW-170: Residue Identity"
+        ],
+        "atom_count": 240
+      },
+      "per_residue": {
+        "verdict": "VETO",
+        "det_score": 16,
+        "det_passed": 2,
+        "coverage_pct": 100.0,
+        "failing_det": [
+          "LAW-170: Residue Identity"
+        ],
+        "atom_count": 240
+      }
+    },
+    {
+      "pdb_id": "3NIR",
+      "altloc_records": 534,
+      "residues_with_altloc": 43,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 83,
+        "det_passed": 10,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 330
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 83,
+        "det_passed": 10,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 327
+      }
+    },
+    {
+      "pdb_id": "1GCI",
+      "altloc_records": 348,
+      "residues_with_altloc": 22,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 1880
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 1880
+      }
+    },
+    {
+      "pdb_id": "2ACE",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 83,
+        "det_passed": 10,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 4143
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 83,
+        "det_passed": 10,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 4143
+      }
+    },
+    {
+      "pdb_id": "1BPI",
+      "altloc_records": 22,
+      "residues_with_altloc": 3,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 83,
+        "det_passed": 10,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 454
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 83,
+        "det_passed": 10,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 454
+      }
+    },
+    {
+      "pdb_id": "1TEN",
+      "altloc_records": 38,
+      "residues_with_altloc": 5,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 698
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 698
+      }
+    },
+    {
+      "pdb_id": "3LZM",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 1309
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 1309
+      }
+    },
+    {
+      "pdb_id": "1AKE",
+      "altloc_records": 24,
+      "residues_with_altloc": 2,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 3312
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 3312
+      }
+    },
+    {
+      "pdb_id": "2CBA",
+      "altloc_records": 40,
+      "residues_with_altloc": 4,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 2059
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 2059
+      }
+    },
+    {
+      "pdb_id": "1HHO",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "VETO",
+        "det_score": 66,
+        "det_passed": 8,
+        "coverage_pct": 100.0,
+        "failing_det": [
+          "LAW-150: Rotamer Audit"
+        ],
+        "atom_count": 2192
+      },
+      "per_residue": {
+        "verdict": "VETO",
+        "det_score": 66,
+        "det_passed": 8,
+        "coverage_pct": 100.0,
+        "failing_det": [
+          "LAW-150: Rotamer Audit"
+        ],
+        "atom_count": 2192
+      }
+    },
+    {
+      "pdb_id": "3PGK",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "VETO",
+        "det_score": 58,
+        "det_passed": 7,
+        "coverage_pct": 100.0,
+        "failing_det": [
+          "LAW-125: Ramachandran",
+          "LAW-150: Rotamer Audit"
+        ],
+        "atom_count": 3145
+      },
+      "per_residue": {
+        "verdict": "VETO",
+        "det_score": 58,
+        "det_passed": 7,
+        "coverage_pct": 100.0,
+        "failing_det": [
+          "LAW-125: Ramachandran",
+          "LAW-150: Rotamer Audit"
+        ],
+        "atom_count": 3145
+      }
+    },
+    {
+      "pdb_id": "1GFL",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 3650
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 3650
+      }
+    },
+    {
+      "pdb_id": "1MBO",
+      "altloc_records": 20,
+      "residues_with_altloc": 4,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 1217
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 1217
+      }
+    },
+    {
+      "pdb_id": "2LYZ",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 83,
+        "det_passed": 10,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 1001
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 83,
+        "det_passed": 10,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 1001
+      }
+    },
+    {
+      "pdb_id": "1PPE",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 83,
+        "det_passed": 10,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 1851
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 83,
+        "det_passed": 10,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 1851
+      }
+    },
+    {
+      "pdb_id": "1AON",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 58674
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 58674
+      }
+    },
+    {
+      "pdb_id": "1FIN",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 8998
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 8998
+      }
+    },
+    {
+      "pdb_id": "1DDL",
+      "altloc_records": 156,
+      "residues_with_altloc": 15,
+      "per_atom": {
+        "verdict": "VETO",
+        "det_score": 66,
+        "det_passed": 8,
+        "coverage_pct": 100.0,
+        "failing_det": [
+          "LAW-170: Residue Identity"
+        ],
+        "atom_count": 4307
+      },
+      "per_residue": {
+        "verdict": "VETO",
+        "det_score": 66,
+        "det_passed": 8,
+        "coverage_pct": 100.0,
+        "failing_det": [
+          "LAW-170: Residue Identity"
+        ],
+        "atom_count": 4307
+      }
+    },
+    {
+      "pdb_id": "1NEK",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 8297
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 8297
+      }
+    },
+    {
+      "pdb_id": "1BRS",
+      "altloc_records": 4,
+      "residues_with_altloc": 1,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 4638
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 4638
+      }
+    },
+    {
+      "pdb_id": "2HBS",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 8760
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 8760
+      }
+    },
+    {
+      "pdb_id": "5A63",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "VETO",
+        "det_score": 58,
+        "det_passed": 7,
+        "coverage_pct": 100.0,
+        "failing_det": [
+          "LAW-150: Rotamer Audit",
+          "LAW-195: Disulfide Geometry"
+        ],
+        "atom_count": 9646
+      },
+      "per_residue": {
+        "verdict": "VETO",
+        "det_score": 58,
+        "det_passed": 7,
+        "coverage_pct": 100.0,
+        "failing_det": [
+          "LAW-150: Rotamer Audit",
+          "LAW-195: Disulfide Geometry"
+        ],
+        "atom_count": 9646
+      }
+    },
+    {
+      "pdb_id": "6J6J",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 66,
+        "det_passed": 8,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 3548
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 66,
+        "det_passed": 8,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 3548
+      }
+    },
+    {
+      "pdb_id": "6WLC",
+      "altloc_records": 418,
+      "residues_with_altloc": 27,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 5498
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 5498
+      }
+    },
+    {
+      "pdb_id": "7K3G",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 50,
+        "det_passed": 6,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 1190
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 50,
+        "det_passed": 6,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 1190
+      }
+    },
+    {
+      "pdb_id": "3J9I",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 66,
+        "det_passed": 8,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 46228
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 66,
+        "det_passed": 8,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 46228
+      }
+    },
+    {
+      "pdb_id": "5T4O",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "INDETERMINATE",
+        "det_score": 58,
+        "det_passed": 7,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 23448
+      },
+      "per_residue": {
+        "verdict": "INDETERMINATE",
+        "det_score": 58,
+        "det_passed": 7,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 23448
+      }
+    },
+    {
+      "pdb_id": "6NB6",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 23865
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 75,
+        "det_passed": 9,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 23865
+      }
+    },
+    {
+      "pdb_id": "7JTL",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 83,
+        "det_passed": 10,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 1622
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 83,
+        "det_passed": 10,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 1622
+      }
+    },
+    {
+      "pdb_id": "1D3Z",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 50,
+        "det_passed": 6,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 602
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 50,
+        "det_passed": 6,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 602
+      }
+    },
+    {
+      "pdb_id": "2KOX",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 50,
+        "det_passed": 6,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 602
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 50,
+        "det_passed": 6,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 602
+      }
+    },
+    {
+      "pdb_id": "1GB1",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 50,
+        "det_passed": 6,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 436
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 50,
+        "det_passed": 6,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 436
+      }
+    },
+    {
+      "pdb_id": "2JOF",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 50,
+        "det_passed": 6,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 148
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 50,
+        "det_passed": 6,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 148
+      }
+    },
+    {
+      "pdb_id": "1L2Y",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 50,
+        "det_passed": 6,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 154
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 50,
+        "det_passed": 6,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 154
+      }
+    },
+    {
+      "pdb_id": "2N0A",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 50,
+        "det_passed": 6,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 10130
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 50,
+        "det_passed": 6,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 10130
+      }
+    },
+    {
+      "pdb_id": "1RVS",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 50,
+        "det_passed": 6,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 85
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 50,
+        "det_passed": 6,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 85
+      }
+    },
+    {
+      "pdb_id": "2MJB",
+      "altloc_records": 0,
+      "residues_with_altloc": 0,
+      "per_atom": {
+        "verdict": "PASS",
+        "det_score": 50,
+        "det_passed": 6,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 602
+      },
+      "per_residue": {
+        "verdict": "PASS",
+        "det_score": 50,
+        "det_passed": 6,
+        "coverage_pct": 100.0,
+        "failing_det": [],
+        "atom_count": 602
+      }
+    }
+  ]
+}
