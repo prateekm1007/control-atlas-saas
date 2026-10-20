@@ -511,14 +511,14 @@ def test_at13_append_only_pushlog():
     r = run("evidence_sequence_check.py", cur_f, "--parent-prefix", older_f)
     check("AT-13", "deleted prior entry fails", r.returncode == 1, r.stdout)
     # 5. pushlog truthfulness: placeholder CONFIRM rejected; real SHA accepted
-    ph = tmpfile("## 2026-10-20T06:06:00Z | P-011 | push | branch=x sha=self-referential-tip\n"
-                 "## 2026-10-20T09:00:00Z | P-011-CONFIRM | push-confirm | branch=x sha=17eb88184c9f461c6bc9ee592f916f7ff4c921c4\n")
+    ph = tmpfile("## 2026-10-20T06:06:00Z | P-011 | push | branch=x sha=self-referential-tip credential=OWNER-PAT-1\n"
+                 "## 2026-10-20T09:00:00Z | P-011-CONFIRM | push-confirm | branch=x remote_sha=17eb88184c9f461c6bc9ee592f916f7ff4c921c4 credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/x\"\n")
     r = run("evidence_sequence_check.py", ph, "--pushlog-schema")
-    check("AT-13", "placeholder INTENT sha is NOT flagged by schema check (only CONFIRM entries)",
+    check("AT-13", "legacy placeholder push corrected by a well-formed CONFIRM passes (the P-011 case)",
           r.returncode == 0, r.stdout)
-    ph2 = tmpfile("## 2026-10-20T09:00:00Z | P-9-CONFIRM | push-confirm | branch=x sha=self-referential-tip\n")
+    ph2 = tmpfile("## 2026-10-20T09:00:00Z | P-9-CONFIRM | push-confirm | branch=x remote_sha=self-referential-tip credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/x\"\n")
     r = run("evidence_sequence_check.py", ph2, "--pushlog-schema")
-    check("AT-13", "CONFIRM with placeholder sha fails truthfulness",
+    check("AT-13", "CONFIRM with placeholder remote_sha fails truthfulness",
           r.returncode == 1 and "truthfulness" in r.stdout, r.stdout)
     # 6. the real P-011-CONFIRM entry carries the real 40-hex remote SHA
     log = open(older_path, encoding="utf-8").read()
@@ -732,3 +732,44 @@ def test_at17_active_workflow_liveness():
     r = run_idx()
     check("AT-17", "ACTIVE rule citing a live-path file absent from the tree fails",
           r.returncode == 1 and "absent from the working tree" in r.stdout, r.stdout)
+
+
+# ------------------------------------ AT-20 (EC-18/24 schema hardening, Round-19)
+
+def test_at20_pushlog_schema_hardening():
+    """Round-19 direction 4: the validation must reject duplicate IDs, malformed
+    confirmations, missing required fields, and invalid parent-prefix history;
+    an unpaired INTENT is reported PENDING without implying completion."""
+    sha = lambda c: c * 40
+    # 1. duplicate ENTRY-ID across a merged history (the P-015-CONFIRM collision class)
+    dup = tmpfile("## 2026-10-20T10:00:00Z | P-015-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
+                  "## 2026-10-20T11:00:00Z | P-015-CONFIRM | push-confirm | branch=b remote_sha=" + sha("1") + " credential=OWNER-PAT-1 evidence=\"ls-remote b\"\n"
+                  "## 2026-10-20T12:00:00Z | P-015-CONFIRM | push-confirm | branch=c remote_sha=" + sha("2") + " credential=OWNER-PAT-1 evidence=\"ls-remote c\"\n")
+    r = run("evidence_sequence_check.py", dup, "--pushlog-schema")
+    check("AT-20", "duplicate ENTRY-ID rejected", r.returncode == 1 and "duplicate ENTRY-ID P-015-CONFIRM" in r.stdout, r.stdout)
+    # 2. CONFIRM missing a required field (evidence=) fails
+    miss = tmpfile("## 2026-10-20T10:00:00Z | P-1-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
+                   "## 2026-10-20T11:00:00Z | P-1-CONFIRM | push-confirm | branch=b remote_sha=" + sha("1") + " credential=OWNER-PAT-1\n")
+    r = run("evidence_sequence_check.py", miss, "--pushlog-schema")
+    check("AT-20", "CONFIRM missing evidence= field fails", r.returncode == 1 and "required field 'evidence'" in r.stdout, r.stdout)
+    # 3. CONFIRM without any preceding INTENT fails
+    lone = tmpfile("## 2026-10-20T11:00:00Z | P-2-CONFIRM | push-confirm | branch=b remote_sha=" + sha("3") + " credential=OWNER-PAT-1 evidence=\"ls-remote\"\n")
+    r = run("evidence_sequence_check.py", lone, "--pushlog-schema")
+    check("AT-20", "CONFIRM without a preceding INTENT fails", r.returncode == 1 and "no preceding" in r.stdout, r.stdout)
+    # 4. INTENT without CONFIRM is reported PENDING and does not fail
+    pend = tmpfile("## 2026-10-20T10:00:00Z | P-3-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n")
+    r = run("evidence_sequence_check.py", pend, "--pushlog-schema")
+    check("AT-20", "unpaired INTENT reported PENDING without failing",
+          r.returncode == 0 and "PENDING" in r.stdout and "P-3-INTENT" in r.stdout, r.stdout)
+    # 5. INTENT missing branch= fails
+    bad = tmpfile("## 2026-10-20T10:00:00Z | P-4-INTENT | push-intent | credential=OWNER-PAT-1\n")
+    r = run("evidence_sequence_check.py", bad, "--pushlog-schema")
+    check("AT-20", "INTENT missing branch= fails", r.returncode == 1 and "required field 'branch'" in r.stdout, r.stdout)
+    # 6. ENTRY-ID outside the P- grammar rejected in schema mode
+    weird = tmpfile("## 2026-10-20T10:00:00Z | E1 | push-intent | branch=b credential=OWNER-PAT-1\n")
+    r = run("evidence_sequence_check.py", weird, "--pushlog-schema")
+    check("AT-20", "ENTRY-ID outside the P- grammar rejected", r.returncode == 1 and "grammar P-<slug>" in r.stdout, r.stdout)
+    # 7. the real mainline push log passes the hardened schema
+    real = os.path.join(REPO, "docs", "evidence", "push-log", "PUSH_LOG.md")
+    r = run("evidence_sequence_check.py", real, "--pushlog-schema")
+    check("AT-20", "the real mainline push log passes the hardened schema", r.returncode == 0, r.stdout)

@@ -72,6 +72,10 @@
     "AT-17": {
       "name": "EC-26 ACTIVE-liveness (Round-19): an ACTIVE rule citing workflow:proposals/ci/... (inert draft), an @ref-pinned workflow, or a live-path file absent from the tree FAILS; citing the live unpinned .github/workflows file with the named job PASSES; PROPOSED rules may still cite inert drafts",
       "node": "scripts/ci/tests/test_acceptance.py::test_at17_active_workflow_liveness"
+    },
+    "AT-20": {
+      "name": "EC-18/EC-24 push-log schema hardening (Round-19): duplicate ENTRY-IDs, CONFIRM entries missing branch/remote_sha/credential/evidence, INTENT entries missing branch/credential, ENTRY-IDs outside the P- grammar, and CONFIRMs with nothing to confirm all FAIL; an unpaired INTENT is reported PENDING without implying the two-phase protocol is complete; the real mainline log passes",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at20_pushlog_schema_hardening"
     }
   }
 }
