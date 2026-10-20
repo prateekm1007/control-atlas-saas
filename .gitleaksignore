@@ -11,3 +11,46 @@
 #   in ANY other file still fails the gate (this exemption is scoped to
 #   this file and this rule only).
 docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:#:generic-api-key
+# Exact fingerprints of the 40 digest findings (no-git scan mode uses
+# file:ruleID:line; the artifact is sealed/byte-exact so line numbers
+# are stable):
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1000
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1047
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1089
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1131
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1173
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1215
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1257
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:129
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1304
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1350
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1397
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1439
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1485
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1527
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1584
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1646
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1688
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:174
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1740
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1785
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1827
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:1869
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:224
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:266
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:321
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:367
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:414
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:456
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:502
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:544
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:591
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:633
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:675
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:720
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:777
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:82
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:826
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:868
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:913
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:generic-api-key:955
