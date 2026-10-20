@@ -22,3 +22,11 @@
 ## 2026-10-20T06:05:30Z | R7 | verify | H-1 acceptance re-check on current tip 5149435: git grep for the three Gemini tokens (AIzaSy, GEMINI, generativeai) outside docs/audit-evidence/ + docs/security/ = ZERO hits (clean); OD-07 tip c02f774: compute_audit_id triple present in backend/main.py ingestion response | RECONSTRUCTED
 
 - RECONSTRUCTED: action performed between R2 and R3 (before worktree creation, against fetched remote refs); stamped here when recorded, not at action time.
+
+## 2026-10-20T09:52:30Z | R8 | record | correction of R6 inventory counts (auditor item 3.9): this branch carries SEVEN workflow YAML drafts under proposals/ci/ (check-declared-base, evidence-sequence-check, gitleaks-all-branches, no-deploy-on-push-lint, reading-note-map-check, status-vocabulary-lint, verify-claimed-shas) — not six as R6 stated — and SIX checker scripts under scripts/ci/; R6 is preserved unchanged (append-only)
+
+- The R6 text ("6 workflow drafts", "6 checkers + tests/run_all.py") was accurate for checkers and wrong for workflows (the PR template and README were not workflows; verify-claimed-shas/check-declared-base/evidence-sequence-check/reading-note-map-check/status-vocabulary-lint/gitleaks-all-branches/no-deploy-on-push-lint are the seven). The audit checklist verified the same defect. AT-16 now enforces the corrected counts mechanically.
+
+## 2026-10-20T09:52:31Z | R9 | test | acceptance suite EXTENDED and re-run locally: AT-01..AT-16, 91 check() assertions, all passing on the exact candidate (see docs/evidence/ec16-ec26/LOCAL_TEST_LOG.md for exact commands, SHA, environment, counts, exit codes); GitHub Actions CI status for these commits: NOT RUN — the workflows are inert drafts under proposals/ci/ and no run ID exists, so NO CI-pass claim is made or implied
+
+- Supersedes R4's "24 checks" claim: the suite was extended per auditor item 3.9 to cover the 3.1–3.8 defect classes (fail-closed negatives, test execution, remote verification, manifest-backed statuses, strict SHA lists, append-only parent-prefix, remediation fixtures, action pinning, inventory counts). R4 remains preserved above, unchanged.

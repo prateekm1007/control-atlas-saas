@@ -99,7 +99,7 @@ def verify_sha_local(sha: str):
         else ("absent", None)
 
 
-def verify_sha_api(repo: str, sha: str, token: str | None):
+def verify_sha_api(repo: str, sha: str, token: str | None, fixture: dict | None = None):
     """Verify one SHA against the intended repository via the GitHub commits API.
 
     Returns (status, returned_sha_or_reason):
@@ -108,7 +108,19 @@ def verify_sha_api(repo: str, sha: str, token: str | None):
       ("error", reason)  -- permission/rate-limit/timeout/network/5xx or a returned
                             SHA that does not match the request: REMOTE VERIFICATION
                             FAILURE (fail closed; never reported as 'absent').
+    Offline test mode: fixture = {"status": 200, "body": {"sha": ...}} | {"status": 404} ...
     """
+    if fixture is not None:
+        status = fixture.get("status")
+        body = fixture.get("body") or {}
+        if status == 200:
+            returned = body.get("sha", "")
+            if returned != sha:
+                return ("error", f"returned commit SHA {returned!r} does not match requested {sha!r}")
+            return ("present", returned)
+        if status in (404, 422):
+            return ("absent", f"HTTP {status}: commit not found on {repo}")
+        return ("error", f"HTTP {status}: remote verification failure (fail closed)")
     url = f"https://api.github.com/repos/{repo}/commits/{sha}"
     req = urllib.request.Request(url, method="GET",
                                  headers={"Accept": "application/vnd.github+json",
@@ -214,6 +226,7 @@ def main() -> int:
     ap.add_argument("--check-tests", action="store_true",
                     help="EC-20: execute the named Acceptance-Tests on this candidate")
     ap.add_argument("--evidence-out", metavar="FILE", help="write the EC-20 evidence JSON here")
+    ap.add_argument("--api-json", help="offline fixture: canned GitHub API response (tests)")
     args = ap.parse_args()
 
     if not os.path.exists(args.body):
@@ -261,6 +274,7 @@ def main() -> int:
         findings.extend(f"EC-16 {e}" for e in parse_errors)
         if not parse_errors and shas:
             token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+            fixture = json.load(open(args.api_json, encoding="utf-8")) if args.api_json else None
             for sha in sorted(set(shas)):
                 if args.local:
                     status, detail = verify_sha_local(sha)
@@ -269,7 +283,7 @@ def main() -> int:
                         findings.append("EC-16 no --repo/GITHUB_REPOSITORY given for remote "
                                         "verification (fail closed)")
                         break
-                    status, detail = verify_sha_api(args.repo, sha, token)
+                    status, detail = verify_sha_api(args.repo, sha, token, fixture)
                 if status == "present":
                     print(f"OK  : {sha} verified on remote ({detail})")
                 elif status == "absent":

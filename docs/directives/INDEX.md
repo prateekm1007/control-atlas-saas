@@ -30,21 +30,21 @@ reading-note-path: docs/evidence/reading-note/READING_NOTE_LATEST.md
 pinned-blobs: b6bb35e84956d84a8c9d9e65734c212baf3ed075,211ad2c5d4b40059d9f3f03de12e0701f9235bc7
 | Rule ID | Status | Enforcement point(s) | Acceptance test(s) |
 |---|---|---|---|
-| EC-§1 | ACTIVE | procedural:AGENTS.md | NONE |
-| EC-§2 | ACTIVE | script:scripts/ci/reading_note_map_check.py, procedural:AGENTS.md | AT-06, AT-08 |
-| EC-§3 | ACTIVE | workflow:.github/workflows/toscanini-gate.yml#Secret Scan (gitleaks), pytest:backend/tests/test_api_key_guard.py | workflow:.github/workflows/toscanini-gate.yml#Unit Tests + Hash Lock |
-| EC-§4 | ACTIVE | procedural:AGENTS.md, pytest:backend/tests/test_status_semantics.py | workflow:.github/workflows/toscanini-gate.yml#Unit Tests + Hash Lock |
-| EC-§5 | ACTIVE | procedural:AGENTS.md | NONE |
-| EC-§6 | ACTIVE | script:scripts/ci/tests/run_all.py, procedural:AGENTS.md | AT-16 |
-| EC-§7 | ACTIVE | script:scripts/ci/workflow_deploy_trigger_lint.py, procedural:.github/workflows/toscanini-gate.yml | AT-03, AT-14 |
-| EC-§8 | ACTIVE | procedural:AGENTS.md | NONE |
-| EC-§9 | ACTIVE | procedural:AGENTS.md | NONE |
-| EC-§10 | ACTIVE | procedural:AGENTS.md | NONE |
-| EC-§11 | ACTIVE | procedural:AGENTS.md | NONE |
-| EC-§12 | ACTIVE | script:scripts/ci/status_vocabulary_lint.py | AT-11 |
-| EC-§13 | ACTIVE | workflow:.github/workflows/toscanini-gate.yml#Secret Scan (gitleaks) | workflow:.github/workflows/toscanini-gate.yml#Secret Scan (gitleaks) |
-| EC-§14 | ACTIVE | procedural:AGENTS.md | NONE |
-| EC-§15 | ACTIVE | procedural:ENGINEERING_CONSTITUTION.md | NONE |
+| EC-§1 | ACTIVE | procedural:AGENTS.md@origin/governance/canonical-docs | NONE |
+| EC-§2 | ACTIVE | script:scripts/ci/reading_note_map_check.py, procedural:AGENTS.md@origin/governance/canonical-docs | AT-06, AT-08 |
+| EC-§3 | ACTIVE | workflow:.github/workflows/toscanini-gate.yml@origin/science/p0-correctness-2026-10-19#Secret Scan (gitleaks), pytest:backend/tests/test_api_key_guard.py | workflow:.github/workflows/toscanini-gate.yml#Unit Tests + Hash Lock |
+| EC-§4 | ACTIVE | procedural:AGENTS.md@origin/governance/canonical-docs, pytest:backend/tests/test_certification.py | workflow:.github/workflows/toscanini-gate.yml#Unit Tests + Hash Lock |
+| EC-§5 | ACTIVE | procedural:AGENTS.md@origin/governance/canonical-docs | NONE |
+| EC-§6 | ACTIVE | script:scripts/ci/tests/run_all.py, procedural:AGENTS.md@origin/governance/canonical-docs | AT-16 |
+| EC-§7 | ACTIVE | script:scripts/ci/workflow_deploy_trigger_lint.py, procedural:.github/workflows/toscanini-gate.yml@origin/main | AT-03, AT-14 |
+| EC-§8 | ACTIVE | procedural:AGENTS.md@origin/governance/canonical-docs | NONE |
+| EC-§9 | ACTIVE | procedural:AGENTS.md@origin/governance/canonical-docs | NONE |
+| EC-§10 | ACTIVE | procedural:AGENTS.md@origin/governance/canonical-docs | NONE |
+| EC-§11 | ACTIVE | procedural:AGENTS.md@origin/governance/canonical-docs | NONE |
+| EC-§12 | ACTIVE | script:scripts/ci/status_vocabulary_lint.py, procedural:AGENTS.md@origin/governance/canonical-docs | AT-11 |
+| EC-§13 | ACTIVE | workflow:.github/workflows/toscanini-gate.yml@origin/science/p0-correctness-2026-10-19#Secret Scan (gitleaks) | workflow:.github/workflows/toscanini-gate.yml@origin/science/p0-correctness-2026-10-19#Secret Scan (gitleaks) |
+| EC-§14 | ACTIVE | procedural:AGENTS.md@origin/governance/canonical-docs | NONE |
+| EC-§15 | ACTIVE | procedural:ENGINEERING_CONSTITUTION.md@origin/policy/engineering-constitution | NONE |
 | OBS-153 | ACTIVE | procedural:constitution.md | NONE |
 | CRIT-154 | ACTIVE | procedural:constitution.md | NONE |
 | EC-16 | PROPOSED | script:scripts/ci/verify_claimed_shas.py, workflow:proposals/ci/verify-claimed-shas.yml#claimed-shas | AT-01, AT-12 |

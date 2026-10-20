@@ -26,6 +26,7 @@ Exit codes: 0 = pass; 1 = fail; 2 = usage/internal error.
 import argparse
 import json
 import os
+import subprocess
 import re
 import sys
 
@@ -39,11 +40,80 @@ END = "<!-- END RULE INVENTORY"
 STATUS_RE = re.compile(r"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|$")
 KEYVAL_RE = re.compile(r"^([a-z][a-z0-9-]*):\s*(.+)$", re.I)
 VALID_STATUS = {"ACTIVE", "PROPOSED"}
-REF_RE = re.compile(r"(script|procedural|workflow|pytest):(\S+)")
+ITEM_SPLIT = re.compile(r"[,;]\s*")
+ITEM_RE = re.compile(r"^(NONE|AT-\d+|(script|procedural|workflow|pytest):(.+))$", re.S)
 
 
-def fail_findings(msgs):
-    return [f"FAIL: {m}" for m in msgs]
+def _path_exists(repo: str, path: str) -> bool:
+    """PATH may carry a @REF suffix for files living on another branch/ref."""
+    if "@" in path:
+        fpath, _, ref = path.rpartition("@")
+        if fpath and ref and os.path.exists(os.path.join(repo, fpath)):
+            return True
+        return subprocess.run(["git", "cat-file", "-e", f"{ref}:{fpath}"],
+                              capture_output=True, cwd=repo).returncode == 0
+    return os.path.exists(os.path.join(repo, path))
+
+
+def _yaml_doc(repo: str, filespec: str):
+    """Load a workflow YAML from @REF when given (explicit pin wins), else the working tree."""
+    fpath, _, ref = (filespec.rpartition("@") if "@" in filespec else (filespec, "", ""))
+    if ref:
+        t = subprocess.run(["git", "show", f"{ref}:{fpath}"], capture_output=True, text=True,
+                           cwd=repo).stdout
+        if not t:
+            return None
+        return yaml.safe_load(t) or {}
+    fp = os.path.join(repo, fpath)
+    if os.path.exists(fp):
+        return yaml.safe_load(open(fp, encoding="utf-8")) or {}
+    return None
+
+
+def resolve_refs(value: str, repo: str):
+    """Validate each named reference in a cell. Returns (findings, none_declared)."""
+    findings = []
+    items = [v.strip() for v in ITEM_SPLIT.split(value) if v.strip()]
+    if not items:
+        return [f"empty enforcement/test cell (fail closed)"], False
+    none_declared = False
+    for item in items:
+        m = ITEM_RE.match(item)
+        if not m:
+            findings.append(f"unparseable reference {item!r}")
+            continue
+        if item.upper() == "NONE":
+            none_declared = True
+            continue
+        if item.startswith("AT-"):
+            continue  # registry membership validated separately
+        kind, target = m.group(2), m.group(3).strip()
+        if kind in ("script", "procedural"):
+            if not _path_exists(repo, target):
+                findings.append(f"named enforcement file does not exist: {target}")
+        elif kind == "workflow":
+            filespec_all, _, job = target.rpartition("#")
+            filespec, _, ref = (filespec_all.rpartition("@")
+                                if "@" in filespec_all else (filespec_all, "", ""))
+            job = job.strip()
+            if not filespec or not job:
+                findings.append(f"malformed workflow reference {item!r} (need file#JOB)")
+                continue
+            doc = _yaml_doc(repo, filespec_all)
+            if doc is None:
+                findings.append(f"named workflow file does not exist: {filespec}")
+            elif yaml is None:
+                findings.append("PyYAML unavailable; refusing to guess (fail closed)")
+            else:
+                jobs = doc.get("jobs") or {}
+                if not any(str(k) == job or (isinstance(v, dict) and str(v.get("name")) == job)
+                           for k, v in jobs.items()):
+                    findings.append(f"workflow job not found: {job!r} in {filespec}")
+        elif kind == "pytest":
+            node_file = target.split("::", 1)[0]
+            if not _path_exists(repo, node_file):
+                findings.append(f"pytest node file does not exist: {node_file}")
+    return findings, none_declared
 
 
 def parse_index(path: str):
@@ -87,44 +157,6 @@ def parse_index(path: str):
     if len(set(ids)) != len(ids):
         raise ValueError("duplicate rule IDs (fail closed)")
     return meta, rules
-
-
-def resolve_refs(value: str, repo: str):
-    """Validate each named reference in a cell. Returns (findings, none_declared)."""
-    findings = []
-    items = [v.strip() for v in re.split(r"[,;]|(?:\s(?=\S*:))", value) if v.strip()]
-    if not items:
-        return [f"empty enforcement/test cell (fail closed)"], False
-    none_declared = False
-    for item in items:
-        if item.upper() == "NONE":
-            none_declared = True
-            continue
-        m = REF_RE.match(item)
-        if not m:
-            findings.append(f"unparseable reference {item!r}")
-            continue
-        kind, target = m.group(1), m.group(2)
-        if kind in ("script", "procedural"):
-            if not os.path.exists(os.path.join(repo, target)):
-                findings.append(f"named enforcement file does not exist: {target}")
-        elif kind == "workflow":
-            fpath, _, job = target.rpartition("#")
-            fp = os.path.join(repo, fpath)
-            if not os.path.exists(fp):
-                findings.append(f"named workflow file does not exist: {fpath}")
-            elif yaml is None:
-                findings.append("PyYAML unavailable; refusing to guess (fail closed)")
-            else:
-                doc = yaml.safe_load(open(fp, encoding="utf-8")) or {}
-                jobs = doc.get("jobs") or {}
-                if not any(str(k) == job for k in jobs):
-                    findings.append(f"workflow job not found: {job!r} in {fpath}")
-        elif kind == "pytest":
-            node_file = target.split("::", 1)[0]
-            if not os.path.exists(os.path.join(repo, node_file)):
-                findings.append(f"pytest node file does not exist: {node_file}")
-    return findings, none_declared
 
 
 def main() -> int:

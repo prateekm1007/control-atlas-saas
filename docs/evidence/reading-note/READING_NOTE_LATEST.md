@@ -28,21 +28,21 @@ Acceptance values: `AT-nn` = test in `scripts/ci/tests/ACCEPTANCE_TESTS.json` (e
 
 | Rule ID | Rule (verbatim anchor) | Enforcement point(s) | Acceptance test(s) |
 |---|---|---|---|
-| EC-§1 | Purpose and authority; conflict handling; fail closed on ambiguity | procedural:AGENTS.md | NONE |
-| EC-§2 | Mandatory pre-coding protocol (constitutions read in full first) | script:scripts/ci/reading_note_map_check.py; procedural:AGENTS.md | AT-06, AT-08 |
-| EC-§3 | Security is a release requirement (fail closed, deny by default, secrets) | workflow:.github/workflows/toscanini-gate.yml#Secret Scan (gitleaks); pytest:backend/tests/test_api_key_guard.py | workflow:.github/workflows/toscanini-gate.yml#Unit Tests + Hash Lock |
-| EC-§4 | Product and scientific integrity (measured vs inferred; law registry) | procedural:AGENTS.md; pytest:backend/tests/test_status_semantics.py | workflow:.github/workflows/toscanini-gate.yml#Unit Tests + Hash Lock |
-| EC-§5 | Architecture and maintainability (contracts, dependencies, migrations) | procedural:AGENTS.md | NONE |
-| EC-§6 | Testing and evidence (exact command, SHA, counts; never invent) | script:scripts/ci/tests/run_all.py; procedural:AGENTS.md | AT-16 |
+| EC-§1 | Purpose and authority; conflict handling; fail closed on ambiguity | procedural:AGENTS.md@origin/governance/canonical-docs | NONE |
+| EC-§2 | Mandatory pre-coding protocol (constitutions read in full first) | script:scripts/ci/reading_note_map_check.py; procedural:AGENTS.md@origin/governance/canonical-docs | AT-06, AT-08 |
+| EC-§3 | Security is a release requirement (fail closed, deny by default, secrets) | workflow:.github/workflows/toscanini-gate.yml@origin/science/p0-correctness-2026-10-19#Secret Scan (gitleaks) (main tip's gate currently carries only the unit-tests job — recorded honestly); pytest:backend/tests/test_api_key_guard.py | workflow:.github/workflows/toscanini-gate.yml#Unit Tests + Hash Lock |
+| EC-§4 | Product and scientific integrity (measured vs inferred; law registry) | procedural:AGENTS.md; pytest:backend/tests/test_certification.py | workflow:.github/workflows/toscanini-gate.yml#Unit Tests + Hash Lock |
+| EC-§5 | Architecture and maintainability (contracts, dependencies, migrations) | procedural:AGENTS.md@origin/governance/canonical-docs | NONE |
+| EC-§6 | Testing and evidence (exact command, SHA, counts; never invent) | script:scripts/ci/tests/run_all.py; procedural:AGENTS.md@origin/governance/canonical-docs | AT-16 |
 | EC-§7 | CI/CD and supply chain (required checks on exact candidate; pinned actions) | script:scripts/ci/workflow_deploy_trigger_lint.py; procedural:.github/workflows/toscanini-gate.yml | AT-03, AT-14 |
-| EC-§8 | Reliability, observability, operations (real health signals; no fake 200) | procedural:AGENTS.md | NONE |
-| EC-§9 | Customer experience, accessibility, cost control | procedural:AGENTS.md | NONE |
-| EC-§10 | LLM and external-provider boundaries (advisory narrative; untrusted input) | procedural:AGENTS.md | NONE |
-| EC-§11 | Change, release, incident discipline (containment → evidence → RCA) | procedural:AGENTS.md | NONE |
+| EC-§8 | Reliability, observability, operations (real health signals; no fake 200) | procedural:AGENTS.md@origin/governance/canonical-docs | NONE |
+| EC-§9 | Customer experience, accessibility, cost control | procedural:AGENTS.md@origin/governance/canonical-docs | NONE |
+| EC-§10 | LLM and external-provider boundaries (advisory narrative; untrusted input) | procedural:AGENTS.md@origin/governance/canonical-docs | NONE |
+| EC-§11 | Change, release, incident discipline (containment → evidence → RCA) | procedural:AGENTS.md@origin/governance/canonical-docs | NONE |
 | EC-§12 | Definition of done ("Not run" is never reported as "passed") | script:scripts/ci/status_vocabulary_lint.py | AT-11 |
 | EC-§13 | Prohibited shortcuts (no gate-weakening, no secret commits, no fake claims) | workflow:.github/workflows/toscanini-gate.yml#Secret Scan (gitleaks) | workflow:.github/workflows/toscanini-gate.yml#Secret Scan (gitleaks) |
-| EC-§14 | Required task artifacts (preflight, manifest, machine-readable results) | procedural:AGENTS.md | NONE |
-| EC-§15 | External engineering references (SSDF / ASVS / SLSA as guidance) | procedural:ENGINEERING_CONSTITUTION.md | NONE |
+| EC-§14 | Required task artifacts (preflight, manifest, machine-readable results) | procedural:AGENTS.md@origin/governance/canonical-docs | NONE |
+| EC-§15 | External engineering references (SSDF / ASVS / SLSA as guidance) | procedural:ENGINEERING_CONSTITUTION.md@origin/policy/engineering-constitution | NONE |
 | OBS-153 | Avidity quantification (contact-density standard) — ACTIVE domain rule | procedural:constitution.md | NONE |
 | CRIT-154 | Structural admissibility (warhead-RMSD, steric-clash veto) — ACTIVE domain rule | procedural:constitution.md | NONE |
 
