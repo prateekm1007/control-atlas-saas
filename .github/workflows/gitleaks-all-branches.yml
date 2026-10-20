@@ -1,0 +1,142 @@
+# ACTIVATION CANDIDATE (Round-18 rebuild of activation/ec23) — EC-23 full-tree secret scan.
+#
+# Auditor Round-18 direction 6 (EC-23 — not accepted; fix and rerun). Run 39417292155
+# failed all three relevant jobs:
+#   1. INSTALL: the pinned action prepends "v" to GITLEAKS_VERSION, so "v8.30.1" produced
+#      a URL containing "vv8.30.1" -> HTTP 404. FIX: version semantics corrected to the
+#      bare "8.30.1" (verified: the action-built URL returns 200 for that value).
+#   2. POSITIVE CONTROL: the seeded fixture used Amazon's DOCUMENTED example key, which is
+#      allowlisted by Gitleaks' default config and was NOT detected. FIX: a synthetic,
+#      randomly generated AWS-format fixture created at RUNTIME (never committed to the
+#      repository) — verified locally to be detected by the pinned binary with --redact
+#      keeping the value out of the log.
+#   3. HISTORICAL FINDINGS: the all-refs scan reported 43 findings. FIX: every finding is
+#      classified per-fingerprint (NOT blanket-ignored) in
+#      docs/evidence/ec16-ec26/GITLEAKS_FINDINGS_DISPOSITION.md, mirrored 1:1 into
+#      .gitleaksignore; the job fails closed on ANY unclassified finding and an acceptance
+#      step cross-checks the two files. The two A-02 findings (the former provider key)
+#      are classified as compromised-until-revocation-evidence; issuer-side revocation
+#      remains a SEPARATE open security requirement and deployment stays blocked.
+# Never merged until the auditor records activation (D-5 discipline).
+
+name: EC23 full-tree secret scan
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  schedule:
+    - cron: "0 5 * * 1"   # weekly Monday 05:00 UTC full-history scan of main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    name: "EC-23 gitleaks full history of the checkout"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # full history is the scan target, not the push range
+      - name: Verify complete history (a partial clone must not be scanned and called full)
+        run: |
+          if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+            echo "FAIL: shallow checkout; full-history scan not possible"; exit 1
+          fi
+          git rev-list --count HEAD >/dev/null && echo "history depth OK"
+      # Action pinned to a reviewed immutable commit SHA (NEVER a moving tag).
+      # Round-18 FIX: GITLEAKS_VERSION is the bare "8.30.1" — the action prepends the
+      # leading "v" itself; "v8.30.1" produced a "vv8.30.1" URL and HTTP 404
+      # (the exact install failure of run 39417292155).
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+          GITLEAKS_ENABLE_COMMENTS: "false"
+
+  gitleaks-all-refs:
+    name: "EC-23 gitleaks across ALL refs (fail closed on unclassified findings)"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch every remote ref explicitly (evidence branches included)
+        run: |
+          git fetch --prune --no-tags origin "+refs/heads/*:refs/remotes/origin/*"
+          git rev-list --all --count >/dev/null
+          git branch -r | tee /tmp/refs_scanned.txt | wc -l
+      - name: Cross-check .gitleaksignore against the disposition record (1:1, fail closed)
+        run: python3 scripts/ci/gitleaks_disposition_check.py
+      - name: Run pinned gitleaks binary over --all with checksum verification
+        env:
+          GITLEAKS_VER: "8.30.1"
+          GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+        run: |
+          set -euo pipefail
+          curl -sSfL --retry 3 -o /tmp/gitleaks.tgz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VER}/gitleaks_${GITLEAKS_VER}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tgz" | sha256sum -c -
+          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks && chmod +x /tmp/gitleaks
+          # --log-opts="--all" scans the history of EVERY ref fetched above; --redact keeps
+          # any finding's secret value out of the job log; exit code gates the job.
+          # Findings whose fingerprints are classified (see GITLEAKS_FINDINGS_DISPOSITION.md
+          # and .gitleaksignore) do not fire; ANY unclassified finding fails the job.
+          /tmp/gitleaks detect --source . --log-opts="--all" --redact --verbose \
+            --report-path /tmp/gitleaks_all_refs.json
+          echo "PASS: no unclassified secrets across all refs and full history"
+
+  seeded-secret-detection-test:
+    name: "EC-23 the scan actually detects (synthetic runtime fixture, expects failure)"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Positive control — synthetic key MUST be detected (nonzero exit)
+        run: |
+          set -uo pipefail
+          # Round-18 FIX: the previous fixture used Amazon's DOCUMENTED example key,
+          # which gitleaks allowlists by default (run 39417292155: "seeded fake key was
+          # NOT detected"). This fixture is SYNTHETIC, generated at runtime with random
+          # values, never committed to this repository, and was verified locally to be
+          # detected by the pinned 8.30.1 binary; --redact keeps the value out of the log.
+          rm -rf /tmp/seedrepo && mkdir -p /tmp/seedrepo && cd /tmp/seedrepo
+          git init -q && git config user.email t@t && git config user.name t
+          python3 - <<'PY' > fixture.txt
+          import secrets, string
+          aid = "AKIA" + "".join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(16))
+          sec = "".join(secrets.choice(string.ascii_letters + string.digits + "/+") for _ in range(40))
+          print(f"aws_access_key_id = {aid}")
+          print(f"aws_secret_access_key = {sec}")
+          PY
+          git add fixture.txt && git commit -qm "synthetic detection fixture"
+          GITLEAKS_VER=8.30.1
+          GITLEAKS_SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+          curl -sSfL --retry 3 -o gl.tgz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VER}/gitleaks_${GITLEAKS_VER}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gl.tgz" | sha256sum -c -
+          tar -xzf gl.tgz gitleaks && chmod +x gitleaks
+          set +e
+          ./gitleaks detect --source . --log-opts="--all" --redact --verbose > /tmp/seed_scan.log 2>&1
+          RC=$?
+          set -e
+          if [ "$RC" -eq 0 ]; then
+            echo "FAIL: synthetic key was NOT detected - the scan is not trustworthy"; exit 1
+          fi
+          grep -q "REDACTED" /tmp/seed_scan.log && ! grep -qE "AKIA[A-Z0-9]{16}" /tmp/seed_scan.log && {
+            echo "PASS: synthetic key detected (exit $RC) and value redacted in output"; exit 0; }
+          echo "FAIL: detection output did not redact the synthetic value"; exit 1
+      - name: Negative control — clean repo MUST pass (exit 0)
+        run: |
+          rm -rf /tmp/cleanrepo && mkdir -p /tmp/cleanrepo && cd /tmp/cleanrepo
+          git init -q && git config user.email t@t && git config user.name t
+          echo "just a clean file" > clean.txt
+          git add clean.txt && git commit -qm "clean"
+          /tmp/seedrepo/gitleaks detect --source . --log-opts="--all" --redact \
+            || { echo "FAIL: clean repo flagged"; exit 1; }
+          echo "PASS: clean repo exits 0"

@@ -218,3 +218,18 @@
   the next globally unused ID (P-026).
 - Single-writer guard: remote tip expected exactly 3271fb1dbb1cb7687889c4e71002aa45ff37c340;
   push ABORTED on deviation.
+
+## 2026-10-20T14:17:41Z | P-023-INTENT | push-intent | branch=activation/ec23-r18 head_at_intent=DEFERRED base=a3d1b5633d46a0cd99842332440986a296412cbb expected_remote_tip_before_push=ABSENT (new ref name; rebuild of activation/ec23 — the original branch is preserved untouched, no force-push) credential=OWNER-PAT-1 authorized_by="auditor Round-18 direction 6 (EC-23 not accepted: fix install path/version semantics, replace the allowlisted fixture with a detectable synthetic, classify all historical findings; genuine revocation remains a separate security requirement)"
+
+- Content (disclosed pre-push): .github/workflows/gitleaks-all-branches.yml — install
+  version semantics fixed (GITLEAKS_VERSION: 8.30.1, bare; the action prepends the leading
+  v — vv8.30.1 caused the HTTP 404 of run 39417292155); positive control uses a SYNTHETIC
+  runtime-generated AWS-format fixture (verified locally: detected by the pinned 8.30.1
+  binary, redacted in output; the old documented-example-key fixture was allowlisted and
+  NOT detected); all-refs job fails closed on ANY unclassified finding; per-fingerprint
+  dispositions recorded in docs/evidence/ec16-ec26/GITLEAKS_FINDINGS_DISPOSITION.md
+  (41 provenance-digest FPs + 1 identifier-list FP + 2 A-02 former-provider-key findings
+  classified compromised-until-issuer-revocation-evidence; NO secret values recorded) and
+  mirrored 1:1 into .gitleaksignore; scripts/ci/gitleaks_disposition_check.py cross-checks
+  the two files (fail closed); local verification: scan exit 0 WITH the ignore file over
+  210 commits / exit 1 without it; push-log append; manifest refresh.
