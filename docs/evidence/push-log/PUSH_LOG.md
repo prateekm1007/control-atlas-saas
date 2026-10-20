@@ -141,3 +141,23 @@
   eb6d6a9fc42681558e55f085b804f9cc2334c924 exactly as expected (ls-remote 11:26:52Z).
 - CI: gate expected on this push (main's trigger list is branches: ["**"]); run ID to be
   recorded in the round report once observed via the Actions API.
+
+## 2026-10-20T13:53:07Z | P-017-INTENT | push-intent | branch=fix/mainline-r18 head_at_intent=DEFERRED base=f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd expected_remote_tip_before_push=ABSENT (new ref name; first push of this branch) credential=OWNER-PAT-1 authorized_by="auditor Round-18 direction 3 (fix-forward PR from exactly f535a71, preserve merged history, no reset, no force-push) + AGENTS.md feature-branch discipline; scoped by register rev 8 Part 11"
+
+- Round-18 fix-forward push (Direction 3): provider-SDK install references removed from the
+  two remaining non-documentation package files (ported selectively from the preserved
+  `c4a0fcc` history; no whole-history merge); remediation documentation corrected
+  (HISTORICAL/SUPERSEDED labels with exact source SHAs; in-force policy separated from the
+  automation actually running); governed-artifact manifest completed with a fail-closed
+  checker (`scripts/ci/manifest_check.py`); acceptance protection added to ACTIVE CI
+  (`.github/workflows/acceptance-gate.yml`); push-log protocol checker extended (pairing +
+  remote verification; pending reported as PENDING, never complete); PR #17 review-bypass
+  incident (INC-1) and P-015-CONFIRM collision (INC-2) recorded without rewriting history;
+  register rev 8 (Part 11); P0_STATUS Round-18 section; EC-20 collection scoped to the
+  acceptance suite; EC-26 Enforcement column added and computed.
+- Pre-push single-writer guard: the remote ref `refs/heads/fix/mainline-r18` is expected to
+  be ABSENT; main is expected at exactly
+  `f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd`; the push is ABORTED on any deviation.
+- head_at_intent is DEFERRED (self-reference limit, PUSH_LOG_SCHEMA.md): the carrying
+  commit cannot know its own hash; the CONFIRM entry records the remote-verified full SHA
+  after the push returns.
