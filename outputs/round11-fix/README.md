@@ -1,5 +1,26 @@
 # ROUND-11 FIX DELIVERY — README
 
+> ## RETRACTION (2026-10-20, Round-12 Direction 6)
+>
+> **The claim that the N8 altloc default was flipped on this branch is
+> RETRACTED.** The table row below describing
+> `outputs/round11-fix/patches-n8-per-residue-default-v2/` as "flips
+> `ALTLOC_POLICY` to `per_residue` as the ENGINE DEFAULT" was misleading:
+> **no altloc code change exists on this branch.** Verified on the branch
+> tree at push time: `backend/tos/ingestion/processor.py` contains zero
+> occurrences of `ALTLOC_POLICY`; the N8 v2 change existed here ONLY as a
+> patch series under `outputs/` (never applied as code to any pushed
+> branch). A patch in a delivery folder is not a flipped default.
+>
+> The actual code implementation — per-residue altloc selection as the
+> module default in `backend/tos/ingestion/processor.py`, `per_atom` as an
+> explicit opt-in, plus the pinned-cohort before/after runs and the recorded
+> verdict diff — lives on branch **`feature/n8-altlocs-per-residue` @
+> `b5afd6c`** (based on `feature/od07-audit-id` @ `08a9403`, pushed
+> 2026-10-20, unmerged). This retraction is written per Round-12 Direction 6;
+> the original README text below is intentionally left unedited below the
+> supersession block (evidence preservation, EC §11).
+
 > ## SUPERSESSION (2026-10-20, Round-12 Direction 5)
 >
 > **The register on this branch is superseded.** The partial register
