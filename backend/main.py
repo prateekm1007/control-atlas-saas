@@ -24,6 +24,7 @@ from tos.enrichment.gemini_compiler import get_compiler
 from tos.utils.type_guards import force_bytes
 from tos.nkg.manager import get_nkg
 from tos.governance.modality_matrix import resolve_method, compute_matrix_hash, get_matrix_meta
+from tos.governance.audit_identity import compute_audit_id
 from tos.engine.adjudicator import adjudicate_laws, AdjudicationInput
 from tos.schemas.response_v1 import ToscaniniResponse
 from tos.engine.batch_processor import process_batch
@@ -180,22 +181,21 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str,
             "coverage_pct": round(coverage, 2), "suppression_reason": suppression
         },
         "governance": {
-            # WP-5: full SHA-256 of the canonical coordinate hash (64 hex chars).
-            # Deterministic — structurally identical submissions share an ID
-            # (owner decision: dedup kept). Replaces collision-prone md5[:8].
-            "audit_id": hashlib.sha256(coord_hash.encode()).hexdigest(),
-            # OD-07 (auditor, delegated by owner, 2026-10-20): the audit
-            # identity is the 64-hex canonical SHA-256 COMBINED with the
-            # canon hash and matrix hash in force — the same input audited
-            # under a different canon/matrix is a different identity. The
-            # legacy_audit_id is the deterministic pre-WP-5 md5[:8] ref,
-            # carried so old 8-char references keep resolving (lookup only;
-            # it is never the canonical identity).
-            "audit_identity": {
-                "audit_id": hashlib.sha256(coord_hash.encode()).hexdigest(),
-                "canon_hash": LAW_CANON_HASH,
-                "matrix_hash": compute_matrix_hash(),
-            },
+            # OD-07 (auditor ruling, Round 13; REAFFIRMED Round 14): the
+            # audit ID is the SHA-256 of ONE canonical serialization that
+            # includes the structure's coordinate hash, the canon hash,
+            # and the matrix hash. Same coordinates under a different
+            # canon or matrix produce a DIFFERENT ID (the same structure
+            # audited under different law semantics is a different
+            # audit); identical input under the same semantics shares one
+            # ID (WP-5 dedup kept, not superseded). Supersedes the bare
+            # sha256(coord_hash) form previously at this position — that
+            # form left canon/matrix as separate fields, so the same
+            # structure kept the same ID across law-semantics changes.
+            "audit_id": compute_audit_id(
+                coord_hash, LAW_CANON_HASH, compute_matrix_hash()),
+            # OD-07: deterministic pre-WP-5 8-char reference (lookup only;
+            # never the canonical identity).
             "legacy_audit_id": compute_legacy_audit_id(coord_hash),
             "station_version": STATION_METADATA["version"],
             "timestamp_utc": datetime.now(timezone.utc).isoformat(),

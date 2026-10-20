@@ -19,21 +19,17 @@ class GovernanceFingerprint(BaseModel):
     policy_ref: str
 
 
-class AuditIdentity(BaseModel):
-    """OD-07: the audit identity — the full 64-hex canonical SHA-256 of
-    the input, combined with the canon hash and matrix hash in force.
-    Identical input under the same canon/matrix shares the identity."""
-    audit_id: str
-    canon_hash: str
-    matrix_hash: str
-
-
 class Governance(BaseModel):
+    # OD-07 (ruling, Round 14): audit_id IS the SHA-256 of the canonical
+    # serialization binding coordinate hash, canon hash, and matrix hash
+    # — the binding values live in governance_fingerprint below. The
+    # separate audit_identity object of the first implementation is
+    # REMOVED: it left canon/matrix beside the ID instead of inside it,
+    # so the same structure kept the same ID under different law
+    # semantics (the deviation this correction fixes).
     audit_id: str
-    # OD-07 additions (additive, optional — backward compatible):
-    # the explicit identity triple and the deterministic legacy 8-char
-    # reference (lookup only; never the canonical identity).
-    audit_identity: Optional[AuditIdentity] = None
+    # OD-07: deterministic pre-WP-5 8-char reference (lookup only;
+    # never the canonical identity).
     legacy_audit_id: Optional[str] = None
     station_version: str
     timestamp_utc: str
