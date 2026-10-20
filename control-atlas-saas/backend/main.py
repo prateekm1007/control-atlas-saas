@@ -19,7 +19,7 @@ import tos.export.sealer as sealer_mod
 import tos.forensic_artifacts.pdf_generator as pdf_mod
 import tos.glossary.law_glossary as glossary_mod
 import tos.glossary.epistemic_definitions as epistemic_mod
-import tos.enrichment.gemini_compiler as gemini_mod
+import tos.enrichment.narrative_compiler as narrative_mod  # H-1: deterministic provider-less compiler
 import tos.generation.dispatcher as dispatcher_mod
 import tos.discovery.resolver as discovery_mod
 import tos.governance.program_schema as program_schema_mod
@@ -84,8 +84,8 @@ async def ingest(mode: str = Form(...), candidate_id: str = Form(...), file: Upl
 
         program_record = advance_program_state(structure, label, float(conf_display) if conf_display != "N/A" else 0.0)
         
-        gemini = gemini_mod.GeminiCompiler(os.getenv("GEMINI_API_KEY", "NONE"))
-        rat = gemini.synthesize(verdict, phys_score, conf_display, label, results)
+        narrative = narrative_mod.NarrativeCompiler()
+        rat = narrative.synthesize(verdict, phys_score, conf_display, label, results)
         sealed = sealer_mod.ForensicSealer.seal_structure(content, structure.audit_id, verdict, coord_hash, ext)
         pdf_b = pdf_mod.generate_v14_certificate(structure.audit_id, verdict, phys_score, label, rat, results, structure.atoms)
 

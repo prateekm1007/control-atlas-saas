@@ -18,7 +18,7 @@ from tos.governance.station_sop import (
     ARCHITECTURE_WEIGHTS, BAYESIAN_FORMULA
 )
 from tos.generation.dispatcher import GenerationDispatcher
-from tos.enrichment.gemini_compiler import get_compiler
+from tos.enrichment.narrative_compiler import get_compiler
 from tos.utils.type_guards import force_bytes
 from tos.nkg.manager import get_nkg
 from tos.governance.modality_matrix import resolve_method, compute_matrix_hash, get_matrix_meta
