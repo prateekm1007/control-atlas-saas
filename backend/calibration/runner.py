@@ -76,44 +76,284 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def _git_output(*args: str) -> str | None:
-    """Best-effort git metadata of the repo containing the IMPORTED tos
-    package; returns None outside a git checkout."""
+def _engine_repo_root() -> Path | None:
+    """Repo root of the git checkout that OWNS the imported tos package.
+
+    Provenance v2 (Round-12 direction 4, package-install audit): a
+    repository that merely CONTAINS the installed package (for example a
+    virtualenv or site-packages directory nested inside an unrelated
+    checkout) is NOT the source of the imported code and must never be
+    reported as such. Ownership requires BOTH:
+      1. the package file lives inside the candidate repo's work tree, and
+      2. git tracks the package file in that repo (ls-files --error-unmatch).
+    Returns None for installed packages (wheel/site-packages), packages
+    with no Git metadata, and untracked copies — the fail-closed answer.
+    """
     try:
-        engine_repo = Path(tos.__file__).resolve().parents[2]
+        pkg_file = Path(tos.__file__).resolve()
+    except Exception:
+        return None
+    for parent in pkg_file.parents:
+        if not (parent / ".git").exists():
+            continue
+        try:
+            root = subprocess.run(
+                ["git", "-C", str(parent), "rev-parse", "--show-toplevel"],
+                capture_output=True, text=True, check=True,
+            ).stdout.strip()
+        except Exception:
+            return None
+        root_path = Path(root).resolve()
+        try:
+            rel = pkg_file.relative_to(root_path)
+        except ValueError:
+            return None  # package file is outside this repo's work tree
+        tracked = subprocess.run(
+            ["git", "-C", str(root_path), "ls-files", "--error-unmatch",
+             str(rel)],
+            capture_output=True, text=True,
+        )
+        if tracked.returncode != 0:
+            return None  # repo contains the dir but does not own the package
+        return root_path
+    return None
+
+
+def _installed_distribution() -> dict | None:
+    """Best-effort installed-distribution record for the tos package
+    (Provenance v2: known installed-artifact route). Returns None when
+    the imported package is not pip-installed (normal source checkout)."""
+    try:
+        from importlib import metadata
+    except ImportError:  # pragma: no cover
+        return None
+    try:
+        dist_names = metadata.packages_distributions().get("tos", [])
+    except Exception:
+        return None
+    for name in dist_names:
+        try:
+            dist = metadata.distribution(name)
+        except Exception:
+            continue
+        record = {"name": dist.metadata["Name"], "version": dist.version}
+        try:
+            direct = dist.read_text("direct_url.json")
+            if direct:
+                parsed = json.loads(direct)
+                # never carry raw URLs with credentials into artifacts
+                if "url" in parsed and isinstance(parsed["url"], str):
+                    parsed["url"] = _sanitize_git_url(parsed["url"])
+                record["direct_url"] = parsed
+        except Exception:
+            pass
+        return record
+    return None
+
+
+def _git_output(*args: str) -> str | None:
+    """Best-effort git metadata of the git checkout that OWNS the
+    imported tos package; returns None outside such a checkout
+    (installed packages, no Git metadata, or untracked copies)."""
+    root = _engine_repo_root()
+    if root is None:
+        return None
+    try:
         return subprocess.run(
-            ["git", "-C", str(engine_repo), *args],
+            ["git", "-C", str(root), *args],
             capture_output=True, text=True, check=True,
         ).stdout.strip()
     except Exception:
         return None
 
 
-def _engine_provenance() -> dict:
+def _engine_provenance(strict: bool = True) -> dict:
     """P0 item 15: record the commit of the code that will ACTUALLY run.
 
     The v24 run recorded the runner checkout's HEAD while the working
     tree contained uncommitted engine changes, so its report numbers
     were untethered from any reproducible commit. Provenance is now
-    taken from the imported tos package's repository, and the tree
-    state is RECORDED (working_tree_clean + tree_status). The CLI
-    entrypoint refuses to start an evidence run on a dirty tree.
+    taken from the git checkout that OWNS the imported tos package
+    (verified by work-tree containment AND git tracking — a checkout
+    that merely contains an installed copy is rejected), and the tree
+    state is RECORDED (working_tree_clean + tree_status).
+
+    Provenance v2 routes:
+    - git-checkout: code_sha + tree state (above).
+    - installed-package: the distribution metadata is recorded and
+      code_sha is None — an installed artifact is never attributed a
+      commit inferred from a containing checkout.
+    - unavailable: neither route resolved.
+
+    strict=True (authoritative measurement): anything but the
+    git-checkout route FAILS CLOSED (SystemExit) — no evidence run on
+    unverifiable source provenance.
+    strict=False (records): the unavailable/installed state is recorded
+    explicitly and never guessed.
     """
     code_sha = _git_output("rev-parse", "HEAD")
-    if code_sha is None:
+    if code_sha is not None:
+        status = _git_output("status", "--porcelain") or ""
+        return {
+            "code_sha": code_sha,
+            "code_sha_source": (
+                "git rev-parse HEAD of the repository that OWNS the imported "
+                "tos engine package (work-tree containment + git tracking "
+                "verified)"
+            ),
+            "source_provenance": "git-checkout",
+            "working_tree_clean": not status,
+            "tree_status": status.splitlines()[:50],
+        }
+    # No git checkout owns the imported package: try the installed-
+    # artifact route, then record unavailability explicitly. Never
+    # infer a commit from a checkout that does not own the package.
+    dist = _installed_distribution()
+    if dist is not None:
+        record = {
+            "code_sha": None,
+            "code_sha_source": (
+                "unavailable — the imported tos package is pip-installed; "
+                "no git checkout owns it. Distribution metadata recorded; "
+                "a commit is never inferred from a containing checkout."
+            ),
+            "source_provenance": "installed-package",
+            "installed_distribution": dist,
+            "working_tree_clean": None,
+            "tree_status": None,
+        }
+        if strict:
+            raise SystemExit(
+                "authoritative calibration runs require a git checkout "
+                "that OWNS the imported tos engine package; an installed "
+                "package has no verifiable source commit")
+        return record
+    record = {
+        "code_sha": None,
+        "code_sha_source": (
+            "unavailable — the imported tos package is neither owned by a "
+            "git checkout (work-tree containment + git tracking) nor "
+            "installed with distribution metadata"
+        ),
+        "source_provenance": "unavailable",
+        "working_tree_clean": None,
+        "tree_status": None,
+    }
+    if strict:
         raise SystemExit(
             "calibration runs require a git checkout of the engine "
-            "(could not resolve the repository of the imported tos package)")
-    status = _git_output("status", "--porcelain") or ""
+            "(could not resolve a repository that OWNS the imported tos "
+            "package)")
+    return record
+
+
+def _sanitize_git_url(url: str) -> str:
+    """Strip credentials from a git remote URL (EC §3: no secrets in
+    reports, artifacts, or logs). Handles scheme URLs with userinfo
+    (https://user:pass@host/..., https://token@host/...) and scp-style
+    URLs (git@host:path)."""
+    import re
+    from urllib.parse import urlsplit, urlunsplit
+    # scp-style first (no scheme): user@host:path
+    url = re.sub(r"^[^/@\s]+@(?=[^/]+:)", "", url)
+    try:
+        parts = urlsplit(url)
+    except ValueError:
+        return "<unparseable remote url>"
+    if parts.username is None and parts.password is None:
+        return url
+    host = parts.hostname or ""
+    if parts.port:
+        host = f"{host}:{parts.port}"
+    return urlunsplit((parts.scheme, host, parts.path,
+                       parts.query, parts.fragment))
+
+
+def _git_context() -> dict:
+    """Sanitized git context of the engine repository. Remote URLs are
+    credential-stripped before they enter any artifact."""
+    branch = _git_output("rev-parse", "--abbrev-ref", "HEAD")
+    describe = _git_output("describe", "--tags", "--always", "--dirty")
+    remotes_raw = _git_output("remote", "-v") or ""
+    remotes: dict[str, str] = {}
+    for line in remotes_raw.splitlines():
+        parts = line.split()
+        if len(parts) >= 2 and parts[0] not in remotes:
+            remotes[parts[0]] = _sanitize_git_url(parts[1])
     return {
-        "code_sha": code_sha,
-        "code_sha_source": (
-            "git rev-parse HEAD of the repository containing the IMPORTED "
-            "tos engine package"
+        "available": _engine_repo_root() is not None,
+        "branch": branch,
+        "describe": describe,
+        "remotes": remotes,
+        "note": (
+            "git context of the repository that OWNS the imported tos "
+            "package; null when the package is installed or has no Git "
+            "metadata — never inferred from a containing checkout"
         ),
-        "working_tree_clean": not status,
-        "tree_status": status.splitlines()[:50],
     }
+
+
+def _dependency_versions() -> dict:
+    """Best-effort versions of dependencies material to measurement
+    (EC §6: dependency/runtime versions where material). A dependency
+    that cannot be imported is recorded explicitly as unavailable —
+    never silently omitted."""
+    out: dict[str, str] = {}
+    for name in ("numpy", "gemmi"):
+        try:
+            module = __import__(name)
+            out[name] = str(getattr(module, "__version__", "unknown"))
+        except Exception as exc:  # pragma: no cover - environment-specific
+            out[name] = f"unavailable ({type(exc).__name__})"
+    return out
+
+
+def build_provenance_manifest(calibration_executed: bool = False) -> dict:
+    """Provenance v2: complete standalone provenance RECORD.
+
+    Composes the engine provenance (git checkout / installed package /
+    explicitly-unavailable) with the sanitized git context, the runtime,
+    the material dependency versions, and the policy-binding hashes.
+    Safe to persist anywhere: it contains no credentials (remotes are
+    sanitized; no environment variables or tokens are recorded).
+
+    calibration_executed is recorded explicitly (default False): a
+    provenance record must never be mistakable for a calibration run —
+    the demonstration manifest records False even though it identifies
+    the runner version.
+    """
+    return {
+        "schema": "toscanini-runner-provenance/2.0.0",
+        "generated_utc": datetime.now(timezone.utc).isoformat(),
+        "runner_version": RUNNER_VERSION,
+        "calibration_executed": bool(calibration_executed),
+        "record_type": (
+            "calibration-run" if calibration_executed
+            else "provenance-record-only"),
+        "engine": _engine_provenance(strict=False),
+        "git_context": _git_context(),
+        "runtime": {
+            "python": platform.python_version(),
+            "python_implementation": platform.python_implementation(),
+            "platform": platform.platform(),
+        },
+        "dependencies": _dependency_versions(),
+        "policy_binding": {
+            "canon_hash": LAW_CANON_HASH,
+            "law_semantic_hash": compute_law_semantic_hash(),
+            "modality_matrix_sha256": compute_matrix_hash(),
+        },
+    }
+
+
+def write_provenance_manifest(out_path: Path) -> dict:
+    """Write the standalone provenance manifest as JSON; returns it."""
+    manifest = build_provenance_manifest()
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    return manifest
 
 
 def target_source_url(pdb_id: str) -> str:
@@ -291,6 +531,7 @@ def run_calibration(dataset: dict, out_dir: Path,
     run_manifest = {
         "runner_version": RUNNER_VERSION,
         "run_type": "diagnostic",
+        "calibration_executed": True,
         "purpose": (
             "Document corrected-metric distributions. NOT a "
             "threshold validation: thresholds may only be re-validated via "
@@ -310,8 +551,11 @@ def run_calibration(dataset: dict, out_dir: Path,
         },
         "environment": {
             "python": platform.python_version(),
+            "python_implementation": platform.python_implementation(),
             "platform": platform.platform(),
         },
+        "git": _git_context(),
+        "dependencies": _dependency_versions(),
         "dataset_definition_sha256": _sha256(
             json.dumps(dataset, sort_keys=True).encode("utf-8")),
         "config": {
@@ -442,7 +686,25 @@ def main(argv: list[str] | None = None) -> int:
                              "(<pdb_id>.pdb); skips network acquisition")
     parser.add_argument("--verify-digests-from", default=None,
                         help="prior coordinate_manifest.json to verify digests against")
+    parser.add_argument("--emit-provenance", default=None, metavar="PATH",
+                        help="write a standalone provenance manifest to PATH "
+                             "and exit 0 without running a calibration "
+                             "(records the tree state faithfully instead "
+                             "of refusing; remotes are credential-stripped)")
     args = parser.parse_args(argv)
+
+    # U9 (Round-11): provenance emission is a RECORD, not an evidence run —
+    # it never refuses a dirty tree, it records it. Useful for CI stamps
+    # and for demonstrating provenance capture without a full run.
+    if args.emit_provenance:
+        manifest = write_provenance_manifest(Path(args.emit_provenance))
+        print(json.dumps({
+            "written": args.emit_provenance,
+            "schema": manifest["schema"],
+            "code_sha": manifest["engine"]["code_sha"],
+            "working_tree_clean": manifest["engine"]["working_tree_clean"],
+        }))
+        return 0
 
     # P0 item 15: evidence runs refuse a dirty engine tree — the recorded
     # code_sha must describe the code that actually measured. (This is

@@ -41,7 +41,12 @@ def test_provenance_records_engine_commit_and_tree_state(tmp_path):
     doc, _ = run_calibration(DATASET, out, source_dir=_coord_dir(tmp_path))
     rm = json.loads((out / "run_manifest.json").read_text())
     assert rm["code_sha"]  # the engine repo's HEAD
-    assert "IMPORTED tos engine package" in rm["code_sha_source"]
+    # Provenance v2: the source is the repo that OWNS the imported tos
+    # package (containment + git tracking verified), not merely one that
+    # contains it.
+    assert "OWNS the imported tos engine package" in rm["code_sha_source"]
+    assert rm["source_provenance"] == "git-checkout"
+    assert rm["calibration_executed"] is True
     assert isinstance(rm["working_tree_clean"], bool)
     assert isinstance(rm["tree_status"], list)
 
