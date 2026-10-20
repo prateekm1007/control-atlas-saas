@@ -56,6 +56,9 @@ objects: {"entry_id": str, "branch": str, "sha": 40-hex or null, "class": str,
                                      because the branch was rebuilt/advanced through a
                                      documented, no-force-push-replacement event)
   CONFIRMED-BY-LATER-EVIDENCE       (intent confirmed by evidence outside the log)
+  SUPERSEDED-BY-CORRECTION-ENTRY    (a later correction entry supersedes this record's
+                                     remote_sha — e.g. a hand-typed SHA tail captured
+                                     wrongly; the correction entry is authoritative)
 
 Offline test mode: --fixture FILE supplies canned API responses:
   {"refs": {"<branch>": "<sha>"}, "commits": {"<sha>": 200}, "compare": {"<base>...<head>": "ahead"}}
@@ -75,7 +78,8 @@ LINE = re.compile(r"^## (\S+) \| ([^|]+) \| ([^|]+) \| ([^|]+?)(?:\s\|\s*RECONST
 PLACEHOLDER_SHAS = {"self-referential-tip", "TBD", "PENDING", "<sha>", "sha", "RECORDED-BELOW"}
 FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
 KV = re.compile(r"(\b[a-z][a-z0-9_-]*)=(\S+)")
-RECON_CLASSES = {"SUPERSEDED-BY-DOCUMENTED-REBUILD", "CONFIRMED-BY-LATER-EVIDENCE"}
+RECON_CLASSES = {"SUPERSEDED-BY-DOCUMENTED-REBUILD", "CONFIRMED-BY-LATER-EVIDENCE",
+                 "SUPERSEDED-BY-CORRECTION-ENTRY"}
 
 
 def parse_ts(s: str):
@@ -268,12 +272,19 @@ def check_pushlog_schema(path: str, slug: str | None = None, token: str | None =
     confirms_by_branch: dict[str, list[dict]] = {}
     for e in confirms:
         kv = _kv(e["subject"])
+        branch = kv.get("branch", "")
         sha = kv.get("remote_sha") or kv.get("sha")
-        if not sha or sha.lower() in PLACEHOLDER_SHAS or not FULL_SHA.match(sha):
+        if (not sha or sha.lower() in PLACEHOLDER_SHAS or not FULL_SHA.match(sha))                 and (e["id"], branch) not in recon:
             findings.append(f"FAIL: {path}:{e['line']}: CONFIRM entry {e['id']} carries "
                             f"{sha!r} instead of the real 40-hex SHA (truthfulness violated)")
             continue
-        confirms_by_branch.setdefault(kv.get("branch", ""), []).append(e)
+        if (e["id"], branch) in recon:
+            notes.append(f"OK: {path}:{e['line']}: CONFIRM entry {e['id']} is reconciled "
+                         f"(a correction entry is authoritative); truthfulness/verification "
+                         f"of the defective value is superseded")
+            if not (sha and FULL_SHA.match(sha)):
+                continue  # malformed value: excluded from pairing/verification
+        confirms_by_branch.setdefault(branch, []).append(e)
 
     # 2. pairing: every push-intent has a LATER confirm for the same branch,
     #    unless reconciled, or it is the branch's final intent confirmed live.
@@ -346,6 +357,8 @@ def check_pushlog_schema(path: str, slug: str | None = None, token: str | None =
             if FULL_SHA.match(sha):
                 recorded.append((e, kv.get("branch", ""), sha))
         for e, branch, sha in recorded:
+            if (e["id"], branch) in recon:
+                continue  # superseded by a correction entry; the recorded value is not evidence
             state, detail = _sha_on_remote(slug, sha, token, fixture)
             if state == "error":
                 findings.append(f"FAIL: {path}:{e['line']}: VERIFICATION_FAILURE for {sha} "

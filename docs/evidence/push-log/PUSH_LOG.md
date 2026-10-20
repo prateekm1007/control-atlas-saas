@@ -278,3 +278,18 @@
   P-029-CONFIRM suppression entry (class CONFIRMED-BY-LATER-EVIDENCE on this branch's
   checker version; pointer P-037-CONFIRM); this INTENT; manifest refresh. Single-writer
   guard: remote tip expected exactly 6fdabbfd681793c8a9c04e8c861bfb9cb3446bfa; push ABORTED on deviation.
+
+## 2026-10-20T14:54:55Z | P-040-CONFIRM | push-confirm | branch=activation/ec21-r18 remote_sha=ea71295be1a86a3fa521c71b060cf26fa2f2da70 credential=OWNER-PAT-1 evidence="git rev-parse ea71295 (captured programmatically; the push-5 tip is an ancestor of the current tip)"
+
+- Push 5 accepted as a fast-forward 6fdabbf -> ea71295be1a86a3fa521c71b060cf26fa2f2da70 (guard held). CI on ea71295be1a86a3fa521c71b060cf26fa2f2da70: EC-21
+  declared-base job SUCCESS; the acceptance gate correctly flagged the malformed
+  P-029-CONFIRM value (41 characters — the transcription defect) as a truthfulness
+  violation; the checker's reconciliation gate now supersedes that defective value
+  (synced from the fix-forward), and this entry completes the P-040 pair.
+
+## 2026-10-20T14:54:55Z | P-042-INTENT | push-intent | branch=activation/ec21-r18 head_at_intent=DEFERRED base=ea71295be1a86a3fa521c71b060cf26fa2f2da70 expected_remote_tip_before_push=ea71295be1a86a3fa521c71b060cf26fa2f2da70 credential=OWNER-PAT-1 authorized_by="Round-18 direction 6 (EC-21) continuation: reconciliation-gated truthfulness synced from the fix-forward; P-040 pair completed"
+
+- Push 6 content (disclosed pre-push): scripts/ci/evidence_sequence_check.py synced from
+  fix/mainline-r18 @ 5539b01 (reconciliation gates the truthfulness check and every
+  remote-verification path); this append; manifest refresh. Single-writer guard: remote
+  tip expected exactly ea71295be1a86a3fa521c71b060cf26fa2f2da70; push ABORTED on deviation.
