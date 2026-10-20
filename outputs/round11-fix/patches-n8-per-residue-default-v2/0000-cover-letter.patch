@@ -1,0 +1,80 @@
+From 4b31a99 N8 v2 cover letter
+From: Z User <z@container>
+Date: Mon, 20 Oct 2026 04:30:00 +0000
+Subject: [PATCH 0/1] N8 v2 (Round-11 audit correction): per-residue
+ alternate-conformer selection is the DEFAULT
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Round-11 audit, failure (3): "the N8 instruction was a per-residue
+DEFAULT; the delivered patch made it opt-in with per_atom as the
+default." v1 (delivered on evidence/round9-r2-2026-10-20 under
+outputs/patches-n8-per-residue-altlocs/) is REJECTED on that point and
+is preserved there byte-identical as the historical record; nothing on
+the prior delivery is rewritten.
+
+This series corrects the default exactly as directed:
+
+- backend/tos/ingestion/processor.py — ALTLOC_POLICY flips from
+  ALTLOC_POLICY_PER_ATOM to ALTLOC_POLICY_PER_RESIDUE. The selection
+  logic itself is UNCHANGED from v1 (same two policies, same selector,
+  same guarantees: exactly one atom per (chain, residue, atom_name)).
+  per_atom remains available as an explicit opt-in
+  (altloc_policy=ALTLOC_POLICY_PER_ATOM) carrying the original P0
+  item 6 semantics byte-for-byte, so pre-N8 deliveries stay comparable.
+  Comments and the IngestionProcessor.run docstring now state the v2
+  default and record that the flip is an audit-directed semantic
+  change, not a silent one.
+- backend/tests/test_altloc_per_residue.py — updated for the new
+  default: test_module_default_is_per_residue (was ..._is_per_atom),
+  test_default_run_matches_explicit_per_residue (was ..._per_atom),
+  test_default_is_chimera_safe_on_chimera_input (NEW: under the v2
+  default the chimera fixture cannot mix conformers), renamed
+  test_per_atom_optin_produces_mixed_conformers (documents the explicit
+  opt-in path), test_cif_default_matches_per_residue +
+  test_cif_per_atom_optin_matches_legacy (was test_cif_default_unchanged),
+  and test_3erd_default_per_residue_asp321_still_conformer_a (was
+  test_3erd_default_unchanged_by_patch; 3ERD ASP A 321 is a 0.50/0.50
+  tie, per-residue totals tie, first-seen ID = A wins, so the pinned
+  P0-era coordinate assertion still holds).
+
+Test evidence (this delivery sandbox, Python 3.12.15, numpy 2.1.3,
+pytest 9.0.2, TOSCANINI_DATA_DIR writable, cwd backend/):
+
+- targeted: `python3 -m pytest tests/test_altloc_selection.py
+  tests/test_altloc_per_residue.py -q` -> 19 passed / 3 failed; all 3
+  failures are the mmCIF tests with ModuleNotFoundError: No module
+  named 'gemmi' (PyPI is unreachable in this sandbox; pip install
+  gemmi fails). The identical 2 CIF tests also error under v1 in this
+  sandbox; the CIF path shares the same _select_conformers selector as
+  the PDB path, and the prior-session v1 run (gemmi present) passed
+  all 20 tests. The 8 pre-existing tests/test_altloc_selection.py
+  tests PASS unchanged under the v2 default — 3ERD ASP A 321 still
+  resolves to conformer A.
+- full suite: `python3 -m pytest -q --continue-on-collection-errors`
+  -> v2: 508 passed / 12 failed / 5 skipped / 1 collection error;
+  base ebc1fd79: 497 passed / 9 failed / 5 skipped / 1 collection
+  error. Diff of per-test failure lists: v2 = base + exactly the 3
+  gemmi-limited CIF tests. ZERO new failures from the default flip.
+  (The 9 base failures and the tos/saas/test_key_store.py collection
+  error are pre-existing in this environment, verified on the clean
+  base in the same session.)
+
+Fresh implementation on top of the v1 content; the lost N8 branch tip
+e9985c6 remains absent everywhere and is not restored or claimed.
+Delivered as a patch series only (owner-gated merge); base
+science/p0-correctness-2026-10-19 @ ebc1fd79.
+
+Series-state verification (this session): `git apply --check` of 0001
+against a clean ebc1fd79 extraction exits 0. The single commit carries
+the FULL corrected implementation relative to that base (v1's content
+with the audit-directed default correction applied); the v1 -> v2
+delta is confined to the policy default constant, its comments/doc-
+strings, and the test file updates listed above.
+
+N8 v2 (2026-10-20)
+---
+ backend/tests/test_altloc_per_residue.py | 225 ++++++++++++++++++
+ backend/tos/ingestion/processor.py       | 135 ++++++++++----
+ 2 files changed, 331 insertions(+), 29 deletions(-)

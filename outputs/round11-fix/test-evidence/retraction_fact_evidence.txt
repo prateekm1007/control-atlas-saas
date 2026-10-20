@@ -1,0 +1,21 @@
+RETRACTION FACT EVIDENCE — captured 2026-10-20T04:20:18Z
+
+1) ls-remote verification (GET-only):
+7e3a3395be2d0719facf5c61ac532a0d347a49d3	refs/heads/evidence/round9-r2-2026-10-20
+2195a048e87dcec4aa63e8dc7981b3bb6d237ca0	refs/heads/main
+
+2) merge-base of the Round-11 delivery branch and main:
+2195a048e87dcec4aa63e8dc7981b3bb6d237ca0
+
+3) system_diagnosis.py:8 on the Round-11 delivery branch (VALUE REDACTED):
+    key = "AIzaSy[REDACTED]"
+
+4) same line on main @ 2195a048 (VALUE REDACTED):
+    key = "AIzaSy[REDACTED]"
+
+5) fail-closed pattern already on science branch scripts/research copy @ 296f10c:
+    # 1. API Key Check — key is read from the environment only, never hardcoded.
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        print("❌ Gemini API: GEMINI_API_KEY is not set. Export it (without printing it) and retry.")
+        sys.exit(1)

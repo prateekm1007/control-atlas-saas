@@ -1,0 +1,129 @@
+COMMAND: TOSCANINI_DATA_DIR=/home/z/my-project/toscanini-test-data python3 -m pytest tests/test_altloc_selection.py tests/test_altloc_per_residue.py -q
+CWD: backend/ on commit 4b31a99 (N8 v2, base science/p0-correctness-2026-10-19 @ ebc1fd79)
+DATE: 2026-10-20T04:18:24Z
+---
+.................FFF..                                                   [100%]
+=================================== FAILURES ===================================
+_______________________ test_cif_per_residue_consistent ________________________
+
+    def test_cif_per_residue_consistent():
+>       s = IngestionProcessor.run(CHIMERA_CIF, "x.cif", "t", "experimental",
+                                   altloc_policy=ALTLOC_POLICY_PER_RESIDUE)
+
+tests/test_altloc_per_residue.py:176: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tos/ingestion/processor.py:203: in run
+    return IngestionProcessor._run_cif(content, altloc_policy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+content = b'data_chimera\nloop_\n_atom_site.group_PDB\n_atom_site.type_symbol\n_atom_site.label_atom_id\n_atom_site.label_alt_id... C CB A XRS A 1 . 10.000 11.000 12.000 0.30 20.0 10 A 1\nATOM C CB B XRS A 1 . 13.000 14.000 15.000 0.70 20.0 10 A 1\n'
+altloc_policy = 'per_residue'
+
+    @staticmethod
+    def _run_cif(content: bytes,
+                 altloc_policy: str = ALTLOC_POLICY) -> "Structure":
+        """mmCIF ingestion via gemmi (P0 item 13: no in-house CIF parser).
+    
+        Reads the ``_atom_site`` table through gemmi's CIF API and maps it
+        onto the same Atom/Structure semantics as the PDB path:
+          - group_PDB ATOM rows kept; HETATM rows kept only when in
+            MODIFIED_RESIDUE_PARENTS and mapped to the parent amino acid;
+          - hydrogens/deuteriums excluded;
+          - one conformer per atom: highest occupancy, then first;
+          - label_seq_id carried on every atom so residue ordering uses
+            the authoritative mmCIF label sequence (P0 item 4);
+          - auth_* identifiers preferred, label_* fallback;
+          - source_residue_count counts polymer + retained-het residues;
+          - classification from _exptl.method when present (AFDB files
+            carry none -> predicted).
+        """
+>       import gemmi
+E       ModuleNotFoundError: No module named 'gemmi'
+
+tos/ingestion/processor.py:224: ModuleNotFoundError
+_____________________ test_cif_default_matches_per_residue _____________________
+
+    def test_cif_default_matches_per_residue():
+        """mmCIF default (v2) is per_residue: B wins the residue (1.10 vs
+        0.90), so CA and CB both come from B."""
+>       s = IngestionProcessor.run(CHIMERA_CIF, "x.cif", "t", "experimental")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_altloc_per_residue.py:186: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tos/ingestion/processor.py:203: in run
+    return IngestionProcessor._run_cif(content, altloc_policy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+content = b'data_chimera\nloop_\n_atom_site.group_PDB\n_atom_site.type_symbol\n_atom_site.label_atom_id\n_atom_site.label_alt_id... C CB A XRS A 1 . 10.000 11.000 12.000 0.30 20.0 10 A 1\nATOM C CB B XRS A 1 . 13.000 14.000 15.000 0.70 20.0 10 A 1\n'
+altloc_policy = 'per_residue'
+
+    @staticmethod
+    def _run_cif(content: bytes,
+                 altloc_policy: str = ALTLOC_POLICY) -> "Structure":
+        """mmCIF ingestion via gemmi (P0 item 13: no in-house CIF parser).
+    
+        Reads the ``_atom_site`` table through gemmi's CIF API and maps it
+        onto the same Atom/Structure semantics as the PDB path:
+          - group_PDB ATOM rows kept; HETATM rows kept only when in
+            MODIFIED_RESIDUE_PARENTS and mapped to the parent amino acid;
+          - hydrogens/deuteriums excluded;
+          - one conformer per atom: highest occupancy, then first;
+          - label_seq_id carried on every atom so residue ordering uses
+            the authoritative mmCIF label sequence (P0 item 4);
+          - auth_* identifiers preferred, label_* fallback;
+          - source_residue_count counts polymer + retained-het residues;
+          - classification from _exptl.method when present (AFDB files
+            carry none -> predicted).
+        """
+>       import gemmi
+E       ModuleNotFoundError: No module named 'gemmi'
+
+tos/ingestion/processor.py:224: ModuleNotFoundError
+____________________ test_cif_per_atom_optin_matches_legacy ____________________
+
+    def test_cif_per_atom_optin_matches_legacy():
+        """mmCIF explicit per_atom opt-in keeps the original P0 item 6
+        semantics: CA from conformer A (0.60), CB from conformer B (0.70)."""
+>       s = IngestionProcessor.run(CHIMERA_CIF, "x.cif", "t", "experimental",
+                                   altloc_policy=ALTLOC_POLICY_PER_ATOM)
+
+tests/test_altloc_per_residue.py:194: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tos/ingestion/processor.py:203: in run
+    return IngestionProcessor._run_cif(content, altloc_policy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+content = b'data_chimera\nloop_\n_atom_site.group_PDB\n_atom_site.type_symbol\n_atom_site.label_atom_id\n_atom_site.label_alt_id... C CB A XRS A 1 . 10.000 11.000 12.000 0.30 20.0 10 A 1\nATOM C CB B XRS A 1 . 13.000 14.000 15.000 0.70 20.0 10 A 1\n'
+altloc_policy = 'per_atom'
+
+    @staticmethod
+    def _run_cif(content: bytes,
+                 altloc_policy: str = ALTLOC_POLICY) -> "Structure":
+        """mmCIF ingestion via gemmi (P0 item 13: no in-house CIF parser).
+    
+        Reads the ``_atom_site`` table through gemmi's CIF API and maps it
+        onto the same Atom/Structure semantics as the PDB path:
+          - group_PDB ATOM rows kept; HETATM rows kept only when in
+            MODIFIED_RESIDUE_PARENTS and mapped to the parent amino acid;
+          - hydrogens/deuteriums excluded;
+          - one conformer per atom: highest occupancy, then first;
+          - label_seq_id carried on every atom so residue ordering uses
+            the authoritative mmCIF label sequence (P0 item 4);
+          - auth_* identifiers preferred, label_* fallback;
+          - source_residue_count counts polymer + retained-het residues;
+          - classification from _exptl.method when present (AFDB files
+            carry none -> predicted).
+        """
+>       import gemmi
+E       ModuleNotFoundError: No module named 'gemmi'
+
+tos/ingestion/processor.py:224: ModuleNotFoundError
+=========================== short test summary info ============================
+FAILED tests/test_altloc_per_residue.py::test_cif_per_residue_consistent - Mo...
+FAILED tests/test_altloc_per_residue.py::test_cif_default_matches_per_residue
+FAILED tests/test_altloc_per_residue.py::test_cif_per_atom_optin_matches_legacy
+3 failed, 19 passed in 1.50s

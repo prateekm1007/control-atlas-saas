@@ -1,0 +1,16 @@
+COMMAND: TOSCANINI_DATA_DIR=... python3 -m pytest -q --continue-on-collection-errors  (full backend suite, clean base)
+COMMIT: ebc1fd79 (science/p0-correctness-2026-10-19 tip)
+DATE: 2026-10-20T04:19:06Z
+---
+ERROR tos/saas/test_key_store.py
+9 failed, 497 passed, 5 skipped, 1222 warnings, 1 error in 10.36s
+=== FAILURE LIST base (sorted) ===
+FAILED tests/test_afdb_acquisition.py::test_cif_experimental_classification
+FAILED tests/test_afdb_acquisition.py::test_cif_ingestion_semantics - ModuleN...
+FAILED tests/test_afdb_acquisition.py::test_cif_label_seq_orders_residues - M...
+FAILED tests/test_afdb_acquisition.py::test_run_autodetects_format - ModuleNo...
+FAILED tests/test_b6_regression.py::TestUsageWidget::test_widget_empty_key_returns_none
+FAILED tests/test_b6_regression.py::TestUsageWidget::test_widget_returns_data_on_200
+FAILED tests/test_b6_regression.py::TestUsageWidget::test_widget_returns_none_on_401
+FAILED tests/test_b6_regression.py::TestUsageWidget::test_widget_returns_none_on_connection_error
+FAILED tests/test_runner_hardening.py::test_measure_target_uses_content_detected_format
