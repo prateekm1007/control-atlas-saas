@@ -187,6 +187,8 @@ jobs:
             --check-tests \
             --evidence-out "$RUNNER_TEMP/ec20_evidence.json"
       - name: Lint the PR body's Status-summary vocabulary
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           printf '{"runs": {}}' > /dev/null  # RUN_PASS claims in bodies need the manifest; built below
           python3 - <<'PY'
@@ -265,12 +267,21 @@ jobs:
       - name: Positive control - a seeded DOCUMENTED fake key MUST be detected
         run: |
           set -uo pipefail
-          # Safe fixture: the documented example key pattern (never a real
+          # Safe fixture: a SYNTHETIC AWS-shaped token, assembled at runtime
+          # from two deliberately non-adjacent quoted parts (never a real
           # credential; never committed to this repository; --redact keeps the
-          # value out of the log).
+          # assembled value out of the log). Because the parts are never
+          # adjacent in this tracked file, the workflow itself cannot match
+          # the aws-access-token rule and pollute the real-repo scans below.
+          # (Defect history: the first version seeded Amazon's DOCUMENTED
+          # example key, which gitleaks 8.30.1's default config allowlists,
+          # so the control failed closed on runs 39438362567 et al.; root-
+          # caused from Actions job log 118681317783 plus local probe runs
+          # with the same pinned binary; fixed in the Round-19 follow-up.)
           rm -rf /tmp/seedrepo && mkdir -p /tmp/seedrepo && cd /tmp/seedrepo
           git init -q && git config user.email t@t && git config user.name t
-          printf 'aws_access_key_id = AKIAIOSFODNN7EXAMPLE\n' > fixture.txt
+          SEED_AWS_TOKEN="AKIA""T7W2QZ5XN4PRM3KV"
+          printf 'aws_access_key_id = %s\n' "$SEED_AWS_TOKEN" > fixture.txt
           git add fixture.txt && git commit -qm "seeded fixture"
           set +e
           /tmp/gitleaks detect --source . --log-opts="--all" --redact --verbose > /tmp/seed_scan.log 2>&1
