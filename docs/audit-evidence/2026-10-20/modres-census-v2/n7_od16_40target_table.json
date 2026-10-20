@@ -1,0 +1,1872 @@
+{
+ "generated_utc": "2026-10-19T20:06:58.725502+00:00",
+ "dataset_v23_blob_sha1": "3a5358374b2037b9475bd2d494754944485da5ac",
+ "classification_rules": {
+  "c1": "identity_error = recorded desc names a different molecular system; state_error = recorded desc asserts a contradicted ligation/assembly state; imprecise-but-true recorded as notes only",
+  "c2_resolution": "recorded vs official resolution_combined[0]; strict |diff|>0.005 A; tolerant |diff|>0.01 A",
+  "c2_method": "category-implied method (xray->X-RAY DIFFRACTION, cryo_em->ELECTRON MICROSCOPY, nmr->SOLUTION NMR) vs official EXPDTL",
+  "c3": "entity class of the ACTUAL acquired structure vs a protein-only calibration protocol",
+  "c4": "PDB record-level parse failures; anomalies informational; measurement re-run NOT performed (hard stop)",
+  "c5": "fresh SHA-256 of https://files.rcsb.org/download/{id}.pdb vs v24 coordinate_manifest.json SHA-256"
+ },
+ "totals": {
+  "experimental_total": 40,
+  "c1_descriptive_errors": 22,
+  "c1_identity_errors": 21,
+  "c1_state_errors": 1,
+  "c2_method_mismatches": 5,
+  "c2_resolution_mismatches_strict": 24,
+  "c2_resolution_mismatches_tol001": 23,
+  "c2_method_or_resolution_strict": 26,
+  "c2_method_or_resolution_tol001": 25,
+  "c3_nucleic_acid_only": 1,
+  "c3_mixed_protein_nucleic": 1,
+  "c4_parse_failures": 0,
+  "c5_coordinate_byte_mismatches": 0,
+  "any_metadata_defect": 32,
+  "fully_clean_rows": [
+   "1AKE",
+   "1AON",
+   "1D3Z",
+   "1GB1",
+   "1GFL",
+   "2JOF",
+   "2LYZ",
+   "3LZM"
+  ]
+ },
+ "rows": [
+  {
+   "pdb_id": "1AKE",
+   "recorded_category": "xray_medium",
+   "recorded_desc": "Adenylate kinase",
+   "recorded_resolution": 2.0,
+   "official_title": "STRUCTURE OF THE COMPLEX BETWEEN ADENYLATE KINASE FROM ESCHERICHIA COLI AND THE INHIBITOR AP5A REFINED AT 1.9 ANGSTROMS RESOLUTION: A MODEL FOR A CATALYTIC TRANSITION STATE",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 2.0,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "ADENYLATE KINASE"
+    }
+   ],
+   "deposited_at": "1991-11-08T00:00:00.000+00:00",
+   "revision_at": "2024-12-25T00:00:00.000+00:00",
+   "c1_descriptive": "match",
+   "c1_rationale": "adenylate kinase = official title",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": false,
+   "c2_resolution_mismatch_tol001": false,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [
+     "A",
+     "B"
+    ],
+    "insertion_codes": [],
+    "n_atom": 3317,
+    "n_hetatm": 499
+   },
+   "c5_coordinate_sha256_fresh": "651e952f55f1317f50f4e82b7f0e99053397032cd8da5b2896f79d0af9f619a9",
+   "c5_coordinate_sha256_v24": "651e952f55f1317f50f4e82b7f0e99053397032cd8da5b2896f79d0af9f619a9",
+   "c5_bytes_fresh": 357777,
+   "c5_bytes_v24": 357777,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "54d17f4eccc7c9244e66d1b5d6c311be6ac65509bdfe736898339491ddaf900a"
+  },
+  {
+   "pdb_id": "1AON",
+   "recorded_category": "xray_low",
+   "recorded_desc": "GroEL-GroES complex",
+   "recorded_resolution": 3.0,
+   "official_title": "CRYSTAL STRUCTURE OF THE ASYMMETRIC CHAPERONIN COMPLEX GROEL/GROES/(ADP)7",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 3.0,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "GROEL"
+    },
+    {
+     "id": 2,
+     "type": "polypeptide(L)",
+     "desc": "GROEL/GROES COMPLEX"
+    }
+   ],
+   "deposited_at": "1997-07-08T00:00:00.000+00:00",
+   "revision_at": "2024-05-22T00:00:00.000+00:00",
+   "c1_descriptive": "match",
+   "c1_rationale": "GroEL/GroES complex = official title",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": false,
+   "c2_resolution_mismatch_tol001": false,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 58674,
+    "n_hetatm": 196
+   },
+   "c5_coordinate_sha256_fresh": "5cddcf0ebe222238073f73f4fcc0f579a090389f9c3d152399b4e41ca4a0ed3e",
+   "c5_coordinate_sha256_v24": "5cddcf0ebe222238073f73f4fcc0f579a090389f9c3d152399b4e41ca4a0ed3e",
+   "c5_bytes_fresh": 4973076,
+   "c5_bytes_v24": 4973076,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "01b5d00ac0422c3d3535d4ec6489d947760281e1a8a724d21ffaea6b9dea1118"
+  },
+  {
+   "pdb_id": "1BPI",
+   "recorded_category": "xray_ultrahigh",
+   "recorded_desc": "BPTI",
+   "recorded_resolution": 1.1,
+   "official_title": "THE STRUCTURE OF BOVINE PANCREATIC TRYPSIN INHIBITOR AT 125K: DEFINITION OF CARBOXYL-TERMINAL RESIDUES GLYCINE-57 AND ALANINE-58",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 1.09,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "BOVINE PANCREATIC TRYPSIN INHIBITOR"
+    }
+   ],
+   "deposited_at": "1995-02-18T00:00:00.000+00:00",
+   "revision_at": "2024-10-23T00:00:00.000+00:00",
+   "c1_descriptive": "match",
+   "c1_rationale": "BPTI is the standard abbreviation of the official title",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": false,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [
+     "A",
+     "B"
+    ],
+    "insertion_codes": [],
+    "n_atom": 460,
+    "n_hetatm": 177
+   },
+   "c5_coordinate_sha256_fresh": "2289dd009b6eae05ac142836277e23098e178185df9441e2a3b9c1bed7dd75df",
+   "c5_coordinate_sha256_v24": "2289dd009b6eae05ac142836277e23098e178185df9441e2a3b9c1bed7dd75df",
+   "c5_bytes_fresh": 81324,
+   "c5_bytes_v24": 81324,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "22ac73fb25dc0e40e99cb50b93b228dd76709240f6a2143ae1041f766cfc9175"
+  },
+  {
+   "pdb_id": "1BRS",
+   "recorded_category": "xray_low",
+   "recorded_desc": "Barnase-barstar",
+   "recorded_resolution": 2.8,
+   "official_title": "PROTEIN-PROTEIN RECOGNITION: CRYSTAL STRUCTURAL ANALYSIS OF A BARNASE-BARSTAR COMPLEX AT 2.0-A RESOLUTION",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 2.0,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "BARNASE"
+    },
+    {
+     "id": 2,
+     "type": "polypeptide(L)",
+     "desc": "BARSTAR"
+    }
+   ],
+   "deposited_at": "1994-03-11T00:00:00.000+00:00",
+   "revision_at": "2024-02-07T00:00:00.000+00:00",
+   "c1_descriptive": "match",
+   "c1_rationale": "barnase-barstar complex = official title",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [
+     "A",
+     "B"
+    ],
+    "insertion_codes": [],
+    "n_atom": 4640,
+    "n_hetatm": 513
+   },
+   "c5_coordinate_sha256_fresh": "0076aae54252706a8c8c02f7b1e71ce2394b0e928b413590b4ac12aade9e8f6c",
+   "c5_coordinate_sha256_v24": "0076aae54252706a8c8c02f7b1e71ce2394b0e928b413590b4ac12aade9e8f6c",
+   "c5_bytes_fresh": 466965,
+   "c5_bytes_v24": 466965,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "ba1179fdfceb5c28e004c69fd463a1a0934d6125b3139ad95e6abb9cc12c65c4"
+  },
+  {
+   "pdb_id": "1D3Z",
+   "recorded_category": "nmr",
+   "recorded_desc": "Ubiquitin NMR",
+   "recorded_resolution": null,
+   "official_title": "UBIQUITIN NMR STRUCTURE",
+   "official_methods": [
+    "SOLUTION NMR"
+   ],
+   "official_resolution": null,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "PROTEIN (UBIQUITIN)"
+    }
+   ],
+   "deposited_at": "1999-10-01T00:00:00.000+00:00",
+   "revision_at": "2024-05-22T00:00:00.000+00:00",
+   "c1_descriptive": "match",
+   "c1_rationale": "ubiquitin NMR = official title",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": false,
+   "c2_resolution_mismatch_tol001": false,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 10,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 12310,
+    "n_hetatm": 0
+   },
+   "c5_coordinate_sha256_fresh": "21099cb88231455fdfab4095dddfadcc85cc4213e105cf5f9cfff2ca21993378",
+   "c5_coordinate_sha256_v24": "21099cb88231455fdfab4095dddfadcc85cc4213e105cf5f9cfff2ca21993378",
+   "c5_bytes_fresh": 1015821,
+   "c5_bytes_v24": 1015821,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "b7cbea751162966d06e63c6df271ad046291ad777b9b924891429f8e79c809bd"
+  },
+  {
+   "pdb_id": "1DDL",
+   "recorded_category": "xray_low",
+   "recorded_desc": "Dihydroorotase",
+   "recorded_resolution": 3.5,
+   "official_title": "DESMODIUM YELLOW MOTTLE TYMOVIRUS",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 2.7,
+   "official_entity_class": "mixed_protein_nucleic_acid",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polyribonucleotide",
+     "desc": "RNA (5'-R(P*UP*UP*UP*UP*UP*UP*U)-3')"
+    },
+    {
+     "id": 2,
+     "type": "polyribonucleotide",
+     "desc": "RNA (5'-R(P*UP*U)-3')"
+    },
+    {
+     "id": 3,
+     "type": "polypeptide(L)",
+     "desc": "DESMODIUM YELLOW MOTTLE VIRUS"
+    }
+   ],
+   "deposited_at": "1999-11-10T00:00:00.000+00:00",
+   "revision_at": "2024-04-03T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'Dihydroorotase'; official structure is Desmodium yellow mottle tymovirus (virus particle, protein+RNA)",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "INELIGIBLE_BY_DEFAULT_pending_criteria",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [
+     "A",
+     "B"
+    ],
+    "insertion_codes": [],
+    "n_atom": 4385,
+    "n_hetatm": 285
+   },
+   "c5_coordinate_sha256_fresh": "352e1d667bfabde81ddcada73592b0952725a907dd5a154d2e175227c49decd3",
+   "c5_coordinate_sha256_v24": "352e1d667bfabde81ddcada73592b0952725a907dd5a154d2e175227c49decd3",
+   "c5_bytes_fresh": 441369,
+   "c5_bytes_v24": 441369,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "30926f6f320e2ab745561c7ca5317f6c9b96ef4984bbd8ca335dc677056c1452"
+  },
+  {
+   "pdb_id": "1EJG",
+   "recorded_category": "xray_ultrahigh",
+   "recorded_desc": "Cholesterol oxidase",
+   "recorded_resolution": 0.54,
+   "official_title": "CRAMBIN AT ULTRA-HIGH RESOLUTION: VALENCE ELECTRON DENSITY.",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 0.54,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "CRAMBIN (PRO22,SER22/LEU25,ILE25)"
+    }
+   ],
+   "deposited_at": "2000-03-02T00:00:00.000+00:00",
+   "revision_at": "2024-10-30T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'Cholesterol oxidase'; official structure is crambin [AUDITOR-CORROBORATED]",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": false,
+   "c2_resolution_mismatch_tol001": false,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [
+     "A",
+     "B",
+     "C"
+    ],
+    "insertion_codes": [],
+    "n_atom": 843,
+    "n_hetatm": 0
+   },
+   "c5_coordinate_sha256_fresh": "115e25b3c80a72b51cda981575f9917309140c5c4249f81bcc0ad245f17c6f18",
+   "c5_coordinate_sha256_v24": "115e25b3c80a72b51cda981575f9917309140c5c4249f81bcc0ad245f17c6f18",
+   "c5_bytes_fresh": 124416,
+   "c5_bytes_v24": 124416,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "82475838e58753b39f3e65e8eea1a5b69eea5492fdcf69a9fc9c938245130230"
+  },
+  {
+   "pdb_id": "1FIN",
+   "recorded_category": "xray_low",
+   "recorded_desc": "CDK2-cyclin A",
+   "recorded_resolution": 2.8,
+   "official_title": "CYCLIN A-CYCLIN-DEPENDENT KINASE 2 COMPLEX",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 2.3,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "CYCLIN-DEPENDENT KINASE 2"
+    },
+    {
+     "id": 2,
+     "type": "polypeptide(L)",
+     "desc": "CYCLIN A"
+    }
+   ],
+   "deposited_at": "1996-07-14T00:00:00.000+00:00",
+   "revision_at": "2024-02-07T00:00:00.000+00:00",
+   "c1_descriptive": "match",
+   "c1_rationale": "CDK2-cyclin A = cyclin A-CDK2 complex (same complex, component order swapped)",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 8998,
+    "n_hetatm": 478
+   },
+   "c5_coordinate_sha256_fresh": "12f7920d265a08c0145152e6f960d942a17dd947585fab0470869111e8136fca",
+   "c5_coordinate_sha256_v24": "12f7920d265a08c0145152e6f960d942a17dd947585fab0470869111e8136fca",
+   "c5_bytes_fresh": 817776,
+   "c5_bytes_v24": 817776,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "a71a8736d02ee0d27e997d693d5b25a8ce9a68668f79591fe76d78ca7c95d08c"
+  },
+  {
+   "pdb_id": "1GB1",
+   "recorded_category": "nmr",
+   "recorded_desc": "Protein G B1 NMR",
+   "recorded_resolution": null,
+   "official_title": "A NOVEL, HIGHLY STABLE FOLD OF THE IMMUNOGLOBULIN BINDING DOMAIN OF STREPTOCOCCAL PROTEIN G",
+   "official_methods": [
+    "SOLUTION NMR"
+   ],
+   "official_resolution": null,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "PROTEIN G"
+    }
+   ],
+   "deposited_at": "1991-05-15T00:00:00.000+00:00",
+   "revision_at": "2024-05-22T00:00:00.000+00:00",
+   "c1_descriptive": "match",
+   "c1_rationale": "protein G B1 = immunoglobulin-binding domain of protein G",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": false,
+   "c2_resolution_mismatch_tol001": false,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 60,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 51300,
+    "n_hetatm": 0
+   },
+   "c5_coordinate_sha256_fresh": "26ad823df283b7b0ce384fdb9ab12cf103cacd61fceb12780d8843189a93133a",
+   "c5_coordinate_sha256_v24": "26ad823df283b7b0ce384fdb9ab12cf103cacd61fceb12780d8843189a93133a",
+   "c5_bytes_fresh": 4197258,
+   "c5_bytes_v24": 4197258,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "d0758798f9e8b4b734a81df9826577e64f2e1a032cee29de50d0cea7075b8361"
+  },
+  {
+   "pdb_id": "1GCI",
+   "recorded_category": "xray_ultrahigh",
+   "recorded_desc": "Glucose isomerase",
+   "recorded_resolution": 1.1,
+   "official_title": "THE 0.78 ANGSTROMS STRUCTURE OF A SERINE PROTEASE-BACILLUS LENTUS SUBTILISIN",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 0.78,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "SUBTILISIN"
+    }
+   ],
+   "deposited_at": "1998-09-02T00:00:00.000+00:00",
+   "revision_at": "2024-05-22T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'Glucose isomerase'; official structure is a serine protease (Bacillus lentus subtilisin) at 0.78 A",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [
+     "A",
+     "B",
+     "C"
+    ],
+    "insertion_codes": [],
+    "n_atom": 3788,
+    "n_hetatm": 397
+   },
+   "c5_coordinate_sha256_fresh": "67155b6bd0085c6cbf1724082cfee040044a61672be536b93d3a191eac7a1219",
+   "c5_coordinate_sha256_v24": "67155b6bd0085c6cbf1724082cfee040044a61672be536b93d3a191eac7a1219",
+   "c5_bytes_fresh": 717660,
+   "c5_bytes_v24": 717660,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "73f957fa84f56fc28ac71e32e8156a6c511729bd3d2556603c994dedffa7e12d"
+  },
+  {
+   "pdb_id": "1GFL",
+   "recorded_category": "xray_medium",
+   "recorded_desc": "GFP",
+   "recorded_resolution": 1.9,
+   "official_title": "STRUCTURE OF GREEN FLUORESCENT PROTEIN",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 1.9,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "GREEN FLUORESCENT PROTEIN"
+    }
+   ],
+   "deposited_at": "1996-08-23T00:00:00.000+00:00",
+   "revision_at": "2024-10-23T00:00:00.000+00:00",
+   "c1_descriptive": "match",
+   "c1_rationale": "GFP = green fluorescent protein",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": false,
+   "c2_resolution_mismatch_tol001": false,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 3650,
+    "n_hetatm": 300
+   },
+   "c5_coordinate_sha256_fresh": "60eb370ad1a2c7c63382399d8655e0448fc29acc2a436e1a6112a5d599390d6f",
+   "c5_coordinate_sha256_v24": "60eb370ad1a2c7c63382399d8655e0448fc29acc2a436e1a6112a5d599390d6f",
+   "c5_bytes_fresh": 360126,
+   "c5_bytes_v24": 360126,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "273833bd2ee89bf631973d40ac96273ab5195bee79bba9205552d44aab408d2f"
+  },
+  {
+   "pdb_id": "1HHO",
+   "recorded_category": "xray_medium",
+   "recorded_desc": "Deoxyhemoglobin",
+   "recorded_resolution": 2.1,
+   "official_title": "STRUCTURE OF HUMAN OXYHAEMOGLOBIN AT 2.1 ANGSTROMS RESOLUTION",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 2.1,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "HEMOGLOBIN A (OXY) (ALPHA CHAIN)"
+    },
+    {
+     "id": 2,
+     "type": "polypeptide(L)",
+     "desc": "HEMOGLOBIN A (OXY) (BETA CHAIN)"
+    }
+   ],
+   "deposited_at": "1983-06-10T00:00:00.000+00:00",
+   "revision_at": "2026-08-12T00:00:00.000+00:00",
+   "c1_descriptive": "state_error",
+   "c1_rationale": "recorded 'Deoxyhemoglobin'; official structure is human OXYhaemoglobin (ligation state contradicted)",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": false,
+   "c2_resolution_mismatch_tol001": false,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 2192,
+    "n_hetatm": 204
+   },
+   "c5_coordinate_sha256_fresh": "f2d60a04ac027f55f20295790197fa31b290fe8ddaca6c1287ce373fcb040ed1",
+   "c5_coordinate_sha256_v24": "f2d60a04ac027f55f20295790197fa31b290fe8ddaca6c1287ce373fcb040ed1",
+   "c5_bytes_fresh": 244296,
+   "c5_bytes_v24": 244296,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "75f8e5ebedd723286b2cb53ee10852adbc791414cc2535ea6496b3adedc26275"
+  },
+  {
+   "pdb_id": "1I0T",
+   "recorded_category": "xray_ultrahigh",
+   "recorded_desc": "Ferredoxin",
+   "recorded_resolution": 0.89,
+   "official_title": "0.6 A STRUCTURE OF Z-DNA CGCGCG",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 0.6,
+   "official_entity_class": "nucleic_acid_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polydeoxyribonucleotide",
+     "desc": "5'-D(*CP*GP*CP*GP*CP*G)-3'"
+    }
+   ],
+   "deposited_at": "2001-01-29T00:00:00.000+00:00",
+   "revision_at": "2024-02-07T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'Ferredoxin'; official structure is Z-DNA hexamer CGCGCG (nucleic acid, not a protein) [AUDITOR-CORROBORATED]",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "INELIGIBLE_protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 240,
+    "n_hetatm": 54
+   },
+   "c5_coordinate_sha256_fresh": "d1349a882000fc684600ebc2695d25333dfe5325504bc597aaa022213662ff6b",
+   "c5_coordinate_sha256_v24": "d1349a882000fc684600ebc2695d25333dfe5325504bc597aaa022213662ff6b",
+   "c5_bytes_fresh": 49572,
+   "c5_bytes_v24": 49572,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "62ae7c59e81ada354ef0f2254db3371c48cbb06e75b45d2b0420e90bbdf0465c"
+  },
+  {
+   "pdb_id": "1L2Y",
+   "recorded_category": "nmr",
+   "recorded_desc": "Villin headpiece NMR",
+   "recorded_resolution": null,
+   "official_title": "NMR Structure of Trp-Cage Miniprotein Construct TC5b",
+   "official_methods": [
+    "SOLUTION NMR"
+   ],
+   "official_resolution": null,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "TC5b"
+    }
+   ],
+   "deposited_at": "2002-02-25T00:00:00.000+00:00",
+   "revision_at": "2024-05-08T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'Villin headpiece'; official structure is Trp-cage miniprotein TC5b",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": false,
+   "c2_resolution_mismatch_tol001": false,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 38,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 11552,
+    "n_hetatm": 0
+   },
+   "c5_coordinate_sha256_fresh": "5d1bbb545a312dfff1ae1e64b6d8addecb2f561ddc4011aeb5bee9d1dfcd4438",
+   "c5_coordinate_sha256_v24": "5d1bbb545a312dfff1ae1e64b6d8addecb2f561ddc4011aeb5bee9d1dfcd4438",
+   "c5_bytes_fresh": 959202,
+   "c5_bytes_v24": 959202,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "03aae84eaf542e34f8a8ba331967499f1f6ab047592b08db0920f98643e0bcc1"
+  },
+  {
+   "pdb_id": "1MBO",
+   "recorded_category": "xray_medium",
+   "recorded_desc": "Myoglobin",
+   "recorded_resolution": 2.0,
+   "official_title": "Structure and refinement of oxymyoglobin at 1.6 angstroms resolution",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 1.6,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "MYOGLOBIN"
+    }
+   ],
+   "deposited_at": "1981-08-27T00:00:00.000+00:00",
+   "revision_at": "2026-08-12T00:00:00.000+00:00",
+   "c1_descriptive": "match",
+   "c1_rationale": "'Myoglobin' does not assert a state; official is oxymyoglobin (imprecision noted, resolution error counted in C2)",
+   "c1_imprecise_note": "official structure is OXYmyoglobin; recorded 'Myoglobin' asserts no state",
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [
+     "A",
+     "B"
+    ],
+    "insertion_codes": [],
+    "n_atom": 1227,
+    "n_hetatm": 384
+   },
+   "c5_coordinate_sha256_fresh": "d7e07c844714def8303adb88ae4ca90d65950bf5b12aacc9dc4de2e3cee6a70c",
+   "c5_coordinate_sha256_v24": "d7e07c844714def8303adb88ae4ca90d65950bf5b12aacc9dc4de2e3cee6a70c",
+   "c5_bytes_fresh": 160947,
+   "c5_bytes_v24": 160947,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "c860a6b684579dd73cbe0f00d983b9c1aa234c3c6292e1e9eb6426d573c7d0df"
+  },
+  {
+   "pdb_id": "1NEK",
+   "recorded_category": "xray_low",
+   "recorded_desc": "Nek2 kinase",
+   "recorded_resolution": 2.8,
+   "official_title": "Complex II (Succinate Dehydrogenase) From E. Coli with ubiquinone bound",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 2.6,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "Succinate dehydrogenase flavoprotein subunit"
+    },
+    {
+     "id": 2,
+     "type": "polypeptide(L)",
+     "desc": "Succinate dehydrogenase iron-sulfur protein"
+    },
+    {
+     "id": 3,
+     "type": "polypeptide(L)",
+     "desc": "Succinate dehydrogenase cytochrome b-556 subunit"
+    },
+    {
+     "id": 4,
+     "type": "polypeptide(L)",
+     "desc": "Succinate dehydrogenase hydrophobic membrane anchor protein"
+    }
+   ],
+   "deposited_at": "2002-12-11T00:00:00.000+00:00",
+   "revision_at": "2026-08-12T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'Nek2 kinase'; official structure is E. coli Complex II / succinate dehydrogenase",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 8297,
+    "n_hetatm": 401
+   },
+   "c5_coordinate_sha256_fresh": "be379bd72d9d0148e664b8592f89e71c4e0cbe2202b8cdbbfb5c4e1a8c08adcd",
+   "c5_coordinate_sha256_v24": "be379bd72d9d0148e664b8592f89e71c4e0cbe2202b8cdbbfb5c4e1a8c08adcd",
+   "c5_bytes_fresh": 803439,
+   "c5_bytes_v24": 803439,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "914721e829789202d7e7c2a2285bb956ac9e53a5290ff0ef0fe098b91c7f094e"
+  },
+  {
+   "pdb_id": "1PPE",
+   "recorded_category": "xray_medium",
+   "recorded_desc": "Porcine elastase",
+   "recorded_resolution": 1.8,
+   "official_title": "THE REFINED 2.0 ANGSTROMS X-RAY CRYSTAL STRUCTURE OF THE COMPLEX FORMED BETWEEN BOVINE BETA-TRYPSIN AND CMTI-I, A TRYPSIN INHIBITOR FROM SQUASH SEEDS (CUCURBITA MAXIMA): TOPOLOGICAL SIMILARITY OF THE SQUASH SEED INHIBITORS WITH THE CARBOXYPEPTIDASE A INHIBITOR FROM POTATOES",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 2.0,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "TRYPSIN"
+    },
+    {
+     "id": 2,
+     "type": "polypeptide(L)",
+     "desc": "TRYPSIN INHIBITOR CMTI-I"
+    }
+   ],
+   "deposited_at": "1991-10-24T00:00:00.000+00:00",
+   "revision_at": "2024-10-23T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'Porcine elastase'; official structure is bovine beta-trypsin + CMTI-I squash-seed inhibitor complex",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [
+     "A"
+    ],
+    "n_atom": 1851,
+    "n_hetatm": 140
+   },
+   "c5_coordinate_sha256_fresh": "fe51b4280055199c644214049f59a752e6124d858eaea29c1a2f721fb03ed0bb",
+   "c5_coordinate_sha256_v24": "fe51b4280055199c644214049f59a752e6124d858eaea29c1a2f721fb03ed0bb",
+   "c5_bytes_fresh": 203958,
+   "c5_bytes_v24": 203958,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "6bd046f81d42223418ea7961a426e6bfab13313135ad5708e3879a4f7b923b93"
+  },
+  {
+   "pdb_id": "1RVS",
+   "recorded_category": "nmr",
+   "recorded_desc": "BPTI NMR",
+   "recorded_resolution": null,
+   "official_title": "STRUCTURE OF TRANSTHYRETIN IN AMYLOID FIBRILS DETERMINED BY SOLID-STATE MAGIC ANGLE SPINNING NMR",
+   "official_methods": [
+    "SOLID-STATE NMR"
+   ],
+   "official_resolution": null,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "Transthyretin"
+    }
+   ],
+   "deposited_at": "2003-12-14T00:00:00.000+00:00",
+   "revision_at": "2024-05-01T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'BPTI NMR'; official structure is transthyretin amyloid fibrils (solid-state MAS NMR)",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": true,
+   "c2_resolution_mismatch_strict": false,
+   "c2_resolution_mismatch_tol001": false,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 20,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 3440,
+    "n_hetatm": 0
+   },
+   "c5_coordinate_sha256_fresh": "5203953c7022cfdf6788d6ec6f76d06d6a28dd5b076b5441a08c13a9dce16bb9",
+   "c5_coordinate_sha256_v24": "5203953c7022cfdf6788d6ec6f76d06d6a28dd5b076b5441a08c13a9dce16bb9",
+   "c5_bytes_fresh": 293382,
+   "c5_bytes_v24": 293382,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "1ef88b879a732bd75672e90e34df0b2919852f1c94a083f6b14a1c1b1a9992bc"
+  },
+  {
+   "pdb_id": "1TEN",
+   "recorded_category": "xray_medium",
+   "recorded_desc": "Tenascin",
+   "recorded_resolution": 1.6,
+   "official_title": "STRUCTURE OF A FIBRONECTIN TYPE III DOMAIN FROM TENASCIN PHASED BY MAD ANALYSIS OF THE SELENOMETHIONYL PROTEIN",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 1.8,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "TENASCIN"
+    }
+   ],
+   "deposited_at": "1992-08-28T00:00:00.000+00:00",
+   "revision_at": "2024-02-14T00:00:00.000+00:00",
+   "c1_descriptive": "match",
+   "c1_rationale": "tenascin = fibronectin type III domain from tenascin",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [
+     "A",
+     "B"
+    ],
+    "insertion_codes": [],
+    "n_atom": 865,
+    "n_hetatm": 216
+   },
+   "c5_coordinate_sha256_fresh": "5b2165e4e495d05e230c6438a8585966578fc70006ec228ac0a0d8b65d06c73c",
+   "c5_coordinate_sha256_v24": "5b2165e4e495d05e230c6438a8585966578fc70006ec228ac0a0d8b65d06c73c",
+   "c5_bytes_fresh": 114858,
+   "c5_bytes_v24": 114858,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "69c598b0df8ee931a64fdf4b6113e5f1082f8866d4b534214bcac1710b4ead3b"
+  },
+  {
+   "pdb_id": "2ACE",
+   "recorded_category": "xray_ultrahigh",
+   "recorded_desc": "Acetylcholinesterase",
+   "recorded_resolution": 1.1,
+   "official_title": "NATIVE ACETYLCHOLINESTERASE (E.C. 3.1.1.7) FROM TORPEDO CALIFORNICA",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 2.5,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "ACETYLCHOLINESTERASE"
+    }
+   ],
+   "deposited_at": "1996-06-23T00:00:00.000+00:00",
+   "revision_at": "2024-10-23T00:00:00.000+00:00",
+   "c1_descriptive": "match",
+   "c1_rationale": "acetylcholinesterase = official title (resolution error counted in C2)",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 4143,
+    "n_hetatm": 214
+   },
+   "c5_coordinate_sha256_fresh": "572b0cdd389537d3ccf1da63392ed0d335ad1a2c8ce0f96685b1a907141468b3",
+   "c5_coordinate_sha256_v24": "572b0cdd389537d3ccf1da63392ed0d335ad1a2c8ce0f96685b1a907141468b3",
+   "c5_bytes_fresh": 400059,
+   "c5_bytes_v24": 400059,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "42ca8d6e5ce42a51dd5f6158f91e7d4e093260dedd67b0a06f2a19a2e8c91613"
+  },
+  {
+   "pdb_id": "2CBA",
+   "recorded_category": "xray_medium",
+   "recorded_desc": "Carbonic anhydrase",
+   "recorded_resolution": 2.0,
+   "official_title": "STRUCTURE OF NATIVE AND APO CARBONIC ANHYDRASE II AND SOME OF ITS ANION-LIGAND COMPLEXES",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 1.54,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "CARBONIC ANHYDRASE II"
+    }
+   ],
+   "deposited_at": "1992-06-01T00:00:00.000+00:00",
+   "revision_at": "2024-10-23T00:00:00.000+00:00",
+   "c1_descriptive": "match",
+   "c1_rationale": "carbonic anhydrase = carbonic anhydrase II (resolution error counted in C2)",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [
+     "A",
+     "B"
+    ],
+    "insertion_codes": [],
+    "n_atom": 2079,
+    "n_hetatm": 221
+   },
+   "c5_coordinate_sha256_fresh": "7862c050b41ed8a867555699c6a0266c7997c06f7552593febf2af9c92c6e5a8",
+   "c5_coordinate_sha256_v24": "7862c050b41ed8a867555699c6a0266c7997c06f7552593febf2af9c92c6e5a8",
+   "c5_bytes_fresh": 219510,
+   "c5_bytes_v24": 219510,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "a98d1d1ca4c59fe3f3612fb78cdcc9227282060db8ac9c8c64c26ad3e35710bd"
+  },
+  {
+   "pdb_id": "2HBS",
+   "recorded_category": "xray_low",
+   "recorded_desc": "Sickle cell hemoglobin",
+   "recorded_resolution": 2.5,
+   "official_title": "THE HIGH RESOLUTION CRYSTAL STRUCTURE OF DEOXYHEMOGLOBIN S",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 2.05,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "HEMOGLOBIN S (DEOXY), ALPHA CHAIN"
+    },
+    {
+     "id": 2,
+     "type": "polypeptide(L)",
+     "desc": "HEMOGLOBIN S (DEOXY), BETA CHAIN"
+    }
+   ],
+   "deposited_at": "1997-05-06T00:00:00.000+00:00",
+   "revision_at": "2026-08-12T00:00:00.000+00:00",
+   "c1_descriptive": "match",
+   "c1_rationale": "sickle-cell hemoglobin = deoxyhemoglobin S (resolution error counted in C2)",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 8760,
+    "n_hetatm": 917
+   },
+   "c5_coordinate_sha256_fresh": "b552883a48cd11bf8bc86785cc7ab5e49203e4c0dae922aaf2cc489421cd5c09",
+   "c5_coordinate_sha256_v24": "b552883a48cd11bf8bc86785cc7ab5e49203e4c0dae922aaf2cc489421cd5c09",
+   "c5_bytes_fresh": 871803,
+   "c5_bytes_v24": 871803,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "c498b718f147aca3787f4957c0b714b1da10a2f2321f514b4d2d55478a15d29b"
+  },
+  {
+   "pdb_id": "2JOF",
+   "recorded_category": "nmr",
+   "recorded_desc": "Trp-cage miniprotein NMR",
+   "recorded_resolution": null,
+   "official_title": "The Trp-cage: Optimizing the Stability of a Globular Miniprotein",
+   "official_methods": [
+    "SOLUTION NMR"
+   ],
+   "official_resolution": null,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "TRP-CAGE"
+    }
+   ],
+   "deposited_at": "2007-03-09T00:00:00.000+00:00",
+   "revision_at": "2024-05-08T00:00:00.000+00:00",
+   "c1_descriptive": "match",
+   "c1_rationale": "Trp-cage miniprotein = official title",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": false,
+   "c2_resolution_mismatch_tol001": false,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 28,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 7952,
+    "n_hetatm": 0
+   },
+   "c5_coordinate_sha256_fresh": "2cb2ebc097abed3cd5004c6d5056e1e8e2a47bc9e7f36433bbfcbfe9cf124332",
+   "c5_coordinate_sha256_v24": "2cb2ebc097abed3cd5004c6d5056e1e8e2a47bc9e7f36433bbfcbfe9cf124332",
+   "c5_bytes_fresh": 664443,
+   "c5_bytes_v24": 664443,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "a72e8c49d33464ca9890e9f8342db12d4f4310624e87a2d32f1ee9ebc721180d"
+  },
+  {
+   "pdb_id": "2KOX",
+   "recorded_category": "nmr",
+   "recorded_desc": "GB1 domain NMR",
+   "recorded_resolution": null,
+   "official_title": "NMR residual dipolar couplings identify long range correlated motions in the backbone of the protein ubiquitin",
+   "official_methods": [
+    "SOLUTION NMR"
+   ],
+   "official_resolution": null,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "Ubiquitin"
+    }
+   ],
+   "deposited_at": "2009-10-02T00:00:00.000+00:00",
+   "revision_at": "2024-05-01T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'GB1 domain NMR'; official structure is ubiquitin (76-residue canonical sequence, entity description 'Ubiquitin')",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": false,
+   "c2_resolution_mismatch_tol001": false,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 640,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 787840,
+    "n_hetatm": 0
+   },
+   "c5_coordinate_sha256_fresh": "d7fadf57dbf9a91d46d4246e22f5cfb5caa5aaf9ad15ba43c8e0bcaf093da939",
+   "c5_coordinate_sha256_v24": "d7fadf57dbf9a91d46d4246e22f5cfb5caa5aaf9ad15ba43c8e0bcaf093da939",
+   "c5_bytes_fresh": 64008873,
+   "c5_bytes_v24": 64008873,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "ad3f5fca17e6ae79607f23de2b95e80a2e54da7be13ba9179dea8a4c6d822373"
+  },
+  {
+   "pdb_id": "2LYZ",
+   "recorded_category": "xray_medium",
+   "recorded_desc": "Hen lysozyme",
+   "recorded_resolution": 2.0,
+   "official_title": "Real-space refinement of the structure of hen egg-white lysozyme",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 2.0,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "HEN EGG WHITE LYSOZYME"
+    }
+   ],
+   "deposited_at": "1975-02-01T00:00:00.000+00:00",
+   "revision_at": "2024-10-23T00:00:00.000+00:00",
+   "c1_descriptive": "match",
+   "c1_rationale": "hen lysozyme = hen egg-white lysozyme",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": false,
+   "c2_resolution_mismatch_tol001": false,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 1001,
+    "n_hetatm": 101
+   },
+   "c5_coordinate_sha256_fresh": "722b8b6fb7d465ee577ad5af676f94c5a857360f1bee50559ce9c67af6399965",
+   "c5_coordinate_sha256_v24": "722b8b6fb7d465ee577ad5af676f94c5a857360f1bee50559ce9c67af6399965",
+   "c5_bytes_fresh": 133569,
+   "c5_bytes_v24": 133569,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "004d6a9c4d738b916d6fe227229aa836e43906b5345f65723176614b6fb6567b"
+  },
+  {
+   "pdb_id": "2MJB",
+   "recorded_category": "nmr",
+   "recorded_desc": "Amyloid beta NMR",
+   "recorded_resolution": null,
+   "official_title": "Solution nmr structure of ubiquitin refined against dipolar couplings in 4 media",
+   "official_methods": [
+    "SOLUTION NMR"
+   ],
+   "official_resolution": null,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "Ubiquitin-60S ribosomal protein L40"
+    }
+   ],
+   "deposited_at": "2014-01-02T00:00:00.000+00:00",
+   "revision_at": "2024-05-15T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'Amyloid beta NMR'; official structure is ubiquitin(-L40 fusion) solution NMR",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": false,
+   "c2_resolution_mismatch_tol001": false,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 20,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 24620,
+    "n_hetatm": 0
+   },
+   "c5_coordinate_sha256_fresh": "547b49a69c29b3f7135e197320f232d3610d9d15fa824f7760da10695d5b57af",
+   "c5_coordinate_sha256_v24": "547b49a69c29b3f7135e197320f232d3610d9d15fa824f7760da10695d5b57af",
+   "c5_bytes_fresh": 2013255,
+   "c5_bytes_v24": 2013255,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "ac687c75a0609018dc360cd5146c4d9d0edc5c3d2240e33c13a72536c1811671"
+  },
+  {
+   "pdb_id": "2N0A",
+   "recorded_category": "nmr",
+   "recorded_desc": "Alpha-synuclein NMR",
+   "recorded_resolution": null,
+   "official_title": "Atomic-resolution structure of alpha-synuclein fibrils",
+   "official_methods": [
+    "SOLID-STATE NMR"
+   ],
+   "official_resolution": null,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "Alpha-synuclein"
+    }
+   ],
+   "deposited_at": "2015-03-04T00:00:00.000+00:00",
+   "revision_at": "2024-05-15T00:00:00.000+00:00",
+   "c1_descriptive": "match",
+   "c1_rationale": "alpha-synuclein = official molecule; fibril state + solid-state NMR recorded as imprecision (method subclass error counted in C2)",
+   "c1_imprecise_note": "official structure is fibrillar (solid-state NMR); recorded implies solution NMR by category",
+   "c2_method_mismatch": true,
+   "c2_resolution_mismatch_strict": false,
+   "c2_resolution_mismatch_tol001": false,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 20160,
+    "n_hetatm": 0
+   },
+   "c5_coordinate_sha256_fresh": "cc2aaebd34924b82cc5bcd9c5a491d4f955c005c626378e361343cbe920cf9ed",
+   "c5_coordinate_sha256_v24": "cc2aaebd34924b82cc5bcd9c5a491d4f955c005c626378e361343cbe920cf9ed",
+   "c5_bytes_fresh": 1665927,
+   "c5_bytes_v24": 1665927,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "708c04fc41ecd2880e6b4dd83ced5826a2691ef922bae4d6e9638a507cf57279"
+  },
+  {
+   "pdb_id": "2OV0",
+   "recorded_category": "xray_ultrahigh",
+   "recorded_desc": "Lysozyme ultra-high",
+   "recorded_resolution": 0.75,
+   "official_title": "Structure of the blue copper protein Amicyanin to 0.75 A resolution",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 0.75,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "Amicyanin"
+    }
+   ],
+   "deposited_at": "2007-02-12T00:00:00.000+00:00",
+   "revision_at": "2023-08-30T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'Lysozyme ultra-high'; official structure is amicyanin (blue copper protein)",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": false,
+   "c2_resolution_mismatch_tol001": false,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [
+     "A",
+     "B",
+     "N",
+     "O"
+    ],
+    "insertion_codes": [],
+    "n_atom": 830,
+    "n_hetatm": 223
+   },
+   "c5_coordinate_sha256_fresh": "3eafc180aa32668ea7e4cb1e61f22d802e47a7384223cb93e1f473221df2eef4",
+   "c5_coordinate_sha256_v24": "3eafc180aa32668ea7e4cb1e61f22d802e47a7384223cb93e1f473221df2eef4",
+   "c5_bytes_fresh": 196668,
+   "c5_bytes_v24": 196668,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "e39addbfcac4bd5ae0ced0b40ee397b35eef4b02835f41dc6c4ed55bfdf543de"
+  },
+  {
+   "pdb_id": "2VB1",
+   "recorded_category": "xray_ultrahigh",
+   "recorded_desc": "Crambin ultra-high res",
+   "recorded_resolution": 0.48,
+   "official_title": "HEWL at 0.65 angstrom resolution",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 0.65,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "LYSOZYME C"
+    }
+   ],
+   "deposited_at": "2007-09-05T00:00:00.000+00:00",
+   "revision_at": "2024-11-13T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'Crambin ultra-high res'; official structure is hen egg-white lysozyme (HEWL) at 0.65 A [AUDITOR-CORROBORATED]",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [
+     "A",
+     "B",
+     "C"
+    ],
+    "insertion_codes": [],
+    "n_atom": 2657,
+    "n_hetatm": 243
+   },
+   "c5_coordinate_sha256_fresh": "cb971a808effff36ae4c2e7030a6608e7a78f55a1c4eb9ccd669872dbd66aa37",
+   "c5_coordinate_sha256_v24": "cb971a808effff36ae4c2e7030a6608e7a78f55a1c4eb9ccd669872dbd66aa37",
+   "c5_bytes_fresh": 447444,
+   "c5_bytes_v24": 447444,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "761eac098d3a3c526be10ca0df5a1a0b5be4dcd18039eb06b6b099dd24ec713f"
+  },
+  {
+   "pdb_id": "3J9I",
+   "recorded_category": "cryo_em",
+   "recorded_desc": "80S ribosome",
+   "recorded_resolution": 3.6,
+   "official_title": "Thermoplasma acidophilum 20S proteasome",
+   "official_methods": [
+    "ELECTRON MICROSCOPY"
+   ],
+   "official_resolution": 3.3,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "Proteasome subunit alpha"
+    },
+    {
+     "id": 2,
+     "type": "polypeptide(L)",
+     "desc": "Proteasome subunit beta"
+    }
+   ],
+   "deposited_at": "2015-02-02T00:00:00.000+00:00",
+   "revision_at": "2024-02-21T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded '80S ribosome'; official structure is T. acidophilum 20S proteasome",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 46228,
+    "n_hetatm": 0
+   },
+   "c5_coordinate_sha256_fresh": "f87dc96adccaaaefd2fa2747c2ce0a00cffca33f46bd28c5593f5939eb90ee92",
+   "c5_coordinate_sha256_v24": "f87dc96adccaaaefd2fa2747c2ce0a00cffca33f46bd28c5593f5939eb90ee92",
+   "c5_bytes_fresh": 3865968,
+   "c5_bytes_v24": 3865968,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "12eb17ab2197dac9533f7b71258b83a53080649967e6db3032788931b1f71f76"
+  },
+  {
+   "pdb_id": "3LZM",
+   "recorded_category": "xray_medium",
+   "recorded_desc": "T4 lysozyme",
+   "recorded_resolution": 1.7,
+   "official_title": "STRUCTURAL STUDIES OF MUTANTS OF T4 LYSOZYME THAT ALTER HYDROPHOBIC STABILIZATION",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 1.7,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "T4 LYSOZYME"
+    }
+   ],
+   "deposited_at": "1989-05-01T00:00:00.000+00:00",
+   "revision_at": "2024-05-22T00:00:00.000+00:00",
+   "c1_descriptive": "match",
+   "c1_rationale": "T4 lysozyme = official title",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": false,
+   "c2_resolution_mismatch_tol001": false,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 1309,
+    "n_hetatm": 152
+   },
+   "c5_coordinate_sha256_fresh": "e531a3c16462ebdc0264ef084dd55f6f924bcde5568cb125efcbfaa89d912ab8",
+   "c5_coordinate_sha256_v24": "e531a3c16462ebdc0264ef084dd55f6f924bcde5568cb125efcbfaa89d912ab8",
+   "c5_bytes_fresh": 153495,
+   "c5_bytes_v24": 153495,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "25ba0755e4e345e0617739617b997fa6ce756ff5772af8ccaa566521ef8cf8b1"
+  },
+  {
+   "pdb_id": "3NIR",
+   "recorded_category": "xray_ultrahigh",
+   "recorded_desc": "Concanavalin A",
+   "recorded_resolution": 1.0,
+   "official_title": "Crystal structure of small protein crambin at 0.48 A resolution",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 0.48,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "Crambin"
+    }
+   ],
+   "deposited_at": "2010-06-16T00:00:00.000+00:00",
+   "revision_at": "2024-11-20T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'Concanavalin A'; official structure is crambin at 0.48 A [AUDITOR-CORROBORATED]",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [
+     "A",
+     "B",
+     "C"
+    ],
+    "insertion_codes": [],
+    "n_atom": 892,
+    "n_hetatm": 134
+   },
+   "c5_coordinate_sha256_fresh": "b1ecd8b00fe1b0e2a3cb8f71609d2fe5177a8f3be699d30c58e4109d5e4e5ab5",
+   "c5_coordinate_sha256_v24": "b1ecd8b00fe1b0e2a3cb8f71609d2fe5177a8f3be699d30c58e4109d5e4e5ab5",
+   "c5_bytes_fresh": 163701,
+   "c5_bytes_v24": 163701,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "e943b7cc1ebde6fe2c0921c38fb19f9fe4e30d862988d1d3fd4d261b8cf97465"
+  },
+  {
+   "pdb_id": "3PGK",
+   "recorded_category": "xray_medium",
+   "recorded_desc": "Phosphoglycerate kinase",
+   "recorded_resolution": 2.1,
+   "official_title": "The structure of yeast phosphoglycerate kinase at 0.25 nm resolution",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 2.5,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "PHOSPHOGLYCERATE KINASE"
+    }
+   ],
+   "deposited_at": "1982-07-15T00:00:00.000+00:00",
+   "revision_at": "2024-11-20T00:00:00.000+00:00",
+   "c1_descriptive": "match",
+   "c1_rationale": "phosphoglycerate kinase = yeast PGK (resolution error counted in C2)",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 3145,
+    "n_hetatm": 46
+   },
+   "c5_coordinate_sha256_fresh": "32abf08811f5a2e088cc0839a984bfd7cdf638d093dd59d9802de19ced89ba53",
+   "c5_coordinate_sha256_v24": "32abf08811f5a2e088cc0839a984bfd7cdf638d093dd59d9802de19ced89ba53",
+   "c5_bytes_fresh": 294759,
+   "c5_bytes_v24": 294759,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "95dfa8efa5b9098bf650932de4f2d5b3b55de922500691d5bb9365f812a46533"
+  },
+  {
+   "pdb_id": "5A63",
+   "recorded_category": "cryo_em",
+   "recorded_desc": "TRPV1 channel",
+   "recorded_resolution": 2.8,
+   "official_title": "Cryo-EM structure of the human gamma-secretase complex at 3.4 angstrom resolution.",
+   "official_methods": [
+    "ELECTRON MICROSCOPY"
+   ],
+   "official_resolution": 3.4,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "Nicastrin"
+    },
+    {
+     "id": 2,
+     "type": "polypeptide(L)",
+     "desc": "Presenilin-1"
+    },
+    {
+     "id": 3,
+     "type": "polypeptide(L)",
+     "desc": "Gamma-secretase subunit APH-1A"
+    },
+    {
+     "id": 4,
+     "type": "polypeptide(L)",
+     "desc": "Gamma-secretase subunit PEN-2"
+    }
+   ],
+   "deposited_at": "2015-06-24T00:00:00.000+00:00",
+   "revision_at": "2024-11-13T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'TRPV1 channel'; official structure is human gamma-secretase complex",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 9646,
+    "n_hetatm": 357
+   },
+   "c5_coordinate_sha256_fresh": "cc9adb1be03dc8cccf72630bea645d45afaa6e87268aad27108801836b7896f2",
+   "c5_coordinate_sha256_v24": "cc9adb1be03dc8cccf72630bea645d45afaa6e87268aad27108801836b7896f2",
+   "c5_bytes_fresh": 915300,
+   "c5_bytes_v24": 915300,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "26f83ded94c89ddfbfa0d82a62f38c7646061523edde27fcbb582bb744e5230b"
+  },
+  {
+   "pdb_id": "5T4O",
+   "recorded_category": "cryo_em",
+   "recorded_desc": "Spliceosome",
+   "recorded_resolution": 3.4,
+   "official_title": "Autoinhibited E. coli ATP synthase state 1",
+   "official_methods": [
+    "ELECTRON MICROSCOPY"
+   ],
+   "official_resolution": 6.9,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "ATP synthase subunit alpha"
+    },
+    {
+     "id": 2,
+     "type": "polypeptide(L)",
+     "desc": "ATP synthase subunit beta"
+    },
+    {
+     "id": 3,
+     "type": "polypeptide(L)",
+     "desc": "ATP synthase gamma chain"
+    },
+    {
+     "id": 4,
+     "type": "polypeptide(L)",
+     "desc": "ATP synthase epsilon chain"
+    },
+    {
+     "id": 5,
+     "type": "polypeptide(L)",
+     "desc": "ATP synthase subunit b"
+    }
+   ],
+   "deposited_at": "2016-08-29T00:00:00.000+00:00",
+   "revision_at": "2024-03-13T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'Spliceosome'; official structure is E. coli ATP synthase (autoinhibited, 6.9 A)",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 23448,
+    "n_hetatm": 120
+   },
+   "c5_coordinate_sha256_fresh": "cec2efd1f123740bee8388abb6ff6569e52f796ad57d430110c321c59a8c1e3a",
+   "c5_coordinate_sha256_v24": "cec2efd1f123740bee8388abb6ff6569e52f796ad57d430110c321c59a8c1e3a",
+   "c5_bytes_fresh": 2337093,
+   "c5_bytes_v24": 2337093,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "20ef7a2b5cbba2f78be7580f31fcd39cb466802c681bbaafca50453e0f62334f"
+  },
+  {
+   "pdb_id": "6J6J",
+   "recorded_category": "cryo_em",
+   "recorded_desc": "Human 26S proteasome",
+   "recorded_resolution": 2.2,
+   "official_title": "Biotin-bound streptavidin",
+   "official_methods": [
+    "ELECTRON MICROSCOPY"
+   ],
+   "official_resolution": 3.2,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "Streptavidin"
+    }
+   ],
+   "deposited_at": "2019-01-15T00:00:00.000+00:00",
+   "revision_at": "2025-07-02T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'Human 26S proteasome'; official structure is biotin-bound streptavidin",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 3548,
+    "n_hetatm": 76
+   },
+   "c5_coordinate_sha256_fresh": "e699b9911536491a0aa4c7267685306f6dd054bfda2cd4875d32fffe23eb4a89",
+   "c5_coordinate_sha256_v24": "e699b9911536491a0aa4c7267685306f6dd054bfda2cd4875d32fffe23eb4a89",
+   "c5_bytes_fresh": 323433,
+   "c5_bytes_v24": 323433,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "8e3f275505e28fb3b16f1f5a447bc3705ad189cd3446e2a8efc539d2a4b0e873"
+  },
+  {
+   "pdb_id": "6NB6",
+   "recorded_category": "cryo_em",
+   "recorded_desc": "ABC transporter",
+   "recorded_resolution": 3.0,
+   "official_title": "SARS-CoV complex with human neutralizing S230 antibody Fab fragment (state 1)",
+   "official_methods": [
+    "ELECTRON MICROSCOPY"
+   ],
+   "official_resolution": 4.2,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "Spike glycoprotein"
+    },
+    {
+     "id": 2,
+     "type": "polypeptide(L)",
+     "desc": "S230 heavy chain"
+    },
+    {
+     "id": 3,
+     "type": "polypeptide(L)",
+     "desc": "S230 light chain"
+    }
+   ],
+   "deposited_at": "2018-12-06T00:00:00.000+00:00",
+   "revision_at": "2024-11-20T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'ABC transporter'; official structure is SARS-CoV + human S230 antibody Fab complex",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": false,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 23865,
+    "n_hetatm": 1918
+   },
+   "c5_coordinate_sha256_fresh": "991c1be973ae74f87ec61fd128005cd24302d10e98409a6135337cb735a7d774",
+   "c5_coordinate_sha256_v24": "991c1be973ae74f87ec61fd128005cd24302d10e98409a6135337cb735a7d774",
+   "c5_bytes_fresh": 2539917,
+   "c5_bytes_v24": 2539917,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "c325f199e69cf5ffccc22d6a62cc82bbbc9c8bb301cfe15dfe5954d6c824f1b6"
+  },
+  {
+   "pdb_id": "6WLC",
+   "recorded_category": "cryo_em",
+   "recorded_desc": "SARS-CoV-2 nucleocapsid",
+   "recorded_resolution": 2.9,
+   "official_title": "Crystal Structure of NSP15 Endoribonuclease from SARS CoV-2 in the Complex with Uridine-5'-Monophosphate",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 1.82,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "Uridylate-specific endoribonuclease"
+    }
+   ],
+   "deposited_at": "2020-04-19T00:00:00.000+00:00",
+   "revision_at": "2023-10-18T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'SARS-CoV-2 nucleocapsid'; official structure is SARS-CoV-2 NSP15 endoribonuclease (X-ray, 1.82 A)",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": true,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [
+     "A",
+     "B"
+    ],
+    "insertion_codes": [],
+    "n_atom": 5707,
+    "n_hetatm": 611
+   },
+   "c5_coordinate_sha256_fresh": "b2d6d15fcdbd8fa4edff84a18bc00b8a9abdc75dcc56a909b9f05add1a8fe9c0",
+   "c5_coordinate_sha256_v24": "b2d6d15fcdbd8fa4edff84a18bc00b8a9abdc75dcc56a909b9f05add1a8fe9c0",
+   "c5_bytes_fresh": 1055430,
+   "c5_bytes_v24": 1055430,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "ceec014a275deaee800f54420936adc29d12cf1f806a3c7a06b2d496d8fbfbc0"
+  },
+  {
+   "pdb_id": "7JTL",
+   "recorded_category": "cryo_em",
+   "recorded_desc": "SARS-CoV-2 RBD-ACE2",
+   "recorded_resolution": 2.3,
+   "official_title": "Structure of SARS-CoV-2 ORF8 accessory protein",
+   "official_methods": [
+    "X-RAY DIFFRACTION"
+   ],
+   "official_resolution": 2.04,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "ORF8 protein"
+    }
+   ],
+   "deposited_at": "2020-08-18T00:00:00.000+00:00",
+   "revision_at": "2024-10-09T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'SARS-CoV-2 RBD-ACE2'; official structure is SARS-CoV-2 ORF8 accessory protein (X-ray)",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": true,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 0,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 1622,
+    "n_hetatm": 203
+   },
+   "c5_coordinate_sha256_fresh": "9d0bd8d6d5c7d82d4f2d0adc9321c50dee9e3f3933226a621671be9818d7e353",
+   "c5_coordinate_sha256_v24": "9d0bd8d6d5c7d82d4f2d0adc9321c50dee9e3f3933226a621671be9818d7e353",
+   "c5_bytes_fresh": 330237,
+   "c5_bytes_v24": 330237,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "61b9c535d407f00d1a25c5eb88fcea6ec8321e0f19d81151622273fcbad613c9"
+  },
+  {
+   "pdb_id": "7K3G",
+   "recorded_category": "cryo_em",
+   "recorded_desc": "SARS-CoV-2 spike closed",
+   "recorded_resolution": 2.6,
+   "official_title": "SARS-CoV-2 Envelope Protein Transmembrane Domain: Pentameric Structure Determined by Solid-State NMR",
+   "official_methods": [
+    "SOLID-STATE NMR"
+   ],
+   "official_resolution": null,
+   "official_entity_class": "protein_only",
+   "official_entities": [
+    {
+     "id": 1,
+     "type": "polypeptide(L)",
+     "desc": "Envelope small membrane protein"
+    }
+   ],
+   "deposited_at": "2020-09-11T00:00:00.000+00:00",
+   "revision_at": "2024-05-15T00:00:00.000+00:00",
+   "c1_descriptive": "identity_error",
+   "c1_rationale": "recorded 'SARS-CoV-2 spike closed'; official structure is SARS-CoV-2 envelope protein TMD pentamer (solid-state NMR)",
+   "c1_imprecise_note": null,
+   "c2_method_mismatch": true,
+   "c2_resolution_mismatch_strict": true,
+   "c2_resolution_mismatch_tol001": true,
+   "c3_eligibility": "protein_only",
+   "c4_parse_failures": [],
+   "c4_anomalies": {
+    "n_model": 10,
+    "altloc_chars": [],
+    "insertion_codes": [],
+    "n_atom": 25450,
+    "n_hetatm": 0
+   },
+   "c5_coordinate_sha256_fresh": "2982f5a386ec27c096d676ec85cbf47081392446231f2787b48ad5b8ce21b62f",
+   "c5_coordinate_sha256_v24": "2982f5a386ec27c096d676ec85cbf47081392446231f2787b48ad5b8ce21b62f",
+   "c5_bytes_fresh": 2087370,
+   "c5_bytes_v24": 2087370,
+   "c5_byte_match_v24": true,
+   "api_response_sha256": "0aba23df2e370ef3c7ac629accdbcc9f781baa25ebd8e247bd68a0bd6ac09621"
+  }
+ ]
+}

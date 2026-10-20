@@ -1,0 +1,47 @@
+input artifact: docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json
+input artifact sha256: 4190a774fb46e8546c4b82d4fda700677991cdf9f864aaab165c8ea796994196
+table dataset_v23 blob: 3a5358374b2037b9475bd2d494754944485da5ac (MATCHES pinned)
+cohort rows: 40
+1AKE: modres=0 hetatm_modified_atoms=0 digest_bound=True
+1AON: modres=0 hetatm_modified_atoms=0 digest_bound=True
+1BPI: modres=0 hetatm_modified_atoms=0 digest_bound=True
+1BRS: modres=0 hetatm_modified_atoms=0 digest_bound=True
+1D3Z: modres=0 hetatm_modified_atoms=0 digest_bound=True
+1DDL: modres=0 hetatm_modified_atoms=0 digest_bound=True
+1EJG: modres=0 hetatm_modified_atoms=0 digest_bound=True
+1FIN: modres=0 hetatm_modified_atoms=0 digest_bound=True
+1GB1: modres=0 hetatm_modified_atoms=0 digest_bound=True
+1GCI: modres=0 hetatm_modified_atoms=0 digest_bound=True
+1GFL: modres=0 hetatm_modified_atoms=0 digest_bound=True
+1HHO: modres=0 hetatm_modified_atoms=0 digest_bound=True
+1I0T: modres=0 hetatm_modified_atoms=0 digest_bound=True
+1L2Y: modres=0 hetatm_modified_atoms=0 digest_bound=True
+1MBO: modres=0 hetatm_modified_atoms=0 digest_bound=True
+1NEK: modres=0 hetatm_modified_atoms=0 digest_bound=True
+1PPE: modres=0 hetatm_modified_atoms=0 digest_bound=True
+1RVS: modres=0 hetatm_modified_atoms=0 digest_bound=True
+1TEN: modres=0 hetatm_modified_atoms=0 digest_bound=True
+2ACE: modres=0 hetatm_modified_atoms=0 digest_bound=True
+2CBA: modres=0 hetatm_modified_atoms=0 digest_bound=True
+2HBS: modres=0 hetatm_modified_atoms=0 digest_bound=True
+2JOF: modres=0 hetatm_modified_atoms=0 digest_bound=True
+2KOX: modres=0 hetatm_modified_atoms=0 digest_bound=True
+2LYZ: modres=0 hetatm_modified_atoms=0 digest_bound=True
+2MJB: modres=0 hetatm_modified_atoms=0 digest_bound=True
+2N0A: modres=0 hetatm_modified_atoms=0 digest_bound=True
+2OV0: modres=0 hetatm_modified_atoms=0 digest_bound=True
+2VB1: modres=0 hetatm_modified_atoms=0 digest_bound=True
+3J9I: modres=0 hetatm_modified_atoms=0 digest_bound=True
+3LZM: modres=0 hetatm_modified_atoms=0 digest_bound=True
+3NIR: modres=0 hetatm_modified_atoms=0 digest_bound=True
+3PGK: modres=0 hetatm_modified_atoms=0 digest_bound=True
+5A63: modres=11 hetatm_modified_atoms=0 digest_bound=True
+5T4O: modres=0 hetatm_modified_atoms=0 digest_bound=True
+6J6J: modres=0 hetatm_modified_atoms=0 digest_bound=True
+6NB6: modres=0 hetatm_modified_atoms=0 digest_bound=True
+6WLC: modres=0 hetatm_modified_atoms=0 digest_bound=True
+7JTL: modres=0 hetatm_modified_atoms=0 digest_bound=True
+7K3G: modres=0 hetatm_modified_atoms=0 digest_bound=True
+
+TOTAL: 40 targets, 11 MODRES records, 0 HETATM atoms of modified-residue names, 0 digest failures
+written: modres_census_results.json (repo-relative: docs/audit-evidence/2026-10-20/modres-census-v2/)
