@@ -1,0 +1,13 @@
+# Gitleaks false-positive exemptions (targeted, file+rule scoped).
+#
+# docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json
+#   The "generic-api-key" rule fires on the JSON key "api_response_sha256"
+#   followed by a high-entropy hex value. Those values are SHA-256 DIGESTS
+#   of RCSB API responses (audit-evidence provenance binding), not
+#   credentials. The file is the byte-exact sealed input artifact of the
+#   MODRES census v2 (recorded SHA-256
+#   4190a774fb46e8546c4b82d4fda700677991cdf9f864aaab165c8ea796994196);
+#   rewriting its keys would break the digest binding. Any OTHER finding
+#   in ANY other file still fails the gate (this exemption is scoped to
+#   this file and this rule only).
+docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:#:generic-api-key
