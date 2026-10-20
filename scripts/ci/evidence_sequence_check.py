@@ -26,28 +26,64 @@ Revision history:
       the live tip is no longer classified HISTORICAL on that fact alone. The
       SHA must be proven a real commit and supported: by ancestry from the
       branch's live tip, or -- when the SHA left the branch lineage -- by a
-      reviewed evidence-back record whose SHA exists (object store or the
-      commits API) and whose cited runs verify. Every run citation anywhere
-      in an entry (evidence field or body) must verify with the configured
-      source (manifest, else the Actions API when --repo is given); failed or
-      cancelled runs are disclosed and cannot prove a push; a citation that
-      cannot be verified FAILS the gate (a manifest omission is never an
-      approval). A textual transcript naming a branch and SHA is support
-      evidence, never proof by itself.
-    * PROTECTED-MAIN MERGE TRANSITION (direction 6): a push to a protected
-      branch (e.g. main) is declared by a VERIFIED merge-intent: the candidate
-      must be a merge commit whose first parent is the declared pre-merge
-      base and whose second parent is the declared (approved) PR head, the
-      merge-intent must ride the PR branch history, and the PR must be merged
-      with an approving review from a user other than the PR author (GitHub
-      API, or fixture files in tests). On the source branch, the active
-      merge-intent must bind to the exact candidate and the declared base
-      must still be the live tip of the target. Raced or unrelated updates
-      to the protected branch FAIL.
+      reviewed evidence-back record whose SHA is a real remote commit
+      (object store or commits API via --repo+token) with verified run
+      citations.
+    * MERGE TRANSITION (direction 6): a push to a protected branch is
+      declared ONLY by a VERIFIED merge-intent: the candidate must be a merge
+      commit whose first parent is the declared pre-merge base and whose
+      second parent is the declared (approved) PR head, the merge-intent must
+      ride the PR branch history, and the PR must be merged with an approving
+      review from a user other than the PR author (GitHub API, or fixture
+      files in tests). On the source branch, the active merge-intent must
+      bind to the exact candidate and the declared base must still be the
+      live tip of the target. Raced or unrelated updates to the protected
+      branch FAIL.
+
+  Round-22 hardening (auditor directions 3-5):
+    * CLAIM SEPARATION (direction 3): commit existence, branch-push
+      provenance, and CI success are now verified and reported as SEPARATE
+      claims. The runs manifest and the Actions-API verifier retain and
+      validate each cited run's EVENT TYPE and HEAD_BRANCH alongside
+      head_sha and conclusion; a push-event run on a different branch
+      contradicts the entry and FAILs; a failed/cancelled run is disclosed
+      and can never be represented as successful gate evidence.
+    * INDEPENDENT PUSH PROVENANCE (direction 3): an off-lineage HISTORICAL
+      confirmation must prove the BRANCH PUSH, not merely commit existence:
+      (a) a push-event Actions run (event=push, head_branch, head_sha), or
+      (b) a live Events-API PushEvent (ref + before/after), or
+      (c) an evidence-back carrying a recorded push_event= citation
+      (id/ref/before/after) validated by a machine-verifiable review_ref=
+      into the canonical auditor-adjudicated record, or
+      (d) an explicit push-not-proven reclassification (valid review_ref=):
+      the push is NOT PROVEN -- disclosed, never counted as evidence.
+      Otherwise FAIL. A commits-API 200 or a free-text rebuild narrative is
+      NOT push provenance.
+    * INTENT RECONCILIATION (direction 4): every intent-reconcile record
+      must target a PRECEDING eligible intent, match its branch semantics
+      (push-intent: branch; merge-intent: source_branch), void it exactly
+      once, and never void a consumed/confirmed intent. The unmatched-intent
+      invariant is enforced GLOBALLY: no branch may hold more than one
+      unvoided unmatched intent.
+    * PRE-PUSH STATE BINDING (direction 4): the terminal intent's
+      expected_remote_tip_before_push is bound to the TRUSTED push-event
+      before/after state (GitHub PushEvent): ref must match the branch,
+      after must be the candidate, before must equal the declared pre-push
+      tip (or the all-zero SHA for a newly created branch with an ABSENT
+      declaration). PR-event runs never substitute for push-event
+      provenance.
+    * MERGE-TRANSITION PROOF (direction 5): the PR API's merge_commit_sha
+      must equal the protected branch's live candidate; source head.ref,
+      exact head SHA, protected base.ref, merged state, merged_at, and a
+      FRESH non-author approval (latest review state per reviewer, on the
+      exact head, submitted before the merge) are all verified; a
+      pre-merge verification mode (--pre-merge-verify) checks the current
+      PR/head/review state before any merge executes.
 
 Log grammar:   ## <ISO-8601 UTC> | <ENTRY-ID> | <verb> | <subject> [| RECONSTRUCTED]
 Verbs: push, push-intent, push-confirm, push-reconcile (schema v3),
-      merge-intent, evidence-back, intent-reconcile (schema v4).
+  merge-intent, evidence-back, intent-reconcile (schema v4),
+  push-not-proven (schema v5).
 Sequence checks: timestamps parse as UTC, non-decreasing, ENTRY-IDs unique; with
 --commit-time, entries whose claimed time drifts more than --max-drift from the
 carrying commit must be RECONSTRUCTED.
@@ -66,7 +102,16 @@ import urllib.request
 LINE = re.compile(r"^## (\S+) \| ([^|]+) \| ([^|]+) \| ([^|]+?)(?:\s\|\s*RECONSTRUCTED)?\s*$")
 PLACEHOLDER_SHAS = {"self-referential-tip", "TBD", "PENDING", "<sha>", "sha"}
 SHA40 = re.compile(r"\b([0-9a-f]{40})\b")
+ZERO_SHA = "0" * 40
 RUN_ID = re.compile(r"\brun(?:_id)?\s*[=:]?\s*(\d{6,})\b", re.I)
+PUSH_EVENT_CITE = re.compile(
+    r"push_event=(\d+)\s+ref=(\S+)\s+before=([0-9a-f]{40}|0{40})\s+after=([0-9a-f]{40})")
+# Round-22 prior-tip citation: a LATER push on the same ref whose `before`
+# field records the backed SHA -- GitHub's own record that the ref pointed
+# there (refs move only by pushes), used when the push's own event has
+# rolled off the retained window and the API elides its `after`.
+PRIOR_TIP_CITE = re.compile(
+    r"push_event=(\d+)\s+ref=(\S+)\s+prior_tip=([0-9a-f]{40})")
 CONFIRM_VERBS = ("push-confirm", "push-reconcile")
 API = "https://api.github.com"
 
@@ -107,6 +152,62 @@ def field(subject: str, name: str):
         return None
     v = m.group(1)
     return v[1:-1] if v.startswith('"') else v
+
+
+# ------------------------------------------------------------- review references
+
+def validate_review_ref(logrepo, review_ref: str, needles: list[str]) -> str | None:
+    """Round-22 direction 3.5: a review/decision reference must resolve to a
+    tracked canonical record whose adjudicating section mentions the entry.
+
+    Format: <repo-relative-path>#<anchor>, e.g.
+      docs/decisions/OWNER_DECISIONS.md#Part-14
+    The anchor names a `## ` heading (dashes read as spaces); the section runs
+    from that heading to the next `## ` heading. At least one of NEEDLES (the
+    backed/reclassified entry IDs or SHAs) must appear in that section, so
+    "reviewed" is never merely a string written by the same record's author:
+    it must point at the canonical auditor-adjudicated record. Returns an
+    error string, or None when the reference validates."""
+    if not review_ref:
+        return "review_ref is missing"
+    path, _, anchor = review_ref.rpartition("#")
+    if not path or not anchor:
+        return (f"review_ref {review_ref!r} is malformed (need "
+                f"<repo-relative-path>#<heading-anchor>)")
+    if not logrepo.ok:
+        return ("review_ref cannot be validated -- the push log is not inside "
+                "a git repository (fail closed)")
+    full = os.path.join(logrepo.toplevel, path)
+    if not os.path.exists(full):
+        return f"review_ref names a file absent from the candidate tree: {path}"
+    try:
+        text = open(full, encoding="utf-8").read()
+    except OSError:
+        return f"review_ref names an unreadable file: {path}"
+    want = anchor.replace("-", " ").strip().lower()
+    lines = text.splitlines()
+    start = None
+    for i, ln in enumerate(lines):
+        if ln.startswith("## "):
+            heading = ln[3:].strip().lower()
+            if want and want in heading:
+                start = i
+                break
+    if start is None:
+        return (f"review_ref anchor {anchor!r} does not name any '## ' heading "
+                f"in {path}")
+    section: list[str] = []
+    for ln in lines[start + 1:]:
+        if ln.startswith("## "):
+            break
+        section.append(ln)
+    body = "\n".join(section)
+    if not any(nd in body for nd in needles if nd):
+        return (f"review_ref {review_ref!r} resolves, but its adjudicating "
+                f"section does not mention the backed entry "
+                f"({', '.join(n for n in needles if n)}) -- a review reference "
+                f"must bind to the record that actually adjudicates this entry")
+    return None
 
 
 # ---------------------------------------------------------------- sequence / prefix
@@ -161,8 +262,9 @@ def check_parent_prefix(current: str, older: str) -> list[str]:
 
 # ---------------------------------------------------------------- schema (pairing by ID)
 
-def check_pushlog_schema(path: str) -> tuple[list[str], list[str], dict]:
-    """Schema + identifier-based INTENT/CONFIRM pairing. Returns (findings, pending, state)."""
+def check_pushlog_schema(path: str, logrepo=None) -> tuple[list[str], list[str], dict]:
+    """Schema + identifier-based INTENT/CONFIRM pairing + Round-22
+    reconciliation/reclassification validation. Returns (findings, pending, state)."""
     findings: list[str] = []
     pending: list[str] = []
     entries = parse_entries(path)
@@ -251,6 +353,15 @@ def check_pushlog_schema(path: str) -> tuple[list[str], list[str], dict]:
                 if key not in subject:
                     findings.append(f"FAIL: {path}:{e['n']}: intent-reconcile entry is missing "
                                     f"the required field {key[:-1]!r}")
+        elif verb == "push-not-proven":
+            for key in ("reclassifies=", "branch=", "remote_sha=", "credential=",
+                        "review_ref=", "evidence="):
+                if key not in subject:
+                    findings.append(f"FAIL: {path}:{e['n']}: push-not-proven entry is missing "
+                                    f"the required field {key[:-1]!r}")
+            if not re.search(r"remote_sha=([0-9a-f]{40})(?:\s|$)", subject):
+                findings.append(f"FAIL: {path}:{e['n']}: push-not-proven remote_sha must be a "
+                                f"real 40-hex SHA")
         else:
             findings.append(f"FAIL: {path}:{e['n']}: unknown push-log verb {verb!r}")
 
@@ -266,9 +377,109 @@ def check_pushlog_schema(path: str) -> tuple[list[str], list[str], dict]:
         else:
             seen[eid] = e["n"]
 
-    # 3. IDENTIFIER pairing (Round-21 direction 4): a CONFIRM consumes the
-    # unpaired intent/legacy-placeholder-push with the SAME id base for the
-    # SAME branch. Branch/FIFO pairing alone is not accepted.
+    by_eid = {e["eid"]: e for e in entries if e["m"]}
+
+    # 2b. INTENT-RECONCILE validation (Round-22 direction 4): a void must
+    # target a PRECEDING eligible intent, match its branch semantics, and
+    # void it exactly once. Cross-branch voids, duplicate/conflicting voids,
+    # voids of consumed (confirmed) intents, and invalid target verbs FAIL.
+    voided_intents: set[str] = set()
+    void_targets: dict[str, dict] = {}
+    for e in entries:
+        if not e["m"] or e["verb"] != "intent-reconcile":
+            continue
+        voids = field(e["subject"], "voids")
+        target = by_eid.get(voids or "")
+        if target is None or target["verb"] not in ("push-intent", "merge-intent"):
+            findings.append(f"FAIL: {path}:{e['n']}: intent-reconcile {e['eid']} names "
+                            f"voids={voids!r} which is not an intent entry (dangling void)")
+            continue
+        if target["n"] >= e["n"]:
+            findings.append(f"FAIL: {path}:{e['n']}: intent-reconcile {e['eid']} voids "
+                            f"{voids} which does not PRECEDE it (a reconciliation "
+                            f"must target a preceding eligible intent)")
+            continue
+        # branch scope: push-intent -> its own branch; merge-intent -> its
+        # source_branch (unambiguous source/target semantics, not a free-form
+        # branch value)
+        if target["verb"] == "push-intent":
+            scope = field(target["subject"], "branch")
+        else:
+            scope = field(target["subject"], "source_branch")
+        rbranch = field(e["subject"], "branch")
+        if scope != rbranch:
+            findings.append(f"FAIL: {path}:{e['n']}: intent-reconcile {e['eid']} declares "
+                            f"branch={rbranch!r} but the voided intent {voids} belongs to "
+                            f"branch scope {scope!r} (cross-branch voiding rejected)")
+            continue
+        if voids in void_targets:
+            findings.append(f"FAIL: {path}:{e['n']}: intent-reconcile {e['eid']} voids "
+                            f"{voids} a second time (first at line {void_targets[voids]['n']}); "
+                            f"an intent is voided exactly once -- duplicate or conflicting "
+                            f"voids are rejected)")
+            continue
+        # a reconciliation must not substitute for or silently consume a
+        # confirmation: voiding an intent that a PRECEDING CONFIRM already
+        # completed is rejected (a void followed by its CONFIRM is rejected
+        # by the pairing rule instead -- both directions fail closed)
+        consumed = any(x["m"] and x["verb"] == "push-confirm"
+                       and id_base(x["eid"]) == id_base(voids)
+                       and field(x["subject"], "branch") == rbranch
+                       and x["n"] < e["n"]
+                       for x in entries)
+        if consumed:
+            findings.append(f"FAIL: {path}:{e['n']}: intent-reconcile {e['eid']} voids "
+                            f"{voids}, which is already completed by its CONFIRM "
+                            f"(a reconciliation must not consume or substitute for a "
+                            f"confirmation; void a live intent)")
+            continue
+        void_targets[voids] = e
+        voided_intents.add(voids)
+
+    # 2c. PUSH-NOT-PROVEN reclassification validation (Round-22 direction 3):
+    # reclassifies a CONFIRM/RECONCILE with matching branch/sha, exactly once,
+    # with a review_ref that resolves into the canonical adjudicated record.
+    reclassified: set[str] = set()
+    reclass_targets: dict[str, dict] = {}
+    for e in entries:
+        if not e["m"] or e["verb"] != "push-not-proven":
+            continue
+        rc = field(e["subject"], "reclassifies")
+        target = by_eid.get(rc or "")
+        if target is None or target["verb"] not in CONFIRM_VERBS:
+            findings.append(f"FAIL: {path}:{e['n']}: push-not-proven {e['eid']} names "
+                            f"reclassifies={rc!r} which is not a CONFIRM/RECONCILE entry "
+                            f"(dangling reclassification)")
+            continue
+        if target["n"] >= e["n"]:
+            findings.append(f"FAIL: {path}:{e['n']}: push-not-proven {e['eid']} reclassifies "
+                            f"{rc} which does not PRECEDE it")
+            continue
+        tb = field(target["subject"], "branch")
+        ts_ = field(target["subject"], "remote_sha")
+        if tb != field(e["subject"], "branch") or ts_ != field(e["subject"], "remote_sha"):
+            findings.append(f"FAIL: {path}:{e['n']}: push-not-proven {e['eid']} branch/sha "
+                            f"do not match the reclassified entry {rc} "
+                            f"(a reclassification must describe the same push)")
+            continue
+        if rc in reclass_targets:
+            findings.append(f"FAIL: {path}:{e['n']}: push-not-proven {e['eid']} reclassifies "
+                            f"{rc} a second time (first at line {reclass_targets[rc]['n']}); "
+                            f"exactly one reclassification per confirmation")
+            continue
+        rr_err = validate_review_ref(logrepo, field(e["subject"], "review_ref"),
+                                      [e["eid"], rc, (ts_ or "")[:12]])
+        if rr_err:
+            findings.append(f"FAIL: {path}:{e['n']}: push-not-proven {e['eid']}: {rr_err}")
+            continue
+        reclass_targets[rc] = e
+        reclassified.add(rc)
+
+    # 3. IDENTIFIER pairing (Round-21 direction 4 + Round-22 void rules): a
+    # CONFIRM consumes the unpaired, UNVOIDED intent (or legacy placeholder
+    # push) with the SAME id base for the SAME branch. A voided intent is not
+    # eligible for pairing: a reconciliation must not silently consume or
+    # substitute for a confirmation.
     open_by_base: dict[str, list[dict]] = {}
     for e in entries:
         if not e["m"]:
@@ -290,24 +501,55 @@ def check_pushlog_schema(path: str) -> tuple[list[str], list[str], dict]:
         branch = field(e["subject"], "branch")
         base = id_base(e["eid"])
         queue = open_by_base.get(base, [])
-        match = next((q for q in queue if not q.get("consumed") and q["branch"] == branch), None)
+        match = next((q for q in queue
+                      if not q.get("consumed") and q["branch"] == branch
+                      and q["e"]["eid"] not in voided_intents), None)
         if match is not None:
             match["consumed"] = True
         else:
-            findings.append(
-                f"FAIL: {path}:{e['n']}: CONFIRM {e['eid']} has no preceding unconfirmed "
-                f"INTENT (or placeholder push) with the identifier {base} for branch "
-                f"{branch!r} (Round-21 identifier pairing: a confirmation must match its "
-                f"own intent and must not consume another)")
-    for q in [q for qs in open_by_base.values() for q in qs if not q.get("consumed")]:
+            voided_here = [q for q in queue
+                           if not q.get("consumed") and q["branch"] == branch
+                           and q["e"]["eid"] in voided_intents]
+            if voided_here:
+                findings.append(
+                    f"FAIL: {path}:{e['n']}: CONFIRM {e['eid']} pairs the intent "
+                    f"{voided_here[0]['e']['eid']}, which was VOIDED by an "
+                    f"intent-reconcile record (a voided intent is no longer "
+                    f"eligible; confirm a live intent)")
+            else:
+                findings.append(
+                    f"FAIL: {path}:{e['n']}: CONFIRM {e['eid']} has no preceding unconfirmed "
+                    f"INTENT (or placeholder push) with the identifier {base} for branch "
+                    f"{branch!r} (Round-21 identifier pairing: a confirmation must match its "
+                    f"own intent and must not consume another)")
+    for q in [q for qs in open_by_base.values() for q in qs
+              if not q.get("consumed") and q["e"]["eid"] not in voided_intents]:
         unpaired.append(q)
         kind = "legacy push" if q["placeholder"] else "push-intent"
         pending.append(f"PENDING: {path}:{q['e']['n']}: {q['e']['eid']} ({kind}) for branch "
                        f"{q['branch']} has no CONFIRM entry (two-phase protocol incomplete; "
                        f"do not imply completion)")
 
-    # 4. evidence-back / intent-reconcile target integrity
-    by_eid = {e["eid"]: e for e in entries if e["m"]}
+    # 3b. GLOBAL unmatched-intent invariant (Round-22 direction 4): no branch
+    # may hold more than one unvoided, unconsumed intent. Only one valid
+    # terminal intent per branch may remain pending; excess intents must be
+    # validly reconciled. This applies to EVERY branch, not only the branch
+    # under test.
+    by_branch: dict[str, list[dict]] = {}
+    for q in unpaired:
+        if q["branch"]:
+            by_branch.setdefault(q["branch"], []).append(q)
+    for branch, qs in sorted(by_branch.items()):
+        if len(qs) > 1:
+            ids = ", ".join(q["e"]["eid"] for q in qs)
+            findings.append(f"FAIL: {path}: multiple unmatched intents for branch "
+                            f"{branch}: {ids} -- only one valid terminal intent per "
+                            f"branch may remain pending; reconcile the excess "
+                            f"intents (intent-reconcile) or complete them")
+
+    # 4. evidence-back target integrity (+ Round-22 review_ref validation
+    # when the reference is present; the provenance REQUIREMENT is enforced
+    # in the remote-verification layer, which knows the API/manifest sources)
     for e in entries:
         if not e["m"] or e["verb"] != "evidence-back":
             continue
@@ -324,16 +566,22 @@ def check_pushlog_schema(path: str) -> tuple[list[str], list[str], dict]:
                 findings.append(f"FAIL: {path}:{e['n']}: evidence-back {e['eid']} branch/sha "
                                 f"do not match the backed entry {backs} "
                                 f"(backing must describe the same push)")
-    for e in entries:
-        if not e["m"] or e["verb"] != "intent-reconcile":
-            continue
-        voids = field(e["subject"], "voids")
-        target = by_eid.get(voids or "")
-        if target is None or target["verb"] not in ("push-intent", "merge-intent"):
-            findings.append(f"FAIL: {path}:{e['n']}: intent-reconcile {e['eid']} names "
-                            f"voids={voids!r} which is not an intent entry (dangling void)")
+        rr = field(e["subject"], "review_ref")
+        if rr is not None:
+            rr_err = validate_review_ref(logrepo, rr, [e["eid"], backs or "",
+                                                        (field(e["subject"], "remote_sha") or "")[:12]])
+            if rr_err:
+                findings.append(f"FAIL: {path}:{e['n']}: evidence-back {e['eid']}: {rr_err}")
+        # a recorded push_event= citation must be syntactically valid
+        ev_text = (field(e["subject"], "evidence") or "") + "\n" + "\n".join(e["body"])
+        for m in PUSH_EVENT_CITE.finditer(ev_text):
+            if m.group(3) == m.group(4):
+                findings.append(f"FAIL: {path}:{e['n']}: evidence-back {e['eid']} records a "
+                                f"push_event citation whose before equals its after "
+                                f"(malformed ref-transition evidence)")
 
-    state = {"entries": entries, "unpaired": unpaired, "by_eid": by_eid}
+    state = {"entries": entries, "unpaired": unpaired, "by_eid": by_eid,
+             "voided_intents": voided_intents, "reclassified": reclassified}
     return findings, pending, state
 
 
@@ -411,23 +659,56 @@ class LogRepo:
         return lines[0] if lines else None
 
 
-class RunVerifier:
-    """Verify cited Actions runs against the manifest, else the GitHub API.
+def _normalize_push_event(ev: dict) -> dict | None:
+    """Accept either the raw Events-API shape or the compact fixture shape.
+    The `after` field is OPTIONAL: the events feed elides it for some push
+    events (observed live on 2026-10-20), and a prior-tip citation relies
+    only on ref + before."""
+    if not isinstance(ev, dict):
+        return None
+    payload = ev.get("payload") or {}
+    ref = ev.get("ref") or payload.get("ref")
+    before = ev.get("before") or payload.get("before")
+    after = ev.get("after") or payload.get("after")
+    if not (isinstance(ref, str) and isinstance(before, str)):
+        return None
+    if after is not None and not isinstance(after, str):
+        after = None
+    return {"id": str(ev.get("id", "")), "ref": ref, "before": before,
+            "after": after, "created_at": ev.get("created_at", "")}
 
-    Fail-closed policy (Round-21 direction 5.6): with a manifest configured
-    (the CI gate always configures one), a citation outside the manifest
-    window MUST verify through the API or the entry FAILS -- a manifest
-    omission is never an approval. With no manifest and no API configured
-    (local tool mode), citations are disclosed as unverified rather than
-    trusted; the gate never runs in that mode.
+
+class RunVerifier:
+    """Verify cited Actions runs and push events against the manifest, the
+    GitHub Actions API, and the repository Events API.
+
+    Fail-closed policy (Round-21 direction 5.6 + Round-22 direction 3): with a
+    manifest configured (the CI gate always configures one), a citation
+    outside the manifest window MUST verify through the API or the entry
+    FAILS -- a manifest omission is never an approval. With no manifest and
+    no API configured (local tool mode), citations are disclosed as
+    unverified rather than trusted; the gate never runs in that mode.
+
+    Round-22: run records retain and validate `event` and `head_branch`
+    alongside head_sha and conclusion, so push-event provenance can be
+    distinguished from CI success; the Events API supplies genuine
+    PushEvent before/after state for the pre-push binding.
     """
 
-    def __init__(self, manifest: dict | None, repo: str | None, token_env: str):
+    def __init__(self, manifest: dict | None, repo: str | None, token_env: str,
+                 push_events_fixture: list | None = None):
         self.manifest = manifest or {}
         self.repo = repo
         self.token = os.environ.get(token_env, "") if token_env else ""
         self._cache: dict[str, dict | None] = {}
         self.has_api = bool(repo and self.token)
+        self.events_fixture = ([_normalize_push_event(ev)
+                                for ev in (push_events_fixture or [])]
+                               if push_events_fixture is not None else None)
+        self.events_fixture = [ev for ev in self.events_fixture if ev] \
+            if self.events_fixture else self.events_fixture
+        self._events_cache: list[dict] | None = None
+        self._events_status: str | None = None
 
     def _api_run(self, rid: str) -> dict | None:
         req = urllib.request.Request(
@@ -439,6 +720,7 @@ class RunVerifier:
                 d = json.loads(r.read() or b"{}")
                 return {"head_sha": d.get("head_sha"),
                         "head_branch": d.get("head_branch"),
+                        "event": d.get("event"),
                         "conclusion": d.get("conclusion")}
         except (urllib.error.HTTPError, urllib.error.URLError, OSError, ValueError):
             return None
@@ -495,6 +777,187 @@ class RunVerifier:
         except (urllib.error.URLError, OSError):
             return None
 
+    # ------------------------- Events API (Round-22 direction 4)
+
+    def events_available(self) -> bool:
+        return self.events_fixture is not None or self.has_api
+
+    def _fetch_push_events(self) -> None:
+        if self._events_cache is not None:
+            return
+        if self.events_fixture is not None:
+            self._events_cache = list(self.events_fixture)
+            self._events_status = "fixture"
+            return
+        if not self.has_api:
+            self._events_cache = []
+            self._events_status = "no-source"
+            return
+        evs: list[dict] = []
+        import time
+        # the Events API serves at most 3 pages / 300 events per repo; a 422
+        # carrying "pagination is limited" AFTER a successful page is the
+        # documented END OF DATA for this resource, not an outage (observed
+        # live 2026-10-20: page 4 returns exactly that). Genuine failures on
+        # any page still fail closed once the bounded retries are exhausted.
+        page = 1
+        while page <= 3:
+            req = urllib.request.Request(
+                f"{API}/repos/{self.repo}/events?per_page=100&page={page}",
+                headers={"Accept": "application/vnd.github+json",
+                         "Authorization": "Bearer " + self.token})
+            data = None
+            for attempt in range(3):
+                try:
+                    with urllib.request.urlopen(req, timeout=30) as r:
+                        data = json.loads(r.read() or b"[]")
+                    break
+                except urllib.error.HTTPError as e:
+                    body = b""
+                    try:
+                        body = e.read()
+                    except Exception:  # noqa: BLE001
+                        pass
+                    if e.code == 422 and b"pagination is limited" in body \
+                            and page > 1:
+                        data = []
+                        break
+                    if attempt < 2:
+                        time.sleep(2 * (attempt + 1))
+                except (urllib.error.URLError, OSError, ValueError):
+                    if attempt < 2:
+                        time.sleep(2 * (attempt + 1))
+            if data is None:
+                self._events_cache = []
+                self._events_status = "unavailable"
+                return
+            got = data if isinstance(data, list) else []
+            for ev in got:
+                if isinstance(ev, dict) and ev.get("type") == "PushEvent":
+                    nev = _normalize_push_event(ev)
+                    if nev:
+                        evs.append(nev)
+            if len(got) < 100:
+                break
+            page += 1
+        self._events_cache = evs
+        self._events_status = "ok"
+
+    def push_event_for(self, sha: str) -> tuple[dict | None, str]:
+        """The latest PushEvent whose payload.after == sha.
+
+        Returns (event, status): status in {found, not-found, no-source,
+        unavailable}. 'unavailable' is a fetch failure (fail closed when the
+        binding is required); 'not-found' means the event is absent from the
+        visible window (rolled off, or the SHA was never pushed) -- never
+        treated as proof."""
+        self._fetch_push_events()
+        matches = [e for e in self._events_cache if e.get("after") == sha]
+        if matches:
+            return matches[-1], "found"
+        if self._events_status in ("fixture", "ok"):
+            return None, "not-found"
+        return None, self._events_status or "no-source"
+
+    def prior_tip_event(self, event_id: str, sha: str) -> tuple[dict | None, str]:
+        """Round-22 prior-tip re-verification: the retained PushEvent with
+        the recorded id whose `before` == sha (a later push on the ref whose
+        before field records the ref's prior tip). Returns (event, status)
+        with the same status vocabulary as push_event_for."""
+        self._fetch_push_events()
+        for e in self._events_cache:
+            if e.get("id") == event_id and e.get("before") == sha:
+                return e, "found"
+        if self._events_status in ("fixture", "ok"):
+            return None, "not-found"
+        return None, self._events_status or "no-source"
+
+    def push_run_for(self, branch: str, sha: str) -> str | None:
+        """A verified Actions run with event=push, head_branch == branch and
+        head_sha == sha (the manifest first, else the Actions API queried by
+        head_sha). A run of ANY conclusion qualifies: a failed run still
+        proves the push event occurred (direction 3) and is never counted as
+        successful gate evidence."""
+        for rid, rec in (self.manifest.get("runs", {}) or {}).items():
+            if (rec.get("event") == "push" and rec.get("head_branch") == branch
+                    and rec.get("head_sha") == sha):
+                return rid
+        if not self.has_api:
+            return None
+        req = urllib.request.Request(
+            f"{API}/repos/{self.repo}/actions/runs?head_sha={sha}&per_page=100",
+            headers={"Accept": "application/vnd.github+json",
+                     "Authorization": "Bearer " + self.token})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                data = json.loads(r.read() or b"{}")
+        except (urllib.error.HTTPError, urllib.error.URLError, OSError, ValueError):
+            return None
+        for run in data.get("workflow_runs", []) or []:
+            if (run.get("event") == "push"
+                    and run.get("head_branch") == branch
+                    and run.get("head_sha") == sha):
+                return str(run.get("id"))
+        return None
+
+    def transition_evidence(self, branch: str, declared: str, candidate: str):
+        """Round-22 binding evidence for a ref transition, ADAPTED to this
+        repository's live feed realities (verified 2026-10-20): the events
+        feed ELIDES PushEvent.after for this repo (only `before` is
+        reliable), and ref updates made through the git-data API generate
+        NO PushEvent at all (their pushes are proven only by push-event
+        Actions runs). Preference order, every step independently verified:
+
+          1. 'push-event': a retained PushEvent on refs/heads/<branch> with
+             after == candidate (when the feed provides after); its before
+             must equal the declared pre-push tip (all-zero for ABSENT),
+             else a mismatch reason is returned (race / false ABSENT);
+          2. 'push-event-before': a retained PushEvent on the ref whose
+             before == the declared pre-push tip (after elided), PLUS a
+             verified push-event run on the exact candidate tying the
+             candidate to the branch push;
+          3. 'push-run': a verified push-EVENT Actions run on the exact
+             candidate (event=push, head_branch, head_sha) -- GitHub's own
+             record that the push event occurred on this branch and head;
+          4. None: no push-event evidence exists (fail closed).
+
+        Returns (kind, obj, mismatch): kind in {'push-event',
+        'push-event-before', 'push-run', None}; obj is the event dict or the
+        run id; mismatch is a failure reason for 'push-event' mismatches."""
+        ref = f"refs/heads/{branch}"
+        self._fetch_push_events()
+        on_ref = [e for e in self._events_cache if e.get("ref") == ref]
+        # 1. after-match (strongest: proves both ends of the transition)
+        for e in reversed(on_ref):
+            if e.get("after") == candidate:
+                before = e.get("before")
+                if declared == "ABSENT":
+                    if before != ZERO_SHA:
+                        return ("push-event", e,
+                                f"false ABSENT: the PushEvent records a prior "
+                                f"tip {str(before)[:12]}… (the ref existed "
+                                f"before this push)")
+                elif isinstance(before, str) and before != declared:
+                    return ("push-event", e,
+                            f"the PushEvent's before is {before[:12]}…, not the "
+                            f"declared pre-push tip {declared[:12]}… (a prior "
+                            f"unlogged ref update, a raced update, or an older "
+                            f"ancestor was declared; the log does not describe "
+                            f"the actual ref transition)")
+                return ("push-event", e, None)
+        # 2. before-match + push-run on the candidate (after elided)
+        want_before = ZERO_SHA if declared == "ABSENT" else declared
+        rid = self.push_run_for(branch, candidate)
+        for e in reversed(on_ref):
+            if e.get("before") == want_before and rid is not None:
+                return ("push-event-before", e, None)
+        # 3. push-event run on the exact candidate alone
+        if rid is not None:
+            return ("push-run", rid, None)
+        return (None, None, None)
+
+    # ------------------------- PR / reviews (Round-21/22 merge verification)
+
     def api_pull(self, number: str) -> dict | None:
         if not (self.repo and self.token):
             return None
@@ -509,17 +972,78 @@ class RunVerifier:
             return None
 
     def api_pull_reviews(self, number: str) -> list | None:
+        """All reviews, paginated (Round-22: a single 100-entry page must not
+        silently truncate the review history)."""
         if not (self.repo and self.token):
             return None
-        req = urllib.request.Request(
-            f"{API}/repos/{self.repo}/pulls/{number}/reviews?per_page=100",
-            headers={"Accept": "application/vnd.github+json",
-                     "Authorization": "Bearer " + self.token})
+        out: list = []
+        page = 1
+        while page <= 5:
+            req = urllib.request.Request(
+                f"{API}/repos/{self.repo}/pulls/{number}/reviews"
+                f"?per_page=100&page={page}",
+                headers={"Accept": "application/vnd.github+json",
+                         "Authorization": "Bearer " + self.token})
+            try:
+                with urllib.request.urlopen(req, timeout=30) as r:
+                    data = json.loads(r.read() or b"[]")
+            except (urllib.error.HTTPError, urllib.error.URLError, OSError, ValueError):
+                return None
+            got = data if isinstance(data, list) else []
+            out.extend(got)
+            if len(got) < 100:
+                break
+            page += 1
+        return out
+
+
+def _valid_approvals(reviews: list, author: str | None, head: str | None,
+                     before_iso: str | None) -> tuple[list[dict], list[str]]:
+    """Round-22 direction 5: an approval counts only when it is from a
+    non-author reviewer, applies to the EXACT declared head (commit_id), was
+    submitted BEFORE the merge (when post-merge), and is the reviewer's
+    LATEST review state (later changes/dismissals supersede earlier
+    approvals). Returns (valid_approvals, rejection_reasons_sample)."""
+    latest: dict[str, dict] = {}
+    for rv in reviews:
+        if not isinstance(rv, dict):
+            continue
+        user = (rv.get("user") or {}).get("login")
+        if not user:
+            continue
+        prev = latest.get(user)
         try:
-            with urllib.request.urlopen(req, timeout=30) as r:
-                return json.loads(r.read() or b"[]")
-        except (urllib.error.HTTPError, urllib.error.URLError, OSError, ValueError):
-            return None
+            ts = parse_ts(rv.get("submitted_at") or "1970-01-01T00:00:00Z")
+        except ValueError:
+            continue
+        if prev is None or ts >= prev["_ts"]:
+            rv2 = dict(rv)
+            rv2["_ts"] = ts
+            latest[user] = rv2
+    valid: list[dict] = []
+    rejected: list[str] = []
+    for user, rv in sorted(latest.items()):
+        if user == author:
+            rejected.append(f"{user}: author")
+            continue
+        if rv.get("state") != "APPROVED":
+            rejected.append(f"{user}: latest state {rv.get('state')!r}")
+            continue
+        cid = rv.get("commit_id")
+        if head and cid != head:
+            rejected.append(f"{user}: approval bound to commit "
+                            f"{(cid or 'none')[:12]}…, not the exact head")
+            continue
+        if before_iso:
+            try:
+                if rv["_ts"] > parse_ts(before_iso):
+                    rejected.append(f"{user}: submitted after the merge")
+                    continue
+            except ValueError:
+                rejected.append(f"{user}: unparseable merge timestamp")
+                continue
+        valid.append(rv)
+    return valid, rejected
 
 
 # ---------------------------------------------------------------- remote verification
@@ -529,8 +1053,10 @@ def check_remote_verification(path: str, state: dict, remote: str,
                               runs: RunVerifier | None, logrepo: LogRepo,
                               pr_fixture: dict | None, reviews_fixture: list | None,
                               ) -> tuple[list[str], list[str]]:
-    """Round-20/21 layers: live-ref comparison, evidence support, historical
-    proof, terminal-intent binding, and the protected-branch merge transition."""
+    """Round-20/21/22 layers: live-ref comparison, evidence support, claim-
+    separated historical proof (commit existence vs push provenance vs CI
+    success), terminal-intent binding with push-event before/after state, and
+    the protected-branch merge transition."""
     findings: list[str] = []
     info: list[str] = []
     entries = state["entries"]
@@ -546,11 +1072,15 @@ def check_remote_verification(path: str, state: dict, remote: str,
         text = (evm.group(1) if evm else "") + "\n" + "\n".join(e["body"])
         return text, sorted(set(RUN_ID.findall(text)))
 
-    def verify_citations(e, sha: str) -> list[str]:
-        """Verify every run citation in the entry (field + body). Returns the
-        supporting (successful, exact-head) run ids; fails closed per policy."""
+    def verify_citations(e, sha: str, branch: str) -> tuple[list[str], list[str]]:
+        """Verify every run citation in the entry (field + body). Returns
+        (ci_success_rids, push_provenance_rids). Round-22: each cited run's
+        EVENT TYPE and HEAD_BRANCH are validated against the claim -- a
+        push-event run on a different branch contradicts the entry and FAILs;
+        a failed/cancelled run is disclosed and never counts as success."""
         _, rids = entry_runs(e)
         supporting: list[str] = []
+        provenance: list[str] = []
         for rid in rids:
             rec, cls = runs.verify(rid) if runs else (None, "no-source-configured")
             if rec is None:
@@ -570,22 +1100,32 @@ def check_remote_verification(path: str, state: dict, remote: str,
                                 f"{str(rec.get('head_sha'))[:12]}… (evidence does not "
                                 f"support the recorded SHA)")
                 continue
+            ev_type = rec.get("event")
+            hb = rec.get("head_branch")
+            if ev_type == "push" and hb is not None and hb != branch:
+                findings.append(f"FAIL: {path}:{e['n']}: {e['eid']} cites run {rid} as "
+                                f"push evidence for branch {branch!r} but that run is a "
+                                f"push event on branch {hb!r} -- a push event on another "
+                                f"branch does not support this entry (Round-22 event/"
+                                f"head_branch validation)")
+                continue
+            if ev_type == "push" and hb == branch:
+                provenance.append(rid)
             if rec.get("conclusion") == "success":
                 supporting.append(rid)
             else:
                 info.append(f"NOTE: {e['eid']}: cited run {rid} ran on the exact head "
-                            f"but concluded {rec.get('conclusion')!r} -- recorded "
-                            f"honestly; a failed or cancelled run cannot prove a "
-                            f"successful push")
-        return supporting
+                            f"(event={ev_type!r}) but concluded {rec.get('conclusion')!r} -- "
+                            f"CI-success is NOT claimed from it; recorded honestly; a failed "
+                            f"or cancelled run can never be represented as successful gate "
+                            f"evidence (it may still evidence the push event itself)")
+        return supporting, provenance
 
     # ---- pass 1: CONFIRM/RECONCILE entries
     current_for: dict[str, str] = {}
-    confirms_by_eid: dict[str, dict] = {}
     for e in entries:
         if not e["m"] or e["verb"] not in CONFIRM_VERBS:
             continue
-        confirms_by_eid[e["eid"]] = e
         subject, eid = e["subject"], e["eid"]
         branch = field(subject, "branch")
         sha = field(subject, "remote_sha")
@@ -602,17 +1142,13 @@ def check_remote_verification(path: str, state: dict, remote: str,
                 findings.append(f"FAIL: {path}:{e['n']}: {eid} records remote_sha={sha[:12]}… "
                                 f"but neither the evidence field nor the entry body contains "
                                 f"that SHA (fabricated or unsupported evidence)")
-        # 2. claimed branch must be named IN THE EVIDENCE FIELD itself. The entry
-        #    body always contains "branch=<name>" (it restates the header), so a
-        #    body fallback makes this check vacuous -- the Round-21-followup audit
-        #    found exactly that (a CONFIRM for branch b whose evidence cited only
-        #    refs/heads/c passed). The SHA keeps its evidence-or-body fallback
-        #    (the legacy P-011-CONFIRM form relies on it); the branch does not.
+        # 2. claimed branch must be named IN THE EVIDENCE FIELD itself
         if branch not in evidence:
             findings.append(f"FAIL: {path}:{e['n']}: {eid} claims branch {branch!r} but the "
                             f"evidence does not mention that branch (mismatched branch)")
-        # 3. run citations (evidence field AND body -- Round-21 direction 5.3)
-        supporting = verify_citations(e, sha) if runs else []
+        # 3. run citations (evidence field AND body) with event/head_branch
+        #    validation; CI-success and push-provenance are tracked separately
+        supporting, provenance = verify_citations(e, sha, branch) if runs else ([], [])
         # 4. live-ref comparison
         tip, err = live(branch)
         if err:
@@ -621,18 +1157,30 @@ def check_remote_verification(path: str, state: dict, remote: str,
             continue
         if tip == sha:
             current_for[branch] = sha
-            info.append(f"CURRENT: {eid} confirms the live tip of {branch} ({sha[:12]}…)")
+            info.append(f"CURRENT: {eid} confirms the live tip of {branch} ({sha[:12]}…); "
+                        f"CI-success support: {len(supporting)} verified successful run(s)")
             continue
-        # 5. HISTORICAL -- Round-21 direction 5: prove the push was real
+        # 5. HISTORICAL -- Round-22 direction 3: commit existence, push
+        #    provenance, and CI success are SEPARATE claims
         anc = logrepo.is_ancestor(sha, tip)
         if anc is True:
             info.append(f"HISTORICAL: {eid} confirmed {branch} @ {sha[:12]}…; the live tip "
                         f"is {tip[:12]}… — SUPPORTED-BY-ANCESTRY (the recorded SHA is on "
                         f"the branch's current lineage; the confirmation is valid for the "
-                        f"push it describes and does NOT confirm the newer tip)")
+                        f"push it describes and does NOT confirm the newer tip); "
+                        f"CI-success support: {len(supporting)} verified successful run(s)")
             continue
-        # off-lineage (or ancestry not determinable): a reviewed evidence-back
-        # record is required (direction 5.5)
+        # off-lineage: an explicit reclassification discloses NOT PROVEN
+        if eid in state.get("reclassified", set()):
+            rc_eid = next((rc["eid"] for rc in entries
+                           if rc["m"] and rc["verb"] == "push-not-proven"
+                           and field(rc["subject"], "reclassifies") == eid), eid)
+            info.append(f"NOT-PROVEN: {eid} confirmed {branch} @ {sha[:12]}… is "
+                        f"RECLASSIFIED by {rc_eid}: the branch push is NOT PROVEN "
+                        f"(commit existence may be proven; push provenance is not) -- "
+                        f"disclosed, never counted as evidence for any declaration")
+            continue
+        # off-lineage: a reviewed evidence-back record is required
         backs = [b for b in entries if b["m"] and b["verb"] == "evidence-back"
                  and field(b["subject"], "backs") == eid
                  and field(b["subject"], "branch") == branch
@@ -642,11 +1190,11 @@ def check_remote_verification(path: str, state: dict, remote: str,
                 f"FAIL: {path}:{e['n']}: {eid} is classified HISTORICAL ({branch} @ "
                 f"{sha[:12]}…, live tip {tip[:12]}…), the SHA is not on the branch's "
                 f"current lineage, and no reviewed evidence-back record supports it -- "
-                f"a different SHA alone does not prove the historical push was real "
-                f"(Round-21 direction 5)")
+                f"a different SHA alone does not prove the historical push was real, and "
+                f"commit existence is not push provenance (Round-22 direction 3)")
             continue
         back = backs[-1]
-        # the backed SHA must be a real commit: object store or commits API
+        # claim (i): commit existence -- object store or commits API
         obj = logrepo.object_exists(sha)
         api_exists = runs.api_commit_exists(sha) if runs else None
         if not obj and api_exists is not True:
@@ -656,30 +1204,147 @@ def check_remote_verification(path: str, state: dict, remote: str,
                 f"be verified as a real remote commit (fail closed)")
             continue
         # the back's own citations verify (fail-closed policy shared above)
-        verify_citations(back, sha)
-        # connecting facts (recorded; anything machine-checked strengthens the record)
-        connected = False
-        _, back_rids = entry_runs(back)
-        for rid in back_rids + sorted(set(RUN_ID.findall(
-                (field(e["subject"], "evidence") or "") + "\n" + body))):
-            rec, _cls = runs.verify(rid) if runs else (None, "no-source-configured")
-            if rec and rec.get("head_sha") == sha and rec.get("head_branch") == branch:
-                connected = True
-                info.append(f"HISTORICAL: {eid} confirmed {branch} @ {sha[:12]}… -- "
-                            f"SUPPORTED-BY-EVIDENCE-BACK {back['eid']} "
-                            f"(CONNECTED-BY-RUN {rid}, real-commit proof "
-                            f"{'object-store' if obj else 'commits-API'})")
-                break
-        if not connected:
+        back_support, back_prov = verify_citations(back, sha, branch) if runs else ([], [])
+        # claim (ii): push provenance -- independent branch-push proof
+        provenance_src = None
+        if back_prov:
+            provenance_src = (f"push-event run {back_prov[-1]} "
+                              f"(event=push, head_branch={branch}, head_sha={sha[:12]}…)")
+        else:
+            ev, evs = runs.push_event_for(sha) if runs else (None, "no-source")
+            rr = field(back["subject"], "review_ref")
+            if evs == "unavailable":
+                info.append(f"NOTE: {back['eid']}: the Events API is unavailable; "
+                            f"live PushEvent verification is skipped (never treated "
+                            f"as proof)")
+            elif ev is not None and ev.get("ref") == f"refs/heads/{branch}" \
+                    and ev.get("after") == sha:
+                if rr:
+                    provenance_src = (f"live Events-API PushEvent {ev.get('id')} "
+                                      f"(ref={ev.get('ref')}, before={ev['before'][:12]}…, "
+                                      f"after={ev['after'][:12]}…), adjudicated by "
+                                      f"review_ref={rr}")
+                else:
+                    findings.append(
+                        f"FAIL: {path}:{back['n']}: {back['eid']} is backed by a live "
+                        f"PushEvent but carries no review_ref -- Events-API evidence "
+                        f"is transient (retention window) and must be recorded and "
+                        f"adjudicated to count durably (fail closed)")
+            elif ev is not None:
+                info.append(f"NOTE: {back['eid']}: a PushEvent exists for the SHA but on "
+                            f"ref {ev.get('ref')!r}, not refs/heads/{branch} (not proof "
+                            f"for this branch)")
+            # recorded push_event citation + adjudication
+            if provenance_src is None:
+                ev_text = ((field(back["subject"], "evidence") or "")
+                           + "\n" + "\n".join(back["body"]))
+                m = PUSH_EVENT_CITE.search(ev_text)
+                if m and m.group(4) == sha:
+                    if m.group(2) != f"refs/heads/{branch}":
+                        findings.append(
+                            f"FAIL: {path}:{back['n']}: {back['eid']} records a push_event "
+                            f"citation on ref {m.group(2)} which is not the claimed branch "
+                            f"ref (mismatched ref-transition evidence)")
+                    elif not rr:
+                        findings.append(
+                            f"FAIL: {path}:{back['n']}: {back['eid']} records push_event "
+                            f"evidence but carries no review_ref -- recorded ref-transition "
+                            f"evidence must be adjudicated against the canonical record "
+                            f"(fail closed)")
+                    else:
+                        provenance_src = (f"recorded PushEvent {m.group(1)} "
+                                          f"(ref={m.group(2)}, before={m.group(3)[:12]}…, "
+                                          f"after={m.group(4)[:12]}…), adjudicated by "
+                                          f"review_ref={rr}")
+                        lev, _ls = runs.push_event_for(sha) if runs else (None, "no-source")
+                        if lev is not None and lev.get("id") == m.group(1):
+                            info.append(f"NOTE: {back['eid']}: the recorded PushEvent "
+                                        f"{m.group(1)} is still observable live "
+                                        f"(re-verified)")
+                        elif runs and runs.events_available():
+                            info.append(f"NOTE: {back['eid']}: the recorded PushEvent "
+                                        f"{m.group(1)} is no longer observable in the "
+                                        f"live events window (retention limit); the "
+                                        f"adjudicated record carries the proof")
+                # Round-22 prior-tip citation: a LATER push on the same ref
+                # whose before field records the backed SHA as the ref's
+                # prior tip (used when the push's own event rolled off and
+                # the API elides its after)
+                if provenance_src is None:
+                    m2 = PRIOR_TIP_CITE.search(ev_text)
+                    if m2 and m2.group(3) == sha:
+                        if m2.group(2) != f"refs/heads/{branch}":
+                            findings.append(
+                                f"FAIL: {path}:{back['n']}: {back['eid']} records a "
+                                f"prior-tip push_event citation on ref {m2.group(2)} "
+                                f"which is not the claimed branch ref (mismatched "
+                                f"ref-transition evidence)")
+                        elif not rr:
+                            findings.append(
+                                f"FAIL: {path}:{back['n']}: {back['eid']} records a "
+                                f"prior-tip push_event citation but carries no "
+                                f"review_ref -- recorded ref-transition evidence must "
+                                f"be adjudicated against the canonical record "
+                                f"(fail closed)")
+                        else:
+                            provenance_src = (f"recorded PushEvent {m2.group(1)} "
+                                              f"(ref={m2.group(2)}, "
+                                              f"prior_tip={m2.group(3)[:12]}…): a later "
+                                              f"push on the same ref records the branch's "
+                                              f"prior tip as the backed SHA -- the ref "
+                                              f"provably pointed there (refs move only "
+                                              f"by pushes), adjudicated by "
+                                              f"review_ref={rr}")
+                            lev2, _ls2 = (runs.prior_tip_event(m2.group(1), sha)
+                                          if runs else (None, "no-source"))
+                            if lev2 is not None:
+                                info.append(f"NOTE: {back['eid']}: the recorded "
+                                            f"prior-tip PushEvent {m2.group(1)} is "
+                                            f"still observable live (re-verified)")
+                            elif runs and runs.events_available():
+                                info.append(f"NOTE: {back['eid']}: the recorded "
+                                            f"prior-tip PushEvent {m2.group(1)} is no "
+                                            f"longer observable in the live events "
+                                            f"window (retention limit); the "
+                                            f"adjudicated record carries the proof")
+        if provenance_src:
+            ci_note = (f"CI-success: {len(back_support)} verified successful run(s)"
+                       if back_support else
+                       "CI-success: none of the cited runs succeeded (failures disclosed "
+                       "separately; a failed run may evidence the push event but is never "
+                       "successful gate evidence)")
             info.append(f"HISTORICAL: {eid} confirmed {branch} @ {sha[:12]}… -- "
-                        f"SUPPORTED-BY-EVIDENCE-BACK {back['eid']} (reviewed record; "
-                        f"real-commit proof {'object-store' if obj else 'commits-API'}; "
-                        f"no run-connection exists for this head, disclosed)")
+                        f"SUPPORTED-BY-EVIDENCE-BACK {back['eid']}: PUSH-PROVEN by "
+                        f"{provenance_src}; commit-existence proof "
+                        f"{'object-store' if obj else 'commits-API'}; {ci_note}")
+        else:
+            # local tool mode (no runs/events source configured): the provenance
+            # gap is DISCLOSED, not silently passed -- the CI gate always
+            # configures the manifest (+ API) and fails exactly this case
+            # closed (the established Round-21 no-source policy).
+            no_source = (runs is None
+                         or (not runs.manifest and not runs.has_api
+                             and runs.events_fixture is None))
+            if no_source:
+                info.append(
+                    f"NOTE: {eid} ({branch} @ {sha[:12]}…, off-lineage) is backed by "
+                    f"{back['eid']}, but push provenance is UNVERIFIED in this mode "
+                    f"(no runs-manifest, API, or events source configured; local tool "
+                    f"mode discloses -- the CI gate always configures sources and "
+                    f"fails this case closed)")
+            else:
+                findings.append(
+                    f"FAIL: {path}:{e['n']}: {eid} ({branch} @ {sha[:12]}…, off-lineage) is "
+                    f"backed by {back['eid']}, but the backing proves only COMMIT EXISTENCE: "
+                    f"no independent branch-push proof exists (no push-event run with "
+                    f"event=push + head_branch={branch}, no Events-API PushEvent, no "
+                    f"adjudicated push_event citation) and no push-not-proven "
+                    f"reclassification discloses the gap -- commit existence is not push "
+                    f"provenance (Round-22 direction 3; fail closed)")
 
     # ---- pass 2: merge-intents
     merge_intents = [e for e in entries if e["m"] and e["verb"] == "merge-intent"]
-    voided = {field(e["subject"], "voids") for e in entries
-              if e["m"] and e["verb"] == "intent-reconcile"}
+    voided = state.get("voided_intents", set())
 
     def mi_field(e, name):
         return field(e["subject"], name)
@@ -699,11 +1364,15 @@ def check_remote_verification(path: str, state: dict, remote: str,
 
         if targeting:
             active = targeting[-1]
+            # Round-22 direction 5: fix merge-intent supersession -- resolve
+            # DEFERRED heads to their introducing commits before comparing
             for old in targeting[:-1]:
                 if old["eid"] in voided:
                     continue
-                old_head, new_head = mi_field(old, "expected_head"), mi_field(active, "expected_head")
-                if old_head and new_head and logrepo.is_ancestor(old_head, new_head):
+                old_head, old_ok = resolve_head(old)
+                new_head, _new_ok = resolve_head(active)
+                if old_ok and old_head and new_head \
+                        and logrepo.is_ancestor(old_head, new_head):
                     info.append(f"NOTE: merge-intent {old['eid']} is SUPERSEDED by "
                                 f"{active['eid']} (same lineage)")
                 else:
@@ -714,6 +1383,7 @@ def check_remote_verification(path: str, state: dict, remote: str,
             base = mi_field(active, "expected_pre_merge_base")
             head, head_ok = resolve_head(active)
             pr_no = mi_field(active, "pr")
+            src_branch = mi_field(active, "source_branch")
             merge_ok = head_ok
             if not head_ok:
                 findings.append(f"FAIL: {path}:{active['n']}: the merge-intent's declared "
@@ -749,6 +1419,45 @@ def check_remote_verification(path: str, state: dict, remote: str,
                             f"FAIL: {path}:{active['n']}: the merge-intent does not ride "
                             f"the merged PR branch history (introduced by "
                             f"{(intro[:12] + '…') if intro else 'nothing'})")
+                # Round-22 direction 4: bind the merge to the trusted
+                # push-event evidence on the protected branch (same adapted
+                # preference chain as the terminal-intent binding)
+                if runs and runs.events_available():
+                    kind, obj, mism = runs.transition_evidence(
+                        branch_under_test, base or "", expect_tip)
+                    if kind is None:
+                        merge_ok = False
+                        findings.append(
+                            f"FAIL: {path}:{active['n']}: no push-event evidence "
+                            f"exists for the protected-branch candidate "
+                            f"{expect_tip[:12]}… (no PushEvent on "
+                            f"refs/heads/{branch_under_test} and no verified "
+                            f"push-event Actions run on the exact head) — the "
+                            f"merge transition cannot be verified (fail closed)")
+                    elif kind == "push-event" and mism:
+                        merge_ok = False
+                        findings.append(
+                            f"FAIL: {path}:{active['n']}: {mism} — the "
+                            f"protected-branch transition is not the declared "
+                            f"one (raced or unrelated update)")
+                    elif kind == "push-event":
+                        info.append(f"BOUND: the merge PushEvent verifies the "
+                                    f"protected-branch transition (before="
+                                    f"{str(obj.get('before'))[:12]}…, after="
+                                    f"{str(obj.get('after'))[:12]}…)")
+                    elif kind == "push-event-before":
+                        info.append(f"BOUND: the merge PushEvent records the "
+                                    f"transition from the declared pre-merge "
+                                    f"base {str(obj.get('before'))[:12]}… (the "
+                                    f"feed elides after; the push-event run on "
+                                    f"the merge commit ties the candidate)")
+                    else:  # push-run
+                        info.append(f"BOUND: push-event run {obj} on the merge "
+                                    f"commit (event=push, head_branch="
+                                    f"{branch_under_test}) ties the candidate to "
+                                    f"a genuine push event; the feed retains no "
+                                    f"transition PushEvent for the protected "
+                                    f"branch (disclosed)")
             else:
                 merge_ok = False
                 findings.append(f"FAIL: {path}:{active['n']}: merge verification requires "
@@ -764,16 +1473,39 @@ def check_remote_verification(path: str, state: dict, remote: str,
                     f"FAIL: {path}:{active['n']}: PR {pr_no} could not be verified "
                     f"(no fixture, API unavailable) -- fail closed")
             else:
+                # Round-22 direction 5: the PR API's merge_commit_sha must be
+                # EXACTLY the protected-branch candidate being checked
+                mcs = pr.get("merge_commit_sha")
+                if expect_tip and mcs != expect_tip:
+                    merge_ok = False
+                    findings.append(
+                        f"FAIL: {path}:{active['n']}: PR {pr_no} merge_commit_sha is "
+                        f"{(mcs or 'none')[:12] if mcs else 'none'}…, not the live "
+                        f"protected-branch candidate {expect_tip[:12]}… (merge-commit "
+                        f"parents alone are insufficient)")
                 if not pr.get("merged"):
                     merge_ok = False
                     findings.append(f"FAIL: {path}:{active['n']}: PR {pr_no} is not "
                                     f"merged (merged={pr.get('merged')!r})")
+                merged_at = pr.get("merged_at")
+                if not merged_at:
+                    merge_ok = False
+                    findings.append(f"FAIL: {path}:{active['n']}: PR {pr_no} carries no "
+                                    f"merged_at timestamp (merged state unverifiable)")
                 if not ((pr.get("head") or {}).get("sha") == head):
                     merge_ok = False
                     findings.append(
                         f"FAIL: {path}:{active['n']}: PR {pr_no} head "
                         f"{str((pr.get('head') or {}).get('sha'))[:12]}… does not "
                         f"match the declared head {(head or '?')[:12]}…")
+                # Round-22: the PR's source branch ref must match the declared
+                # source_branch (a wrong-branch merge is not the declared one)
+                head_ref = (pr.get("head") or {}).get("ref")
+                if src_branch and head_ref != src_branch:
+                    merge_ok = False
+                    findings.append(
+                        f"FAIL: {path}:{active['n']}: PR {pr_no} head ref is "
+                        f"{head_ref!r}, not the declared source branch {src_branch!r}")
                 if not ((pr.get("base") or {}).get("ref") == branch_under_test):
                     merge_ok = False
                     findings.append(
@@ -791,14 +1523,20 @@ def check_remote_verification(path: str, state: dict, remote: str,
                     f"not be verified (no fixture, API unavailable) -- fail closed")
             else:
                 author = (pr or {}).get("user", {}).get("login")
-                approved = [r for r in reviews if r.get("state") == "APPROVED"
-                            and r.get("user", {}).get("login") != author]
+                approved, rejected = _valid_approvals(
+                    reviews, author, head, (pr or {}).get("merged_at"))
                 if not approved:
                     merge_ok = False
+                    detail = "; ".join(rejected[:5]) if rejected else "no reviews"
                     findings.append(
                         f"FAIL: {path}:{active['n']}: PR {pr_no} has no approving "
-                        f"review from a user other than the PR author (required "
-                        f"independent approval is not satisfied)")
+                        f"review from a user other than the PR author that applies to "
+                        f"the exact declared head and predates the merge (required "
+                        f"independent approval not satisfied; review states: {detail})")
+                else:
+                    info.append(f"APPROVAL-VERIFIED: {len(approved)} fresh non-author "
+                                f"approval(s) on the exact head "
+                                f"({', '.join((r.get('user') or {}).get('login', '?') for r in approved)})")
             if merge_ok:
                 info.append(f"MERGE-VERIFIED: {active['eid']} declares the live tip "
                             f"of {branch_under_test} as a reviewed-PR merge "
@@ -806,7 +1544,7 @@ def check_remote_verification(path: str, state: dict, remote: str,
                 info.append(f"DECLARED: {branch_under_test} current tip is declared by "
                             f"the verified merge-intent {active['eid']}")
 
-    # ---- pass 3: branch under test -- terminal-intent binding (direction 4)
+    # ---- pass 3: branch under test -- terminal-intent binding (directions 4)
     if branch_under_test:
         tip, err = live(branch_under_test)
         declared_by_merge = any(mi_field(e, "target") == branch_under_test
@@ -824,6 +1562,24 @@ def check_remote_verification(path: str, state: dict, remote: str,
                        if mi_field(e, "source_branch") == branch_under_test]
             if src_mis:
                 active = src_mis[-1]
+                # Round-22 direction 5: merge-intent supersession is resolved
+                # via the introducing commits (DEFERRED heads included) on the
+                # source side as well -- a prior intent on the same lineage is
+                # SUPERSEDED by the active one; anything else must be voided
+                for old in src_mis[:-1]:
+                    if old["eid"] in voided:
+                        continue
+                    old_head, old_ok = resolve_head(old)
+                    new_head, _new_ok = resolve_head(active)
+                    if old_ok and old_head and new_head \
+                            and logrepo.is_ancestor(old_head, new_head):
+                        info.append(f"NOTE: merge-intent {old['eid']} is SUPERSEDED "
+                                    f"by {active['eid']} (same lineage)")
+                    else:
+                        findings.append(f"FAIL: {path}:{active['n']}: stale "
+                                        f"merge-intent {old['eid']} is not on the "
+                                        f"lineage of the active one and is not "
+                                        f"voided (void it with intent-reconcile)")
                 head, head_ok = resolve_head(active)
                 base = mi_field(active, "expected_pre_merge_base")
                 tgt = mi_field(active, "target")
@@ -871,18 +1627,7 @@ def check_remote_verification(path: str, state: dict, remote: str,
             if declared and not unpaired_here:
                 info.append(f"DECLARED: {branch_under_test} current tip is CONFIRMED-CURRENT")
             elif unpaired_here:
-                if declared_by_merge and not unpaired_here:
-                    pass  # handled above
                 terminal = unpaired_here[-1]
-                excess = unpaired_here[:-1]
-                for q in excess:
-                    if q["e"]["eid"] not in voided:
-                        findings.append(
-                            f"FAIL: {path}:{q['e']['n']}: multiple unmatched intents for "
-                            f"the branch under test: {q['e']['eid']} is not the terminal "
-                            f"intent and is not voided by an intent-reconcile record "
-                            f"(excess unmatched intents must be separately reconciled)")
-                # exact-candidate binding for the terminal intent
                 te = terminal["e"]
                 if terminal["placeholder"]:
                     findings.append(f"FAIL: {path}:{te['n']}: the branch under test's tip "
@@ -928,22 +1673,25 @@ def check_remote_verification(path: str, state: dict, remote: str,
                             newest_sha = (field(newest_prior["subject"], "remote_sha")
                                           if newest_prior else None)
                             if re.fullmatch(r"[0-9a-f]{40}", tok):
-                                # the two declaration violations are INDEPENDENT:
-                                # a declaration can be both non-ancestral and
-                                # stale; reporting only the first hid the second
                                 bad_decl = False
                                 if expect_tip and not logrepo.is_ancestor(tok, expect_tip):
                                     # a DOCUMENTED REBUILD makes a non-ancestral
                                     # pre-push tip legitimate: when the log itself
-                                    # carries a reviewed evidence-back for this
-                                    # exact branch+SHA (the record that proves the
-                                    # old push was real), the candidate descends
-                                    # from the rebuild, not from the declared tip
+                                    # carries a reviewed evidence-back OR a
+                                    # push-not-proven reclassification for this
+                                    # exact branch+SHA (records that document the
+                                    # old push and the rebuild), the candidate
+                                    # descends from the rebuild, not from the
+                                    # declared tip
                                     backs_tok = [b for b in entries
                                                  if b["m"] and b["verb"] == "evidence-back"
                                                  and field(b["subject"], "branch") == branch_under_test
                                                  and field(b["subject"], "remote_sha") == tok]
-                                    if not backs_tok:
+                                    reclass_tok = [rc for rc in entries
+                                                   if rc["m"] and rc["verb"] == "push-not-proven"
+                                                   and field(rc["subject"], "branch") == branch_under_test
+                                                   and field(rc["subject"], "remote_sha") == tok]
+                                    if not backs_tok and not reclass_tok:
                                         bad_decl = True
                                         findings.append(
                                             f"FAIL: {path}:{te['n']}: declared pre-push tip "
@@ -979,6 +1727,56 @@ def check_remote_verification(path: str, state: dict, remote: str,
                                 findings.append(
                                     f"FAIL: {path}:{te['n']}: expected_remote_tip_before_push "
                                     f"must be a 40-hex SHA or ABSENT (schema violation)")
+                        # Round-22 direction 4: bind the declared pre-push
+                        # state to the TRUSTED push-event evidence, adapted
+                        # to this repository's feed (after is elided;
+                        # API-driven ref updates emit no PushEvent -- the
+                        # push-event run on the candidate is the binding
+                        # evidence in that class; see transition_evidence)
+                        if expect_tip and runs and runs.events_available():
+                            decl2 = (field(te["subject"],
+                                           "expected_remote_tip_before_push") or "")
+                            decl_tok = decl2.split()[0] if decl2.split() else ""
+                            kind, obj, mism = runs.transition_evidence(
+                                branch_under_test, decl_tok, expect_tip)
+                            if kind is None:
+                                findings.append(
+                                    f"FAIL: {path}:{te['n']}: no push-event "
+                                    f"evidence exists for the candidate "
+                                    f"{expect_tip[:12]}… (no PushEvent on "
+                                    f"refs/heads/{branch_under_test} matches the "
+                                    f"declared pre-push state and no verified "
+                                    f"push-event Actions run exists on the exact "
+                                    f"head) — fail closed")
+                            elif kind == "push-event" and mism:
+                                findings.append(
+                                    f"FAIL: {path}:{te['n']}: {mism}")
+                            elif kind == "push-event":
+                                info.append(
+                                    f"BOUND: the PushEvent verifies the ref "
+                                    f"transition (before={str(obj.get('before'))[:12]}…, "
+                                    f"after={str(obj.get('after'))[:12]}…)")
+                            elif kind == "push-event-before":
+                                info.append(
+                                    f"BOUND: the PushEvent records the transition "
+                                    f"from the declared pre-push tip "
+                                    f"{str(obj.get('before'))[:12]}… on "
+                                    f"refs/heads/{branch_under_test} (the feed "
+                                    f"elides after; the push-event run on the "
+                                    f"exact candidate ties the candidate to the "
+                                    f"branch push)")
+                            else:  # push-run
+                                info.append(
+                                    f"BOUND: push-event run {obj} (event=push, "
+                                    f"head_branch={branch_under_test}, "
+                                    f"head_sha={expect_tip[:12]}…) ties the "
+                                    f"candidate to a genuine push event; the "
+                                    f"events feed retains no transition PushEvent "
+                                    f"matching the declared pre-push state for "
+                                    f"this ref (API-driven ref updates generate "
+                                    f"none; disclosed) — the declared state "
+                                    f"remains verified against the log's newest "
+                                    f"recorded branch state and the live ref")
                     info.append(f"PENDING: {branch_under_test} current tip "
                                 f"{(tip or '?')[:12]}… is declared by the unpaired "
                                 f"terminal intent {te['eid']} (line {te['n']}); its "
@@ -1015,6 +1813,108 @@ def check_remote_verification(path: str, state: dict, remote: str,
     return findings, info
 
 
+# ---------------------------------------------------------- pre-merge verification
+
+def check_pre_merge(path: str, state: dict, remote: str, branch_under_test: str,
+                    expect_tip: str, runs: RunVerifier, logrepo: LogRepo,
+                    pr_no: str, pr_fixture: dict | None,
+                    reviews_fixture: list | None) -> tuple[list[str], list[str]]:
+    """Round-22 direction 5: a FUNCTIONING pre-merge gate. On the source
+    branch's PR event, verify the CURRENT PR/head/review state before any
+    merge executes: the PR's exact head must be the candidate, its base must
+    be the merge-intent's declared target, and a fresh non-author approval
+    must apply to the exact head. A post-merge verifier is not a substitute
+    for this check -- the merge must be blocked until the approval exists."""
+    findings: list[str] = []
+    info: list[str] = []
+    entries = state["entries"]
+
+    def pm_field(e, name):
+        return field(e["subject"], name)
+
+    merge_intents = [e for e in entries if e["m"] and e["verb"] == "merge-intent"
+                     and pm_field(e, "source_branch") == branch_under_test]
+    if not merge_intents:
+        findings.append(f"FAIL: {path}: no merge-intent is declared for source branch "
+                        f"{branch_under_test!r}; a merge into a protected branch requires "
+                        f"one, bound to the exact final candidate, BEFORE merging")
+        return findings, info
+    active = merge_intents[-1]
+    tgt = pm_field(active, "target")
+    eh = pm_field(active, "expected_head")
+    if eh == "DEFERRED":
+        intro = logrepo.introducing_commit(active["eid"], "merge-intent")
+        if not intro:
+            findings.append(f"FAIL: {path}:{active['n']}: the merge-intent's declared "
+                            f"head (DEFERRED) could not be resolved (fail closed)")
+        elif expect_tip and intro != expect_tip:
+            findings.append(f"FAIL: {path}:{active['n']}: the active merge-intent "
+                            f"{active['eid']} binds head {intro[:12]}… but the candidate "
+                            f"is {expect_tip[:12]}… — redeclare the merge-intent on the "
+                            f"exact final candidate before merging")
+    elif expect_tip and eh != expect_tip:
+        findings.append(f"FAIL: {path}:{active['n']}: the active merge-intent "
+                        f"{active['eid']} declares head {eh[:12]}… but the candidate is "
+                        f"{expect_tip[:12]}… — redeclare before merging")
+
+    if pr_fixture is not None:
+        pr = pr_fixture
+    else:
+        pr = runs.api_pull(pr_no)
+    if pr is None:
+        findings.append(f"FAIL: {path}: PR {pr_no} could not be verified pre-merge "
+                        f"(API unavailable or unauthorized) -- fail closed; the "
+                        f"authenticated PR and review endpoints must be reachable "
+                        f"(workflow permission pull-requests: read)")
+        return findings, info
+    head_sha = (pr.get("head") or {}).get("sha")
+    head_ref = (pr.get("head") or {}).get("ref")
+    base_ref = (pr.get("base") or {}).get("ref")
+    if expect_tip and head_sha != expect_tip:
+        findings.append(f"FAIL: {path}: PR {pr_no} head is "
+                        f"{(head_sha or 'none')[:12] if head_sha else 'none'}…, not the "
+                        f"candidate {expect_tip[:12]}… (the PR does not carry the "
+                        f"checked-out candidate)")
+    if head_ref != branch_under_test:
+        findings.append(f"FAIL: {path}: PR {pr_no} head ref is {head_ref!r}, not the "
+                        f"declared source branch {branch_under_test!r}")
+    if tgt and base_ref != tgt:
+        findings.append(f"FAIL: {path}: PR {pr_no} base is {base_ref!r}, not the "
+                        f"merge-intent's declared target {tgt!r}")
+    if pr.get("merged"):
+        findings.append(f"FAIL: {path}: PR {pr_no} is already merged; this is the "
+                        f"pre-merge verification (the post-merge path verifies the "
+                        f"merge itself)")
+        return findings, info
+    if reviews_fixture is not None:
+        reviews = reviews_fixture
+    else:
+        reviews = runs.api_pull_reviews(pr_no)
+    if reviews is None:
+        findings.append(f"FAIL: {path}: the reviews of PR {pr_no} could not be "
+                        f"verified pre-merge (API unavailable or unauthorized) -- "
+                        f"fail closed")
+        return findings, info
+    author = (pr.get("user") or {}).get("login")
+    approved, rejected = _valid_approvals(reviews, author,
+                                          head_sha or expect_tip, None)
+    if not approved:
+        detail = "; ".join(rejected[:5]) if rejected else "no reviews"
+        findings.append(
+            f"FAIL: {path}: PRE-MERGE BLOCKED -- PR {pr_no} has no current approving "
+            f"review from a non-author reviewer applied to the exact head "
+            f"{(head_sha or (expect_tip or '?'))[:12]}… (review states: {detail}). "
+            f"The merge must wait for the required independent approval on THIS "
+            f"head; this check passing is a precondition of the protected merge, "
+            f"not a substitute for it")
+    else:
+        info.append(f"PRE-MERGE-VERIFIED: PR {pr_no} carries "
+                    f"{len(approved)} current non-author approval(s) on the exact "
+                    f"head; base={base_ref!r}; the merge may proceed through the "
+                    f"protected PR path once every required check is green")
+    return findings, info
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("logfile")
@@ -1024,14 +1924,19 @@ def main() -> int:
                     help="require OLDER_FILE to be a byte-prefix of logfile (append-only)")
     ap.add_argument("--pushlog-schema", action="store_true",
                     help="also enforce push-log schema: unique IDs, well-formed entries with "
-                         "required fields, and identifier-based INTENT/CONFIRM pairing "
-                         "(unpaired INTENTs are reported as PENDING, not failures)")
+                         "required fields, identifier-based INTENT/CONFIRM pairing, "
+                         "intent-reconcile and push-not-proven validation, and the global "
+                         "unmatched-intent invariant (unpaired INTENTs are reported as "
+                         "PENDING, not failures)")
     ap.add_argument("--remote-verify", action="store_true",
-                    help="Round-20/21 layer: verify every CONFIRM/RECONCILE against the live "
-                         "remote ref, prove the evidence supports the recorded SHA, require "
-                         "historical pushes to be real (ancestry or a reviewed evidence-back), "
-                         "bind the terminal intent to the exact candidate, and verify the "
-                         "protected-branch merge transition")
+                    help="Round-20/21/22 layer: verify every CONFIRM/RECONCILE against the "
+                         "live remote ref, prove the evidence supports the recorded SHA with "
+                         "event/head_branch validation, require historical pushes to prove "
+                         "the BRANCH PUSH (commit existence alone is not push provenance), "
+                         "bind the terminal intent to the exact candidate and to push-event "
+                         "before/after state, and verify the protected-branch merge "
+                         "transition (merge_commit_sha, source ref, merged_at, fresh "
+                         "non-author approval)")
     ap.add_argument("--remote", default="origin",
                     help="remote (URL or path) for ls-remote verification (default: origin)")
     ap.add_argument("--branch", default=None,
@@ -1039,12 +1944,12 @@ def main() -> int:
     ap.add_argument("--expect-tip", default=None, metavar="SHA",
                     help="the expected live tip of --branch (in CI: the exact pushed SHA)")
     ap.add_argument("--runs-manifest", default=None, metavar="FILE",
-                    help="JSON {\"runs\": {id: {head_sha, head_branch?, conclusion}}} for "
-                         "run-citation verification")
+                    help="JSON {\"runs\": {id: {head_sha, head_branch?, event?, conclusion}}} "
+                         "for run-citation verification")
     ap.add_argument("--repo", default=None, metavar="SLUG",
                     help="owner/repo for GitHub API verification (runs outside the manifest "
-                         "window, commit existence, PR + review state); requires the token "
-                         "env var")
+                         "window, commit existence, push events, PR + review state); "
+                         "requires the token env var")
     ap.add_argument("--api-token-env", default="GH_TOKEN", metavar="VAR",
                     help="environment variable carrying the API token (default GH_TOKEN; "
                          "the value is never printed or written anywhere)")
@@ -1052,6 +1957,16 @@ def main() -> int:
                     help="test fixture replacing the PR API response for merge verification")
     ap.add_argument("--reviews-json", default=None, metavar="FILE",
                     help="test fixture replacing the PR-reviews API response")
+    ap.add_argument("--push-events-json", default=None, metavar="FILE",
+                    help="test fixture replacing the Events-API PushEvent source "
+                         "(a JSON list of PushEvent records)")
+    ap.add_argument("--pre-merge-verify", action="store_true",
+                    help="Round-22 pre-merge gate: with --branch (source) and --pr-number, "
+                         "verify the CURRENT PR/head/review state before any merge "
+                         "executes; fails while no fresh non-author approval applies to "
+                         "the exact head")
+    ap.add_argument("--pr-number", default=None, metavar="N",
+                    help="the PR under test (used with --pre-merge-verify)")
     a = ap.parse_args()
 
     # a missing log file must fail CLOSED with a clear message, not an
@@ -1067,8 +1982,9 @@ def main() -> int:
         findings += check_parent_prefix(a.logfile, a.parent_prefix)
     pending: list[str] = []
     info: list[str] = []
+    logrepo = LogRepo(a.logfile)
     if a.pushlog_schema or a.remote_verify:
-        schema_findings, pending, state = check_pushlog_schema(a.logfile)
+        schema_findings, pending, state = check_pushlog_schema(a.logfile, logrepo)
         findings += schema_findings
         if a.remote_verify:
             manifest = None
@@ -1084,8 +2000,20 @@ def main() -> int:
                                    capture_output=True, text=True)
                 if r.returncode == 0 and r.stdout.strip():
                     remote = r.stdout.strip()
-            runs = RunVerifier(manifest, a.repo, a.api_token_env)
-            logrepo = LogRepo(a.logfile)
+            push_events_fixture = None
+            if a.push_events_json:
+                try:
+                    loaded = json.load(open(a.push_events_json, encoding="utf-8"))
+                    push_events_fixture = loaded if isinstance(loaded, list) else None
+                    if push_events_fixture is None:
+                        print("FAIL: --push-events-json must be a JSON list of PushEvent "
+                              "records; fail closed")
+                        return 1
+                except (OSError, ValueError) as e:
+                    print(f"FAIL: --push-events-json unusable ({e}); fail closed")
+                    return 1
+            runs = RunVerifier(manifest, a.repo, a.api_token_env,
+                               push_events_fixture=push_events_fixture)
             pr_fixture = reviews_fixture = None
             if a.pr_json:
                 try:
@@ -1104,6 +2032,16 @@ def main() -> int:
                 runs, logrepo, pr_fixture, reviews_fixture)
             findings += rv_findings
             info += rv_info
+            if a.pre_merge_verify:
+                if not (a.branch and a.expect_tip and a.pr_number):
+                    print("FAIL: --pre-merge-verify requires --branch, --expect-tip, "
+                          "and --pr-number")
+                    return 1
+                pm_findings, pm_info = check_pre_merge(
+                    a.logfile, state, remote, a.branch, a.expect_tip,
+                    runs, logrepo, a.pr_number, pr_fixture, reviews_fixture)
+                findings += pm_findings
+                info += pm_info
     for p in pending:
         print(p)
     for i in info:
@@ -1112,6 +2050,7 @@ def main() -> int:
           f"{'sequence + append-only ' if a.parent_prefix else ''}"
           f"{'schema ' if (a.pushlog_schema or a.remote_verify) else ''}"
           f"{'remote-verified ' if a.remote_verify else ''}"
+          f"{'pre-merge-verified ' if a.pre_merge_verify else ''}"
           f"clean")
     return 0 if not findings else 1
 

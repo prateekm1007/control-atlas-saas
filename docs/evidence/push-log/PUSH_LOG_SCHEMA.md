@@ -1,10 +1,14 @@
-# Push log schema v4 — two-phase records + post-hoc reconciliation + remote verification + binding/merge
+# Push log schema v5 — two-phase records + post-hoc reconciliation + remote verification + binding/merge + claim separation
 
 (Defined 2026-10-20, EC-18/EC-24 auditor revisions; v3 added the `push-reconcile`
 verb and the remote-verification layer per the Round-20 auditor direction 4; v4
-adds the Round-21 identifier-pairing, terminal-intent exact-candidate binding,
+added the Round-21 identifier-pairing, terminal-intent exact-candidate binding,
 historical-proof (`evidence-back`, `intent-reconcile`) and protected-branch
-merge-transition (`merge-intent`) rules per auditor directions 4–6.)
+merge-transition (`merge-intent`) rules per auditor directions 4–6; v5 adds the
+Round-22 claim-separation rules per auditor directions 3–5: `push-not-proven`
+reclassification, `review_ref=` adjudication references, recorded `push_event=`
+citations, PushEvent before/after pre-push-state binding, the global
+unmatched-intent invariant, and the hardened merge/pre-merge verification.)
 
 This document defines the record format for `PUSH_LOG.md`. It is a separate file so the
 log itself stays append-only under the parent-prefix check (`scripts/ci/evidence_sequence_check.py
@@ -71,6 +75,17 @@ two truthful, separately-timestamped records:
 
    It never converts an intent into a confirmation and never conceals missing evidence: the
    voided intent stays visible in the log; only its pairing obligation is discharged.
+   v5 rules: the target must be a PRECEDING eligible intent; the branch scope must
+   match (voiding a push-intent requires the reconcile's `branch=` to equal the
+   intent's branch; voiding a merge-intent requires it to equal the intent's
+   `source_branch` — unambiguous source/target semantics, never a free-form
+   branch value); an intent is voided exactly once (duplicate or conflicting
+   voids FAIL); voiding an intent that a preceding CONFIRM already completed
+   FAILS (a reconciliation must not consume or substitute for a confirmation),
+   and a CONFIRM naming a voided intent FAILS. The unmatched-intent invariant
+   is GLOBAL (v5): no branch — including branches other than the one under
+   test — may hold more than one unvoided, unconsumed intent; only one valid
+   terminal intent per branch may remain pending.
 
 6. **MERGE-INTENT (v4, direction 6).** Pre-declares a future merge of this branch into a
    protected branch through the reviewed PR mechanism:
@@ -84,11 +99,52 @@ two truthful, separately-timestamped records:
    on the protected branch is DECLARED only by a VERIFIED merge-intent: the candidate must
    be a merge commit whose first parent is the declared pre-merge base and whose second
    parent is the declared head, the merge-intent must ride the merged PR branch history,
-   and the PR must be merged with an approving review from a user other than the PR author.
-   Raced, unrelated, or unapproved updates FAIL. The merge must be executed as a MERGE
-   COMMIT through the protected PR path — never a direct push, never a bypass.
+   and the PR must carry a FRESH approving review from a non-author reviewer applied
+   to the EXACT declared head and submitted before the merge (v5: latest review state
+   per reviewer; dismissed or superseded approvals do not count); the PR's
+   `merge_commit_sha` must equal the protected branch's live candidate, the source
+   ref, merged state, and `merged_at` must match the declaration, and the merge
+   PushEvent's `before` must equal the declared base. Raced, unrelated, unapproved,
+   stale-approved, or API-unverifiable updates FAIL. The merge must be executed as a
+   MERGE COMMIT through the protected PR path — never a direct push, never a bypass.
+   On the source branch, prior merge-intents on the same lineage are SUPERSEDED via
+   their introducing commits; anything else must be voided.
 
-## Remote verification (v3/v4, `--remote-verify`)
+7. **PUSH-NOT-PROVEN (v5, direction 3).** The honest reclassification of a
+   historical confirmation whose branch push cannot be proven:
+
+       ## <UTC> | P-<n> | push-not-proven | reclassifies=<confirm-entry-id> branch=<name> remote_sha=<40hex> credential=<name> review_ref=<canonical-record-ref> evidence="<what was searched, what was found, why proof is insufficient>"
+
+   Commit existence may be proven; push provenance is not. The reclassified entry
+   stays visible in the log, is disclosed as NOT PROVEN on every verification run,
+   and is never counted as evidence for any declaration. `review_ref` MUST resolve
+   into the canonical auditor-adjudicated record (repo-relative path + `#` heading
+   anchor) whose section mentions the reclassified entry — "reviewed" is never
+   merely a string written by the same record's author. Exactly one
+   reclassification per confirmation; reclassifying a non-CONFIRM/RECONCILE entry
+   or a mismatched branch/SHA fails. This record never edits the original entry
+   (append-only).
+
+8. **EVIDENCE-BACK claim separation (v5 hardening of the v4 record).** The
+   evidence-back grammar is unchanged, but the checker now verifies three
+   SEPARATE claims: (i) commit existence (object store or commits API);
+   (ii) push provenance — a push-event Actions run (event=push, head_branch,
+   head_sha), a live Events-API PushEvent (ref + before/after), a RECORDED
+   `push_event=<id> ref=<ref> before=<40hex|0{40}> after=<40hex>` citation,
+   or a RECORDED prior-tip citation `push_event=<id> ref=<ref>
+   prior_tip=<40hex>` (a LATER push on the same ref whose `before` field
+   records the backed SHA — GitHub's own record that the ref pointed there;
+   used when the push's own event rolled off the retained window and the
+   feed elides its `after`) — each adjudicated by a valid `review_ref=` on
+   the back; and (iii) CI success —
+   only successful runs count, with failed/cancelled runs disclosed separately
+   (a failed run may evidence the push event itself but is never successful
+   gate evidence). A commits-API HTTP 200 or a free-text rebuild narrative is
+   NOT push provenance; without provenance or a push-not-proven
+   reclassification the gate fails closed (local no-source tool mode discloses
+   the gap and never silently passes it).
+
+## Remote verification (v3/v4/v5, `--remote-verify`)
 
 `scripts/ci/evidence_sequence_check.py --remote-verify [--branch <under-test>
 [--expect-tip <sha>]] [--runs-manifest FILE] [--repo <slug>]` verifies, fail-closed:
@@ -113,10 +169,31 @@ two truthful, separately-timestamped records:
 - that the branch under test's CURRENT tip is DECLARED: by a bound unpaired terminal INTENT
   (reported PENDING — the honest steady state for the newest push of a session; v4 requires
   the terminal intent to have been introduced by the exact candidate under test and to
-  declare the verified pre-push tip, with all excess unmatched intents voided), by an
+  declare the verified pre-push tip, with all excess unmatched intents voided — v5 makes
+  the unmatched-intent invariant global across ALL branches), by an
   exact-tip CONFIRM/RECONCILE, or — on a protected branch — by a VERIFIED merge-intent. A
   tip whose push was never declared FAILS (an ls-remote failure or an absent remote ref
-  also fails closed — missing remote verification is never a pass).
+  also fails closed — missing remote verification is never a pass);
+- **(v5, direction 4) that the terminal intent's declared pre-push state is bound to
+  TRUSTED push-event evidence** when the events source is configured (the CI gate always
+  configures it). ADAPTED to this repository's live feed (verified 2026-10-20: the feed
+  ELIDES PushEvent.after — only `before` is reliable — and ref updates made through the
+  git-data API generate NO PushEvent at all), the accepted evidence, in preference
+  order: (1) a PushEvent on the branch's ref with `after` == the candidate AND `before`
+  == the declared `expected_remote_tip_before_push` (all-zero for an ABSENT
+  declaration); (2) a PushEvent on the ref whose `before` == the declared pre-push tip
+  (after elided) PLUS a verified push-event Actions run on the exact candidate
+  (event=push, head_branch, head_sha); (3) a verified push-event Actions run on the
+  exact candidate alone (the API-driven-ref-update class, disclosed). An ABSENT
+  declaration is backed by the ref's absent prior state (the all-zero before), not
+  merely by the absence of older log records. A prior unlogged ref update, a false
+  ABSENT, a raced update, no push-event evidence at all, or a PR-event run substituting
+  for push-event provenance FAILS;
+- **(v5, direction 3) that every cited run's EVENT TYPE and HEAD_BRANCH are validated
+  against the particular claim**: a push-event run on a different branch contradicts the
+  entry and FAILS; push-event provenance and CI success are verified and reported as
+  separate claims (a failed or cancelled run is disclosed and can never be represented as
+  successful gate evidence).
 
 ## Truthfulness rules
 

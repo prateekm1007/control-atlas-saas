@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Runner for the acceptance tests AT-01..AT-29 (EC-20 dogfood entry point).
+"""Runner for the acceptance tests AT-01..AT-34 (EC-20 dogfood entry point).
 
 The tests live in test_acceptance.py as pytest-compatible node IDs
 (scripts/ci/tests/test_acceptance.py::test_atNN_*), so `pytest` can execute and
@@ -22,7 +22,7 @@ def main() -> int:
     if (r := subprocess.run([sys.executable, "-m", "pytest", SRC, "-q", "--no-header"],
                             capture_output=True, text=True)).returncode == 0:
         print(r.stdout.strip().splitlines()[-1] if r.stdout.strip() else "pytest: ok")
-        print("ALL ACCEPTANCE TESTS PASS (AT-01..AT-29, pytest runner)")
+        print("ALL ACCEPTANCE TESTS PASS (AT-01..AT-34, pytest runner)")
         return 0
     if "No module named pytest" not in r.stderr:
         print(r.stdout)

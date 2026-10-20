@@ -476,3 +476,65 @@
   verified unused across the published branch logs. head_at_intent is DEFERRED
   per the two-phase schema; if this branch is pushed again, P-073-CONFIRM
   records the remote-verified tip after that push returns.
+
+
+## 2026-10-20T20:26:00Z | P-073-CONFIRM | push-confirm | branch=repair/round19-mainline-acceptance remote_sha=908de6dbb9bb183c3c078cbd6be8df1a3475fa32 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/repair/round19-mainline-acceptance -> 908de6dbb9bb183c3c078cbd6be8df1a3475fa32 (re-verified 2026-10-20T20:17:51Z; the push was an ordinary fast-forward 47022be..908de6d made by the parallel writer operating in this sandbox -- the documented incident class, disclosed; the writer declared it as P-073-INTENT and stated no further bookkeeping pushes were planned; main verified untouched at f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd before and after); push-event checks on this exact head: Toscanini Stability Gate run 39481587361 conclusion=success, Governance Acceptance run 39481587388 conclusion=success (all seven always-on jobs); PR-event checks on this exact head: Toscanini Stability Gate run 39481596303 conclusion=success, Governance Acceptance run 39481596105 conclusion=success (nine jobs; the pre-merge-verification job did not yet exist at this head)"
+
+- Two-phase completion for the push declared by P-073-INTENT (head_at_intent
+  was DEFERRED; the remote-verified tip is recorded here after the fact,
+  never backdated). This entry confirms THAT push; it does not confirm any
+  later tip of this branch. All four checks above ran on the exact head
+  908de6dbb9bb… and concluded success; the run facts were fetched from the
+  Actions API at 2026-10-20T20:17:51Z.
+
+## 2026-10-20T20:27:00Z | P-074 | push-not-proven | reclassifies=P-011-CONFIRM branch=proposal/ec16-ec26-enforcement remote_sha=17eb88184c9f461c6bc9ee592f916f7ff4c921c4 credential=OWNER-PAT-1 review_ref=docs/decisions/OWNER_DECISIONS.md#Part-14 evidence="searched 2026-10-20T20:17:51Z: Actions runs ?head_sha=17eb88184c9f461c6bc9ee592f916f7ff4c921c4 -> total_count=0 (no run of any event type on the exact head; the pre-gate-trigger era); Events API full retained window (300 events, 2026-10-18T16:00:59Z..2026-10-20T19:13:33Z, 20 PushEvents) -> no PushEvent with after=17eb88184c9f461c6bc9ee592f916f7ff4c921c4 and none with before=17eb88184c9f461c6bc9ee592f916f7ff4c921c4 on refs/heads/proposal/ec16-ec26-enforcement (the push's own event, ~09:34Z per the log, rolled off the retained window); the commits-API HTTP 200 recorded by P-062 proves only commit existence. The branch push is NOT PROVEN and is never counted as evidence for any declaration; the original entry and its backing stay unchanged."
+
+- Round-22 direction 3.4: honest reclassification. Commit existence is not
+  push provenance; with no independent ref-transition evidence surviving,
+  the claim is disclosed as NOT PROVEN rather than smoothed over.
+
+## 2026-10-20T20:28:00Z | P-075 | evidence-back | backs=P-013-CONFIRM branch=proposal/ec16-ec26-enforcement remote_sha=dab33d946fe31891efbd6e4917e360abcb1872c1 credential=OWNER-PAT-1 review_ref=docs/decisions/OWNER_DECISIONS.md#Part-14 evidence="independent ref-transition evidence: GitHub Events-API PushEvent 24612279632 (created 2026-10-20T10:32:21Z, ref=refs/heads/proposal/ec16-ec26-enforcement) records its before as dab33d946fe31891efbd6e4917e360abcb1872c1 -- the branch provably pointed at this SHA immediately before that push (refs move only by pushes; the push that set it is thereby established, consistent with P-013-CONFIRM's 10:28:58Z ls-remote observation); the event's after/size fields are elided by the API (disclosed); Actions runs on this exact head: total_count=0; citation: push_event=24612279632 ref=refs/heads/proposal/ec16-ec26-enforcement prior_tip=dab33d946fe31891efbd6e4917e360abcb1872c1; re-verified live 2026-10-20T20:17:51Z; adjudicated by register Part 14.4"
+
+- Round-22 direction 3, schema v5 prior-tip citation form: the push's own
+  event rolled off the retained window, but a later push on the same ref
+  carries GitHub's record of the ref's prior tip. Commit-existence proof:
+  object store / commits-API (P-064). CI-success: none (zero runs on the
+  head); nothing is claimed.
+
+## 2026-10-20T20:29:00Z | P-076 | intent-reconcile | voids=P-072 branch=repair/round19-mainline-acceptance credential=OWNER-PAT-1 evidence="the P-072 merge-intent resolved to 908de6dbb9bb… (its introducing commit), which this Round-22 repair push supersedes; redeclared as P-077 on this push, bound to the exact final candidate per the checker's exact-candidate rule"
+
+- Truthful void record: P-072's content is preserved unchanged in the log;
+  only its pairing obligation is discharged.
+
+## 2026-10-20T20:30:00Z | P-077 | merge-intent | target=main pr=30 source_branch=repair/round19-mainline-acceptance expected_pre_merge_base=f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-22 merge path: merge only after all Round-22 blockers are fixed on the exact final candidate, the full Stability Gate and Governance Acceptance pass on that SHA's push and PR events, the pre-merge-verification job passes WITH the required independent non-author current-head approval recorded on the PR, and the merge executes through the protected PR mechanism with a MERGE COMMIT; after that merge, PRs #31-#36 revalidate serially against the resulting main (EC-21 not waived); PRs #23-#29 close only on proven unique-content coverage"
+
+- Redeclaration on the exact final candidate (expected_head=DEFERRED resolves
+  to the commit introducing this record). A-04 verified live 2026-10-20T20:17:51Z (owner
+  PAT): branch protection on main requires the checks "Secret Scan
+  (gitleaks)" and "Unit Tests + Hash Lock" (strict), one approving review,
+  and conversation resolution; the Governance Acceptance checks are NOT in
+  the platform's required-check list -- recorded as a material finding; the
+  reviewed merge path still requires them procedurally, and the
+  pre-merge-verification job enforces the approval requirement on the exact
+  head before any merge. The merge itself is executed only through the
+  protected PR path; no merge is performed by this push.
+
+## 2026-10-20T20:31:00Z | P-078-INTENT | push-intent | branch=repair/round19-mainline-acceptance head_at_intent=DEFERRED expected_remote_tip_before_push=908de6dbb9bb183c3c078cbd6be8df1a3475fa32 credential=OWNER-PAT-1 authorized_by="auditor Round-22 directions 7-8: append the P-073 completion and the new candidate-bound records in the next repair push without editing old entries or force-pushing; regenerate the manifest and live evidence table; make one normal fast-forward push; verify the exact candidate's CI runs and conclusions from GitHub; update PR #30's machine-checked body with only confirmed evidence; preserve a truthful terminal PENDING; then stop for review"
+
+- This push carries the Round-22 repairs: the EC-23 control checker
+  rewrite (report-field leakage closed; per-element type validation;
+  count-only diagnostics; AT-30), the EC-24 claim separation and
+  provenance/reconciliation/binding layers with the push-not-proven and
+  prior-tip citation mechanisms (AT-31/AT-32; schema v5), the
+  protected-main merge proof and the functioning pre-merge gate
+  (AT-33; pull-requests: read + canaries), the EC-26 conservative
+  glob coverage with ordered negative filters (AT-34), P-073-CONFIRM,
+  the P-074/P-075 re-adjudication pair, the P-072 void and this
+  redeclaration, the regenerated evidence table and manifest, register
+  Part 14, P0_STATUS section 12, the Round-22 reading note, and RECEIPT
+  R16.
+- ID selection: P-074..P-078 verified unused across the published log.
+- head_at_intent is DEFERRED per the two-phase schema; if this branch is
+  pushed again, P-078-CONFIRM records the remote-verified tip after that
+  push returns. Until then the tip pushed by this INTENT is disclosed as
+  PENDING by the evidence-sequence checker — the designed, truthful state.

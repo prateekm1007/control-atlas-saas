@@ -1630,18 +1630,29 @@ def test_at27_historical_proof():
     check("AT-27", "an off-lineage historical confirmation without backing fails",
           r.returncode == 1 and "no reviewed evidence-back record supports it" in r.stdout,
           r.stdout)
-    # 2. with a matching evidence-back (SHA exists in the object store) -> PASS.
-    #    The log also carries the terminal intent for the log commit itself: the
-    #    tip is then DECLARED (PENDING, honest steady state) and the assertion
-    #    isolates the evidence-back semantics
+    # 2. with a matching evidence-back: Round-22 requires INDEPENDENT push
+    #    provenance (commit existence alone is not push evidence). The back
+    #    carries a recorded push_event= citation (id/ref/before/after) plus a
+    #    review_ref= that resolves into a tracked adjudicating register whose
+    #    section mentions the backed entry.
+    register = os.path.join(src, "docs", "decisions", "REGISTER.md")
+    os.makedirs(os.path.dirname(register), exist_ok=True)
+    open(register, "w").write(
+        "# Test register\n\n## Part 99 -- Round-22 test adjudication\n\n"
+        "The adjudicator reviewed the evidence-back P-2 for the off-lineage "
+        "confirmation P-1-CONFIRM (SHA %s) and accepted the recorded "
+        "PushEvent ref-transition evidence.\n" % a[:12])
     back = ("## 2026-10-20T12:00:00Z | P-2 | evidence-back | backs=P-1-CONFIRM branch=b "
-            "remote_sha=%s credential=OWNER-PAT-1 evidence=\"branch rebuilt per reviewed "
-            "direction; commit %s preserved in the object store\"\n" % (a, a)
+            "remote_sha=%s credential=OWNER-PAT-1 review_ref=docs/decisions/REGISTER.md#Part-99 "
+            "evidence=\"branch rebuilt per reviewed direction; commit %s preserved in the "
+            "object store; push_event=12345678 ref=refs/heads/b before=%s after=%s "
+            "created=2026-10-20T09:00:00Z\"\n" % (a, a, "0" * 40, a)
             + "## 2026-10-20T13:00:00Z | P-3-INTENT | push-intent | branch=b "
             "expected_remote_tip_before_push=%s credential=OWNER-PAT-1\n" % a)
     r = run_with(back)
-    check("AT-27", "an evidence-backed off-lineage historical confirmation passes",
-          r.returncode == 0 and "SUPPORTED-BY-EVIDENCE-BACK" in r.stdout, r.stdout)
+    check("AT-27", "an evidence-backed off-lineage confirmation passes only with adjudicated push_event provenance",
+          r.returncode == 0 and "PUSH-PROVEN" in r.stdout
+          and "recorded PushEvent 12345678" in r.stdout, r.stdout)
     # 3. evidence-back for a SHA that exists nowhere -> FAIL (fail closed): the
     #    backing BINDS to the backed entry (same declared SHA) but that SHA is
     #    not a real commit -- the object-store/API proof is what must reject it
@@ -1682,12 +1693,13 @@ def test_at27_historical_proof():
     check("AT-27", "a cited run with a contradicting head_sha fails",
           r.returncode == 1 and "evidence does not support the recorded SHA" in r.stdout,
           r.stdout)
-    # 7. a cited run on the exact head with a FAILED conclusion is disclosed,
-    #    does not prove the push, and cannot replace the backing requirement
+    # 7. a cited run on the exact head with a FAILED conclusion and NO push
+    #    event (pull_request) is disclosed, proves neither CI success nor the
+    #    push, and cannot replace the backing requirement
     fail_man = tmpfile(json.dumps({"runs": {"222222": {"head_sha": a,
+                                                      "head_branch": "b",
+                                                      "event": "pull_request",
                                                       "conclusion": "failure"}}}), ".json")
-    r = run_with("", "--runs-manifest", fail_man) if False else None
-    # (the P-1-CONFIRM itself carries no citation; use a citing variant)
     cite_fail = ("## 2026-10-20T10:00:00Z | P-6-INTENT | push-intent | branch=b "
                  "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
                  "## 2026-10-20T11:00:00Z | P-6-CONFIRM | push-confirm | branch=b remote_sha=%s "
@@ -1698,24 +1710,42 @@ def test_at27_historical_proof():
     r = run("evidence_sequence_check.py", logpath, "--pushlog-schema", "--remote-verify",
             "--remote", bare, "--branch", "b", "--expect-tip", c6,
             "--runs-manifest", fail_man)
-    check("AT-27", "a failed cited run is disclosed and cannot prove the push (backing still required)",
-          r.returncode == 1 and "cannot prove a successful push" in r.stdout
-          and "no reviewed evidence-back" in r.stdout, r.stdout)
-    # 8. a SUCCESSFUL run on the exact head plus a back -> PASS with connection
-    ok_man = tmpfile(json.dumps({"runs": {"222222": {"head_sha": a, "head_branch": "b",
-                                                    "conclusion": "success"}}}), ".json")
+    check("AT-27", "a failed pull_request-event run proves neither CI success nor the push",
+          r.returncode == 1 and "successful gate evidence" in r.stdout
+          and "commit existence is not push provenance" in r.stdout, r.stdout)
+    # 8. a push-EVENT run (event=push, head_branch, exact head) with a FAILED
+    #    conclusion proves the PUSH but never CI success -- both facts are
+    #    reported separately (Round-22 claim separation)
+    pushfail_man = tmpfile(json.dumps({"runs": {"222222": {"head_sha": a,
+                                                        "head_branch": "b",
+                                                        "event": "push",
+                                                        "conclusion": "failure"}}}), ".json")
     both = cite_fail + ("## 2026-10-20T12:00:00Z | P-7 | evidence-back | backs=P-6-CONFIRM "
-                        "branch=b remote_sha=%s credential=OWNER-PAT-1 evidence=\"run 222222 "
-                        "connects the head to branch b\"\n" % a
+                        "branch=b remote_sha=%s credential=OWNER-PAT-1 "
+                        "review_ref=docs/decisions/REGISTER.md#Part-99 evidence=\"run 222222 "
+                        "connects the head to branch b (event=push; conclusion=failure "
+                        "disclosed separately)\"\n" % a
                         + "## 2026-10-20T13:00:00Z | P-8-INTENT | push-intent | branch=b "
                         "expected_remote_tip_before_push=%s credential=OWNER-PAT-1\n" % a)
     c7 = commit(src, "log7", path=logrel, text=both)
     sp.run(["git", "-C", src, "push", "-q", "--force", bare, c7 + ":refs/heads/b"], check=True)
     r = run("evidence_sequence_check.py", logpath, "--pushlog-schema", "--remote-verify",
             "--remote", bare, "--branch", "b", "--expect-tip", c7,
+            "--runs-manifest", pushfail_man)
+    check("AT-27", "a failed push-event run proves the push event but never CI success (claims separated)",
+          r.returncode == 0 and "PUSH-PROVEN by push-event run 222222" in r.stdout
+          and "none of the cited runs succeeded" in r.stdout, r.stdout)
+    # 9. a SUCCESSFUL push-event run on the exact head -> PUSH-PROVEN with
+    #    CI-success support
+    ok_man = tmpfile(json.dumps({"runs": {"222222": {"head_sha": a, "head_branch": "b",
+                                                    "event": "push",
+                                                    "conclusion": "success"}}}), ".json")
+    r = run("evidence_sequence_check.py", logpath, "--pushlog-schema", "--remote-verify",
+            "--remote", bare, "--branch", "b", "--expect-tip", c7,
             "--runs-manifest", ok_man)
-    check("AT-27", "a verified successful run on the exact head connects the push to the branch",
-          r.returncode == 0 and "CONNECTED-BY-RUN 222222" in r.stdout, r.stdout)
+    check("AT-27", "a verified successful push-event run on the exact head proves the branch push",
+          r.returncode == 0 and "PUSH-PROVEN by push-event run 222222" in r.stdout
+          and "CI-success: 1 verified successful run" in r.stdout, r.stdout)
 
 
 # ------------------------------ AT-28 (protected-main merge, Round-21)
@@ -1795,16 +1825,26 @@ def test_at28_merge_transition():
     m = sp.run(["git", "-C", src, "rev-parse", "HEAD"],
                capture_output=True, text=True).stdout.strip()
     push("HEAD:refs/heads/main")
-    pr_ok = tmpfile(json.dumps({"merged": True, "user": {"login": "author"},
+    pr_ok = tmpfile(json.dumps({"merged": True, "merge_commit_sha": m,
+                                "merged_at": "2026-10-20T12:00:00Z",
+                                "user": {"login": "author"},
                                 "head": {"sha": head2, "ref": "feat"},
                                 "base": {"ref": "main"}}), ".json")
     rev_ok = tmpfile(json.dumps([{"state": "APPROVED",
-                                  "user": {"login": "reviewer"}}]), ".json")
+                                  "user": {"login": "reviewer"},
+                                  "commit_id": head2,
+                                  "submitted_at": "2026-10-20T11:30:00Z"}]), ".json")
     rev_author = tmpfile(json.dumps([{"state": "APPROVED",
-                                      "user": {"login": "author"}}]), ".json")
+                                      "user": {"login": "author"},
+                                      "commit_id": head2,
+                                      "submitted_at": "2026-10-20T11:30:00Z"}]), ".json")
     rev_none = tmpfile(json.dumps([{"state": "COMMENTED",
-                                    "user": {"login": "reviewer"}}]), ".json")
-    pr_open = tmpfile(json.dumps({"merged": False, "user": {"login": "author"},
+                                    "user": {"login": "reviewer"},
+                                    "commit_id": head2,
+                                    "submitted_at": "2026-10-20T11:30:00Z"}]), ".json")
+    pr_open = tmpfile(json.dumps({"merged": False, "merge_commit_sha": None,
+                                  "merged_at": None,
+                                  "user": {"login": "author"},
                                   "head": {"sha": head2, "ref": "feat"},
                                   "base": {"ref": "main"}}), ".json")
     r = chk("main", m, pr_ok, rev_ok)
@@ -1942,3 +1982,915 @@ def test_at29_path_filter_liveness():
     r = run_idx()
     check("AT-29", "an unknown annotation key fails closed",
           r.returncode == 1 and "unknown annotation key" in r.stdout, r.stdout)
+
+
+# ------------------- AT-30 (EC-23 report-field leakage, Round-22 direction 2)
+
+def test_at30_secret_control_field_leakage():
+    """Round-22 direction 2: NO report-derived value may ever reach stdout or
+    stderr. A malicious or malformed report can place the synthetic key in
+    RuleID, File, StartLine, an unexpected field, a non-object array entry, or
+    malformed JSON bytes; every such report must fail closed WITHOUT printing
+    the key, on positive and negative paths alike."""
+    KEY = "AKIA" + "ZZR22FIELDPROBEQQ9"
+    d = tempfile.mkdtemp()
+
+    def write_raw(name, text):
+        p = os.path.join(d, name)
+        open(p, "w").write(text)
+        return p
+
+    def ctrl(mode, *args):
+        env = dict(os.environ)
+        env["SEEDED_KEY"] = KEY
+        return subprocess.run(
+            [PY, os.path.join(CI, "secret_control_check.py"), mode, *args],
+            capture_output=True, text=True, env=env, shell=False)
+
+    good = [{"RuleID": "aws-access-token", "File": "fixture.txt",
+             "StartLine": 1, "Secret": "REDACTED", "Match": "REDACTED"}]
+    clean_log = write_raw("clean.log", "no key material here\n")
+
+    def no_leak(r):
+        return KEY not in r.stdout and KEY not in r.stderr
+
+    # 1. an UNEXPECTED finding whose RuleID carries the key: count-only
+    #    diagnostics; the key never reaches the output
+    r1 = write_raw("r1.json", json.dumps(
+        good + [{"RuleID": KEY, "File": "other.txt", "StartLine": 3}]))
+    r = ctrl("positive", "--report", r1, "--exit-code", "101")
+    check("AT-30", "unexpected finding with the key in RuleID fails without printing it",
+          r.returncode == 1 and "unexpected additional finding(s): 1" in r.stdout
+          and no_leak(r), r.stdout + r.stderr)
+    # 2. the key in the File field of an unexpected finding
+    r2 = write_raw("r2.json", json.dumps(
+        good + [{"RuleID": "generic-api-key", "File": KEY, "StartLine": 4}]))
+    r = ctrl("positive", "--report", r2, "--exit-code", "101")
+    check("AT-30", "unexpected finding with the key in File fails without printing it",
+          r.returncode == 1 and no_leak(r), r.stdout + r.stderr)
+    # 3. the key as a STRING StartLine: type validation fails closed
+    r3 = write_raw("r3.json", json.dumps(
+        [{"RuleID": "aws-access-token", "File": "fixture.txt",
+          "StartLine": KEY, "Secret": "REDACTED", "Match": "REDACTED"}]))
+    r = ctrl("positive", "--report", r3, "--exit-code", "101")
+    check("AT-30", "a string StartLine carrying the key fails type validation without printing it",
+          r.returncode == 1 and "'StartLine' is not a" in r.stdout
+          and "contents withheld" in r.stdout and no_leak(r), r.stdout + r.stderr)
+    # 4. non-object array entries (the key embedded in a string row)
+    r4 = write_raw("r4.json", json.dumps(
+        good + ["row carrying " + KEY, 5, None]))
+    r = ctrl("positive", "--report", r4, "--exit-code", "101")
+    check("AT-30", "non-object report rows fail closed without printing row contents",
+          r.returncode == 1 and "is not a JSON object" in r.stdout
+          and "contents withheld" in r.stdout and no_leak(r), r.stdout + r.stderr)
+    # 5. malformed JSON with the key in the raw bytes
+    r5 = write_raw("r5.json", "[{\"RuleID\": \"" + KEY + "\", oops")
+    r = ctrl("positive", "--report", r5, "--exit-code", "101")
+    check("AT-30", "malformed JSON carrying the key fails closed without printing it",
+          r.returncode == 1 and "not parseable JSON" in r.stdout
+          and "redaction FAILED" in r.stdout and no_leak(r), r.stdout + r.stderr)
+    # 6. non-array JSON (dict) with the key inside a value
+    r6 = write_raw("r6.json", json.dumps({"RuleID": KEY}))
+    r = ctrl("positive", "--report", r6, "--exit-code", "101")
+    check("AT-30", "a non-array report fails closed without printing values",
+          r.returncode == 1 and "not a JSON array" in r.stdout and no_leak(r),
+          r.stdout + r.stderr)
+    # 7. missing report fails; requested-but-missing log fails closed
+    r = ctrl("positive", "--report", os.path.join(d, "absent.json"),
+             "--exit-code", "101")
+    check("AT-30", "a missing report fails without printing anything derived",
+          r.returncode == 1 and "absent" in r.stdout and no_leak(r),
+          r.stdout + r.stderr)
+    rok = write_raw("rok.json", json.dumps(good))
+    r = ctrl("positive", "--report", rok, "--exit-code", "101",
+             "--log-file", os.path.join(d, "missing.log"))
+    check("AT-30", "a requested-but-missing capture log fails closed",
+          r.returncode == 1 and "MISSING" in r.stdout, r.stdout)
+    # 8. negative mode: findings present -> count-only message, no values
+    r = ctrl("negative", "--report", r2, "--exit-code", "0")
+    check("AT-30", "negative mode reports only the finding count (never rule/file values)",
+          r.returncode == 1 and "produced 2 finding(s)" in r.stdout
+          and "never printed" in r.stdout and no_leak(r), r.stdout + r.stderr)
+    # 9. negative mode with a malformed row value fails closed
+    r = ctrl("negative", "--report", r3, "--exit-code", "0")
+    check("AT-30", "negative mode type-validates rows and fails closed",
+          r.returncode == 1 and "'StartLine' is not a" in r.stdout
+          and no_leak(r), r.stdout + r.stderr)
+    # 10. clean paths still pass with the key nowhere in the output
+    r = ctrl("positive", "--report", rok, "--exit-code", "101",
+             "--log-file", clean_log)
+    check("AT-30", "the hardened positive control passes without printing the key",
+          r.returncode == 0 and no_leak(r), r.stdout + r.stderr)
+    rclean = write_raw("rclean.json", "[]")
+    r = ctrl("negative", "--report", rclean, "--exit-code", "0",
+             "--log-file", clean_log)
+    check("AT-30", "the hardened negative control passes without printing the key",
+          r.returncode == 0 and no_leak(r), r.stdout + r.stderr)
+    # 11. scanner execution error masquerading as detection still fails
+    r = ctrl("positive", "--report", rok, "--exit-code", "1")
+    check("AT-30", "a scanner exit 1 is rejected (execution error, not detection)",
+          r.returncode == 1 and "masquerading" in r.stdout, r.stdout)
+
+
+# --------------- AT-31 (EC-24 push provenance + pre-push binding, Round-22)
+
+def test_at31_push_provenance_and_binding():
+    """Round-22 directions 3-4: an off-lineage historical confirmation must
+    prove the BRANCH PUSH (push-event run / PushEvent / adjudicated citation),
+    never merely commit existence; a push-not-proven reclassification is the
+    honest disclosure; and the terminal intent's declared pre-push state is
+    bound to the trusted PushEvent before/after state (false ABSENT, prior
+    unlogged ref updates, and raced updates all fail)."""
+    import subprocess as sp
+    d = tempfile.mkdtemp()
+    bare = os.path.join(d, "remote.git")
+    sp.run(["git", "init", "-q", "--bare", bare], check=True)
+    src = os.path.join(d, "src")
+    sp.run(["git", "init", "-q", "-b", "main", src], check=True)
+
+    def commit(repo, tag, path=None, text=None, add="docs"):
+        if path and text is not None:
+            os.makedirs(os.path.dirname(os.path.join(repo, path)), exist_ok=True)
+            open(os.path.join(repo, path), "w").write(text)
+            sp.run(["git", "-C", repo, "add", add], check=True)
+        sp.run(["git", "-C", repo, "-c", "user.email=t@t", "-c", "user.name=t",
+                "commit", "-q", "--allow-empty", "-m", tag], check=True)
+        return sp.run(["git", "-C", repo, "rev-parse", "HEAD"],
+                      capture_output=True, text=True).stdout.strip()
+
+    logrel = "docs/evidence/push-log/PUSH_LOG.md"
+    logpath = os.path.join(src, logrel)
+    commit(src, "root")
+    a = commit(src, "A")
+    sp.run(["git", "-C", src, "push", "-q", bare, a + ":refs/heads/b"], check=True)
+    sp.run(["git", "-C", src, "reset", "-q", "--hard", "HEAD~1"], check=True)
+    b2 = commit(src, "B")
+    sp.run(["git", "-C", src, "push", "-q", "--force", bare, b2 + ":refs/heads/b"],
+           check=True)
+    # adjudication-register fixture for review_ref resolution
+    reg = os.path.join(src, "docs", "decisions", "REGISTER.md")
+    os.makedirs(os.path.dirname(reg), exist_ok=True)
+    open(reg, "w").write(
+        "# Test register\n\n## Part 98 -- Round-22 provenance adjudication\n\n"
+        "The adjudicator reviewed the evidence-backs P-2/P-20 backing "
+        "P-1-CONFIRM (SHA %s) and the reclassification record P-21.\n" % a[:12])
+    sp.run(["git", "-C", src, "add", "docs"], check=True)
+
+    base_log = ("## 2026-10-20T10:00:00Z | P-1-INTENT | push-intent | branch=b "
+                "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+                "## 2026-10-20T11:00:00Z | P-1-CONFIRM | push-confirm | branch=b remote_sha=%s "
+                "credential=OWNER-PAT-1 evidence=\"git ls-remote r refs/heads/b -> %s\"\n" % (a, a))
+    empty_man = tmpfile(json.dumps({"runs": {}}), ".json")
+    _seq = [0]
+
+    def scenario(extra, *args, cand_events=None, extra_events=()):
+        # every scenario's candidate is declared by a fresh terminal intent
+        # (the two-phase protocol) with a UNIQUE id per scenario (the
+        # introducing-commit binding uses git log -S, so a reused id would
+        # resolve to the first scenario that introduced it); the pre-push tip
+        # is the newest recorded state for b (P-1-CONFIRM's remote_sha = a)
+        _seq[0] += 1
+        text = base_log + extra + (
+            "## 2026-10-20T14:00:00Z | P-9%d-INTENT | push-intent | branch=b "
+            "expected_remote_tip_before_push=%s credential=OWNER-PAT-1\n"
+            % (_seq[0], a))
+        c = commit(src, "log", path=logrel, text=text)
+        sp.run(["git", "-C", src, "push", "-q", "--force", bare, c + ":refs/heads/b"],
+               check=True)
+        args = list(args)
+        if cand_events is not None or extra_events:
+            events = list(extra_events) + [dict(e, after=c) for e in (cand_events or [])]
+            args += ["--push-events-json", tmpfile(json.dumps(events), ".json")]
+        return run("evidence_sequence_check.py", logpath, "--pushlog-schema",
+                   "--remote-verify", "--remote", bare, "--branch", "b",
+                   "--expect-tip", c, *args)
+
+    # 1. a real but never-proven-pushed commit: back proves existence only
+    narrative = ("## 2026-10-20T12:00:00Z | P-2 | evidence-back | backs=P-1-CONFIRM "
+                 "branch=b remote_sha=%s credential=OWNER-PAT-1 evidence=\"branch was "
+                 "rebuilt per a reviewed direction; the commit is preserved in the "
+                 "object store and the rebuild was documented in transcripts\"\n" % a)
+    r = scenario(narrative, "--runs-manifest", empty_man)
+    check("AT-31", "a rebuild narrative without ref-transition evidence is not push provenance",
+          r.returncode == 1 and "proves only COMMIT EXISTENCE" in r.stdout, r.stdout)
+    # 2. a push-event run on the WRONG branch contradicts the entry
+    wrong_man = tmpfile(json.dumps({"runs": {"111111": {
+        "head_sha": a, "head_branch": "other", "event": "push",
+        "conclusion": "success"}}}), ".json")
+    cite_other = ("## 2026-10-20T12:00:00Z | P-2 | evidence-back | backs=P-1-CONFIRM "
+                  "branch=b remote_sha=%s credential=OWNER-PAT-1 evidence=\"run 111111 "
+                  "on this head\"\n" % a)
+    r = scenario(cite_other, "--runs-manifest", wrong_man)
+    check("AT-31", "a push-event run on another branch fails the entry",
+          r.returncode == 1 and "push event on another branch" in r.stdout, r.stdout)
+    # 3. a non-push event (pull_request) never proves the push
+    pr_man = tmpfile(json.dumps({"runs": {"111111": {
+        "head_sha": a, "head_branch": "b", "event": "pull_request",
+        "conclusion": "success"}}}), ".json")
+    r = scenario(cite_other, "--runs-manifest", pr_man)
+    check("AT-31", "a pull_request-event run does not prove the branch push",
+          r.returncode == 1 and "proves only COMMIT EXISTENCE" in r.stdout, r.stdout)
+    # 4. a cited run absent from the manifest with no API fails the gate
+    r = scenario(cite_other.replace("111111", "999999"), "--runs-manifest", empty_man)
+    check("AT-31", "a cited run that cannot be verified fails (missing API proof)",
+          r.returncode == 1 and "could not be verified" in r.stdout
+          and "manifest omission is never an approval" in r.stdout, r.stdout)
+    # 5. push-not-proven reclassification with a VALID review_ref discloses honestly
+    reclass = ("## 2026-10-20T12:00:00Z | P-21 | push-not-proven | reclassifies=P-1-CONFIRM "
+               "branch=b remote_sha=%s credential=OWNER-PAT-1 "
+               "review_ref=docs/decisions/REGISTER.md#Part-98 evidence=\"no "
+               "push-event run exists for this head; the Events-API window no "
+               "longer retains the transition; the branch push is NOT PROVEN and "
+               "is never counted as evidence\"\n" % a)
+    r = scenario(reclass, "--runs-manifest", empty_man)
+    check("AT-31", "a push-not-proven reclassification with a valid review_ref is accepted",
+          r.returncode == 0 and "NOT-PROVEN" in r.stdout
+          and "RECLASSIFIED by P-21" in r.stdout, r.stdout)
+    # 6. a reclassification whose review_ref does not mention the entry fails
+    bad_reg = os.path.join(src, "docs", "decisions", "OTHER.md")
+    open(bad_reg, "w").write("# Other\n\n## Part 50 -- unrelated\n\nnothing here\n")
+    reclass_bad = reclass.replace("REGISTER.md#Part-98", "OTHER.md#Part-50")
+    r = scenario(reclass_bad, "--runs-manifest", empty_man)
+    check("AT-31", "a review_ref whose section does not mention the entry fails",
+          r.returncode == 1 and "does not mention the backed entry" in r.stdout,
+          r.stdout)
+    # 7. duplicate reclassification of the same confirmation fails
+    r = scenario(reclass + reclass.replace("P-21", "P-22"), "--runs-manifest", empty_man)
+    check("AT-31", "a second reclassification of the same confirmation fails",
+          r.returncode == 1 and "a second time" in r.stdout, r.stdout)
+    # 8. a live Events-API PushEvent + review_ref proves the push (the
+    #    candidate's own push event is provided alongside the historical one)
+    back_ev = ("## 2026-10-20T12:00:00Z | P-20 | evidence-back | backs=P-1-CONFIRM "
+               "branch=b remote_sha=%s credential=OWNER-PAT-1 "
+               "review_ref=docs/decisions/REGISTER.md#Part-98 evidence=\"PushEvent "
+               "observed live\"\n" % a)
+    ev_for_a8 = {"id": "777001", "ref": "refs/heads/b", "before": "0" * 40,
+                 "after": a, "created_at": "2026-10-20T09:00:00Z"}
+    r = scenario(back_ev, "--runs-manifest", empty_man,
+                 cand_events=[{"id": "777040", "ref": "refs/heads/b",
+                               "before": a,
+                               "created_at": "2026-10-20T14:00:00Z"}],
+                 extra_events=[ev_for_a8])
+    check("AT-31", "a live PushEvent with an adjudicating review_ref proves the push",
+          r.returncode == 0 and "live Events-API PushEvent 777001" in r.stdout
+          and "PUSH-PROVEN" in r.stdout, r.stdout)
+    # 9. a recorded push_event citation on the WRONG ref fails
+    bad_ref = back_ev.replace(
+        "evidence=\"PushEvent observed live\"",
+        "evidence=\"push_event=777002 ref=refs/heads/c before=%s after=%s "
+        "created=2026-10-20T09:00:00Z\"" % ("0" * 40, a))
+    r = scenario(bad_ref, "--runs-manifest", empty_man)
+    check("AT-31", "a recorded push_event citation on the wrong ref fails",
+          r.returncode == 1 and "mismatched ref-transition evidence" in r.stdout,
+          r.stdout)
+    # 10. a recorded push_event citation WITHOUT review_ref fails
+    no_rr = bad_ref.replace("ref=refs/heads/c", "ref=refs/heads/b").replace(
+        "review_ref=docs/decisions/REGISTER.md#Part-98 ", "")
+    r = scenario(no_rr, "--runs-manifest", empty_man)
+    check("AT-31", "recorded push_event evidence without review_ref is not adjudicated",
+          r.returncode == 1 and "carries no review_ref" in r.stdout, r.stdout)
+
+    # ---- pre-push-state binding (direction 4): PushEvent before/after.
+    # Every binding scenario carries the adjudicated back for the off-lineage
+    # P-1-CONFIRM (otherwise its missing provenance would fail the run for an
+    # unrelated reason); the candidate's own event is injected with the real
+    # candidate SHA, which cannot be known before the commit is made.
+    back_ev_rec = ("## 2026-10-20T12:00:00Z | P-20 | evidence-back | backs=P-1-CONFIRM "
+                   "branch=b remote_sha=%s credential=OWNER-PAT-1 "
+                   "review_ref=docs/decisions/REGISTER.md#Part-98 evidence=\"push_event="
+                   "777000 ref=refs/heads/b before=%s after=%s "
+                   "created=2026-10-20T09:00:00Z\"\n" % (a, "0" * 40, a))
+    ev_for_a = {"id": "777000", "ref": "refs/heads/b", "before": "0" * 40,
+                "after": a, "created_at": "2026-10-20T09:00:00Z"}
+
+    def binding_scenario(intent_text, cand_events, branch="b", prelude=None,
+                         extra_events=()):
+        _seq[0] += 1
+        intent_text = intent_text.replace(
+            "P-30-INTENT", "P-3%d-INTENT" % _seq[0]).replace(
+            "P-31-INTENT", "P-3%d-INTENT" % _seq[0])
+        text = base_log + (prelude if prelude is not None else back_ev_rec) + intent_text
+        c = commit(src, "logB", path=logrel, text=text)
+        sp.run(["git", "-C", src, "push", "-q", "--force", bare,
+                c + ":refs/heads/" + branch], check=True)
+        events = list(extra_events) + [dict(e, after=c) for e in cand_events]
+        ev_file = tmpfile(json.dumps(events), ".json")
+        return run("evidence_sequence_check.py", logpath, "--pushlog-schema",
+                   "--remote-verify", "--remote", bare, "--branch", branch,
+                   "--expect-tip", c, "--push-events-json", ev_file)
+
+    term = ("## 2026-10-20T13:00:00Z | P-30-INTENT | push-intent | branch=b "
+            "expected_remote_tip_before_push=%s credential=OWNER-PAT-1\n" % a)
+    # 11. declared tip matches the PushEvent before -> BOUND
+    r = binding_scenario(term, [{"id": "777010", "ref": "refs/heads/b",
+                                 "before": a,
+                                 "created_at": "2026-10-20T14:00:00Z"}],
+                         extra_events=[ev_for_a])
+    check("AT-31", "the terminal intent's declared pre-push tip is bound to the PushEvent before",
+          r.returncode == 0 and "BOUND: the PushEvent verifies the ref transition" in r.stdout,
+          r.stdout)
+    # 12. a prior UNLOGGED ref update (before != declared) fails
+    r = binding_scenario(term, [{"id": "777011", "ref": "refs/heads/b",
+                                 "before": "f" * 40,
+                                 "created_at": "2026-10-20T14:00:00Z"}],
+                         extra_events=[ev_for_a])
+    check("AT-31", "a prior unlogged ref update (PushEvent before != declared tip) fails",
+          r.returncode == 1 and "prior unlogged ref update" in r.stdout, r.stdout)
+    # 13. no PushEvent for the candidate fails closed (raced or absent)
+    r = binding_scenario(term, [], extra_events=[ev_for_a])
+    check("AT-31", "absent push-event evidence for the candidate fails closed",
+          r.returncode == 1 and "no push-event evidence exists for the candidate" in r.stdout,
+          r.stdout)
+    # 14. false ABSENT: on a FRESH branch the intent declares ABSENT but the
+    #     PushEvent records a prior (nonzero) tip
+    term_absent = ("## 2026-10-20T13:00:00Z | P-31-INTENT | push-intent | branch=fresh "
+                   "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n")
+    r = binding_scenario(term_absent, [{"id": "777012", "ref": "refs/heads/fresh",
+                                        "before": "e" * 40,
+                                        "created_at": "2026-10-20T14:00:00Z"}],
+                         branch="fresh")
+    check("AT-31", "a false ABSENT declaration (nonzero PushEvent before) fails",
+          r.returncode == 1 and "false ABSENT" in r.stdout, r.stdout)
+    # 15. ABSENT with the all-zero before (newly created branch) is bound
+    r = binding_scenario(term_absent, [{"id": "777013", "ref": "refs/heads/fresh",
+                                        "before": "0" * 40,
+                                        "created_at": "2026-10-20T14:00:00Z"}],
+                         branch="fresh")
+    check("AT-31", "an ABSENT declaration backed by the all-zero before is bound",
+          r.returncode == 0
+          and "the PushEvent verifies the ref transition" in r.stdout
+          and "before=000000000000" in r.stdout, r.stdout)
+
+    # 16-18. PRIOR-TIP citations (Round-22): a later push on the same ref
+    # whose before field records the backed SHA proves the ref pointed there
+    # (used when the push's own event rolled off and the API elides after)
+    def prior_tip_scenario(back_text, events, prelude=None):
+        _seq[0] += 1
+        text = base_log + (prelude if prelude is not None else "") + back_text + (
+            "## 2026-10-20T14:00:00Z | P-8%d-INTENT | push-intent | branch=b "
+            "expected_remote_tip_before_push=%s credential=OWNER-PAT-1\n"
+            % (_seq[0], a))
+        c = commit(src, "logC", path=logrel, text=text)
+        sp.run(["git", "-C", src, "push", "-q", "--force", bare, c + ":refs/heads/b"],
+               check=True)
+        # the candidate's own push event carries after == the candidate SHA,
+        # which is only known after the commit; the sentinel is replaced here
+        prepared = [dict(e, after=c) if e.get("after") == "@@CAND@@" else e
+                    for e in events]
+        ev_file = tmpfile(json.dumps(prepared), ".json")
+        return run("evidence_sequence_check.py", logpath, "--pushlog-schema",
+                   "--remote-verify", "--remote", bare, "--branch", "b",
+                   "--expect-tip", c, "--runs-manifest", empty_man,
+                   "--push-events-json", ev_file)
+
+    prior_ev = {"id": "777100", "ref": "refs/heads/b", "before": a,
+                "after": None, "created_at": "2026-10-20T09:30:00Z"}
+    cand_ev = {"id": "777101", "ref": "refs/heads/b", "before": a,
+               "after": "@@CAND@@", "created_at": "2026-10-20T14:00:00Z"}
+    pt_back = ("## 2026-10-20T12:30:00Z | P-40 | evidence-back | backs=P-1-CONFIRM "
+               "branch=b remote_sha=%s credential=OWNER-PAT-1 "
+               "review_ref=docs/decisions/REGISTER.md#Part-98 evidence=\"a later "
+               "push on the ref records the prior tip; citation: push_event=777100 "
+               "ref=refs/heads/b prior_tip=%s; the event's after is elided\"\n" % (a, a))
+    r = prior_tip_scenario(pt_back, [prior_ev, cand_ev])
+    check("AT-31", "a prior_tip citation (later push's before == backed SHA) proves the push",
+          r.returncode == 0 and "PUSH-PROVEN" in r.stdout
+          and "prior_tip=" in r.stdout
+          and "still observable live" in r.stdout, r.stdout)
+    pt_wrong_ref = pt_back.replace("ref=refs/heads/b prior_tip", "ref=refs/heads/c prior_tip")
+    r = prior_tip_scenario(pt_wrong_ref, [prior_ev, cand_ev])
+    check("AT-31", "a prior_tip citation on the wrong ref fails",
+          r.returncode == 1 and "mismatched ref-transition evidence" in r.stdout, r.stdout)
+    pt_no_rr = pt_back.replace("review_ref=docs/decisions/REGISTER.md#Part-98 ", "")
+    r = prior_tip_scenario(pt_no_rr, [prior_ev, cand_ev])
+    check("AT-31", "a prior_tip citation without review_ref is not adjudicated",
+          r.returncode == 1 and "no review_ref" in r.stdout, r.stdout)
+
+    # 19-20. ADAPTED binding modes for this repository's feed (verified live
+    # 2026-10-20): PushEvent.after is ELIDED in the events feed (only before
+    # is reliable), and ref updates made through the git-data API generate NO
+    # PushEvent at all. Mode 2: a PushEvent whose before == the declared
+    # pre-push tip (after elided) + a push-event run on the candidate. Mode
+    # 3: no PushEvent; the push-event run on the exact candidate alone.
+    def adapted_binding_scenario(events, run_in_manifest=True):
+        _seq[0] += 1
+        intent = term.replace("P-30-INTENT", "P-3%d-INTENT" % _seq[0])
+        text = base_log + back_ev_rec + intent
+        c = commit(src, "logD", path=logrel, text=text)
+        sp.run(["git", "-C", src, "push", "-q", "--force", bare, c + ":refs/heads/b"],
+               check=True)
+        ev_file = tmpfile(json.dumps(events), ".json")
+        runs_map = {}
+        if run_in_manifest:
+            runs_map["555001"] = {"head_sha": c, "head_branch": "b",
+                                  "event": "push", "conclusion": "success"}
+        man = tmpfile(json.dumps({"runs": runs_map}), ".json")
+        return run("evidence_sequence_check.py", logpath, "--pushlog-schema",
+                   "--remote-verify", "--remote", bare, "--branch", "b",
+                   "--expect-tip", c, "--runs-manifest", man,
+                   "--push-events-json", ev_file)
+
+    # 19. mode 2: the candidate's own push event carries before == declared
+    #     tip with after ELIDED; the push-event run ties the candidate
+    r = adapted_binding_scenario(
+        [{"id": "777200", "ref": "refs/heads/b", "before": a, "after": None,
+          "created_at": "2026-10-20T14:00:00Z"}])
+    check("AT-31", "a before-matching PushEvent (after elided) + push-run binds the transition",
+          r.returncode == 0 and "records the transition from the declared "
+          "pre-push tip" in r.stdout and "feed elides after" in r.stdout,
+          r.stdout)
+    # 20. mode 3: no PushEvent at all (API-driven ref update class); the
+    #     push-event run on the exact candidate is the binding evidence
+    r = adapted_binding_scenario([])
+    check("AT-31", "a push-event run on the exact candidate binds when no PushEvent exists",
+          r.returncode == 0 and "push-event run 555001" in r.stdout
+          and "ties the candidate to a genuine push event" in r.stdout,
+          r.stdout)
+    # 21. neither a PushEvent nor a push-event run -> fail closed
+    r = adapted_binding_scenario([], run_in_manifest=False)
+    check("AT-31", "no push-event evidence at all fails closed",
+          r.returncode == 1 and "no push-event evidence exists" in r.stdout,
+          r.stdout)
+
+
+# --------------- AT-32 (EC-24 intent-reconciliation invariants, Round-22)
+
+def test_at32_intent_reconciliation_invariants():
+    """Round-22 direction 4: every intent-reconcile must target a PRECEDING
+    eligible intent, match its branch semantics (push-intent: branch;
+    merge-intent: source_branch), void it exactly once, and never void a
+    consumed intent; the unmatched-intent invariant holds GLOBALLY (no branch
+    may hold more than one unvoided unmatched intent, including branches
+    other than the one under test)."""
+    import subprocess as sp
+    d = tempfile.mkdtemp()
+
+    def schema(logtext):
+        f = tmpfile(logtext, ".md")
+        return run("evidence_sequence_check.py", f, "--pushlog-schema")
+
+    def log(entry_ids):
+        """Build a log with push-intents for branches b/c from ENTRY_IDS."""
+        out = []
+        for n_, (eid, br) in enumerate(entry_ids, 1):
+            out.append("## 2026-10-20T1%d:00:00Z | %s | push-intent | branch=%s "
+                       "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+                       % (n_, eid, br))
+        return "".join(out)
+
+    # 1. cross-branch void: intent for branch c, reconcile declares branch=b
+    t = log([("P-1-INTENT", "c")]) + \
+        "## 2026-10-20T19:00:00Z | P-9 | intent-reconcile | voids=P-1-INTENT " \
+        "branch=b credential=OWNER-PAT-1 evidence=\"x\"\n"
+    r = schema(t)
+    check("AT-32", "a cross-branch void is rejected",
+          r.returncode == 1 and "cross-branch voiding rejected" in r.stdout, r.stdout)
+    # 2. voiding a confirmed (consumed) intent is rejected
+    t = ("## 2026-10-20T10:00:00Z | P-1-INTENT | push-intent | branch=b "
+         "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+         "## 2026-10-20T11:00:00Z | P-1-CONFIRM | push-confirm | branch=b remote_sha="
+         + "a" * 40 + " credential=OWNER-PAT-1 evidence=\"ls-remote b -> " + "a" * 40 + "\"\n"
+         "## 2026-10-20T12:00:00Z | P-9 | intent-reconcile | voids=P-1-INTENT "
+         "branch=b credential=OWNER-PAT-1 evidence=\"x\"\n")
+    r = schema(t)
+    check("AT-32", "voiding an intent its CONFIRM already completed is rejected",
+          r.returncode == 1 and "already completed by its CONFIRM" in r.stdout, r.stdout)
+    # 3. duplicate void of the same intent is rejected
+    t = log([("P-2-INTENT", "b"), ("P-3-INTENT", "b")]) + \
+        "## 2026-10-20T19:00:00Z | P-9 | intent-reconcile | voids=P-2-INTENT branch=b " \
+        "credential=OWNER-PAT-1 evidence=\"x\"\n" \
+        "## 2026-10-20T19:30:00Z | P-10 | intent-reconcile | voids=P-2-INTENT branch=b " \
+        "credential=OWNER-PAT-1 evidence=\"y\"\n"
+    r = schema(t)
+    check("AT-32", "a duplicate void of the same intent is rejected",
+          r.returncode == 1 and "a second time" in r.stdout, r.stdout)
+    # 4. a void that targets a FUTURE intent is rejected
+    t = "## 2026-10-20T10:00:00Z | P-9 | intent-reconcile | voids=P-2-INTENT " \
+        "branch=b credential=OWNER-PAT-1 evidence=\"x\"\n" + log([("P-2-INTENT", "b")])
+    r = schema(t)
+    check("AT-32", "a void of a non-preceding intent is rejected",
+          r.returncode == 1 and "does not PRECEDE" in r.stdout, r.stdout)
+    # 5. the unmatched-intent invariant is GLOBAL: two unmatched intents on
+    #    branch c fail even though the branch under test is b
+    bare = os.path.join(d, "remote.git")
+    sp.run(["git", "init", "-q", "--bare", bare], check=True)
+    src = os.path.join(d, "src")
+    sp.run(["git", "init", "-q", "-b", "main", src], check=True)
+    logrel = "docs/evidence/push-log/PUSH_LOG.md"
+    logpath = os.path.join(src, logrel)
+
+    def commit_log(text, tag):
+        os.makedirs(os.path.dirname(os.path.join(src, logrel)), exist_ok=True)
+        open(logpath, "w").write(text)
+        sp.run(["git", "-C", src, "add", "docs"], check=True)
+        sp.run(["git", "-C", src, "-c", "user.email=t@t", "-c", "user.name=t",
+                "commit", "-q", "--allow-empty", "-m", tag], check=True)
+        return sp.run(["git", "-C", src, "rev-parse", "HEAD"],
+                      capture_output=True, text=True).stdout.strip()
+
+    _seq = [0]
+
+    def remote_check(text, *args):
+        # unique terminal-intent id per call (the introducing-commit binding
+        # uses git log -S; a reused id would resolve to an earlier candidate)
+        _seq[0] += 1
+        text = text.replace("P-4-INTENT", "P-4%d-INTENT" % _seq[0])
+        c = commit_log(text, "log")
+        sp.run(["git", "-C", src, "push", "-q", bare, c + ":refs/heads/b"], check=True)
+        return run("evidence_sequence_check.py", logpath, "--pushlog-schema",
+                   "--remote-verify", "--remote", bare, "--branch", "b",
+                   "--expect-tip", c, *args)
+
+    two_c = log([("P-4-INTENT", "b"), ("P-5-INTENT", "c"), ("P-6-INTENT", "c")])
+    r = remote_check(two_c)
+    check("AT-32", "multiple unmatched intents on a branch OTHER than the one under test fail",
+          r.returncode == 1 and "multiple unmatched intents for branch c" in r.stdout,
+          r.stdout)
+    # 6. the excess intent on the other branch, validly voided, passes
+    fixed = two_c + \
+        "## 2026-10-20T19:00:00Z | P-11 | intent-reconcile | voids=P-5-INTENT " \
+        "branch=c credential=OWNER-PAT-1 evidence=\"superseded by P-6\"\n"
+    r = remote_check(fixed)
+    check("AT-32", "an excess intent on another branch, validly voided, is tolerated",
+          r.returncode == 0 and "PENDING" in r.stdout, r.stdout)
+    # 7. merge-intent voids are scoped to the SOURCE branch
+    mi = ("## 2026-10-20T10:00:00Z | P-4-INTENT | push-intent | branch=feat "
+          "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+          "## 2026-10-20T11:00:00Z | P-5 | merge-intent | target=main pr=7 "
+          "source_branch=feat expected_pre_merge_base=" + "d" * 40 + " "
+          "expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by=\"t\"\n")
+    ok_void = mi + ("## 2026-10-20T12:00:00Z | P-12 | intent-reconcile | "
+                    "voids=P-5 branch=feat credential=OWNER-PAT-1 evidence=\"stale\"\n"
+                    "## 2026-10-20T13:00:00Z | P-6-INTENT | push-intent | branch=b "
+                    "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n")
+    r = schema(ok_void)
+    check("AT-32", "a merge-intent void scoped to its source branch is valid",
+          r.returncode == 0, r.stdout)
+    bad_scope = mi + ("## 2026-10-20T12:00:00Z | P-12 | intent-reconcile | "
+                      "voids=P-5 branch=main credential=OWNER-PAT-1 evidence=\"stale\"\n")
+    r = schema(bad_scope)
+    check("AT-32", "a merge-intent void scoped to the target branch is rejected",
+          r.returncode == 1 and "cross-branch voiding rejected" in r.stdout, r.stdout)
+    # 8. a CONFIRM naming a VOIDED intent is rejected (a void must not
+    #    substitute for a confirmation)
+    t = ("## 2026-10-20T10:00:00Z | P-7-INTENT | push-intent | branch=b "
+         "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+         "## 2026-10-20T11:00:00Z | P-13 | intent-reconcile | voids=P-7-INTENT "
+         "branch=b credential=OWNER-PAT-1 evidence=\"stale\"\n"
+         "## 2026-10-20T12:00:00Z | P-7-CONFIRM | push-confirm | branch=b remote_sha="
+         + "a" * 40 + " credential=OWNER-PAT-1 evidence=\"ls-remote b -> " + "a" * 40 + "\"\n")
+    r = schema(t)
+    check("AT-32", "a confirmation pairing a voided intent is rejected",
+          r.returncode == 1 and "no longer eligible" in r.stdout, r.stdout)
+    # 9. a void naming a non-intent entry is rejected
+    t = log([("P-8-INTENT", "b")]) + \
+        "## 2026-10-20T19:00:00Z | P-14 | intent-reconcile | voids=P-8-CONFIRM " \
+        "branch=b credential=OWNER-PAT-1 evidence=\"x\"\n"
+    r = schema(t)
+    check("AT-32", "a void naming a non-intent entry is rejected (dangling void)",
+          r.returncode == 1 and "not an intent entry" in r.stdout, r.stdout)
+
+
+# ------------- AT-33 (merge-transition proof + pre-merge gate, Round-22)
+
+def test_at33_merge_proof_and_premerge_gate():
+    """Round-22 direction 5: the merge transition is proven by the PR API's
+    merge_commit_sha (not parents alone), the exact source ref, merged_at,
+    and a FRESH non-author approval on the exact head (commit_id, submitted
+    before the merge, latest state per reviewer); the merge PushEvent's
+    before must equal the declared base; a second sequential merge follows
+    the first; and the PRE-MERGE gate fails while no approval exists on the
+    exact head."""
+    import subprocess as sp
+    d = tempfile.mkdtemp()
+    bare = os.path.join(d, "remote.git")
+    sp.run(["git", "init", "-q", "--bare", bare], check=True)
+    src = os.path.join(d, "src")
+    sp.run(["git", "init", "-q", "-b", "main", src], check=True)
+
+    def commit(tag, path=None, text=None):
+        if path and text is not None:
+            os.makedirs(os.path.dirname(os.path.join(src, path)), exist_ok=True)
+            open(os.path.join(src, path), "w").write(text)
+            sp.run(["git", "-C", src, "add", "docs"], check=True)
+        sp.run(["git", "-C", src, "-c", "user.email=t@t", "-c", "user.name=t",
+                "commit", "-q", "--allow-empty", "-m", tag], check=True)
+        return sp.run(["git", "-C", src, "rev-parse", "HEAD"],
+                      capture_output=True, text=True).stdout.strip()
+
+    def push(refspec, force=False):
+        sp.run(["git", "-C", src, "push", "-q"] + (["--force"] if force else []) +
+               [bare, refspec], check=True)
+
+    logrel = "docs/evidence/push-log/PUSH_LOG.md"
+    logpath = os.path.join(src, logrel)
+    base = commit("base")
+    push("HEAD:refs/heads/main")
+    sp.run(["git", "-C", src, "checkout", "-q", "-b", "feat"], check=True)
+    mi = ("## 2026-10-20T10:00:00Z | P-1-INTENT | push-intent | branch=feat "
+          "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+          "## 2026-10-20T11:00:00Z | P-2 | merge-intent | target=main pr=7 "
+          "source_branch=feat expected_pre_merge_base=%s expected_head=DEFERRED "
+          "credential=OWNER-PAT-1 authorized_by=\"auditor direction\"\n" % base)
+    head2 = commit("merge-intent", path=logrel, text=mi)
+    push("HEAD:refs/heads/feat")
+
+    def chk(branch, tip, pr_file=None, rev_file=None, ev_file=None, pre=False,
+            pr_number=None):
+        extra = []
+        if pr_file:
+            extra += ["--pr-json", pr_file]
+        if rev_file:
+            extra += ["--reviews-json", rev_file]
+        if ev_file:
+            extra += ["--push-events-json", ev_file]
+        if pre:
+            extra += ["--pre-merge-verify", "--pr-number", str(pr_number or 7)]
+        return run("evidence_sequence_check.py", logpath, "--pushlog-schema",
+                   "--remote-verify", "--remote", bare, "--branch", branch,
+                   "--expect-tip", tip, *extra)
+
+    # ---- phase 1: PRE-MERGE gate on the source branch
+    pr_open = tmpfile(json.dumps({"merged": False, "merge_commit_sha": None,
+                                  "merged_at": None, "user": {"login": "author"},
+                                  "head": {"sha": head2, "ref": "feat"},
+                                  "base": {"ref": "main"}}), ".json")
+    rev_none = tmpfile(json.dumps([]), ".json")
+    rev_ok = tmpfile(json.dumps([{"state": "APPROVED", "user": {"login": "reviewer"},
+                                  "commit_id": head2,
+                                  "submitted_at": "2026-10-20T11:30:00Z"}]), ".json")
+    r = chk("feat", head2, pr_open, rev_none, pre=True)
+    check("AT-33", "the pre-merge gate FAILS while no approval exists on the exact head",
+          r.returncode == 1 and "PRE-MERGE BLOCKED" in r.stdout, r.stdout)
+    r = chk("feat", head2, pr_open, rev_ok, pre=True)
+    check("AT-33", "the pre-merge gate passes with a fresh non-author approval on the exact head",
+          r.returncode == 0 and "PRE-MERGE-VERIFIED" in r.stdout, r.stdout)
+    pr_other_head = tmpfile(json.dumps({"merged": False, "merge_commit_sha": None,
+                                        "merged_at": None, "user": {"login": "author"},
+                                        "head": {"sha": "9" * 40, "ref": "feat"},
+                                        "base": {"ref": "main"}}), ".json")
+    r = chk("feat", head2, pr_other_head, rev_ok, pre=True)
+    check("AT-33", "the pre-merge gate rejects a PR whose head is not the candidate",
+          r.returncode == 1 and "not the candidate" in r.stdout, r.stdout)
+    pr_wrong_base = tmpfile(json.dumps({"merged": False, "merge_commit_sha": None,
+                                        "merged_at": None, "user": {"login": "author"},
+                                        "head": {"sha": head2, "ref": "feat"},
+                                        "base": {"ref": "dev"}}), ".json")
+    r = chk("feat", head2, pr_wrong_base, rev_ok, pre=True)
+    check("AT-33", "the pre-merge gate rejects a PR based on the wrong target",
+          r.returncode == 1 and "not the merge-intent's declared target" in r.stdout,
+          r.stdout)
+    r = chk("feat", head2, pre=True)  # no fixtures, no API
+    check("AT-33", "the pre-merge gate fails closed when the PR cannot be verified",
+          r.returncode == 1 and "could not be verified pre-merge" in r.stdout, r.stdout)
+
+    # ---- phase 2: DEFERRED supersession + a fresh terminal intent. The
+    # candidate advances on the SAME source branch (the real-world
+    # P-061 -> P-068 -> P-072 pattern); the prior merge-intent is superseded
+    # via the introducing commits, and the two-phase protocol delivers
+    # P-1-CONFIRM plus a fresh terminal intent for the new candidate.
+    sp.run(["git", "-C", src, "checkout", "-q", "feat"], check=True)
+    mi_chain = (mi
+                + "## 2026-10-20T12:30:00Z | P-1-CONFIRM | push-confirm | branch=feat "
+                  "remote_sha=%s credential=OWNER-PAT-1 evidence=\"git ls-remote r "
+                  "refs/heads/feat -> %s\"\n" % (head2, head2)
+                + "## 2026-10-20T13:00:00Z | P-4 | merge-intent | target=main pr=7 "
+                  "source_branch=feat expected_pre_merge_base=%s expected_head=DEFERRED "
+                  "credential=OWNER-PAT-1 authorized_by=\"auditor direction\"\n" % base
+                + "## 2026-10-20T13:30:00Z | P-5-INTENT | push-intent | branch=feat "
+                  "expected_remote_tip_before_push=%s credential=OWNER-PAT-1\n" % head2)
+    head6 = commit("redeclared merge-intent", path=logrel, text=mi_chain)
+    push("HEAD:refs/heads/feat")
+    pr_red = tmpfile(json.dumps({"merged": False, "merge_commit_sha": None,
+                                 "merged_at": None, "user": {"login": "author"},
+                                 "head": {"sha": head6, "ref": "feat"},
+                                 "base": {"ref": "main"}}), ".json")
+    rev_red = tmpfile(json.dumps([{"state": "APPROVED",
+                                   "user": {"login": "reviewer"},
+                                   "commit_id": head6,
+                                   "submitted_at": "2026-10-20T13:45:00Z"}]), ".json")
+    r = chk("feat", head6, pr_red, rev_red, pre=True)
+    check("AT-33", "a prior DEFERRED merge-intent on the same lineage is SUPERSEDED, not a failure",
+          r.returncode == 0 and "SUPERSEDED" in r.stdout
+          and "PRE-MERGE-VERIFIED" in r.stdout, r.stdout)
+
+    # ---- phase 3: the reviewed merge lands; post-merge proof hardening
+    # (merging the CURRENT feat head, which the active P-4 intent declares)
+    sp.run(["git", "-C", src, "checkout", "-q", "main"], check=True)
+    sp.run(["git", "-C", src, "-c", "user.email=t@t", "-c", "user.name=t",
+            "merge", "-q", "--no-ff", "-m", "merge pr 7", "feat"], check=True)
+    m = sp.run(["git", "-C", src, "rev-parse", "HEAD"],
+               capture_output=True, text=True).stdout.strip()
+    push("HEAD:refs/heads/main")
+
+    def prf(**over):
+        doc = {"merged": True, "merge_commit_sha": m,
+               "merged_at": "2026-10-20T14:00:00Z", "user": {"login": "author"},
+               "head": {"sha": head6, "ref": "feat"}, "base": {"ref": "main"}}
+        doc.update(over)
+        return tmpfile(json.dumps(doc), ".json")
+
+    ev_merge = tmpfile(json.dumps([{"id": "888001", "ref": "refs/heads/main",
+                                    "before": base, "after": m,
+                                    "created_at": "2026-10-20T14:00:05Z"}]), ".json")
+    r = chk("main", m, prf(), rev_red, ev_merge)
+    check("AT-33", "a legitimate merge with complete PR + approval + PushEvent proof passes",
+          r.returncode == 0 and "MERGE-VERIFIED" in r.stdout
+          and "merge PushEvent verifies" in r.stdout, r.stdout)
+    # mismatched merge_commit_sha fails (parents alone are insufficient)
+    r = chk("main", m, prf(merge_commit_sha="5" * 40), rev_ok, ev_merge)
+    check("AT-33", "a mismatched merge_commit_sha fails",
+          r.returncode == 1 and "merge_commit_sha is" in r.stdout, r.stdout)
+    # wrong source branch fails
+    r = chk("main", m, prf(head={"sha": head2, "ref": "other"}), rev_ok, ev_merge)
+    check("AT-33", "a PR merged from the wrong source branch fails",
+          r.returncode == 1 and "not the declared source branch" in r.stdout, r.stdout)
+    # stale-SHA approval (approval bound to an older head) fails
+    rev_stale = tmpfile(json.dumps([{"state": "APPROVED",
+                                     "user": {"login": "reviewer"},
+                                     "commit_id": base,
+                                     "submitted_at": "2026-10-20T11:30:00Z"}]), ".json")
+    r = chk("main", m, prf(), rev_stale, ev_merge)
+    check("AT-33", "an approval bound to a stale commit does not satisfy the exact-head rule",
+          r.returncode == 1 and "approval bound to commit" in r.stdout, r.stdout)
+    # approval submitted AFTER the merge fails
+    rev_late = tmpfile(json.dumps([{"state": "APPROVED", "user": {"login": "reviewer"},
+                                    "commit_id": head6,
+                                    "submitted_at": "2026-10-20T14:30:00Z"}]), ".json")
+    r = chk("main", m, prf(), rev_late, ev_merge)
+    check("AT-33", "an approval submitted after the merge fails",
+          r.returncode == 1 and "submitted after the merge" in r.stdout, r.stdout)
+    # dismissed / superseded approvals fail
+    rev_dismissed = tmpfile(json.dumps([
+        {"state": "APPROVED", "user": {"login": "reviewer"}, "commit_id": head6,
+         "submitted_at": "2026-10-20T13:45:00Z"},
+        {"state": "DISMISSED", "user": {"login": "reviewer"}, "commit_id": head6,
+         "submitted_at": "2026-10-20T13:50:00Z"}]), ".json")
+    r = chk("main", m, prf(), rev_dismissed, ev_merge)
+    check("AT-33", "a later DISMISSED state supersedes the earlier approval",
+          r.returncode == 1 and "latest state 'DISMISSED'" in r.stdout, r.stdout)
+    rev_superseded = tmpfile(json.dumps([
+        {"state": "APPROVED", "user": {"login": "reviewer"}, "commit_id": head6,
+         "submitted_at": "2026-10-20T13:45:00Z"},
+        {"state": "CHANGES_REQUESTED", "user": {"login": "reviewer"},
+         "commit_id": head6, "submitted_at": "2026-10-20T13:50:00Z"}]), ".json")
+    r = chk("main", m, prf(), rev_superseded, ev_merge)
+    check("AT-33", "a later CHANGES_REQUESTED state supersedes the earlier approval",
+          r.returncode == 1 and "latest state 'CHANGES_REQUESTED'" in r.stdout, r.stdout)
+    # raced merge PushEvent (before != declared base) fails
+    ev_raced = tmpfile(json.dumps([{"id": "888002", "ref": "refs/heads/main",
+                                    "before": "c" * 40, "after": m,
+                                    "created_at": "2026-10-20T12:00:05Z"}]), ".json")
+    r = chk("main", m, prf(), rev_ok, ev_raced)
+    check("AT-33", "a merge PushEvent whose before is not the declared base fails",
+          r.returncode == 1
+          and "the protected-branch transition is not the declared one" in r.stdout,
+          r.stdout)
+
+    # ---- phase 3: sequential second merge (the PR #30 -> #31 pattern)
+    sp.run(["git", "-C", src, "checkout", "-q", "-b", "feat2", "main"], check=True)
+    mi2 = mi + ("## 2026-10-20T13:00:00Z | P-3 | merge-intent | target=main pr=8 "
+                "source_branch=feat2 expected_pre_merge_base=%s expected_head=DEFERRED "
+                "credential=OWNER-PAT-1 authorized_by=\"auditor direction\"\n" % m)
+    head5 = commit("second merge-intent", path=logrel, text=mi2)
+    push("HEAD:refs/heads/feat2")
+    sp.run(["git", "-C", src, "checkout", "-q", "main"], check=True)
+    sp.run(["git", "-C", src, "-c", "user.email=t@t", "-c", "user.name=t",
+            "merge", "-q", "--no-ff", "-m", "merge pr 8", "feat2"], check=True)
+    m2 = sp.run(["git", "-C", src, "rev-parse", "HEAD"],
+                capture_output=True, text=True).stdout.strip()
+    push("HEAD:refs/heads/main")
+    pr8 = tmpfile(json.dumps({"merged": True, "merge_commit_sha": m2,
+                              "merged_at": "2026-10-20T14:00:00Z",
+                              "user": {"login": "author"},
+                              "head": {"sha": head5, "ref": "feat2"},
+                              "base": {"ref": "main"}}), ".json")
+    rev8 = tmpfile(json.dumps([{"state": "APPROVED", "user": {"login": "reviewer2"},
+                                "commit_id": head5,
+                                "submitted_at": "2026-10-20T13:30:00Z"}]), ".json")
+    ev8 = tmpfile(json.dumps([{"id": "888003", "ref": "refs/heads/main",
+                               "before": m, "after": m2,
+                               "created_at": "2026-10-20T14:00:05Z"}]), ".json")
+    r = chk("main", m2, pr8, rev8, ev8)
+    check("AT-33", "a second sequential merge on the new base verifies (the #30 -> #31 pattern)",
+          r.returncode == 0 and "MERGE-VERIFIED" in r.stdout
+          and "P-3" in r.stdout, r.stdout)
+
+    # ---- phase 4 (closed): the sequential second merge completed the scenario;
+    # the DEFERRED-supersession proof ran in phase 2 above.
+
+
+# ------------------- AT-34 (EC-26 conservative glob coverage, Round-22)
+
+def test_at34_glob_coverage_and_ordered_filters():
+    """Round-22 direction 6: representative-sample coverage is replaced by a
+    sound conservative glob-coverage check; ordered negative patterns follow
+    GitHub Actions filter semantics; empty filter lists and malformed event
+    configurations fail closed."""
+    d = tempfile.mkdtemp()
+    os.makedirs(os.path.join(d, ".github", "workflows"), exist_ok=True)
+    wf = os.path.join(d, ".github", "workflows", "gate.yml")
+    os.makedirs(os.path.join(d, "docs", "directives"), exist_ok=True)
+    open(os.path.join(d, "registry.json"), "w").write(json.dumps({"tests": {}}))
+
+    def write_wf(text):
+        open(wf, "w").write(text)
+
+    def idx(enf):
+        open(os.path.join(d, "docs", "directives", "INDEX.md"), "w").write(
+            "# index\n<!-- BEGIN RULE INVENTORY -->\n"
+            "reading-note-path: docs/note.md\n"
+            "pinned-blobs: b6bb35e84956d84a8c9d9e65734c212baf3ed075\n"
+            "| Rule ID | Status | Enforcement point(s) | Acceptance test(s) |\n"
+            "|---|---|---|---|\n"
+            "| EC-X | ACTIVE | " + enf + " | NONE |\n"
+            "<!-- END RULE INVENTORY -->\n")
+        open(os.path.join(d, "docs", "note.md"), "w").write(
+            "blob b6bb35e84956d84a8c9d9e65734c212baf3ed075 read\n| EC-X | -> mapped |\n")
+
+    def run_idx():
+        return run("reading_note_map_check.py", "--index", "docs/directives/INDEX.md",
+                   "--repo-root", d, "--registry", "registry.json")
+
+    job = "jobs:\n  gate-job:\n    name: Gate Job\n    runs-on: ubuntu-latest\n"
+
+    def on_with(push_cfg, pr_cfg="    branches: ['**']\n"):
+        return ("name: gate\non:\n  push:\n" + push_cfg +
+                "  pull_request:\n" + pr_cfg + job)
+
+    gov = "~events=push+pull_request~governs=docs/**"
+    # 1. docs/** governed by only docs/X: one representative sample would pass,
+    #    the conservative witness set fails
+    write_wf(on_with("    branches: ['**']\n    paths: [docs/X]\n"))
+    idx("workflow:.github/workflows/gate.yml#gate-job" + gov)
+    r = run_idx()
+    check("AT-34", "docs/** governed by only docs/X fails (representative-sample hole closed)",
+          r.returncode == 1 and "would exclude the governed path" in r.stdout, r.stdout)
+    # 2. ordered negative pattern excludes the governed subtree
+    write_wf(on_with("    branches: ['**']\n    paths: ['**', '!docs/evidence/**']\n"))
+    idx("workflow:.github/workflows/gate.yml#gate-job"
+        "~events=push+pull_request~governs=docs/evidence/**")
+    r = run_idx()
+    check("AT-34", "an ordered negative pattern excluding the governed subtree fails",
+          r.returncode == 1 and "ordered negative patterns" in r.stdout, r.stdout)
+    # 3. the SAME patterns in the OPPOSITE order re-include the subtree (order matters)
+    write_wf(on_with("    branches: ['**']\n    paths: ['!docs/evidence/**', '**']\n"))
+    r = run_idx()
+    check("AT-34", "reversing the pattern order changes the outcome (ordered semantics)",
+          r.returncode == 0, r.stdout)
+    # 4. branch filters use ordered semantics too: ['**', '!main'] excludes main
+    write_wf(on_with("    branches: ['**', '!main']\n"))
+    idx("workflow:.github/workflows/gate.yml#gate-job"
+        "~events=push+pull_request~governs=docs/**")
+    r = run_idx()
+    check("AT-34", "branches ['**', '!main'] excludes the enforcement branch",
+          r.returncode == 1 and "ordered filter semantics" in r.stdout, r.stdout)
+    # 5. empty filter lists fail closed (never read as unrestricted)
+    write_wf(on_with("    branches: []\n"))
+    r = run_idx()
+    check("AT-34", "an empty branches list fails closed",
+          r.returncode == 1 and "EMPTY branches list" in r.stdout, r.stdout)
+    write_wf(on_with("    branches: ['**']\n    paths: []\n"))
+    r = run_idx()
+    check("AT-34", "an empty paths list fails closed",
+          r.returncode == 1 and "EMPTY paths list" in r.stdout, r.stdout)
+    # 6. malformed event configuration types fail closed
+    write_wf("name: gate\non:\n  push:\n  - main\n  - dev\n  pull_request:\n"
+             "    branches: ['**']\n" + job)
+    r = run_idx()
+    check("AT-34", "a list-valued event configuration fails closed",
+          r.returncode == 1 and "MALFORMED event configuration" in r.stdout, r.stdout)
+    write_wf("name: gate\non:\n  push: main\n  pull_request:\n"
+             "    branches: ['**']\n" + job)
+    r = run_idx()
+    check("AT-34", "a string-valued event configuration fails closed",
+          r.returncode == 1 and "MALFORMED event configuration" in r.stdout, r.stdout)
+    write_wf("name: gate\non:\n  push: 5\n  pull_request:\n"
+             "    branches: ['**']\n" + job)
+    r = run_idx()
+    check("AT-34", "an int-valued event configuration fails closed",
+          r.returncode == 1 and "MALFORMED event configuration" in r.stdout, r.stdout)
+    # 7. broad coverage passes: every witness of both globs is covered
+    write_wf(on_with("    branches: ['**']\n    paths: [docs/**, scripts/**]\n"))
+    idx("workflow:.github/workflows/gate.yml#gate-job"
+        "~events=push+pull_request~governs=docs/**+scripts/ci/**")
+    r = run_idx()
+    check("AT-34", "a filter covering every structural witness of the globs passes",
+          r.returncode == 0, r.stdout)
+    # 8. a component-level wildcard still covers its own glob
+    write_wf(on_with("    branches: ['**']\n    paths: [docs/**]\n"))
+    idx("workflow:.github/workflows/gate.yml#gate-job"
+        "~events=push+pull_request~governs=docs/*.md")
+    r = run_idx()
+    check("AT-34", "docs/*.md is covered by docs/** (witness shapes all match)",
+          r.returncode == 0, r.stdout)
+    # 9. paths-ignore over a witness SHAPE fails (the old representative
+    #    sample docs/X would NOT have matched this ignore -- the witness set
+    #    closes that hole)
+    write_wf(on_with("    branches: ['**']\n    paths-ignore: [docs/*/w1]\n"))
+    idx("workflow:.github/workflows/gate.yml#gate-job"
+        "~events=push+pull_request~governs=docs/**")
+    r = run_idx()
+    check("AT-34", "a paths-ignore covering a governed witness shape fails",
+          r.returncode == 1 and "paths-ignore" in r.stdout
+          and "excludes the governed path" in r.stdout, r.stdout)

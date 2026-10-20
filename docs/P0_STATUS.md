@@ -255,3 +255,126 @@ A-02 issuer-side revocation, and EC2 deployment secrets remain OPEN. PR #30 is
 still NOT approved for merge: the merge gate remains (all checks green on the
 exact final candidate + the demonstrated post-merge transition + the required
 independent approval through the protected path).
+
+## 12. Round-22 acceptance-defect repair (added 2026-10-20, SERIES-2026-10-20-R22)
+
+**Auditor ruling (binding):** Round-21 is NOT CLOSED and PR #30 is NOT APPROVED
+FOR MERGE. Green CI is necessary but not sufficient: the independent audit
+found further fail-open cases in EC-23, EC-24 and EC-26. `main` stays
+untouched at `f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd`; work proceeds on
+`repair/round19-mainline-acceptance` through ordinary fast-forward pushes and
+the reviewed PR path only.
+
+**Preflight (auditor direction 1, this cycle):** both constitutions re-read in
+full from the exact pinned blobs (`constitution.md`
+`211ad2c5d4b40059d9f3f03de12e0701f9235bc7`, `ENGINEERING_CONSTITUTION.md`
+`b6bb35e84956d84a8c9d9e65734c212baf3ed075`) with the real read window
+`2026-10-20T19:06:52Z`–`19:07:45Z`; the register (rev 10), P0_STATUS (§1–11),
+INDEX, PUSH_LOG_SCHEMA (v4), the full push log through P-073-INTENT, the
+reconciliation and incident records, the evidence table and RECEIPT read in
+full before the first edit (~19:25Z). A parallel-writer observation is
+disclosed: two fast-forward bookkeeping pushes (R21B-3 `47022be`, R21B-4
+`908de6d`, by the same sandbox identity as the documented incident class)
+landed during the preflight window carrying push-log records only; this cycle
+was rebased forward onto `908de6d` with no conflict (they touched no checker,
+workflow, or documentation content), and the single-writer pre-check is
+re-verified before this cycle's own push.
+
+**Repairs implemented in this cycle (auditor directions 2–7):**
+
+- **EC-23 (direction 2):** `scripts/ci/secret_control_check.py` no longer
+  interpolates ANY report-derived value into diagnostics (the Round-22 audit
+  found `RuleID`/`File`/`StartLine` leak paths in the failure diagnostics and
+  negative-control output). Every report element is type-validated before
+  examination (non-object rows, non-string RuleID/File, non-int StartLine,
+  non-string Secret/Match fail closed with FIXED messages and row contents
+  withheld); unexpected findings report a COUNT only; the raw-key checks cover
+  the report bytes even when the schema validation fails; unexpected internal
+  errors fail closed with a fixed message. AT-30 proves the assembled
+  synthetic key never reaches stdout/stderr on every path (RuleID, File,
+  string StartLine, non-object rows, malformed JSON, non-array reports,
+  missing reports/logs, negative paths, scanner-error masquerade).
+- **EC-24 (direction 3):** `scripts/ci/evidence_sequence_check.py` now
+  separates commit existence, branch-push provenance, and CI success as
+  INDEPENDENT claims. The runs manifest and the Actions-API verifier retain
+  and validate each cited run's EVENT TYPE and HEAD_BRANCH (a push-event run
+  on another branch contradicts the entry and FAILs). An off-lineage
+  HISTORICAL confirmation must prove the branch push by (a) a push-event run,
+  (b) a live Events-API PushEvent, (c) a recorded `push_event=` citation
+  adjudicated by a machine-verifiable `review_ref=` into the canonical
+  auditor-adjudicated record, or (d) an explicit `push-not-proven`
+  reclassification (valid `review_ref=`; disclosed, never counted as
+  evidence). A commits-API 200 or a free-text rebuild narrative is NOT push
+  provenance. P-063/P-065 prove their pushes by their push-event runs (their
+  failure conclusions are disclosed separately); P-062/P-064 prove only
+  commit existence and are re-adjudicated in register Part 14 (events-API
+  search results recorded there). AT-31 covers: never-proven-pushed commits,
+  wrong-branch runs, non-push events, missing API proof, rebuild narratives,
+  valid/invalid/duplicate reclassifications, live and recorded PushEvents,
+  and the PushEvent before/after binding of the declared pre-push tip (false
+  ABSENT, prior unlogged ref updates, raced/absent events).
+- **EC-24 (direction 4):** intent reconciliations must target PRECEDING
+  eligible intents, match branch scope (push-intent branch; merge-intent
+  source_branch — unambiguous semantics, no free-form values), void exactly
+  once, and never void consumed intents; a CONFIRM naming a voided intent
+  FAILS. The unmatched-intent invariant is GLOBAL: no branch (including
+  branches other than the one under test) may hold more than one unvoided
+  unmatched intent. AT-32 covers all of these plus the merge-intent
+  source-branch scoping.
+- **Merge transition (direction 5):** the workflow gains the narrowly scoped
+  `pull-requests: read` permission and a live API canary (authenticated
+  PR/review/events reads must succeed, else the job fails closed BEFORE the
+  checker runs). The post-merge verifier now checks the PR API's
+  `merge_commit_sha` against the protected branch's live candidate, the
+  source `head.ref`, `merged_at`, and a FRESH non-author approval applied to
+  the EXACT head (commit_id binding, submitted before the merge, latest
+  state per reviewer — dismissed/superseded approvals rejected), plus the
+  merge PushEvent's `before` equaling the declared base. A new
+  `pre-merge-verification` job (PR events only) checks the CURRENT
+  PR/head/review state BEFORE any merge executes and is EXPECTED TO FAIL
+  while no independent approval exists on the exact head — that is the
+  functioning pre-merge gate. DEFERRED merge-intent supersession is resolved
+  via introducing commits on both the source and target sides. AT-33 covers
+  all failure modes plus a second sequential merge (the #30 → #31 pattern).
+  A-04 (exact branch-protection required checks) remains an OPEN blocker
+  until independently verified.
+- **EC-26 (direction 6):** `scripts/ci/reading_note_map_check.py` replaces
+  the representative-sample coverage test with a SOUND conservative
+  glob-coverage check (a structural witness set generated from each governed
+  glob: multiple name shapes per wildcard component, `**` at depths 1–3,
+  root/hidden/workflow paths for whole-tree governance); ordered negative
+  patterns follow GitHub Actions filter semantics (`!` negations, last match
+  wins) for paths AND branches; empty filter lists and malformed event
+  configuration types (string/list/int event values) fail closed. AT-34
+  covers the auditor's full list (docs/** vs docs/X, `['**','!docs/evidence/**']`,
+  `branches: ['**','!main']`, empty lists, malformed configurations, both
+  pattern orders, witness-shaped paths-ignore).
+
+**Acceptance suite:** AT-01..AT-34 registered and green on this candidate
+(pytest + `run_all.py`, 34/34). The registry, INDEX inventory rows, and the
+governance-acceptance job names are updated; no existing check was weakened
+or deleted (AT-27/AT-28 fixtures were strengthened to the new required PR
+fields: merge_commit_sha, merged_at, commit_id, submitted_at).
+
+**Push-log protocol (direction 8):** this cycle's push carries P-073-CONFIRM
+for the `908de6d` push (with its verified run evidence), the Round-22
+re-adjudication records for the legacy off-lineage confirmations (per the
+events-API search results recorded in register Part 14), a fresh push intent
+bound to the exact introducing candidate with the true pre-push tip
+`908de6d…`, the P-072 supersession (void + redeclaration bound to the exact
+final candidate and the live base), and the regenerated manifest and evidence
+table. The terminal intent stays PENDING (disclosed, never COMPLETE); no push
+is manufactured to eliminate it.
+
+**Outstanding (not closed by this cycle):** PR #30 still lacks an independent
+current-head approval (the pre-merge-verification job will remain red until
+it is recorded); the merge awaits all Round-22 blockers fixed on the exact
+final head, the full Stability Gate + Governance Acceptance green there, the
+passing pre-merge approval verification, and the protected-path MERGE COMMIT;
+after any verified merge, PRs #31–#36 revalidate serially against the new
+`main` (EC-21 not waived) and #23–#29 close only on proven unique-content
+coverage. A-04 branch-protection verification, the independent r2 archive
+verification, the portable 40-row cohort metadata table, A-02 issuer-side
+revocation, and EC2 deployment secrets remain OPEN. The scientific hard stop
+is preserved in full; A-01 remains ACCEPTED RISK (no rotation reminder, no
+credential operations, token values never written anywhere).

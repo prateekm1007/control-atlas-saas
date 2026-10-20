@@ -670,3 +670,169 @@ without their approved gates. The independent r2 evidence-archive
 verification, the portable 40-row cohort metadata table, A-02 issuer-side
 revocation, and the EC2 deployment secrets remain OPEN and are not closed by
 this governance work.
+
+## Part 14 — Round-22 records (AUDITOR-ADJUDICATED, 2026-10-20; register rev 11)
+
+**Status of this Part:** auditor-adjudicated per the binding Round-22 decision;
+NOT owner-signed. It explicitly supersedes Round-21's closure CLAIM (not the
+historical record): Round-21 is NOT CLOSED, PR #30 is NOT APPROVED FOR MERGE,
+and EC-23/EC-24/EC-26 remain PROPOSED and are not live on `main`.
+
+### 14.1 The ruling (transcribed from the auditor's Round-22 decision)
+
+Green CI is necessary but not sufficient; the independent audit found further
+fail-open cases in EC-23, EC-24 and EC-26 that the existing acceptance tests
+did not cover. `main` remains at `f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd`;
+no merge, no activation of governance rules on `main`, no gate weakening. Work
+proceeds on `repair/round19-mainline-acceptance` through ordinary fast-forward
+pushes and the reviewed PR path. The mandated repairs: (2) EC-23 — no
+report-derived value may reach stdout/stderr; per-element schema validation
+failing closed; redaction checks not weakened; AT extension covering
+RuleID/File/StartLine/unexpected fields/Secret/Match/non-object entries/
+malformed reports with captured stdout+stderr assertions. (3) EC-24 — commit
+existence, branch-push provenance, and CI success as separate claims; run
+event/head_branch validation; re-audit of P-062..P-065; P-011/P-013 proof
+search with honest NOT PROVEN classification when insufficient; machine-
+verifiable review/decision references for historical backing records. (4)
+EC-24 — branch-scoped, unique, valid intent reconciliation; global
+unmatched-intent invariant; expected_remote_tip_before_push bound to trusted
+push-event before/after state (all-zero before for new branches; no PR-event
+substitution); ABSENT backed by the ref's absent prior state. (5) merge
+transition — `pull-requests: read` + live canary; merge_commit_sha, source
+ref, merged_at, fresh non-author approval on the exact head (dismissals and
+supersessions handled; pagination); pre-merge PR-event verification; A-04
+stays an open blocker; DEFERRED supersession fixed; sequential-merge test.
+(6) EC-26 — sound conservative glob coverage; ordered negative patterns;
+empty/malformed filters fail closed. (7) document/evidence reconciliation
+with the append-only push log preserved. (8) two-phase push mechanics with
+truthful reclassification, then stop for review. A-01 remains ACCEPTED RISK
+(no rotation reminders, no rotation initiation, never reveal or store the
+token). No merge of PR #30 until all Round-22 blockers are fixed and
+independently reviewed on the exact new head; then live Stability Gate +
+Governance Acceptance, functioning pre-merge approval verification, and the
+protected-PR merge-commit strategy; after a verified merge, #31–#36
+revalidate serially and #23–#29 close only on proven unique-content coverage.
+The scientific hard stop is preserved in full.
+
+### 14.2 Repairs delivered on the Round-22 candidate
+
+EC-23: `scripts/ci/secret_control_check.py` type-validates every report
+element before examination and never interpolates report-derived values into
+diagnostics (counts, booleans, argv-supplied expectations, validated integers
+only); malformed reports/rows fail closed with fixed messages; the raw-key
+checks cover the report bytes even when the schema fails; broad-exception
+paths fail closed with a fixed message (AT-30). EC-24: claim separation
+(commit existence / push provenance / CI success) with event + head_branch
+validation on every cited run; off-lineage confirmations require push-event
+runs, live Events-API PushEvents, adjudicated `push_event=` citations, or
+`push-not-proven` reclassifications with machine-verifiable `review_ref=`
+references into THIS register (the reference must resolve to a Part whose
+section mentions the backed entry — "reviewed" is never merely a string
+written by the same record's author); intent reconciliations enforce
+preceding eligible targets, branch scope (merge-intent: source_branch),
+one-void-per-target, no voiding of consumed intents, and the GLOBAL
+unmatched-intent invariant; the terminal intent's declared pre-push state is
+bound to the PushEvent before/after state when the events source is
+configured (the CI gate always configures it; local tool mode discloses).
+Merge transition: `pull-requests: read` + live canaries; merge_commit_sha /
+source head.ref / merged_at / fresh non-author approval on the exact head
+(commit_id, pre-merge timing, latest-state-per-reviewer) / merge PushEvent
+before; the new pre-merge-verification job is the functioning pre-merge gate
+(expected red until the independent approval exists — by design, disclosed).
+EC-26: conservative witness-based glob coverage with ordered negative
+patterns and fail-closed empty/malformed filters (AT-34). Acceptance suite
+AT-01..AT-34 green (no check weakened or deleted; AT-27/AT-28 fixtures
+strengthened to the new required PR fields). Schema v5 documents every new
+rule.
+
+### 14.3 Adjudication table (direction 8; supersedes the Round-21 table's rows for these rules)
+
+| Rule | Decision status | Policy status | Implementation status | Live on main |
+|---|---|---|---|---|
+| EC-23 | PROPOSED until the report-derived disclosure regression is fixed and the exact-candidate scan controls pass | PROPOSED | disclosure fix + type validation + AT-30 on the Round-22 candidate; the exact-candidate CI run is the completing evidence | NO |
+| EC-24 | PROPOSED until claim separation, provenance, reconciliation invariants, pre-push-state binding, and BOTH merge-transition verifications pass | PROPOSED | all layers implemented (AT-31/AT-32/AT-33; schema v5); exact-candidate CI run is the completing evidence | NO |
+| EC-26 | PROPOSED until conservative coverage, ordered negative patterns, and malformed-filter rejection pass on the exact candidate | PROPOSED | witness-based coverage + ordered semantics + AT-34; exact-candidate CI run is the completing evidence | NO |
+| EC-16 / EC-19 / EC-20 / EC-21 | PROPOSED until their reviewed and rebased activation candidates pass all required checks | PROPOSED | live jobs run on the repair branch's own events; activation candidates await the post-#30 serial revalidation | NO |
+| EC-17 / EC-22 / EC-25 | In force as policy under earlier auditor decisions | ACTIVE | live jobs run on the repair branch's own pushes/PRs only | NO (until PR #30 merges and the post-merge verification succeeds) |
+
+### 14.4 Historical evidence-back re-adjudication (direction 3; P-062..P-065)
+
+Search performed 2026-10-20T20:17:51Z with the owner PAT (A-01; the value is never written
+anywhere), covering every machine-verifiable source the auditor named:
+
+- **Actions runs on the exact heads** (GET /actions/runs?head_sha=…):
+  `17eb88184c9f…` total_count=0; `dab33d946fe3…` total_count=0 — no run of
+  any event type exists on either head; the pre-gate-trigger era is
+  confirmed by live query, not by trusting the prior record. P-012/P-014's
+  cited runs (39408223554 on docs/owner-decisions, 39408297643 on
+  governance/canonical-docs) DO exist as push-event runs with matching
+  head_branch and head_sha; their conclusion=failure is disclosed separately
+  and never counted as successful gate evidence.
+- **Events API** (full retained window: 300 events,
+  2026-10-18T16:00:59Z..2026-10-20T19:13:33Z, 20 PushEvents): no PushEvent
+  with after == `17eb88184c9f…` and none with after == `dab33d946fe3…`;
+  exactly ONE retained PushEvent on refs/heads/proposal/ec16-ec26-enforcement: id 24612279632, created
+  2026-10-20T10:32:21Z, before = `dab33d946fe3…` (after/size elided by the
+  API) — a later push's own record that the branch's prior tip was
+  `dab33d946fe3…`, consistent with P-013-CONFIRM's ls-remote at 10:28:58Z.
+- **Incident and retained-Git evidence**: the P-013-CONFIRM body's
+  "fast-forward 17eb881..dab33d9" narrative and the durability bundles prove
+  commit existence and describe the transition, but a log narrative is not
+  independent machine-verifiable ref-transition evidence (transcript-only
+  proof is rejected per direction 3.6).
+
+Adjudication (this Part is the canonical record the review_ref= fields of
+P-074/P-075 resolve to):
+
+- **P-011-CONFIRM (proposal/ec16-ec26-enforcement @ `17eb88184c9f…`) →
+  NOT PROVEN.** Reclassified by P-074 (push-not-proven): the push's own
+  event (~09:34Z per the log) rolled off the retained window, no Actions
+  run exists on the head, and no other ref-transition evidence survives.
+  The commit exists (P-062's commits-API HTTP 200); commit existence is not
+  push provenance. The original entries stay unchanged; this push is never
+  counted as evidence for any declaration.
+- **P-013-CONFIRM (proposal/ec16-ec26-enforcement @ `dab33d946fe3…`) →
+  PUSH-PROVEN by prior-tip citation.** Backed by P-075 (evidence-back,
+  review_ref=this Part): PushEvent 24612279632 (2026-10-20T10:32:21Z, same
+  ref) records its before as `dab33d946fe3…` — the ref provably pointed
+  there (refs move only by pushes), establishing the branch update that
+  P-013-CONFIRM records. The event is re-verifiable live while retained;
+  the citation is recorded in P-075 in the schema-v5 prior_tip form.
+- **P-012-CONFIRM and P-014-CONFIRM → PUSH-PROVEN by push-event runs**
+  (direction 3.3, verified live again this cycle): 39408223554 (event=push,
+  head_branch=docs/owner-decisions, head_sha=`78b147d5…`,
+  conclusion=failure) and 39408297643 (event=push,
+  head_branch=governance/canonical-docs, head_sha=`b12f30e9…`,
+  conclusion=failure). The push event on the exact branch and head proves
+  the ref pointed there; the FAILED conclusions are disclosed separately
+  and are not counted as successful gate evidence.
+
+### 14.5 Merge path (binding; unchanged in substance from Part 13.4, with the Round-22 additions)
+
+PR #30 merges only after: all Round-22 blockers are fixed on the exact final
+candidate; the full Stability Gate and Governance Acceptance pass on that
+SHA's push and PR events; the pre-merge-verification job passes WITH the
+required independent, non-author, current-head approval recorded on the PR
+(until then that job is expected red — the gate functioning); the merge
+executes only through GitHub's protected PR mechanism with a MERGE COMMIT;
+the post-merge `main` run verifies the merge-intent (parents,
+merge_commit_sha, source ref, merged_at, fresh approval, PushEvent before).
+After that merge: PRs #31–#36 revalidate serially against the resulting
+`main` (declared bases updated; fresh exact-head results; their own
+merge-intents declared before each merges; EC-21 is not waived); PRs #23–#29
+close only after a path-by-path diff proves their unique changes are covered
+and their historical refs/evidence are preserved.
+
+### 14.6 Standing items — UNCHANGED
+
+A-01 remains ACCEPTED RISK: the owner rotates the PAT at the owner's
+pleasure; no rotation reminder, no rotation initiation, no credential
+operations; the token value is never written into the repository or any
+evidence. A-04 (exact branch-protection required-check configuration) is an
+OPEN blocker until independently verified; protection is never bypassed. The
+scientific hard stop is preserved in full: no production deployment, no v25
+calibration, no held-out evaluation, no threshold or cohort changes, no
+law-semantic changes, no golden-artifact regeneration without their approved
+gates. The independent r2 evidence-archive verification, the portable 40-row
+cohort metadata table, A-02 issuer-side revocation, and the EC2 deployment
+secrets remain OPEN and are not closed by this governance work.

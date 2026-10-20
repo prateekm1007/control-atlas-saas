@@ -86,6 +86,10 @@ def _yaml_doc(repo: str, filespec: str):
 
 TRIGGER_EVENTS = {"push", "pull_request", "pull_request_target"}
 
+# Round-22 witness names for wildcard components: multiple shapes so a
+# filter that only covers SOME name shapes cannot pass as covering the glob.
+_WITNESS_NAMES = ["x", "y0", "ab", "a.b", "a_b", "A-1", "9"]
+
 
 def _on_block(doc: dict):
     """Return the workflow's `on:` value, handling the YAML 1.1 `on`->True gotcha."""
@@ -120,18 +124,105 @@ def _github_glob_match(path: str, pattern: str) -> bool:
     return re.fullmatch(rx, path) is not None
 
 
-def _representative_path(glob: str) -> str:
-    """A concrete path the governed glob certainly matches (for filter checks)."""
-    if "**" in glob or "*" in glob or "?" in glob:
-        if glob.endswith("/**"):
-            return glob[:-3] + "/X"
-        return re.sub(r"\*+", "X", glob).replace("?", "X")
-    return glob
+def _glob_component_regex(pattern: str) -> str:
+    """Regex for a single path COMPONENT (no '/' crossing inside it)."""
+    rx = ""
+    i = 0
+    while i < len(pattern):
+        c = pattern[i]
+        if c == "*":
+            rx += "[^/]*"
+            i += 1
+        elif c == "?":
+            rx += "[^/]"
+            i += 1
+        else:
+            rx += re.escape(c)
+            i += 1
+    return rx
+
+
+def _glob_witnesses(glob: str) -> list[str]:
+    """Round-22 direction 6: a SOUND, conservative witness set for a governed
+    glob -- concrete paths the governed change set certainly contains.
+
+    The witnesses are generated from the glob's own structure: literal
+    components verbatim; each wildcard component exercised with several name
+    shapes (so `paths: [docs/X]` cannot pass as covering `docs/**`); each
+    `**` exercised at depths 1..3; whole-tree `**` additionally exercised
+    with root-level, hidden, and nested workflow paths. A path filter must
+    cover EVERY witness under GitHub's ORDERED filter semantics for the
+    filter to be accepted as covering the glob; anything else fails closed.
+    Where full inclusion cannot be proven, the check fails rather than
+    claiming path coverage."""
+    if glob == "**":
+        return ["w0", "w0/w1", "w0/w1/w2", ".hidden", ".hidden/nested",
+                ".github/workflows/w.yml", "docs/x.md", "a/b/c/d"]
+    parts = glob.split("/")
+    out: set[str] = set()
+
+    def add_candidates(prefix: str, comp: str):
+        rx = _glob_component_regex(comp)
+        cands = list(_WITNESS_NAMES)
+        for suf in (".md", ".yml", ".json", ".txt"):
+            cands.append("f" + suf)
+        got = []
+        for n in cands:
+            if re.fullmatch(rx, n):
+                got.append(f"{prefix}/{n}" if prefix else n)
+        return got
+
+    def build(idx: int, prefix: str):
+        if idx == len(parts):
+            if prefix:
+                out.add(prefix)
+            return
+        p = parts[idx]
+        if p == "**":
+            for d in (1, 2, 3):
+                comp = "/".join("w%d" % i for i in range(d))
+                np = f"{prefix}/{comp}" if prefix else comp
+                if idx + 1 == len(parts):
+                    out.add(np)
+                else:
+                    build(idx + 1, np)
+        elif "*" in p or "?" in p:
+            for np in add_candidates(prefix, p):
+                build(idx + 1, np)
+        else:
+            np = f"{prefix}/{p}" if prefix else p
+            build(idx + 1, np)
+
+    build(0, "")
+    return sorted(out)
+
+
+def _match_ordered(path: str, patterns: list[str]) -> bool:
+    """GitHub Actions ORDERED filter semantics: patterns are evaluated in
+    order and the LAST matching pattern decides; a leading '!' negates.
+    `["**", "!docs/evidence/**"]` therefore EXCLUDES docs/evidence changes
+    even though a naive any-match test would include them."""
+    result = False
+    for p in patterns:
+        neg = p.startswith("!")
+        pat = p[1:] if neg else p
+        if _github_glob_match(path, pat):
+            result = not neg
+    return result
 
 
 def _pattern_list(value, key: str, filespec: str, ev: str, findings: list[str]):
-    """Validate a filter's TYPE (GitHub accepts a string or list of strings only)."""
+    """Validate a filter's TYPE (GitHub accepts a string or list of strings
+    only). Returns [] ONLY for an ABSENT key (value None). An EMPTY list is
+    ambiguous -- it must not be silently read as unrestricted coverage --
+    and fails closed (Round-22 direction 6)."""
     if value is None:
+        return []
+    if isinstance(value, list) and not value:
+        findings.append(f"workflow {filespec} trigger {ev} has an EMPTY {key} "
+                        f"list -- an empty filter is a misconfiguration that "
+                        f"must not be interpreted as unrestricted coverage "
+                        f"(fail closed)")
         return []
     if isinstance(value, str):
         return [value]
@@ -147,15 +238,16 @@ def _pattern_list(value, key: str, filespec: str, ev: str, findings: list[str]):
 def _validate_triggers(filespec: str, doc: dict, events: list[str],
                        branch: str, findings: list[str],
                        governs: list[str] | None = None):
-    """Round-20/21: the live workflow must actually run on every declared event,
-    with branch coverage AND path coverage of the governed changes.
+    """Round-20/21/22: the live workflow must actually run on every declared
+    event, with branch coverage AND path coverage of the governed changes.
 
-    Fails closed for: manual-only workflows, missing declared events, branch
-    filters that exclude the enforcement branch (branches / branches-ignore),
-    path filters that exclude a governed path (paths / paths-ignore), and
-    filter values of an invalid type (a dict or int filter must not silently
-    pass the check).
-    """
+    Fails closed for: manual-only workflows, missing declared events,
+    malformed event configuration types (a non-dict event value is never
+    treated as an unfiltered trigger), empty filter lists, branch filters
+    that exclude the enforcement branch under ORDERED semantics
+    (branches / branches-ignore, including '!' negations), and path filters
+    that fail the conservative glob-coverage test (paths / paths-ignore,
+    ordered negative patterns included)."""
     on_val = _on_block(doc)
     if on_val is None:
         findings.append(f"workflow {filespec} declares no 'on:' triggers at all "
@@ -176,48 +268,60 @@ def _validate_triggers(filespec: str, doc: dict, events: list[str],
                             f"would not run on that event")
             continue
         cfg = on_val.get(ev)
-        if cfg is None or not isinstance(cfg, dict):
+        if cfg is None:
             continue  # event with no filter: runs for every branch and path
-        # --- branch coverage (Round-20) with type validation (Round-21)
+        # Round-22 direction 6: a malformed event configuration type must
+        # FAIL CLOSED -- a string/list/int event value is never read as an
+        # unfiltered trigger.
+        if not isinstance(cfg, dict):
+            findings.append(f"workflow {filespec} trigger {ev} has a MALFORMED event "
+                            f"configuration (expected a mapping of filters, got "
+                            f"{type(cfg).__name__}) -- malformed trigger "
+                            f"configuration fails closed")
+            continue
+        # --- branch coverage (Round-20; Round-22: ordered semantics)
         pats = _pattern_list(cfg.get("branches"), "branches", filespec, ev, findings)
-        if pats and not any(fnmatch.fnmatchcase(branch, str(p)) for p in pats):
+        if pats and not _match_ordered(branch, pats):
             findings.append(f"workflow {filespec} trigger {ev} filters branches "
                             f"{pats}, which exclude the enforcement branch "
-                            f"{branch!r} (disabled for the required branch)")
+                            f"{branch!r} under ordered filter semantics "
+                            f"(disabled for the required branch)")
         pats = _pattern_list(cfg.get("branches-ignore"), "branches-ignore",
                              filespec, ev, findings)
-        if pats and any(fnmatch.fnmatchcase(branch, str(p)) for p in pats):
+        if pats and any(_github_glob_match(branch, str(p)) for p in pats):
             findings.append(f"workflow {filespec} trigger {ev} ignores the "
                             f"enforcement branch {branch!r} "
                             f"(branches-ignore {pats})")
-        # --- path coverage (Round-21 direction 7): the governed changes must
-        # not be excluded by paths / paths-ignore filters.
+        # --- path coverage (Round-21; Round-22: conservative glob coverage
+        # over a structural witness set, with ordered negative patterns)
         if governs:
             paths = _pattern_list(cfg.get("paths"), "paths", filespec, ev, findings)
             ignores = _pattern_list(cfg.get("paths-ignore"), "paths-ignore",
                                     filespec, ev, findings)
             for g in governs:
-                rep = _representative_path(g)
-                if ignores and any(_github_glob_match(rep, p) for p in ignores):
+                if g == "**" and paths \
+                        and not any(p.lstrip("!") == "**" for p in paths):
                     findings.append(
-                        f"workflow {filespec} trigger {ev} paths-ignore {ignores} "
-                        f"excludes the governed path {rep} (rule {g!r}) -- the "
-                        f"claimed enforcement would not run on the changes it "
-                        f"is supposed to enforce")
-                if paths:
-                    if g == "**":
-                        if "**" not in paths:
-                            findings.append(
-                                f"workflow {filespec} trigger {ev} restricts paths to "
-                                f"{paths} but the enforcement governs the whole tree "
-                                f"(~governs=**); only an unrestricted or '**' filter "
-                                f"covers it")
-                    elif not any(_github_glob_match(rep, p) for p in paths):
+                        f"workflow {filespec} trigger {ev} restricts paths to "
+                        f"{paths} but the enforcement governs the whole tree "
+                        f"(~governs=**); only an unrestricted or '**' filter "
+                        f"covers it")
+                for w in _glob_witnesses(g):
+                    if ignores and any(_github_glob_match(w, p) for p in ignores):
                         findings.append(
-                            f"workflow {filespec} trigger {ev} filters paths {paths}, "
-                            f"which exclude the governed path {rep} -- the claimed "
-                            f"enforcement would not run on the changes it is supposed "
-                            f"to enforce")
+                            f"workflow {filespec} trigger {ev} paths-ignore {ignores} "
+                            f"excludes the governed path {w} (rule {g!r}) -- the "
+                            f"claimed enforcement would not run on the changes it "
+                            f"is supposed to enforce")
+                        break
+                    if paths and not _match_ordered(w, paths):
+                        findings.append(
+                            f"workflow {filespec} trigger {ev} paths filter {paths} "
+                            f"would exclude the governed path {w} (rule {g!r}) -- "
+                            f"conservative glob coverage: a filter that does not "
+                            f"cover every structural witness of the governed glob "
+                            f"(including ordered negative patterns) fails closed")
+                        break
 
 
 def resolve_refs(value: str, repo: str, require_live: bool = False,
