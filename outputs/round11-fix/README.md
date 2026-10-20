@@ -1,5 +1,22 @@
 # ROUND-11 FIX DELIVERY — README
 
+> ## SUPERSESSION (2026-10-20, Round-12 Direction 5)
+>
+> **The register on this branch is superseded.** The partial register
+> reconstruction carried on this branch — `docs/decisions/OWNER_DECISIONS.md`
+> (rev 5) and the preserved `outputs/OWNER_DECISIONS.md` (rev 4) — is left
+> UNEDITED here, as directed, and is **superseded by the authoritative
+> reconciled decision register (45 rows: OD-01..OD-21, A-01..A-08, G-1..G-3,
+> H-1..H-13)** on branch **`docs/owner-decisions` @ `0dcc5a1`** (pushed
+> 2026-10-20; auditor-delegated authority; every row with status, authority,
+> rationale, dependent work items, override path, and a separate
+> implementation-status column). The "Standing governance state" section
+> below ("All 21 ODs remain OPEN") describes the superseded rev-5 view and
+> is likewise superseded — decision statuses now live in the authoritative
+> register. The reconstruction gaps listed in "What is NOT in this delivery"
+> were closed by the auditor's Round-12 reconciliation message and are
+> resolved in that register, not here.
+
 **Branch:** `evidence/round11-fix-2026-10-20`
 **Base:** `origin/main` @ `2195a048e87dcec4aa63e8dc7981b3bb6d237ca0`,
 carrying the Round-11 delivery tip
