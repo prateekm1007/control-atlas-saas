@@ -1,7 +1,12 @@
-# OWNER_DECISIONS — Consolidated Decision Register (rev 6)
+# OWNER_DECISIONS — Consolidated Decision Register (rev 7)
 
-**Provenance.** This is the single consolidated decision register, rev 6.
-It supersedes rev 5 (drafted in Round 13, never published before this
+**Provenance.** This is the single consolidated decision register, rev 7.
+Rev 7 (this revision) appends the 2026-10-20 auditor adjudications of the
+EC-16…EC-26 amendment proposals and the two meta-amendments (Part 6), the
+updated owner/auditor action rows (Part 7), the push-authorization
+reconciliation (Part 8), and the preserved-blockers statement (Part 9).
+Rev 7 supersedes rev 6 (Round 14, published as `0773f0b`) on this same
+canonical path; rev 6 in turn superseded rev 5 (drafted in Round 13, never published before that
 branch) on this same canonical path; rev 4 (delivered on
 `evidence/round9-r2-2026-10-20` @ `7e3a3395…`, `outputs/OWNER_DECISIONS.md`)
 remains a sealed historical record and is not amended. Per the Round-13
@@ -203,8 +208,11 @@ golden-artifact changes.
 
 ## Register-level notes
 
-1. **One register, one canonical location.** This file (rev 5, on
-   `docs/owner-decisions`) is the only current register. Earlier drafts
+1. **One register, one canonical location.** This file (rev 7, on
+   `docs/owner-decisions`) is the only current register. (Correction,
+   2026-10-20: this note previously said "rev 5" — a stale reference left
+   from the rev-6 edit; the register it describes was rev 6 at the time and
+   is rev 7 now.) Earlier drafts
    (rev 1/3 in the r1/r2 archives, rev 4 on the evidence branch) are
    sealed historical records and are not amended.
 2. **No silent status conversions.** No item is upgraded without its
@@ -216,3 +224,88 @@ golden-artifact changes.
    the single pinned convention applies: bytes (octets), UTF-8 chars,
    whitespace-split words, and LF / split-elements / non-blank lines
    reported separately, under `LC_ALL=C.UTF-8`.
+
+## Part 6 — EC-16…EC-26 adjudications + meta-amendments (AUDITOR-ADJUDICATED, 2026-10-20)
+
+The user's instruction delegated these policy decisions to the auditor. They are recorded
+below as **`AUDITOR-ADJUDICATED` under delegated authority, dated 2026-10-20**. No owner
+signature is claimed or implied. These are decisions on the INTENDED POLICY CONTENT: the
+amendments are **not active** in the repository Constitution, no workflow is activated, and
+nothing is merged until the implementation defects are fixed and the exact merge candidate
+passes the required validation gates (auditor direction 2026-10-20, sections 2–3).
+
+| Amendment | Decision | Binding direction (auditor, 2026-10-20) |
+|---|---|---|
+| EC-16 — Remote-verifiable claims | **ACCEPT WITH REVISIONS** | Require every claimed SHA to be a full 40-character lowercase hexadecimal commit ID. Verify it against the intended repository using GitHub's commit API or another verified remote-object route. Check that the returned commit SHA exactly matches the request. Reject mixed valid/invalid lists; never silently ignore short or malformed IDs. API permission, rate-limit, and network errors must fail closed as verification failures, not be misreported as nonexistent commits. |
+| EC-17 — Push on completion | **ACCEPT** | Each completed work item must be durably stored on an authorized remote feature/evidence branch or delivered in a bundle with verified `SHA256SUMS` before subsequent work begins. A proposed rule cannot authorize its own push. Enforce the existing scope of push authorization. |
+| EC-18 — Append-only evidence | **ACCEPT WITH REVISIONS** | Retain UTC timestamps, unique entry IDs, monotonic sequence checking, and explicit `RECONSTRUCTED` labels. Add a check that the current log preserves the exact previous version as a prefix, with no edits or deletions to prior entries. Bind recorded actions to source evidence; timestamp comparison alone cannot prove that an action occurred at the claimed time. |
+| EC-19 — One active directive | **ACCEPT** | Maintain one active directive series in the single index. Each report and evidence package must identify its directive and the items it closes. Historical backfills must be clearly marked as reconstructed. |
+| EC-20 — Rulings copied verbatim | **ACCEPT WITH REVISIONS** | Copy the controlling ruling into the work item and name machine-verifiable acceptance tests. Require the named tests to exist and actually pass on the exact candidate. A file-path presence check is not a test run. Any deviation requires a recorded written waiver before implementation. |
+| EC-21 — Declared base | **ACCEPT WITH REVISIONS** | Require a full base SHA and a validated `Stack-parent` value. Check ancestry against fetched, complete history and validate the declared stack class — `main-line`, `science-line`, or `policy-line` — against the expected base. Do not accept a local Git object's existence as proof that it is on the remote. |
+| EC-22 — Status vocabulary | **ACCEPT WITH REVISIONS** | Only `RUN_PASS` accompanied by an actual CI run ID counts as CI progress. Retain `NOT_RUN`, `RUN_FAIL`, `PUSHED`, and `MERGED`. Reject unknown status tokens. Progress percentages must be computed from verifiable run records, not trusted because a coder typed a percentage beside a run ID. |
+| EC-23 — Full-tree secret scan | **ACCEPT WITH REVISIONS** | Scan the intended repository history and all required refs, including evidence branches. Pin the Gitleaks action to a reviewed immutable commit SHA, declare least-privilege workflow permissions, and test detection and failure behavior using safe fixtures. A scan of only the current push range must not be represented as a whole-repository historical scan. |
+| EC-24 — Push log | **ACCEPT WITH REVISIONS** | Require a checkable push log with branch, full SHA, timestamp, and credential identifier where technically observable. Classify "only authorized credential names can push" as `ADVISORY` until a real server-side enforcement mechanism exists. A post-hoc log does not prevent an unauthorized credential from pushing. |
+| EC-25 — No ungated deploy on push | **ACCEPT WITH REVISIONS** | Production deployment must be dispatch-only, restricted to the approved deployment ref, gated on exact-SHA validation and successful required checks, with environment protection. No deployment on ordinary `push` or `workflow_run` events. Remediation of the existing workflow must be part of the same reviewed activation plan as the lint. |
+| EC-26 — Rules map to acceptance | **ACCEPT WITH REVISIONS** | Derive the in-force rule inventory from the canonical directive index — not an arbitrary list supplied by the pull-request author. For each applicable rule, require a mapping to an actual enforcement point and named acceptance test. Validate that those paths and checks exist. |
+| R-AS1–R-AS4 — Rule-authoring standard | **ACCEPT WITH REVISIONS** | Every in-force rule needs a real enforcement point. Mark unenforceable clauses `ADVISORY`; advisory rules do not count toward compliance. Maintain the single classification index. Retrofit existing rules without silently changing their meaning. |
+| R-DL1–R-DL5 — Directive lifecycle | **ACCEPT WITH REVISIONS** | Maintain one active series and clear supersession records. Read-only audits, local drafts, and verification may proceed within the active directive. The default must not authorize unlisted remote writes, merges, deployments, credential operations, spending, or scientific-semantic changes. Existing scoped push authorization remains scoped. |
+
+**Adoption order (auditor-decided):** Batch 1 = EC-17 and EC-25, with the rule-authoring
+standard and directive-lifecycle safeguards; Batch 2 = EC-22 and EC-23; Batch 3 = EC-16,
+EC-18, EC-19, EC-20, EC-21, EC-24, and EC-26.
+
+**Implementation status (separate from decision status, per register discipline):** the
+correction cycle implementing auditor items 3.1–3.9 lives on `proposal/ec16-ec26-enforcement`
+(inert under `proposals/` and `scripts/ci/`; local acceptance suite AT-01…AT-16 recorded in
+`docs/evidence/ec16-ec26/LOCAL_TEST_LOG.md` on that branch; **GitHub Actions CI for those
+commits: NOT RUN** — no run ID exists and no CI-pass claim is made). Activation requires:
+defect fixes verified, exact merge candidate passing the required validation gates, and the
+reviewed activation plan (`proposals/remediation/` for EC-25) applied in order. Nothing here
+authorizes activation or merge.
+
+## Part 7 — Owner/auditor actions (rev 7 updates to Part 4; statuses unchanged unless stated)
+
+| Action | Rev 7 direction (2026-10-20) | Implementation status |
+|---|---|---|
+| A-01 — PAT risk | Retain the existing `ACCEPTED RISK` status. Do not issue another rotation reminder. Never write or reproduce the token value. | UNCHANGED — ACCEPTED RISK; no new rotation reminder issued in this cycle; the token value appears in no file, log, or register row. |
+| A-02 — Former Gemini API key | Require issuer-side revocation/rotation evidence. Removal from a feature branch is not key revocation. Keep deployment blocked while the deployed `main` code and secret requirements remain unresolved. | OPEN — tree removal remains implemented on `hygiene/h1-remove-gemini` @ `5149435` (unmerged); issuer-side evidence still not presented; deployment stays blocked. |
+| A-03 — EC2 secrets | Require the mandatory production secrets to be configured and verified through the approved secure mechanism; fail closed if any required secret is absent. Do not claim configuration has been completed without evidence. | OPEN — no configuration evidence exists; fail-closed behavior is verified in code (WP-2) but the production secrets remain unconfigured as far as recorded evidence shows. |
+| A-04 — Branch protection | Require the Stability Gate and secret scan as required checks and disable direct pushes to `main`. The `main` protected flag alone does not prove the exact required-check configuration. | OPEN — protection flag observed; the exact required-check set remains unread/unverified and is NOT claimed as configured. |
+| A-05 — Canonical governance merge | Keep the governance patch unmerged until its exact-source validation and required checks pass. No merge is authorized by this audit. | OPEN — `governance/canonical-docs` remains unmerged; no merge authorized. |
+| A-06 — Legacy `fix/c2-api-key-enforcement` branch | Keep it read-only for this task. Its reported zero-ahead/68-behind state supports cleanup, but preserve the ref evidence and confirm no open PR or unique data before any later deletion. | OPEN (read-only) — no writes to that branch this cycle; disposition remains the owner's. |
+| A-09 — Parallel-writer incident | Preserve the incident evidence append-only. Do not infer credential identity from Git author/committer fields alone. No further unscoped remote writes by parallel actors; every claim must be supported by exact remote-ref evidence. | OPEN — incident records preserved; no attribution added beyond recorded evidence; no unscoped writes performed in this cycle. |
+
+## Part 8 — Push-authorization reconciliation (honest record)
+
+- Rev 6's authorization list (Round-13 direction 3) named seven branches:
+  `hygiene/h1-remove-gemini`, `governance/canonical-docs`, `docs/owner-decisions`,
+  `feature/od07-audit-id`, `feature/n8-altlocs-per-residue`, `feature/provenance-v2`,
+  `feature/modrs-census-v2`. It did **not** list `proposal/ec16-ec26-enforcement`, yet the
+  proposal package was pushed to that branch (push-log P-011, tip `17eb881…`).
+- **Discrepancy recorded, not smoothed over:** that push preceded this authorization text and
+  was NOT covered by rev 6's list. It was not self-authorized by EC-17 (which is a proposal,
+  not an in-force rule — a proposed rule cannot authorize its own push).
+- **Authorization now in force (auditor direction 2026-10-20, section 3):** continued
+  focused, auditable corrections on `proposal/ec16-ec26-enforcement` — appended commits only,
+  no force-push, no merge to `main`, no activation of workflows — are authorized, and the
+  branch is hereby added to the standing push-authorization list for that scoped purpose.
+  The two-phase push log (INTENT + CONFIRM records, `PUSH_LOG_SCHEMA.md` on the proposal
+  branch) documents each subsequent push of this cycle.
+- Still in force: no push to `main`; no force-push of any published branch; no merge; no
+  deployment; the push credential is used only from a runtime environment variable / protected
+  file outside the repository and its value is never written to any file, log, or URL.
+
+## Part 9 — Preserved blockers (explicitly NOT closed by this cycle)
+
+1. **Portable 40-row cohort metadata table** — OUTSTANDING (unchanged from rev 6). The
+   directly inspectable, portable, row-level cohort metadata table has not been produced;
+   nothing in the amendment work marks it complete.
+2. **r2 archive acceptance** — BLOCKED on the auditor side: the delivered archive bytes must
+   be independently downloaded, hashed, extracted, and verified in a clean environment before
+   acceptance; the coder-side verifications previously delivered do not substitute for that.
+3. **v23 dataset and historic calibration results** — preserved unchanged; metadata
+   quarantine, the OD-17 corrected-cohort process, and the scientific hard stop remain in
+   force; no v25 calibration, no held-out evaluation, no threshold/cohort changes, no
+   golden-artifact regeneration.
+4. **Hard stop (OD-16)** — unchanged: no merges to `main`, no deployments, no unlisted
+   remote writes, no credential operations.
