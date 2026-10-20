@@ -120,3 +120,63 @@ not on `main` and must not be weakened or waived.
   anywhere). The 40-row cohort metadata table, the independent r2 archive
   verification, A-02 issuer-side revocation, and the EC2 deployment secrets
   remain OPEN (direction 10).
+
+---
+
+# Round-21-followup reading note (SERIES-2026-10-20-R21B, 2026-10-20)
+
+- **Session:** continuation cycle on `repair/round19-mainline-acceptance`; the
+  candidate moved from `62fab8a…` to `0fe4840…` (the Round-21 push) during this
+  session, and the preflight below was performed for BOTH candidates (the
+  pinned blobs are content-addressed and byte-identical on both).
+- **Fetch/read evidence:** read-only fetch of `origin` at 2026-10-20T~17:44Z;
+  worktree at `62fab8a` created 17:46:57Z (worktree file mtime); BOTH
+  constitutions read in full 17:47–17:50Z (Read tool; probe extraction
+  17:50:27Z); `git hash-object` re-verified both pinned blobs on the `0fe4840`
+  checkout at ~18:39Z: `constitution.md` =
+  `211ad2c5d4b40059d9f3f03de12e0701f9235bc7`, `ENGINEERING_CONSTITUTION.md` =
+  `b6bb35e84956d84a8c9d9e65734c212baf3ed075` (both match the pinned blob SHAs
+  recorded in the INDEX inventory; timestamps are session-log approximations,
+  disclosed as such). First repository edit of this cycle: the conftest probe
+  placement 17:50:27Z (probe), first substantive edit ~18:2xZ (checker).
+- **Files read in full before editing:** `AGENTS.md`
+  (`85767237399ffb30f3e45894d9dfbe6f4240584f`), `docs/coder/BRIEF.md`
+  (`052a84ca829d321dc0841a4b1c8702145dcbf6b5`),
+  `docs/decisions/OWNER_DECISIONS.md` (rev 9 → rev 10 Part 13 on `0fe4840`),
+  `docs/P0_STATUS.md` (`e646a9e…` at `62fab8a`; §10 read at `0fe4840`),
+  `docs/directives/INDEX.md` (`f95dc52e…` at `62fab8a`; R21 row read at
+  `0fe4840`), `docs/evidence/push-log/PUSH_LOG_SCHEMA.md` (v3 and v4),
+  `docs/evidence/push-log/PUSH_LOG.md` (P-050..P-065 + schema records),
+  `RECONCILIATION-2026-10-20-R19-FOLLOWUP-PUSHES.md`, the Round-21 evidence
+  table, and the R21 state of every checker/test touched.
+- **EC/OBS/CRIT IDs enforced this cycle:** EC §1 (purpose/authority; conflicts
+  recorded, not edited away), EC §2 (mandatory pre-coding protocol; this note),
+  EC §3 (fail-closed secret handling; no credential values anywhere; the
+  OWNER-PAT-1 value never written to any file), EC §4 (integrity: synthetic
+  fixtures stay test-only; measured vs inferred distinguished), EC §5 (smallest
+  complete change; duplicate-entry-point search before the draft repair), EC §6
+  (testing and evidence: deterministic tests; exact commands/SHAs/counts; the
+  unsound-green defect class eliminated), EC §7 (feature branch + reviewed PR;
+  required checks on the exact candidate), EC §11 (change/incident discipline;
+  the sandbox read anomaly disclosed, not smoothed), EC §12 (definition of
+  done: this cycle's evidence below), EC §13 (no weakened/deleted checks — one
+  check ADDED at AT-23), EC §14 (task artifacts: P0_STATUS §11, RECEIPT R15,
+  this note), EC-17 (two-phase push records P-060-CONFIRM/P-066-INTENT),
+  EC-18/EC-24 (append-only log; remote verification; evidence-field branch
+  binding), EC-19 (this INDEX-anchored status), EC-20 (executed acceptance
+  tests recorded with counts), EC-22 (status vocabulary respected), EC-25 (no
+  deploy-trigger changes), EC-26 (rule inventory consistent; AT IDs valid),
+  OBS-153 and CRIT-154 (untouched; no scientific claim made or altered).
+- **Verdict impact: none.** This cycle repairs the acceptance suite's
+  soundness and the evidence bookkeeping only; no scientific artifact, law,
+  threshold, cohort, calibration, or engine verdict is touched. Hash locks
+  (canon/matrix/law-semantic) are byte-identical: the files are not referenced
+  by this change (verified by the changed-file manifest in the commit).
+- **Verification performed on the exact candidate** (pristine `0fe4840`
+  checkout + this cycle's changes): pytest suite with the conftest fixture
+  active `29 passed` × 3 consecutive runs; `run_all.py` green; reading-note +
+  inventory check PASS (20 required rules mapped); EC-25 trigger lint PASS;
+  status vocabulary PASS on the four CI-scanned evidence files; the hardened
+  evidence-sequence checker PASSES the real push log with the CI-equivalent
+  invocation (`--repo` + API token + `--branch`/`--expect-tip`); parent-prefix
+  append-only verified at commit time.

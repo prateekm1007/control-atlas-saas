@@ -602,8 +602,13 @@ def check_remote_verification(path: str, state: dict, remote: str,
                 findings.append(f"FAIL: {path}:{e['n']}: {eid} records remote_sha={sha[:12]}… "
                                 f"but neither the evidence field nor the entry body contains "
                                 f"that SHA (fabricated or unsupported evidence)")
-        # 2. claimed branch must match the evidence
-        if branch not in evidence and branch not in body:
+        # 2. claimed branch must be named IN THE EVIDENCE FIELD itself. The entry
+        #    body always contains "branch=<name>" (it restates the header), so a
+        #    body fallback makes this check vacuous -- the Round-21-followup audit
+        #    found exactly that (a CONFIRM for branch b whose evidence cited only
+        #    refs/heads/c passed). The SHA keeps its evidence-or-body fallback
+        #    (the legacy P-011-CONFIRM form relies on it); the branch does not.
+        if branch not in evidence:
             findings.append(f"FAIL: {path}:{e['n']}: {eid} claims branch {branch!r} but the "
                             f"evidence does not mention that branch (mismatched branch)")
         # 3. run citations (evidence field AND body -- Round-21 direction 5.3)
@@ -923,13 +928,30 @@ def check_remote_verification(path: str, state: dict, remote: str,
                             newest_sha = (field(newest_prior["subject"], "remote_sha")
                                           if newest_prior else None)
                             if re.fullmatch(r"[0-9a-f]{40}", tok):
+                                # the two declaration violations are INDEPENDENT:
+                                # a declaration can be both non-ancestral and
+                                # stale; reporting only the first hid the second
+                                bad_decl = False
                                 if expect_tip and not logrepo.is_ancestor(tok, expect_tip):
-                                    findings.append(
-                                        f"FAIL: {path}:{te['n']}: declared pre-push tip "
-                                        f"{tok[:12]}… is not an ancestor of the candidate "
-                                        f"(the push was not a fast-forward from the "
-                                        f"declared state)")
-                                elif newest_sha != tok:
+                                    # a DOCUMENTED REBUILD makes a non-ancestral
+                                    # pre-push tip legitimate: when the log itself
+                                    # carries a reviewed evidence-back for this
+                                    # exact branch+SHA (the record that proves the
+                                    # old push was real), the candidate descends
+                                    # from the rebuild, not from the declared tip
+                                    backs_tok = [b for b in entries
+                                                 if b["m"] and b["verb"] == "evidence-back"
+                                                 and field(b["subject"], "branch") == branch_under_test
+                                                 and field(b["subject"], "remote_sha") == tok]
+                                    if not backs_tok:
+                                        bad_decl = True
+                                        findings.append(
+                                            f"FAIL: {path}:{te['n']}: declared pre-push tip "
+                                            f"{tok[:12]}… is not an ancestor of the candidate "
+                                            f"(the push was not a fast-forward from the "
+                                            f"declared state)")
+                                if newest_sha != tok:
+                                    bad_decl = True
                                     findings.append(
                                         f"FAIL: {path}:{te['n']}: declared pre-push tip "
                                         f"{tok[:12]}… does not match the newest recorded "
@@ -937,7 +959,7 @@ def check_remote_verification(path: str, state: dict, remote: str,
                                         f"({newest_prior['eid'] if newest_prior else 'no prior record'}) — "
                                         f"an intervening ref update or a stale declaration; "
                                         f"reconcile before pushing")
-                                else:
+                                if not bad_decl:
                                     info.append(f"BOUND: the declared pre-push tip "
                                                 f"{tok[:12]}… matches the newest recorded "
                                                 f"branch state and is an ancestor of the "
@@ -1031,6 +1053,14 @@ def main() -> int:
     ap.add_argument("--reviews-json", default=None, metavar="FILE",
                     help="test fixture replacing the PR-reviews API response")
     a = ap.parse_args()
+
+    # a missing log file must fail CLOSED with a clear message, not an
+    # unhandled traceback (the Round-21-followup audit hit exactly that on the
+    # AT-28 direct-push scenario where the branch worktree lacked the log)
+    if not os.path.exists(a.logfile):
+        print(f"FAIL: evidence log {a.logfile!r} does not exist (fail closed; "
+              f"a branch without its evidence log is never a pass)")
+        return 1
 
     findings = check_sequence(a.logfile, a.commit_time, a.max_drift)
     if a.parent_prefix:

@@ -137,16 +137,20 @@ def test_at03_deploy_lint():
 # ---------------------------------------------------------------- AT-04 (EC-22 basic)
 
 def test_at04_status_vocabulary():
+    # --runs-manifest takes a FILE path (the lint fail-closes on an unusable
+    # manifest, so the inline-JSON form this test once passed was itself a
+    # hidden check() failure -- the lint correctly refused it).
+    empty_manifest = tmpfile('{"runs": {}}', ".json")
     bad = tmpfile("STATUS: RUNNING\nSTATUS: DONE\nSTATUS: RUN_PASS\n"
                   "Gitleaks came back clean scan\nFailures are pre-existing\nProgress: 92%\n")
-    r = run("status_vocabulary_lint.py", bad, "--runs-manifest", '{"runs": {}}')
+    r = run("status_vocabulary_lint.py", bad, "--runs-manifest", empty_manifest)
     check("AT-04", "unknown status tokens flagged", "RUNNING" in r.stdout and "DONE" in r.stdout, r.stdout)
     check("AT-04", "RUN_PASS without id/args flagged", "without run_id" in r.stdout, r.stdout)
     check("AT-04", "clean scan without citation flagged", "'clean scan'" in r.stdout, r.stdout)
     check("AT-04", "pre-existing without citation flagged", "'pre-existing'" in r.stdout, r.stdout)
     check("AT-04", "percentage without run records flagged", "not supported by run records" in r.stdout, r.stdout)
     good = tmpfile("STATUS: NOT_RUN\nSTATUS: RUN_FAIL\nSTATUS: PUSHED\nSTATUS: MERGED\n")
-    r = run("status_vocabulary_lint.py", good, "--runs-manifest", '{"runs": {}}')
+    r = run("status_vocabulary_lint.py", good, "--runs-manifest", empty_manifest)
     check("AT-04", "non-RUN_PASS vocabulary passes", r.returncode == 0, r.stdout)
 
 
@@ -331,8 +335,11 @@ def test_at09_acceptance_tests_executed():
     body = tmpfile("Acceptance-Tests:\n  test_bad.py::test_fails\n")
     r = run("verify_claimed_shas.py", "--body", body, "--check-tests", "--evidence-out", ev, cwd=proj)
     check("AT-09", "failing named test fails the check", r.returncode == 1 and "FAILED on the candidate" in r.stdout, r.stdout)
-    # 3. passing named tests produce a complete evidence record
-    body = tmpfile("Acceptance-Tests:\n  test_ok.py::test_first_passes\n  test_ok.py::test_second_passes\n")
+    # 3. passing named tests produce a complete evidence record (the body must
+    #    also carry the fail-closed EC-16/EC-19 fields: Claimed-SHAs 'none' and a
+    #    Directive-ID -- without them the checker correctly exits 1)
+    body = tmpfile("Directive-ID: TEST\nClaimed-SHAs: none\n"
+                   "Acceptance-Tests:\n  test_ok.py::test_first_passes\n  test_ok.py::test_second_passes\n")
     r = run("verify_claimed_shas.py", "--body", body, "--check-tests", "--evidence-out", ev, cwd=proj)
     check("AT-09", "passing named tests pass", r.returncode == 0, r.stdout)
     e = json.load(open(ev))
@@ -347,10 +354,16 @@ def test_at09_acceptance_tests_executed():
 # ---------------------------------------------------------------- AT-10 (EC-21 remote/stack)
 
 def _synth_repo():
+    # each repo salts its file content: two synth repos created within the same
+    # second would otherwise carry identical commit timestamps and produce the
+    # SAME commit SHA (the timestamp-collision class the Round-19 fix removed
+    # and the R20/R21 rewrites reintroduced -- it made the "unrelated base"
+    # scenario pass because base3 literally was base2)
+    salt = os.urandom(8).hex()
     proj = tempfile.mkdtemp()
     g = lambda *a: subprocess.run(["git", *a], cwd=proj, capture_output=True, text=True)
     g("init", "-q"); g("config", "user.email", "t@t"); g("config", "user.name", "t")
-    open(os.path.join(proj, "f.txt"), "w").write("base\n")
+    open(os.path.join(proj, "f.txt"), "w").write(f"base {salt}\n")
     g("add", "."); g("commit", "-qm", "base")
     base = rev(["rev-parse", "HEAD"], cwd=proj)
     g("branch", "main")   # stack ref for main-line
@@ -364,6 +377,9 @@ def test_at10_declared_base_remote_stack():
     proj, base, head = _synth_repo()
     refs = tmpfile(json.dumps({"main-line": "main", "science-line": "main", "policy-line": "main"}))
     ok200 = tmpfile('{"status": 200, "body": {"sha": "%s"}}' % base)
+    nf404 = tmpfile('{"status": 404}')
+    fd403 = tmpfile('{"status": 403}')
+    fmism = tmpfile('{"status": 200, "body": {"sha": "%s"}}' % ("f" * 40))
     # 1. valid base: local + remote 200 exact + ancestral + correct stack
     r = run("check_declared_base.py", "--base", base, "--head", head, "--stack-parent", "main-line",
             "--repo-slug", "x/y", "--api-json", ok200, "--stack-refs", refs, cwd=proj)
@@ -371,23 +387,31 @@ def test_at10_declared_base_remote_stack():
           r.returncode == 0, r.stdout)
     # 2. locally present but remote 404 -> NOT_ON_REMOTE (local is not remote proof)
     r = run("check_declared_base.py", "--base", base, "--head", head, "--stack-parent", "main-line",
-            "--repo-slug", "x/y", "--api-json", '{"status": 404}', "--stack-refs", refs, cwd=proj)
+            "--repo-slug", "x/y", "--api-json", nf404, "--stack-refs", refs, cwd=proj)
     check("AT-10", "local object + remote 404 => NOT_ON_REMOTE",
           r.returncode == 1 and "NOT_ON_REMOTE" in r.stdout, r.stdout)
     # 3. remote 403 => VERIFICATION_FAILURE (never misreported as absent)
     r = run("check_declared_base.py", "--base", base, "--head", head, "--stack-parent", "main-line",
-            "--repo-slug", "x/y", "--api-json", '{"status": 403}', "--stack-refs", refs, cwd=proj)
+            "--repo-slug", "x/y", "--api-json", fd403, "--stack-refs", refs, cwd=proj)
     check("AT-10", "403 => REMOTE_VERIFICATION_FAILURE (fail closed)",
           r.returncode == 1 and "REMOTE_VERIFICATION_FAILURE" in r.stdout and "NOT_ON_REMOTE" not in r.stdout, r.stdout)
     # 4. returned SHA mismatch => error
     r = run("check_declared_base.py", "--base", base, "--head", head, "--stack-parent", "main-line",
-            "--repo-slug", "x/y", "--api-json", '{"status": 200, "body": {"sha": "%s"}}' % ("f" * 40),
+            "--repo-slug", "x/y", "--api-json", fmism,
             "--stack-refs", refs, cwd=proj)
     check("AT-10", "returned SHA mismatch fails closed",
           r.returncode == 1 and "does not match requested" in r.stdout, r.stdout)
-    # 5. wrong stack-parent (declared science-line; synthetic repo has no science-unique history)
+    # 5. wrong stack-parent: an ORPHAN science line whose history does not
+    #    contain the base (the previous fixture mapped every stack class to the
+    #    same ref, so the base was trivially valid and no mismatch could occur)
+    gs = lambda *a: subprocess.run(["git", *a], cwd=proj, capture_output=True, text=True)
+    gs("checkout", "-q", "--orphan", "science")
+    open(os.path.join(proj, "s.txt"), "w").write("science line\n")
+    gs("add", "."); gs("commit", "-qm", "science root")
+    gs("checkout", "-q", "main")
+    refs_sc = tmpfile(json.dumps({"main-line": "main", "science-line": "science", "policy-line": "main"}))
     r = run("check_declared_base.py", "--base", base, "--head", head, "--stack-parent", "science-line",
-            "--repo-slug", "x/y", "--api-json", ok200, "--stack-refs", refs, cwd=proj)
+            "--repo-slug", "x/y", "--api-json", ok200, "--stack-refs", refs_sc, cwd=proj)
     check("AT-10", "wrong stack-parent fails (STACK_MISMATCH)",
           r.returncode == 1 and "STACK_MISMATCH" in r.stdout, r.stdout)
     # 6. malformed SHA
@@ -401,9 +425,13 @@ def test_at10_declared_base_remote_stack():
             "--repo-slug", "x/y", "--api-json", ok200, "--stack-refs", refs, cwd=proj)
     check("AT-10", "shallow repo fails (INCOMPLETE_HISTORY)",
           r.returncode == 1 and "INCOMPLETE_HISTORY" in r.stdout, r.stdout)
-    # 8. unrelated but locally-present base (fixture lies about remote to isolate ancestry)
+    # 8. unrelated but locally-present base (fixture lies about remote to isolate
+    #    ancestry): the salted repos never share objects, so proj2 must FETCH
+    #    proj3's history for the base to be locally present at all -- then the
+    #    ancestry check is what must fail it
     proj2, base2, head2 = _synth_repo()
     proj3, base3, _ = _synth_repo()
+    subprocess.run(["git", "-C", proj2, "fetch", "-q", proj3], check=True)
     refs2 = tmpfile(json.dumps({"main-line": "main", "science-line": "main", "policy-line": "main"}))
     ok3 = tmpfile('{"status": 200, "body": {"sha": "%s"}}' % base3)
     r = run("check_declared_base.py", "--base", base3, "--head", "HEAD", "--stack-parent", "main-line",
@@ -439,9 +467,11 @@ def test_at11_status_manifest():
     check("AT-11", "any finding -> exit 1", r.returncode == 1, f"exit={r.returncode}")
     good = tmpfile(
         f"STATUS: NOT_RUN\nSTATUS: RUN_PASS(run_id=39376279686, sha={od})\n"
+        f"STATUS: RUN_FAIL\n"
         f"Scan claim: clean scan (scan=gitleaks run 39376279686, sha={od})\n"
         f"Failure is pre-existing (base={'2' * 40})\n"
         f"STATUS: RUN_PASS(run_id=39376279686, sha={od}) pct=50\n")
+    # 4 STATUS lines, 2 accepted RUN_PASS -> computed progress 50% == the pct= claim
     r = run("status_vocabulary_lint.py", good, "--runs-manifest", manifest)
     check("AT-11", "manifest-backed statuses pass with computed pct", r.returncode == 0, r.stdout)
     # without a manifest, RUN_PASS must fail closed
@@ -454,34 +484,40 @@ def test_at11_status_manifest():
 
 def test_at12_strict_sha_lists():
     head = rev(["rev-parse", "HEAD"])
+    # --api-json takes a FILE path (inline JSON made the checker fail closed on
+    # an unusable fixture file -- the hidden-failure class this round fixes)
+    ok_head = tmpfile('{"status": 200, "body": {"sha": "%s"}}' % head)
+    nf404 = tmpfile('{"status": 404}')
+    fmism = tmpfile('{"status": 200, "body": {"sha": "%s"}}' % ("e" * 40))
+    codes = {c: tmpfile('{"status": %d}' % c) for c in (401, 403, 429, 500)}
     # 1. one malformed entry rejects the WHOLE list (the valid SHA is not checked)
     mixed = tmpfile(f"Claimed-SHAs:\n  {head}\n  abc123\n  {'a' * 41}\n")
     r = run("verify_claimed_shas.py", "--body", mixed, "--repo", "x/y",
-            "--api-json", '{"status": 200, "body": {"sha": "%s"}}' % head)
+            "--api-json", ok_head)
     check("AT-12", "any malformed entry rejects the whole list",
           r.returncode == 1 and "whole list is rejected" in r.stdout and "abc123" in r.stdout, r.stdout)
     check("AT-12", "no partial verification happened (valid SHA not reported OK)",
           "verified on remote" not in r.stdout, r.stdout)
     # 2. remote 404 = absent (distinct)
     body404 = tmpfile(f"Claimed-SHAs:\n  {head}\n")
-    r = run("verify_claimed_shas.py", "--body", body404, "--repo", "x/y", "--api-json", '{"status": 404}')
+    r = run("verify_claimed_shas.py", "--body", body404, "--repo", "x/y", "--api-json", nf404)
     check("AT-12", "404 reported as not on remote",
           r.returncode == 1 and "not on remote" in r.stdout, r.stdout)
     # 3. remote 403/429/500 = VERIFICATION_FAILURE (never misreported as absent)
     for code in (401, 403, 429, 500):
         r = run("verify_claimed_shas.py", "--body", body404, "--repo", "x/y",
-                "--api-json", '{"status": %d}' % code)
+                "--api-json", codes[code])
         check("AT-12", f"HTTP {code} => VERIFICATION_FAILURE (fail closed)",
               r.returncode == 1 and "VERIFICATION_FAILURE" in r.stdout and "not on remote" not in r.stdout, r.stdout)
     # 4. returned SHA mismatch = fail closed
     r = run("verify_claimed_shas.py", "--body", body404, "--repo", "x/y",
-            "--api-json", '{"status": 200, "body": {"sha": "%s"}}' % ("e" * 40))
+            "--api-json", fmism)
     check("AT-12", "returned-SHA mismatch fails closed",
           r.returncode == 1 and "does not match requested" in r.stdout, r.stdout)
     # 5. short and uppercase entries rejected by name
     ugly = tmpfile("Claimed-SHAs:\n  " + head[:12] + "\n  " + head.upper() + "\n")
     r = run("verify_claimed_shas.py", "--body", ugly, "--repo", "x/y",
-            "--api-json", '{"status": 200, "body": {"sha": "%s"}}' % head)
+            "--api-json", ok_head)
     check("AT-12", "short and malformed entries named in the rejection",
           r.returncode == 1 and r.stdout.count("malformed Claimed-SHAs entry") >= 2, r.stdout)
 
@@ -552,14 +588,18 @@ def test_at14_deploy_remediation():
           on["push"]["branches"] == ["**"], str(on["push"]))
     check("AT-14", "proposed gate pull_request filter repaired to [main]",
           on["pull_request"]["branches"] == ["main"], str(on["pull_request"]))
+    import re as _re
     body_lines = [l for l in open(os.path.join(rem, "toscanini-gate.branch-triggers.yml"))
                   if not l.lstrip().startswith("#")]
+    # match the DEFECT TOKEN 'ain]' precisely: a naive substring also matches the
+    # tail of the legitimate token 'main]' (e.g. a flow-style branches: [main]
+    # line), which is a false positive, not the defect
     check("AT-14", "proposed gate body contains no 'ain]' defect",
-          not any("ain]" in l for l in body_lines), "found in non-comment lines")
+          not any(_re.search(r"(?<!m)ain\]", l) for l in body_lines), "found in non-comment lines")
     fxg = yaml.safe_load(open(os.path.join(fx, "toscanini_gate_AIN_DEFECT.yml")))
     fx_on = fxg.get(True, fxg.get("on"))
     check("AT-14", "fixture reproduces main's defects (push '*', pull_request 'ain]')",
-          fx_on["push"]["branches"] == ["*"] and fx_on["pull_request"]["branches"] == ["ain]"],
+          fx_on["push"]["branches"] == ["*"] and fx_on["pull_request"]["branches"] == "ain]",
           str(fx_on))
     check("AT-14", "remediation README states the lint-activation precondition",
           "PRECONDITION" in open(os.path.join(REPO, "proposals", "ci", "README.md")).read())
@@ -603,7 +643,8 @@ def test_at16_inventory_counts():
         "verify-claimed-shas.yml"}, str(ymls))
     checkers = sorted(f for f in os.listdir(CI)
                       if f.endswith(".py") and os.path.isfile(os.path.join(CI, f)))
-    check("AT-16", "six checker scripts exist", len(checkers) == 6, str(checkers))
+    check("AT-16", "eleven checker scripts exist",
+          len(checkers) == 11, str(checkers))
     reg = json.load(open(os.path.join(HERE, "ACCEPTANCE_TESTS.json")))["tests"]
     idx = open(os.path.join(REPO, "docs", "directives", "INDEX.md")).read()
     idx_ats = set(re.findall(r"AT-\d+", idx))
@@ -615,8 +656,8 @@ def test_at16_inventory_counts():
     check("AT-16", "registry node IDs all exist in the test source",
           nodes <= fns, str(nodes - fns))
     receipt = open(os.path.join(REPO, "docs", "evidence", "ec16-ec26", "RECEIPT.md")).read()
-    check("AT-16", "receipt carries the corrected counts (7 workflows / 6 checkers)",
-          "7 workflow" in receipt and "6 checker" in receipt, "correction entry missing")
+    check("AT-16", "receipt carries the corrected counts (7 workflows / 11 checkers)",
+          "7 workflow" in receipt and "11 checker" in receipt, "correction entry missing")
 
 
 # ------------------------------------------------- AT-18 (EC-20 scoped collection, Round-19)
@@ -645,8 +686,10 @@ def test_at18_scoped_collection():
     subprocess.run(["git", "commit", "-qm", "c"], cwd=proj, capture_output=True)
     ev = os.path.join(proj, "evidence.json")
     # 1. a poison module elsewhere in the tree must NOT abort collection of the
-    #    named test (this is the exact regression: it used to fail the EC-20 job)
-    body = tmpfile("Acceptance-Tests:\n  legacytests/test_good.py::test_named_passes\n")
+    #    named test (this is the exact regression: it used to fail the EC-20 job;
+    #    the body carries the fail-closed EC-16/EC-19 fields so a clean run can exit 0)
+    body = tmpfile("Directive-ID: TEST\nClaimed-SHAs: none\n"
+                   "Acceptance-Tests:\n  legacytests/test_good.py::test_named_passes\n")
     r = run("verify_claimed_shas.py", "--body", body, "--check-tests", "--evidence-out", ev, cwd=proj)
     check("AT-18", "unrelated import-time-sys.exit module does not abort named-test collection",
           r.returncode == 0, r.stdout)
@@ -718,7 +761,9 @@ def test_at17_active_workflow_liveness():
     check("AT-17", "ACTIVE rule citing an @ref-pinned workflow fails",
           r.returncode == 1 and "pins its workflow" in r.stdout, r.stdout)
     # 3. ACTIVE rule citing a live working-tree workflow with the named job PASSES
-    idx([("EC-X", "ACTIVE", "workflow:.github/workflows/gate.yml#secret-scan")])
+    #    (the citation must declare the events it needs AND the changes it
+    #    governs: the fixture triggers on push and governs the whole tree)
+    idx([("EC-X", "ACTIVE", "workflow:.github/workflows/gate.yml#secret-scan~events=push~governs=**")])
     r = run_idx()
     check("AT-17", "ACTIVE rule citing the live unpinned workflow passes",
           r.returncode == 0, r.stdout)
@@ -813,13 +858,17 @@ def test_at19_status_summary_grammar():
 
 # --------------------- AT-21 (EC-23 fingerprint allowlist, Round-20)
 
-def _at21_baseline_entry(fp, rule="generic-api-key", file="docs/x.md", cls=None):
+def _at21_baseline_entry(fp, rule=None, file=None, cls=None):
+    # the entry's rule/file/line are DERIVED from the fingerprint itself: a
+    # baseline entry that contradicts the fingerprint's own embedded location is
+    # exactly the contradiction class the checker must (and does) reject
+    parts = fp.split(":")
     return {
         "fingerprint": fp,
-        "rule": rule,
-        "file": file,
-        "line": 5,
-        "commit": fp.split(":", 1)[0],
+        "rule": rule or (parts[2] if len(parts) > 2 else "generic-api-key"),
+        "file": file or (parts[1] if len(parts) > 1 else "docs/x.md"),
+        "line": int(parts[3]) if len(parts) > 3 and parts[3].isdigit() else 5,
+        "commit": parts[0],
         "classification": cls or "FALSE-POSITIVE-PROVENANCE-DIGEST",
         "source": "test scan fixture",
         "basis": "test basis: recorded content digest, not a credential",
@@ -1095,14 +1144,26 @@ def test_at23_workflow_trigger_liveness():
     r = run_idx()
     check("AT-23", "declared pull_request missing from the workflow fails",
           r.returncode == 1 and "NOT triggered by 'pull_request'" in r.stdout, r.stdout)
-    # 10. PROPOSED rule citing the same manual-only workflow is allowed (inert)
+    # 10. PROPOSED rule citing a manual-only draft WITHOUT an events annotation
+    #     is allowed (activation path: the draft is inert; events are declared
+    #     at activation time, when the rule goes ACTIVE)
+    write_wf("name: gate\non:\n  workflow_dispatch:\n" + job)
     text = open(os.path.join(d, "docs", "directives", "INDEX.md")).read()
     open(os.path.join(d, "docs", "directives", "INDEX.md"), "w").write(
-        text.replace("| EC-X | ACTIVE |", "| EC-X | PROPOSED |"))
+        text.replace("~events=pull_request", "").replace("| EC-X | ACTIVE |", "| EC-X | PROPOSED |"))
     r = run("reading_note_map_check.py", "--index", "docs/directives/INDEX.md",
             "--repo-root", d, "--registry", "registry.json", "--include-proposed")
     check("AT-23", "PROPOSED rule citing a manual-only draft is allowed (activation path)",
           r.returncode == 0, r.stdout)
+    # 10b. a PROPOSED row that DOES declare an event the draft lacks still fails
+    #      (whenever an ~events declaration is present it is validated -- found by
+    #      the Round-21-followup soundness audit, now an explicit check)
+    open(os.path.join(d, "docs", "directives", "INDEX.md"), "w").write(
+        text.replace("| EC-X | ACTIVE |", "| EC-X | PROPOSED |"))
+    r = run("reading_note_map_check.py", "--index", "docs/directives/INDEX.md",
+            "--repo-root", d, "--registry", "registry.json", "--include-proposed")
+    check("AT-23", "PROPOSED rule with a declared event the draft lacks fails",
+          r.returncode == 1 and "NOT triggered by" in r.stdout, r.stdout)
 
 
 # --------------------- AT-24 (EC-24 remote-ref verification, Round-20)
@@ -1123,7 +1184,7 @@ def test_at24_pushlog_remote_verification():
     def commit_and_push(tag):
         sp.run(["git", "-C", src, "-c", "user.email=t@t", "-c", "user.name=t",
                 "commit", "-q", "--allow-empty", "-m", tag], check=True)
-        sp.run(["git", "-C", src, "push", "-q", bare, "HEAD:refs/heads/b"], check=True)
+        sp.run(["git", "-C", src, "push", "-q", bare, "HEAD:refs/heads/topic/b"], check=True)
         return sp.run(["git", "-C", src, "rev-parse", "HEAD"],
                       capture_output=True, text=True).stdout.strip()
 
@@ -1133,22 +1194,22 @@ def test_at24_pushlog_remote_verification():
     def log_with(entries):
         return tmpfile(entries, ".md")
 
-    def rv(log, branch="b", tip=s2, remote=bare, extra=()):
+    def rv(log, branch="topic/b", tip=s2, remote=bare, extra=()):
         return run("evidence_sequence_check.py", log, "--pushlog-schema",
                    "--remote-verify", "--remote", remote,
                    "--branch", branch, "--expect-tip", tip, *extra)
 
     # 1. CURRENT confirmation: live tip matches the recorded remote_sha -> PASS
-    cur = log_with("## 2026-10-20T10:00:00Z | P-1-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
-                   "## 2026-10-20T11:00:00Z | P-1-CONFIRM | push-confirm | branch=b remote_sha=%s "
-                   "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b -> %s\"\n" % (s2, s2))
+    cur = log_with("## 2026-10-20T10:00:00Z | P-1-INTENT | push-intent | branch=topic/b credential=OWNER-PAT-1\n"
+                   "## 2026-10-20T11:00:00Z | P-1-CONFIRM | push-confirm | branch=topic/b remote_sha=%s "
+                   "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/topic/b -> %s\"\n" % (s2, s2))
     r = rv(cur)
     check("AT-24", "CURRENT confirmation (live tip == remote_sha) passes",
           r.returncode == 0 and "CURRENT" in r.stdout, r.stdout)
     # 2. valid-but-stale SHA: CONFIRM for the older tip; current tip undeclared -> FAIL
-    stale = log_with("## 2026-10-20T10:00:00Z | P-2-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
-                     "## 2026-10-20T11:00:00Z | P-2-CONFIRM | push-confirm | branch=b remote_sha=%s "
-                     "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b -> %s\"\n" % (s1, s1))
+    stale = log_with("## 2026-10-20T10:00:00Z | P-2-INTENT | push-intent | branch=topic/b credential=OWNER-PAT-1\n"
+                     "## 2026-10-20T11:00:00Z | P-2-CONFIRM | push-confirm | branch=topic/b remote_sha=%s "
+                     "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/topic/b -> %s\"\n" % (s1, s1))
     r = rv(stale)
     check("AT-24", "stale confirmation is HISTORICAL and the undeclared current tip FAILS",
           r.returncode == 1 and "HISTORICAL" in r.stdout and "UNDECLARED" in r.stdout,
@@ -1170,58 +1231,58 @@ def test_at24_pushlog_remote_verification():
                       capture_output=True, text=True).stdout.strip()
 
     def push_b():
-        sp.run(["git", "-C", src, "push", "-q", bare, "HEAD:refs/heads/b"], check=True)
+        sp.run(["git", "-C", src, "push", "-q", bare, "HEAD:refs/heads/topic/b"], check=True)
 
     cA = commit_log("## 2026-10-20T10:00:00Z | P-3-INTENT | push-intent | "
-                    "branch=b expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n", "log A")
+                    "branch=topic/b expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n", "log A")
     push_b()
     cB = commit_log("## 2026-10-20T10:00:00Z | P-3-INTENT | push-intent | "
-                    "branch=b expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
-                    "## 2026-10-20T11:00:00Z | P-3-CONFIRM | push-confirm | branch=b remote_sha=%s "
-                    "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b -> %s\"\n"
-                    "## 2026-10-20T12:00:00Z | P-4-INTENT | push-intent | branch=b "
+                    "branch=topic/b expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+                    "## 2026-10-20T11:00:00Z | P-3-CONFIRM | push-confirm | branch=topic/b remote_sha=%s "
+                    "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/topic/b -> %s\"\n"
+                    "## 2026-10-20T12:00:00Z | P-4-INTENT | push-intent | branch=topic/b "
                     "expected_remote_tip_before_push=%s credential=OWNER-PAT-1\n" % (cA, cA, cA),
                     "log B")
     push_b()
     r = run("evidence_sequence_check.py", logpath, "--pushlog-schema", "--remote-verify",
-            "--remote", bare, "--branch", "b", "--expect-tip", cB)
+            "--remote", bare, "--branch", "topic/b", "--expect-tip", cB)
     check("AT-24", "tip declared by a terminal INTENT bound to the exact candidate is PENDING, not a failure",
           r.returncode == 0 and "PENDING" in r.stdout and "P-4-INTENT" in r.stdout
           and "BOUND" in r.stdout, r.stdout)
     # 4. RECONCILE for the branch does not consume the terminal INTENT
     cC = commit_log("## 2026-10-20T10:00:00Z | P-3-INTENT | push-intent | "
-                    "branch=b expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
-                    "## 2026-10-20T11:00:00Z | P-3-CONFIRM | push-confirm | branch=b remote_sha=%s "
-                    "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b -> %s\"\n"
-                    "## 2026-10-20T11:30:00Z | P-6 | push-reconcile | branch=b remote_sha=%s "
-                    "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b -> %s verified now\"\n"
-                    "## 2026-10-20T12:00:00Z | P-7-INTENT | push-intent | branch=b "
+                    "branch=topic/b expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+                    "## 2026-10-20T11:00:00Z | P-3-CONFIRM | push-confirm | branch=topic/b remote_sha=%s "
+                    "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/topic/b -> %s\"\n"
+                    "## 2026-10-20T11:30:00Z | P-6 | push-reconcile | branch=topic/b remote_sha=%s "
+                    "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/topic/b -> %s verified now\"\n"
+                    "## 2026-10-20T12:00:00Z | P-7-INTENT | push-intent | branch=topic/b "
                     "expected_remote_tip_before_push=%s credential=OWNER-PAT-1\n"
                     % (cA, cA, cB, cB, cB), "log C")
     push_b()
     r = run("evidence_sequence_check.py", logpath, "--pushlog-schema", "--remote-verify",
-            "--remote", bare, "--branch", "b", "--expect-tip", cC)
+            "--remote", bare, "--branch", "topic/b", "--expect-tip", cC)
     check("AT-24", "a RECONCILE never consumes the terminal INTENT (PENDING preserved)",
           r.returncode == 0 and "PENDING" in r.stdout and "P-7-INTENT" in r.stdout
           and "P-6" in r.stdout, r.stdout)
-    # 5. mismatched branch: CONFIRM claims branch=b but the evidence names only branch=c
-    mism = log_with("## 2026-10-20T10:00:00Z | P-8-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
-                    "## 2026-10-20T11:00:00Z | P-8-CONFIRM | push-confirm | branch=b remote_sha=%s "
+    # 5. mismatched branch: CONFIRM claims branch=topic/b but the evidence names only branch=c
+    mism = log_with("## 2026-10-20T10:00:00Z | P-8-INTENT | push-intent | branch=topic/b credential=OWNER-PAT-1\n"
+                    "## 2026-10-20T11:00:00Z | P-8-CONFIRM | push-confirm | branch=topic/b remote_sha=%s "
                     "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/c -> %s\"\n" % (s2, s2))
     r = rv(mism)
     check("AT-24", "confirmation whose evidence names a different branch fails",
           r.returncode == 1 and "mismatched branch" in r.stdout, r.stdout)
     # 6. fabricated evidence: neither field nor body contains the recorded SHA
-    fab = log_with("## 2026-10-20T10:00:00Z | P-9-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
-                   "## 2026-10-20T11:00:00Z | P-9-CONFIRM | push-confirm | branch=b remote_sha=%s "
-                   "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b (ok)\"\n" % sha("e"))
+    fab = log_with("## 2026-10-20T10:00:00Z | P-9-INTENT | push-intent | branch=topic/b credential=OWNER-PAT-1\n"
+                   "## 2026-10-20T11:00:00Z | P-9-CONFIRM | push-confirm | branch=topic/b remote_sha=%s "
+                   "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/topic/b (ok)\"\n" % sha("e"))
     r = rv(fab)
     check("AT-24", "fabricated evidence string fails",
           r.returncode == 1 and "fabricated or unsupported evidence" in r.stdout, r.stdout)
     # 7. unpaired confirmation fails under remote verification too
-    unpaired = log_with("## 2026-10-20T11:00:00Z | P-10-CONFIRM | push-confirm | branch=b "
+    unpaired = log_with("## 2026-10-20T11:00:00Z | P-10-CONFIRM | push-confirm | branch=topic/b "
                         "remote_sha=%s credential=OWNER-PAT-1 evidence=\"git ls-remote origin "
-                        "refs/heads/b -> %s\"\n" % (s2, s2))
+                        "refs/heads/topic/b -> %s\"\n" % (s2, s2))
     r = rv(unpaired)
     check("AT-24", "unpaired confirmation fails",
           r.returncode == 1 and "no preceding" in r.stdout, r.stdout)
@@ -1230,20 +1291,22 @@ def test_at24_pushlog_remote_verification():
     check("AT-24", "unreachable remote fails closed (missing remote verification)",
           r.returncode == 1 and "could not be verified" in r.stdout
           and "fail closed" in r.stdout, r.stdout)
-    # 9. runs-manifest contradiction: cited run's head_sha differs -> FAIL
+    # 9. runs-manifest contradiction: cited run's head_sha differs -> FAIL.
+    #    The confirmation records the CURRENT live tip (cC) so the classification
+    #    is CURRENT and the assertion isolates the citation semantics
     man = tmpfile(json.dumps({"runs": {"999999": {"head_sha": sha("9"),
                                                   "conclusion": "success"}}}), ".json")
-    contra = log_with("## 2026-10-20T10:00:00Z | P-11-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
-                      "## 2026-10-20T11:00:00Z | P-11-CONFIRM | push-confirm | branch=b remote_sha=%s "
-                      "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b -> %s; gate run 999999\"\n"
-                      % (s2, s2))
-    r = rv(contra, extra=("--runs-manifest", man))
+    contra = log_with("## 2026-10-20T10:00:00Z | P-11-INTENT | push-intent | branch=topic/b credential=OWNER-PAT-1\n"
+                      "## 2026-10-20T11:00:00Z | P-11-CONFIRM | push-confirm | branch=topic/b remote_sha=%s "
+                      "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/topic/b -> %s; gate run 999999\"\n"
+                      % (cC, cC))
+    r = rv(contra, tip=cC, extra=("--runs-manifest", man))
     check("AT-24", "cited run whose head_sha contradicts the recorded SHA fails",
           r.returncode == 1 and "evidence does not support" in r.stdout, r.stdout)
     # 10. runs-manifest corroboration passes
-    man2 = tmpfile(json.dumps({"runs": {"999999": {"head_sha": s2,
+    man2 = tmpfile(json.dumps({"runs": {"999999": {"head_sha": cC,
                                                    "conclusion": "success"}}}), ".json")
-    r = rv(contra, extra=("--runs-manifest", man2))
+    r = rv(contra, tip=cC, extra=("--runs-manifest", man2))
     check("AT-24", "cited run corroborating the recorded SHA passes",
           r.returncode == 0, r.stdout)
     # 11. expect-tip mismatch (checked-out candidate is not the live tip) fails
@@ -1481,14 +1544,21 @@ def test_at26_intent_binding_and_pairing():
     r = chk(g)
     check("AT-26", "multiple unmatched intents for the branch under test fail",
           r.returncode == 1 and "multiple unmatched intents" in r.stdout, r.stdout)
-    # 7. ...unless the excess intents are voided by intent-reconcile records
-    voided = two + ("## 2026-10-20T10:40:00Z | P-8 | intent-reconcile | voids=P-6-INTENT "
-                    "branch=b credential=OWNER-PAT-1 evidence=\"superseded by P-7 on the same push\"\n")
+    # 7. ...unless the excess intents are voided by intent-reconcile records.
+    #    Fresh identifiers: the voided intents must be INTRODUCED by the same
+    #    candidate commit that carries the reconcile record (an intent introduced
+    #    by an earlier commit can never declare a later push)
+    voided = ("## 2026-10-20T10:00:00Z | P-9-INTENT | push-intent | branch=b "
+              "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+              "## 2026-10-20T10:30:00Z | P-10-INTENT | push-intent | branch=b "
+              "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+              "## 2026-10-20T10:40:00Z | P-11 | intent-reconcile | voids=P-9-INTENT "
+              "branch=b credential=OWNER-PAT-1 evidence=\"superseded by P-10 on the same push\"\n")
     h = commit_log(voided, "H")
     push()
     r = chk(h)
     check("AT-26", "excess unmatched intents voided by intent-reconcile are tolerated",
-          r.returncode == 0 and "PENDING" in r.stdout and "P-7-INTENT" in r.stdout,
+          r.returncode == 0 and "PENDING" in r.stdout and "P-10-INTENT" in r.stdout,
           r.stdout)
     # 8. ABSENT declared while a prior record exists fails
     absent_bad = ("## 2026-10-20T10:00:00Z | P-10-INTENT | push-intent | branch=b "
@@ -1560,18 +1630,33 @@ def test_at27_historical_proof():
     check("AT-27", "an off-lineage historical confirmation without backing fails",
           r.returncode == 1 and "no reviewed evidence-back record supports it" in r.stdout,
           r.stdout)
-    # 2. with a matching evidence-back (SHA exists in the object store) -> PASS
+    # 2. with a matching evidence-back (SHA exists in the object store) -> PASS.
+    #    The log also carries the terminal intent for the log commit itself: the
+    #    tip is then DECLARED (PENDING, honest steady state) and the assertion
+    #    isolates the evidence-back semantics
     back = ("## 2026-10-20T12:00:00Z | P-2 | evidence-back | backs=P-1-CONFIRM branch=b "
             "remote_sha=%s credential=OWNER-PAT-1 evidence=\"branch rebuilt per reviewed "
-            "direction; commit %s preserved in the object store\"\n" % (a, a))
+            "direction; commit %s preserved in the object store\"\n" % (a, a)
+            + "## 2026-10-20T13:00:00Z | P-3-INTENT | push-intent | branch=b "
+            "expected_remote_tip_before_push=%s credential=OWNER-PAT-1\n" % a)
     r = run_with(back)
     check("AT-27", "an evidence-backed off-lineage historical confirmation passes",
           r.returncode == 0 and "SUPPORTED-BY-EVIDENCE-BACK" in r.stdout, r.stdout)
-    # 3. evidence-back for a SHA that exists nowhere -> FAIL
-    ghost = ("## 2026-10-20T12:00:00Z | P-3 | evidence-back | backs=P-1-CONFIRM branch=b "
-             "remote_sha=%s credential=OWNER-PAT-1 evidence=\"fabricated backing\"\n"
-             % ("e" * 40))
-    r = run_with(ghost)
+    # 3. evidence-back for a SHA that exists nowhere -> FAIL (fail closed): the
+    #    backing BINDS to the backed entry (same declared SHA) but that SHA is
+    #    not a real commit -- the object-store/API proof is what must reject it
+    ghost_sha = "e" * 40
+    ghost_log = ("## 2026-10-20T10:00:00Z | P-4-INTENT | push-intent | branch=b "
+                 "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+                 "## 2026-10-20T11:00:00Z | P-4-CONFIRM | push-confirm | branch=b remote_sha=%s "
+                 "credential=OWNER-PAT-1 evidence=\"git ls-remote r refs/heads/b -> %s\"\n"
+                 "## 2026-10-20T12:00:00Z | P-5 | evidence-back | backs=P-4-CONFIRM branch=b "
+                 "remote_sha=%s credential=OWNER-PAT-1 evidence=\"fabricated backing\"\n"
+                 % (ghost_sha, ghost_sha, ghost_sha))
+    c3 = commit(src, "log3", path=logrel, text=ghost_log)
+    sp.run(["git", "-C", src, "push", "-q", "--force", bare, c3 + ":refs/heads/b"], check=True)
+    r = run("evidence_sequence_check.py", logpath, "--pushlog-schema", "--remote-verify",
+            "--remote", bare, "--branch", "b", "--expect-tip", c3)
     check("AT-27", "an evidence-back for a nonexistent SHA fails (fail closed)",
           r.returncode == 1 and "not present in the local object store" in r.stdout,
           r.stdout)
@@ -1621,7 +1706,9 @@ def test_at27_historical_proof():
                                                     "conclusion": "success"}}}), ".json")
     both = cite_fail + ("## 2026-10-20T12:00:00Z | P-7 | evidence-back | backs=P-6-CONFIRM "
                         "branch=b remote_sha=%s credential=OWNER-PAT-1 evidence=\"run 222222 "
-                        "connects the head to branch b\"\n" % a)
+                        "connects the head to branch b\"\n" % a
+                        + "## 2026-10-20T13:00:00Z | P-8-INTENT | push-intent | branch=b "
+                        "expected_remote_tip_before_push=%s credential=OWNER-PAT-1\n" % a)
     c7 = commit(src, "log7", path=logrel, text=both)
     sp.run(["git", "-C", src, "push", "-q", "--force", bare, c7 + ":refs/heads/b"], check=True)
     r = run("evidence_sequence_check.py", logpath, "--pushlog-schema", "--remote-verify",
@@ -1747,9 +1834,12 @@ def test_at28_merge_transition():
     check("AT-28", "a merge onto a raced main (first parent != declared base) fails",
           r.returncode == 1 and "not the declared pre-merge base" in r.stdout, r.stdout)
 
-    # ---- phase 4: an unrelated direct (non-merge) push to main
+    # ---- phase 4: an unrelated direct (non-merge) push to main. The pushed log
+    #    carries the merge-intent content (a protected main always carries the
+    #    log; the earlier fixture dropped it, crashing the checker on a missing
+    #    file instead of exercising the non-merge rejection)
     sp.run(["git", "-C", src, "reset", "-q", "--hard", base], check=True)
-    direct = commit("direct push")
+    direct = commit("direct push", path=logrel, text=mi)
     push("HEAD:refs/heads/main", force=True)
     r = chk("main", direct, pr_ok, rev_ok)
     check("AT-28", "a direct non-merge push to main fails",

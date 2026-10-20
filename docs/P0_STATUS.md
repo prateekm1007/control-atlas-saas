@@ -214,3 +214,44 @@ full; A-01 remains ACCEPTED RISK (no rotation reminder, per the Round-21
 PAT instruction); A-02 issuer-side revocation, the independent r2 archive
 verification, the portable 40-row cohort metadata table, and the EC2
 deployment secrets remain OPEN and are not closed by this work.
+
+## 11. Round-21-followup suite-soundness repair (added 2026-10-20, SERIES-2026-10-20-R21B)
+
+Independent verification of the Round-21 candidate `0fe4840…` (pristine
+checkout, pytest run with the Round-19 soundness probe) found that the CI
+"Acceptance suite (AT-01..AT-29)" green carried **15 test nodes with hidden
+check() failures**: the R20/R21 rewrites of `test_acceptance.py` lost the
+conftest soundness fixture, so a `check()` failure recorded inside a test node
+never failed that node (the f44bf4d class recurring; EC §6/§13). The hidden
+nodes were AT-04/09/10/11/12/14/16/17/18/21/23 (R20 classes) and
+AT-24/26/27/28 (R21 classes).
+
+| Defect (hidden failure) | Genuine repair on this candidate |
+|---|---|
+| Inline JSON passed to `--runs-manifest`/`--api-json` (checkers correctly fail closed on an unusable fixture file) | File-path fixtures (AT-04, AT-10, AT-12) |
+| EC-20 evidence bodies missing the fail-closed `Claimed-SHAs: none`/`Directive-ID` fields | Fields added (AT-09, AT-18) |
+| AT-11 fixture claimed pct=50 while the records computed 66% | RUN_FAIL record added: 2 accepted / 4 statuses = 50% |
+| AT-10 stack-mismatch scenario could not fail (every stack class mapped to the same ref); unrelated-base scenario collided (identical commit timestamps produced the SAME SHA in two synth repos) | Orphan science line; salted `_synth_repo`; proj2 fetches proj3 for the locally-present-but-unrelated case |
+| AT-14: the draft's `on:` block still carried the `ain]` defect (blob 3e9e0b4d restored by the R20 rename); the AIN fixture was normalized (did not reproduce the defect); `main]`-substring collision in the body check | Draft repaired at block level (pull_request `branches: [main]`, push `["**"]`); true-defect fixture restored byte-exact; precise-token regex `(?<!m)ain\]` |
+| AT-16 expected 6 checkers and a RECEIPT.md that R20/R21 had removed | 11 checkers (R21 adds generate_evidence_table.py); RECEIPT.md completed append-only (R13/R14/R15 correction entries) |
+| AT-17/AT-23: ACTIVE citation lacked `~events=`; PROPOSED case declared an event the draft lacks | `~events=push~governs=**` citation; the PROPOSED-without-annotation case plus a NEW explicit negative check (declared-but-absent event on a PROPOSED row fails) |
+| AT-21: baseline entry contradicted its own fingerprint (file=docs/x.md vs fingerprint's docs/digests.json) | Entry fields DERIVED from the fingerprint |
+| AT-24: single-letter branch names matched inside hex SHAs and the body fallback made the branch check vacuous; citation cases used a stale tip | `topic/b` branch names; branch must be named IN the evidence field (checker hardening); citation cases pinned to the live tip cC |
+| AT-26: voided-intent case reused intents introduced by an earlier commit (the R21 binding rule correctly rejects that) | Fresh intent IDs introduced by the same candidate commit |
+| AT-27: off-lineage scenarios left the log commit's tip undeclared; the ghost-back case did not bind | Terminal intents (DEFERRED binding) for the log commits; the ghost back now BINDS to its entry so the object-store proof is what rejects it |
+| AT-28: the direct-push scenario dropped the log file (checker crashed with an unhandled traceback instead of failing closed) | The pushed log is carried; the checker also fails closed with a clear message on a missing log |
+| Checker: the terminal intent's declaration violations were an elif chain (only the first fired) | Independent findings, with a documented-rebuild waiver (a binding evidence-back for the same branch+SHA makes a non-ancestral pre-push tip legitimate) |
+
+**Result:** `29 passed` under pytest WITH the conftest fixture active, three
+consecutive runs on the exact candidate, plus `run_all.py` green; every
+previously-hidden failure genuinely repaired; no check weakened or deleted
+(one explicit negative check ADDED at AT-23). P0_STATUS's own prose carries no
+machine-checkable status claims beyond the run records cited above.
+
+**Unchanged program-level state:** the scientific hard stop is preserved in
+full; A-01 remains ACCEPTED RISK (no rotation reminder, per direction 8); the
+independent r2 archive verification, the portable 40-row cohort metadata table,
+A-02 issuer-side revocation, and EC2 deployment secrets remain OPEN. PR #30 is
+still NOT approved for merge: the merge gate remains (all checks green on the
+exact final candidate + the demonstrated post-merge transition + the required
+independent approval through the protected path).

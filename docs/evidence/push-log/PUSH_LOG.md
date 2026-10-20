@@ -335,3 +335,42 @@
   commits API and the run records), the original entry stays unchanged, and nothing is
   backdated. Where a run is cited, its head_branch connects the SHA to the claimed
   branch; a failed run conclusion is disclosed and is not counted as proof.
+
+
+## 2026-10-20T18:51:00Z | P-060-CONFIRM | push-confirm | branch=repair/round19-mainline-acceptance remote_sha=0fe4840d1f51bf2c375115116f7e46928fd7ee78 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/repair/round19-mainline-acceptance -> 0fe4840d1f51bf2c375115116f7e46928fd7ee78 (re-verified 2026-10-20T18:50:56Z after the push returned; the push was an ordinary fast-forward 62fab8a..0fe4840, single-writer pre-checked, main verified untouched at f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd immediately before and after); push-event checks on this exact head: Toscanini Stability Gate run 39473614585 and Governance Acceptance run 39473614599, both conclusion=success, created 2026-10-20T18:18:49Z; PR #30 head synced to this exact SHA with PR-event checks: gate runs 39473669119 and 39474173522, governance-acceptance runs 39473669306 and 39474173685 (all nine governance jobs success on this head)"
+
+- Two-phase completion for the Round-21 content push declared by P-060-INTENT
+  (head_at_intent=DEFERRED per the two-phase schema; the pushed tip is recorded
+  here after the push returned, never backdated). The push carried the Round-21
+  repairs exactly as enumerated by P-060-INTENT.
+- Live remote state re-verified at 2026-10-20T18:50:56Z: the branch tip is
+  exactly 0fe4840d1f51bf2c375115116f7e46928fd7ee78 and the recorded checks ran
+  on this exact head. This entry confirms THAT push; it does not confirm any
+  later tip of this branch.
+
+## 2026-10-20T18:51:30Z | P-066-INTENT | push-intent | branch=repair/round19-mainline-acceptance head_at_intent=DEFERRED expected_remote_tip_before_push=0fe4840d1f51bf2c375115116f7e46928fd7ee78 credential=OWNER-PAT-1 authorized_by="auditor Round-19 direction 7 and Round-21 direction 8 (continuation): the acceptance suite must be SOUND on the exact candidate - EC §6/§13 forbid a green report over hidden check() failures; no direct push to main; no force-push; merges only through the reviewed PR path"
+
+- Round-21-followup suite-soundness repair. The Round-21 candidate 0fe4840
+  carried a pristine-pytest green (29 passed) while a conftest probe surfaced
+  15 test nodes with hidden check() failures (the f44bf4d class recurring
+  through the R20/R21 rewrites). This push carries: scripts/ci/tests/conftest.py
+  restored (accumulate-and-report semantics preserved); every hidden failure
+  repaired to its checker's real contract (AT-04/09/10/11/12/14/16/17/18/21/23
+  of the R20 classes; AT-24/26/27/28 of the R21 classes); checker hardenings in
+  evidence_sequence_check.py (the claimed branch must be named IN the evidence
+  field; the terminal intent's declaration validated independently for
+  staleness and for ancestry, with a documented-rebuild waiver when the log
+  carries a binding evidence-back for the same branch+SHA; a missing log file
+  fails closed with a clear message); the draft's on: block genuinely repaired
+  and the true-defect AIN fixture restored (blob-level verified; the recurring
+  sandbox read anomaly disclosed in RECEIPT R15); RECEIPT.md completed with the
+  R13/R14/R15 correction entries (11 checkers / 7 workflow drafts);
+  P0_STATUS section 11; INDEX R21B row; the Round-21-followup reading note; the
+  regenerated evidence table and manifest.
+- ID selection: P-066 verified unused across the published branch logs (the
+  highest previously used identifier is P-065 on this branch).
+- head_at_intent is DEFERRED per the two-phase schema; if this branch is pushed
+  again, P-066-CONFIRM records the remote-verified tip after that push returns
+  (disclosed limitation of the two-phase protocol, never backdated). Until then
+  the branch tip pushed by this INTENT is disclosed as PENDING by the
+  evidence-sequence checker — that is the designed, truthful state.
