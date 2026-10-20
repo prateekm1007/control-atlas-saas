@@ -255,3 +255,19 @@
   INTENT) and the manifest refresh; no other content changes. Single-writer guard:
   remote tip expected exactly 98af2ef5b73ba54e2a10b4a3325c2b1b34a02d07f; push ABORTED on
   deviation.
+
+## 2026-10-20T14:47:26Z | P-037-CONFIRM | push-confirm | branch=activation/ec21-r18 remote_sha=98af2ef2baf88f02723944c97036c3d1b7a95263 credential=OWNER-PAT-1 evidence="git rev-parse 98af2ef (captured programmatically); the push-2 tip is an ancestor of the current tip"
+
+- CORRECTION of P-029-CONFIRM (preserved unchanged above): P-029-CONFIRM recorded
+  remote_sha=98af2ef5b73ba54e2a10b4a3325c2b1b34a02d07f — a wrongly transcribed tail
+  (hand-typed). The actual push-2 tip is 98af2ef2baf88f02723944c97036c3d1b7a95263. This entry is the authoritative
+  confirmation of the P-029 intent. P-032-INTENT's base/expected fields carry the same
+  wrong tail; the correct value is 98af2ef2baf88f02723944c97036c3d1b7a95263 (also recorded in the fix-forward branch's
+  correction register, P-036-INTENT).
+
+## 2026-10-20T14:47:26Z | P-038-INTENT | push-intent | branch=activation/ec21-r18 head_at_intent=DEFERRED base=f9d28f0479888ba0720b08fb068e02f1c49d9d5c expected_remote_tip_before_push=f9d28f0479888ba0720b08fb068e02f1c49d9d5c credential=OWNER-PAT-1 authorized_by="Round-18 direction 6 (EC-21) continuation: transcription corrections recorded append-only"
+
+- Push 4 content (disclosed pre-push): this append (P-037-CONFIRM correction + this
+  INTENT) and the manifest refresh; no other content changes. Single-writer guard:
+  remote tip expected exactly f9d28f0479888ba0720b08fb068e02f1c49d9d5c; push ABORTED on
+  deviation.
