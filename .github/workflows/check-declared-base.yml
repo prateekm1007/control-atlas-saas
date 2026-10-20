@@ -1,0 +1,31 @@
+# ACTIVATION CANDIDATE (Round-18 rebuild of activation/ec21) — EC-21 declared base.
+# Auditor ruling: ACCEPTED IN PRINCIPLE, NOT ACTIVE. Binding direction: rebase after the
+# mainline repair (this branch is stacked on the green fix-forward fix/mainline-r18),
+# reconcile the push-intent/confirmation evidence (PUSH_LOG_RECONCILIATION.json entry for
+# the original branch's intent), rerun all checks on the exact final candidate, and keep
+# the rule PROPOSED until the full candidate is green. Merge then goes ONLY through the
+# required PR review path. Original activation/ec21 preserved untouched (no force-push).
+# INERT DRAFT — activates only on owner approval (EC-21), see move-map in proposals/ci/README.md
+name: EC21 declared base
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+permissions:
+  contents: read
+jobs:
+  declared-base:
+    name: EC-21 base is remote-verified, ancestral, and on the declared stack line
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # COMPLETE history is a precondition of the checker (shallow fails closed)
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr_body.md"
+          GIT_TERMINAL_PROMPT=0 python3 scripts/ci/check_declared_base.py \
+            --declaration "$RUNNER_TEMP/pr_body.md" \
+            --repo-slug "${{ github.repository }}" \
+            --head HEAD

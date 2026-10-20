@@ -218,3 +218,12 @@
   the next globally unused ID (P-026).
 - Single-writer guard: remote tip expected exactly 3271fb1dbb1cb7687889c4e71002aa45ff37c340;
   push ABORTED on deviation.
+
+## 2026-10-20T14:21:00Z | P-022-INTENT | push-intent | branch=activation/ec21-r18 head_at_intent=DEFERRED base=a3d1b5633d46a0cd99842332440986a296412cbb expected_remote_tip_before_push=ABSENT (new ref name; rebuild of activation/ec21 — the original branch is preserved untouched, no force-push) credential=OWNER-PAT-1 authorized_by="auditor Round-18 direction 6 (EC-21 accepted in principle, NOT active: rebase after the mainline repair, reconcile push-intent/confirmation evidence, rerun the full gate; keep PROPOSED until green; merge only through the required review path)"
+
+- Content (disclosed pre-push): .github/workflows/check-declared-base.yml (the audited
+  draft verbatim, with the Round-18 header); reconciliation entry for the original
+  branch's intent (P-INTENT-ec21, observed tip 7f5d50c…, run 39417494195); push-log
+  append; manifest refresh. The declared base for the EC-21 check is the main-line base
+  f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd (ancestral from this stacked tip and on
+  origin/main); the stacked intermediate (fix/mainline-r18) is disclosed in the PR body.
