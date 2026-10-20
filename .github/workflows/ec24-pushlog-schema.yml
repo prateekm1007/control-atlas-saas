@@ -1,0 +1,55 @@
+# ACTIVATION CANDIDATE (Round-18 rebuild of activation/ec24) — EC-24 push-log protocol.
+#
+# Auditor Round-18 direction 6 (EC-24 — not accepted despite its green check; fix the
+# checker). Run 39417295180 passed, but the check only enforced CONFIRM-entry SHA
+# syntax — it did NOT prove the push-confirm protocol is complete: the live activation
+# branch's log ended with an INTENT entry and had no matching confirmation for that
+# branch's push.
+#
+# This candidate enforces the STRENGTHENED protocol (scripts/ci/evidence_sequence_check.py
+# --pushlog-schema, extended on the Round-18 fix-forward base):
+#   - every push-intent must have a LATER matching push-confirm for the same branch,
+#     OR be confirmed LIVE (the remote tip of the intent's branch equals the carrying
+#     commit, or is at-or-after the commit that introduced the intent), OR be explicitly
+#     reconciled in PUSH_LOG_RECONCILIATION.json with a pointer to documenting evidence;
+#   - every recorded SHA is verified against the ACTUAL remote refs (existence via the
+#     commits API; current-tip / ancestor / reconciled lineage);
+#   - the check prints a mandatory status line: an unconfirmed push reports
+#     "PUSHLOG STATUS: PENDING", never COMPLETE.
+# The old activation branches' unconfirmed intents are reconciled with the observed
+# remote tips (documented evidence; branches preserved untouched, no force-push).
+# Never merged until the auditor records activation (D-5 discipline).
+
+name: EC24 push log protocol (fail-closed pairing + remote verification)
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pushlog-protocol:
+    name: "EC-24 every intent confirmed or live-verified (PENDING never passes as complete)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          # Sequence + append-only + full protocol (pairing, remote SHA verification,
+          # reconciliation consumption, PENDING semantics):
+          python3 scripts/ci/evidence_sequence_check.py docs/evidence/push-log/PUSH_LOG.md \
+            --pushlog-schema \
+            --remote-slug "${{ github.repository }}" \
+            --head-sha "$HEAD_SHA"
+          if git cat-file -e "HEAD~1:docs/evidence/push-log/PUSH_LOG.md" 2>/dev/null; then
+            git show "HEAD~1:docs/evidence/push-log/PUSH_LOG.md" > "$RUNNER_TEMP/older_pushlog.md"
+            python3 scripts/ci/evidence_sequence_check.py docs/evidence/push-log/PUSH_LOG.md \
+              --parent-prefix "$RUNNER_TEMP/older_pushlog.md"
+          fi

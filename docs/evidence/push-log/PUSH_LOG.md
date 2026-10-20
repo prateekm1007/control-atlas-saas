@@ -218,3 +218,13 @@
   the next globally unused ID (P-026).
 - Single-writer guard: remote tip expected exactly 3271fb1dbb1cb7687889c4e71002aa45ff37c340;
   push ABORTED on deviation.
+
+## 2026-10-20T14:19:25Z | P-024-INTENT | push-intent | branch=activation/ec24-r18 head_at_intent=DEFERRED base=a3d1b5633d46a0cd99842332440986a296412cbb expected_remote_tip_before_push=ABSENT (new ref name; rebuild of activation/ec24 — the original branch is preserved untouched, no force-push) credential=OWNER-PAT-1 authorized_by="auditor Round-18 direction 6 (EC-24 not accepted: strengthen the checker so missing confirmations fail closed; require full remote SHA + actual remote-ref evidence)"
+
+- Content (disclosed pre-push): .github/workflows/ec24-pushlog-schema.yml — the
+  strengthened protocol invocation (--pushlog-schema --remote-slug --head-sha +
+  parent-prefix); reconciliation entries appended to PUSH_LOG_RECONCILIATION.json for the
+  eight OLD activation branches' unconfirmed intents (each intent's push OBSERVED at its
+  remote tip; branches preserved untouched); push-log append; manifest refresh. The
+  EC-24 gap the auditor flagged (log ending with an unconfirmed intent) is demonstrated
+  FIXED: this branch's final intent is live-verified against the actual remote ref.

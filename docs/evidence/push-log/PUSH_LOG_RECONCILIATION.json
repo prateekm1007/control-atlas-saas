@@ -48,6 +48,70 @@
       "class": "SUPERSEDED-BY-DOCUMENTED-REBUILD",
       "pointer": "docs/directives/INDEX.md SERIES-2026-10-20-R17 row (docs-only rebase d51ad7c merged as b851e01)",
       "recorded_at_utc": "2026-10-20T13:32:54Z"
+    },
+    {
+      "entry_id": "P-INTENT-ec16",
+      "branch": "activation/ec16",
+      "sha": "c5df5846b5234e0f765012c81ce70c60405e48ff",
+      "class": "CONFIRMED-BY-LATER-EVIDENCE",
+      "pointer": "the intent's push was observed: branch tip c5df5846b5234e0f765012c81ce70c60405e48ff verified by git ls-remote (auditor Round-18 table records the exact SHA and the observed CI runs). The original branch is preserved untouched (no force-push); its log's final intent had no in-log confirmation (the exact EC-24 gap the auditor flagged). This rebuilt branch (activation/ec24-r18) demonstrates the fixed protocol; the old branches stay as historical evidence.",
+      "recorded_at_utc": "2026-10-20T14:20:00Z"
+    },
+    {
+      "entry_id": "P-INTENT-ec18",
+      "branch": "activation/ec18",
+      "sha": "9587ae84f85f29974908337f4745ef6bf8928eec",
+      "class": "CONFIRMED-BY-LATER-EVIDENCE",
+      "pointer": "the intent's push was observed: branch tip 9587ae84f85f29974908337f4745ef6bf8928eec verified by git ls-remote (auditor Round-18 table records the exact SHA and the observed CI runs). The original branch is preserved untouched (no force-push); its log's final intent had no in-log confirmation (the exact EC-24 gap the auditor flagged). This rebuilt branch (activation/ec24-r18) demonstrates the fixed protocol; the old branches stay as historical evidence.",
+      "recorded_at_utc": "2026-10-20T14:20:00Z"
+    },
+    {
+      "entry_id": "P-INTENT-ec19",
+      "branch": "activation/ec19",
+      "sha": "925a775cd2ff85d715a785ba4244fd63dfd53f18",
+      "class": "CONFIRMED-BY-LATER-EVIDENCE",
+      "pointer": "the intent's push was observed: branch tip 925a775cd2ff85d715a785ba4244fd63dfd53f18 verified by git ls-remote (auditor Round-18 table records the exact SHA and the observed CI runs). The original branch is preserved untouched (no force-push); its log's final intent had no in-log confirmation (the exact EC-24 gap the auditor flagged). This rebuilt branch (activation/ec24-r18) demonstrates the fixed protocol; the old branches stay as historical evidence.",
+      "recorded_at_utc": "2026-10-20T14:20:00Z"
+    },
+    {
+      "entry_id": "P-INTENT-ec20",
+      "branch": "activation/ec20",
+      "sha": "748544fbcc675190ff06f17483f4168cb34352d5",
+      "class": "CONFIRMED-BY-LATER-EVIDENCE",
+      "pointer": "the intent's push was observed: branch tip 748544fbcc675190ff06f17483f4168cb34352d5 verified by git ls-remote (auditor Round-18 table records the exact SHA and the observed CI runs). The original branch is preserved untouched (no force-push); its log's final intent had no in-log confirmation (the exact EC-24 gap the auditor flagged). This rebuilt branch (activation/ec24-r18) demonstrates the fixed protocol; the old branches stay as historical evidence.",
+      "recorded_at_utc": "2026-10-20T14:20:00Z"
+    },
+    {
+      "entry_id": "P-INTENT-ec21",
+      "branch": "activation/ec21",
+      "sha": "7f5d50c99b5311ad57acf76d614f942ec12b50fa",
+      "class": "CONFIRMED-BY-LATER-EVIDENCE",
+      "pointer": "the intent's push was observed: branch tip 7f5d50c99b5311ad57acf76d614f942ec12b50fa verified by git ls-remote (auditor Round-18 table records the exact SHA and the observed CI runs). The original branch is preserved untouched (no force-push); its log's final intent had no in-log confirmation (the exact EC-24 gap the auditor flagged). This rebuilt branch (activation/ec24-r18) demonstrates the fixed protocol; the old branches stay as historical evidence.",
+      "recorded_at_utc": "2026-10-20T14:20:00Z"
+    },
+    {
+      "entry_id": "P-INTENT-ec23",
+      "branch": "activation/ec23",
+      "sha": "4e3498d7ab218f990cb1ff497f579f6e5a123085",
+      "class": "CONFIRMED-BY-LATER-EVIDENCE",
+      "pointer": "the intent's push was observed: branch tip 4e3498d7ab218f990cb1ff497f579f6e5a123085 verified by git ls-remote (auditor Round-18 table records the exact SHA and the observed CI runs). The original branch is preserved untouched (no force-push); its log's final intent had no in-log confirmation (the exact EC-24 gap the auditor flagged). This rebuilt branch (activation/ec24-r18) demonstrates the fixed protocol; the old branches stay as historical evidence.",
+      "recorded_at_utc": "2026-10-20T14:20:00Z"
+    },
+    {
+      "entry_id": "P-INTENT-ec24",
+      "branch": "activation/ec24",
+      "sha": "742f06c323c883849042fe525a7adb4055b4ff00",
+      "class": "CONFIRMED-BY-LATER-EVIDENCE",
+      "pointer": "the intent's push was observed: branch tip 742f06c323c883849042fe525a7adb4055b4ff00 verified by git ls-remote (auditor Round-18 table records the exact SHA and the observed CI runs). The original branch is preserved untouched (no force-push); its log's final intent had no in-log confirmation (the exact EC-24 gap the auditor flagged). This rebuilt branch (activation/ec24-r18) demonstrates the fixed protocol; the old branches stay as historical evidence.",
+      "recorded_at_utc": "2026-10-20T14:20:00Z"
+    },
+    {
+      "entry_id": "P-INTENT-ec26",
+      "branch": "activation/ec26",
+      "sha": "59e8fe036d8eca3a6dbe42239fb0e23374ed9d4c",
+      "class": "CONFIRMED-BY-LATER-EVIDENCE",
+      "pointer": "the intent's push was observed: branch tip 59e8fe036d8eca3a6dbe42239fb0e23374ed9d4c verified by git ls-remote (auditor Round-18 table records the exact SHA and the observed CI runs). The original branch is preserved untouched (no force-push); its log's final intent had no in-log confirmation (the exact EC-24 gap the auditor flagged). This rebuilt branch (activation/ec24-r18) demonstrates the fixed protocol; the old branches stay as historical evidence.",
+      "recorded_at_utc": "2026-10-20T14:20:00Z"
     }
   ]
 }
