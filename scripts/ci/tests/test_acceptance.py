@@ -617,3 +617,51 @@ def test_at16_inventory_counts():
     receipt = open(os.path.join(REPO, "docs", "evidence", "ec16-ec26", "RECEIPT.md")).read()
     check("AT-16", "receipt carries the corrected counts (7 workflows / 6 checkers)",
           "7 workflow" in receipt and "6 checker" in receipt, "correction entry missing")
+
+
+# ------------------------------------------------- AT-18 (EC-20 scoped collection, Round-19)
+
+def test_at18_scoped_collection():
+    """Regression for the EC-20 activation failures (runs 39417485854/88957/92355).
+
+    Root cause: repo-wide `pytest --collect-only` imports EVERY test module under
+    the root; legacy script-style modules that sys.exit() at import time raise
+    SystemExit inside pytest's collector -> INTERNALERROR -> collection aborts ->
+    named-but-actually-present tests were reported "not collectable". The fix
+    scopes collection to the files that contain the named tests.
+    """
+    proj = tempfile.mkdtemp()
+    subprocess.run(["git", "init", "-q"], cwd=proj)
+    subprocess.run(["git", "config", "user.email", "t@t"], cwd=proj)
+    subprocess.run(["git", "config", "user.name", "t"], cwd=proj)
+    os.makedirs(os.path.join(proj, "legacytests"))
+    # a poison module: executes at import and exits nonzero (gpu_worker-style)
+    open(os.path.join(proj, "legacytests", "test_poison.py"), "w").write(
+        "import sys\nprint('legacy script suite running')\nsys.exit(1)\n")
+    # a good pytest module alongside it
+    open(os.path.join(proj, "legacytests", "test_good.py"), "w").write(
+        "def test_named_passes():\n    assert True\n")
+    subprocess.run(["git", "add", "."], cwd=proj, capture_output=True)
+    subprocess.run(["git", "commit", "-qm", "c"], cwd=proj, capture_output=True)
+    ev = os.path.join(proj, "evidence.json")
+    # 1. a poison module elsewhere in the tree must NOT abort collection of the
+    #    named test (this is the exact regression: it used to fail the EC-20 job)
+    body = tmpfile("Acceptance-Tests:\n  legacytests/test_good.py::test_named_passes\n")
+    r = run("verify_claimed_shas.py", "--body", body, "--check-tests", "--evidence-out", ev, cwd=proj)
+    check("AT-18", "unrelated import-time-sys.exit module does not abort named-test collection",
+          r.returncode == 0, r.stdout)
+    e = json.load(open(ev))
+    check("AT-18", "scoped collection executed the named test",
+          e.get("counts", {}).get("tests") == 1 and e.get("exit_status") == 0, json.dumps(e.get("counts")))
+    check("AT-18", "evidence records the per-file collection scope",
+          e.get("collection_scope_files") == ["legacytests/test_good.py"], json.dumps(e.get("collection_scope_files")))
+    # 2. naming a test in the poison module still fails closed (not silently skipped)
+    body = tmpfile("Acceptance-Tests:\n  legacytests/test_poison.py::test_anything\n")
+    r = run("verify_claimed_shas.py", "--body", body, "--check-tests", "--evidence-out", ev, cwd=proj)
+    check("AT-18", "test inside an unimportable module fails closed as not collectable",
+          r.returncode == 1 and "not collectable" in r.stdout, r.stdout)
+    # 3. naming a file that does not exist fails closed with its own message
+    body = tmpfile("Acceptance-Tests:\n  no/such/file.py::test_x\n")
+    r = run("verify_claimed_shas.py", "--body", body, "--check-tests", "--evidence-out", ev, cwd=proj)
+    check("AT-18", "named test file that does not exist fails closed",
+          r.returncode == 1 and "does not exist" in r.stdout, r.stdout)

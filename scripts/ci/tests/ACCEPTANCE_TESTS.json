@@ -64,6 +64,10 @@
     "AT-16": {
       "name": "Inventory consistency: workflow/checker/test counts in README, receipt, index agree with the actual tree",
       "node": "scripts/ci/tests/test_acceptance.py::test_at16_inventory_counts"
+    },
+    "AT-18": {
+      "name": "EC-20 per-file scoped collection (Round-19): an unrelated legacy module that sys.exit()s at import time cannot abort collection of the named acceptance tests; naming a test inside an unimportable module or a missing file still fails closed",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at18_scoped_collection"
     }
   }
 }
