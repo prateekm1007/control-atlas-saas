@@ -173,3 +173,18 @@
   INCIDENT-2026-10-20-P015-COLLISION.md). head_at_intent is DEFERRED per the
   two-phase schema; the CONFIRM records the remote-verified tip after the
   push returns.
+
+### Reconciliation note (EC-21, Round-19 direction 6, recorded 2026-10-20)
+
+- The ORIGINAL activation push of `activation/ec21` is confirmed against the exact live
+  remote ref: `git ls-remote origin refs/heads/activation/ec21` ->
+  `7f5d50c99b5311ad57acf76d614f942ec12b50fa` (observed at this session's start-of-round
+  fetch, 2026-10-20T12:22Z; re-verifiable). Its specific check passed on that exact head
+  (run 39417494195, auditor-verified in the Round-19 directions) together with the ordinary
+  gate; that candidate was accepted IN PRINCIPLE and is NOT claimed active.
+- The original branch's `P-INTENT-ec21` entry remains PENDING on that branch's own log:
+  the branch is preserved as historical evidence and is not merged, so its two-phase
+  protocol is disclosed as incomplete rather than silently completed (direction 4).
+  This candidate (`activation/ec21-r19`) is the rebased activation record the auditor
+  directed; its own push follows the two-phase protocol (P-019-INTENT above; the CONFIRM
+  records the remote-verified tip after the push returns).
