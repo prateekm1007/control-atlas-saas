@@ -309,3 +309,16 @@ authorizes activation or merge.
    golden-artifact regeneration.
 4. **Hard stop (OD-16)** — unchanged: no merges to `main`, no deployments, no unlisted
    remote writes, no credential operations.
+
+## Part 10 — Concurrent-writer reconciliation during this cycle (recorded 2026-10-20)
+
+While rev 7 was being prepared, the remote `docs/owner-decisions` branch advanced
+`0773f0b` → `a99348f` (three commits, committer date 2026-10-20T10:03:38Z, identity
+`Z User <z@container>` — the same sandbox identity documented in the incident records)
+carrying a `toscanini-gate.yml` trigger fix and two constitution reading notes labeled
+Round-15/Round-16. The concurrent work cites "Round-16 direction 2"; that directive text
+is not present in this environment and is NOT evaluated here. Reconciliation = a merge
+(`b421237`), not a rewrite: file sets are disjoint, both lineages preserved, no
+force-push, per the A-09 discipline. Attribution of the concurrent pushes follows A-09:
+git identity alone does not establish credential identity; the owner's token-history
+review remains the authority.
