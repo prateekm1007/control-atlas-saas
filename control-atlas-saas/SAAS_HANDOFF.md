@@ -38,18 +38,15 @@ Located at: `~/control-atlas/control-atlas-saas`
     *   `tos/engine/tier1_measurements.py`: Voxelized physics.
     *   `tos/engine/tier3_predict.py`: Bayesian probability engine.
     *   `tos/forensic_artifacts/pdf_generator.py`: FPDF2 Dossier engine.
-    *   `tos/enrichment/gemini_compiler.py`: Apex Intelligence Hierarchy.
+    *   `tos/enrichment/`: narrative provider removed (H-1, Round 14).
     *   `tos/saas_engine/selector.py`: Geometric architecture derivation.
 *   `dashboard/dashboard.py`: Streamlit-based "Pipeline Console" UI.
 *   `nkg/piu_moat.jsonl`: Persistent failure moat.
 
-## 4. The Intelligence Layer (Apex Hierarchy)
-To prevent timeouts and ensure Ph.D. quality, the system employs this failover sequence:
-1. `models/gemini-3-flash-preview`
-2. `models/gemini-2.5-pro-preview`
-3. `models/gemini-2.5-flash`
-4. `models/gemini-2.5-flash-lite-preview`
-5. `models/gemini-2.0-flash-thinking-exp`
+## 4. The Intelligence Layer (Deterministic Offline)
+H-1 (Round 14): the external narrative provider, its model cascade and its
+credential were removed from the tree. Certificates render a deterministic
+inline summary; the deterministic verdict is authoritative.
 
 ## 5. Current State: v21.0.4 "Institutional Memory Lock"
 *   **Persistence:** `ProgramRepository` allows continuing work via `program_id`.

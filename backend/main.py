@@ -20,7 +20,6 @@ from tos.governance.station_sop import (
     compute_law_semantic_hash
 )
 from tos.generation.dispatcher import GenerationDispatcher, SourceUnavailable
-from tos.enrichment.gemini_compiler import get_compiler
 from tos.utils.type_guards import force_bytes
 from tos.nkg.manager import get_nkg
 from tos.governance.modality_matrix import resolve_method, compute_matrix_hash, get_matrix_meta
@@ -203,10 +202,14 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
         "strategic_math": {
             "s6": s6_final, "w_arch": w_arch, "m_s8": m_s8, "architecture": t3_category
         },
-        "witness_reports": get_compiler().synthesize_dossier_content({
-            "v": verdict, "s": det_score, "c": coverage, "arch": t3_category, "killer_laws": failing_det
-        }),
-        "ai_model_used": get_compiler().model_used,
+        # H-1 (Round 14, auditor direction 3): the external narrative
+        # provider and its compiler are REMOVED. generate_v21_dossier
+        # provably never reads witness_reports (see
+        # docs/audit-evidence/2026-10-20/h1-p0-stack/EVIDENCE.md), so per
+        # the binding ruling the compiler is deleted, not replaced. The
+        # optional schema fields (witness_reports / ai_model_used) remain
+        # Optional and are now absent — the dashboard renders its built-in
+        # pending state (honest degradation, EC section 10).
         "pdb_b64": base64.b64encode(content_bytes).decode(),
     })
 

@@ -11,7 +11,6 @@ hardening requirements.
 | `TOSCANINI_API_KEYS` | brain (EC2) | Comma-separated static API keys. DB-backed keys (`backend/tos/saas/keys.db`) are the alternative. | Protected routes return **503** (fail-closed) |
 | `TOSCANINI_ALLOW_OPEN_MODE` | brain (dev only) | `1` enables unauthenticated OPEN_MODE when no keys are configured. **Never set in production.** | Open mode stays off (safe) |
 | `ALLOWED_ORIGINS` | brain | Comma-separated browser origins allowed by CORS, e.g. `https://app.example.com`. | No cross-origin browser access |
-| `GEMINI_API_KEY` | brain | Enrichment compiler + diagnostic script. | Enrichment degrades to templates |
 | `INTERNAL_CALLBACK_SECRET` | brain **and** gpu_worker | Shared HMAC secret for `/refinement/internal-callback`. Must be identical on both sides. | Brain: callback returns 503. Worker: refuses to send (fail-closed) |
 | `REDIS_URL` | brain + gpu_worker | Job store / Celery broker. | Defaults to `redis://redis:6379/0` |
 | `TOSCANINI_DATA_DIR` | brain | Writable data directory (audit store, comparisons, NKG, telemetry). | Defaults to `/app/data` in Docker |

@@ -40,8 +40,8 @@ Legend: `[x]` done, evidence linked · `[ ]` open · `[owner]` blocked on owner
 
 ## Owner gates (not started by coder)
 
-- [owner] Rotate the Gemini key (still in main's HEAD)
-- [owner] Set EC2 secrets (`TOSCANINI_API_KEYS`, `INTERNAL_CALLBACK_SECRET`, `ALLOWED_ORIGINS`, `GEMINI_API_KEY`)
+- [owner] Rotate/revoke the exposed provider key at the issuer (A-02; literal removed from this branch per H-1; `main` still carries it until the governance merge; issuer-side revocation unverified)
+- [owner] Set EC2 secrets (`TOSCANINI_API_KEYS`, `INTERNAL_CALLBACK_SECRET`, `ALLOWED_ORIGINS`) — the former provider-key requirement is removed by H-1 (no code path reads it)
 - [owner] Branch protection on main; require the Toscanini Stability Gate
 - [owner] Governance file location (Gate 1) and remaining constitution decisions (Gate 2)
 - [owner] Approve any verdict-changing PR before merge to main
