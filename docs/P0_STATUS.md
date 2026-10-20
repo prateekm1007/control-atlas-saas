@@ -163,7 +163,23 @@ against a runs manifest built from the live Actions API.
 | 3271fb1 (push 3) | Toscanini Stability Gate (push event) | STATUS: RUN_PASS(run_id=39435833741, sha=3271fb1dbb1cb7687889c4e71002aa45ff37c340) |
 | 3271fb1 (push 3) | Toscanini Stability Gate (PR event) | STATUS: RUN_PASS(run_id=39435841759, sha=3271fb1dbb1cb7687889c4e71002aa45ff37c340) |
 
-### 8.3 Acceptance-suite extension (Round-18)
+### 8.3 Final Round-18 candidate results (all seven exact candidates green; EC-22 grammar, manifest-backed)
+
+| Candidate (branch @ tip) | Required check(s) | Status |
+|---|---|---|
+| fix/mainline-r18 @ 5539b01 (PR #23) | Round-18 acceptance gate + ordinary gate (both events) | STATUS: RUN_PASS(run_id=39443533044, sha=5539b01a42839bb0cc2ea7a75de44492f0462a44) |
+| activation/ec16-ec20-consolidated @ 00b49af (PR #24) | EC-16 + EC-19 + EC-20 jobs + gates | STATUS: RUN_PASS(run_id=39446141415, sha=00b49af3d51e2945c52302ea52962b78b5251ed1) |
+| activation/ec18-r18 @ 11d99f5 (PR #25) | EC-18 job + gates | STATUS: RUN_PASS(run_id=39437335099, sha=11d99f5166fb6efe893e1edbadb6d4f4e18113be) |
+| activation/ec23-r18 @ 952d8a7 (PR #26) | EC-23 jobs (all three) + gates | STATUS: RUN_PASS(run_id=39441644268, sha=952d8a7b1a9217b226111dc0e6da6d0b31122c59) |
+| activation/ec24-r18 @ 853214f (PR #27) | EC-24 protocol job + gates | STATUS: RUN_PASS(run_id=39438198824, sha=853214f4aeedcf7f7c46ec205c40716acb853679) |
+| activation/ec26-r18 @ 4af0fbd (PR #28) | EC-26 job + gates | STATUS: RUN_PASS(run_id=39438290430, sha=4af0fbd65d13a30618cbdc9764f9a23a3a46952c) |
+| activation/ec21-r18 @ 69bbfcc (PR #29) | EC-21 job + gates | STATUS: RUN_PASS(run_id=39443598543, sha=69bbfcc645d0fc96b2048607d09da80e5fc1e8f2) |
+
+Green CI is NOT an activation decision: every candidate awaits the auditor's recorded
+activation AND the required approving review; no merge is authorized by this cycle
+(register rev 8, Part 11). PRs #18/#19/#20 are marked superseded by #24 (direction 5).
+
+### 8.4 Acceptance-suite extension (Round-18)
 
 AT-01..AT-19 (registry `scripts/ci/tests/ACCEPTANCE_TESTS.json`). New: AT-17 (an ACTIVE
 rule mapped only to inert `proposals/ci/` drafts fails; a lying Enforcement label fails),

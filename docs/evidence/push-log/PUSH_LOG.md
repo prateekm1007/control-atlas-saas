@@ -312,3 +312,19 @@
   CI run on aa510f7, exactly the fail-closed behavior working); this append completes
   the P-036/P-039 pairs; manifest refresh. Single-writer guard: remote tip expected
   exactly aa510f7533d5d4fd63db9b8bf8d027219c16d500; push ABORTED on deviation.
+
+## 2026-10-20T15:15:00Z | P-041-CONFIRM | push-confirm | branch=fix/mainline-r18 remote_sha=5539b01a42839bb0cc2ea7a75de44492f0462a44 credential=OWNER-PAT-1 evidence="git rev-parse 5539b01 (captured programmatically); check-runs API queried at CONFIRM write time"
+
+- Push 9 accepted as a fast-forward aa510f7 -> 5539b01 (guard held). CI on 5539b01:
+  Round-18 acceptance gate run 39443533044 (push) / 39443544992 (pull_request) SUCCESS;
+  Toscanini Stability Gate run 39443532915 (push) / 39443544955 (pull_request) SUCCESS.
+  Completes the P-041 pair.
+
+## 2026-10-20T15:15:00Z | P-046-INTENT | push-intent | branch=fix/mainline-r18 head_at_intent=DEFERRED base=5539b01a42839bb0cc2ea7a75de44492f0462a44 expected_remote_tip_before_push=5539b01a42839bb0cc2ea7a75de44492f0462a44 credential=OWNER-PAT-1 authorized_by="Round-18 final documentation pass: P0_STATUS section 8 final observed-run records (all seven candidates green), INDEX series-row completion, P-041 pair completion"
+
+- Push 10 content (disclosed pre-push): P0_STATUS section 8.2 extended with the final
+  green-run records for the seven Round-18 candidates (EC-22 grammar, manifest-backed);
+  INDEX SERIES-2026-10-20-R18 row completed with the round's verified outcomes; this
+  append; manifest refresh. No checker or workflow changes. Single-writer guard: remote
+  tip expected exactly 5539b01a42839bb0cc2ea7a75de44492f0462a44; push ABORTED on
+  deviation.
