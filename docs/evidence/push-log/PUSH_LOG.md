@@ -228,3 +228,24 @@
   instead of silently renamed, and the manifest is regenerated. Push-log append; manifest
   refresh. Single-writer guard: remote tip expected exactly
   a3d1b5633d46a0cd99842332440986a296412cbb; push ABORTED on deviation.
+
+## 2026-10-20T14:41:01Z | P-026-CONFIRM | push-confirm | branch=fix/mainline-r18 remote_sha=a3d1b5633d46a0cd99842332440986a296412cbb credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/fix/mainline-r18 -> a3d1b5633d46a0cd99842332440986a296412cbb (observed post-push-4; the tip is an ancestor of the current tip; check-runs API queried at CONFIRM write time)"
+
+- Push 4 accepted as a fast-forward 3271fb1 -> a3d1b56 (single-writer guard held). CI on
+  a3d1b56: acceptance gate + ordinary gate runs recorded in P0_STATUS section 8.2
+  (RUN_PASS rows, manifest-backed).
+
+## 2026-10-20T14:41:01Z | P-027-CONFIRM | push-confirm | branch=fix/mainline-r18 remote_sha=4f7c28bb7a23189e55660f24e7d567454c6ea8f9 credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/fix/mainline-r18 -> 4f7c28bb7a23189e55660f24e7d567454c6ea8f9 (observed post-push-5)"
+
+- Push 5 accepted as a fast-forward a3d1b56 -> 4f7c28bb7a23189e55660f24e7d567454c6ea8f9 (single-writer guard held). CI on
+  this commit: Toscanini Stability Gate SUCCESS (both events); the Round-18 acceptance
+  gate correctly reported PENDING for P-026-INTENT (no confirm existed yet — this entry
+  completes the pair; the checker behaved exactly as designed: an unconfirmed push is
+  PENDING, never complete). Process note recorded: a new INTENT must never be appended
+  before the previous push's CONFIRM.
+
+## 2026-10-20T14:41:01Z | P-031-INTENT | push-intent | branch=fix/mainline-r18 head_at_intent=DEFERRED base=4f7c28bb7a23189e55660f24e7d567454c6ea8f9 expected_remote_tip_before_push=4f7c28bb7a23189e55660f24e7d567454c6ea8f9 credential=OWNER-PAT-1 authorized_by="Round-18 direction 4 continuation: completing the two-phase protocol (P-026/P-027 confirmations) before any further intent; disclosed process correction"
+
+- Push 6 content (disclosed pre-push): this append (P-026-CONFIRM, P-027-CONFIRM, this
+  INTENT) and the manifest refresh. No content changes beyond evidence. Single-writer
+  guard: remote tip expected exactly 4f7c28bb7a23189e55660f24e7d567454c6ea8f9; push ABORTED on deviation.
