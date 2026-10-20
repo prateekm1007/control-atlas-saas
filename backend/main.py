@@ -19,7 +19,6 @@ from tos.governance.station_sop import (
     ARCHITECTURE_WEIGHTS, BAYESIAN_FORMULA
 )
 from tos.generation.dispatcher import GenerationDispatcher, SourceUnavailable
-from tos.enrichment.gemini_compiler import get_compiler
 from tos.utils.type_guards import force_bytes
 from tos.nkg.manager import get_nkg
 from tos.governance.modality_matrix import resolve_method, compute_matrix_hash, get_matrix_meta
@@ -198,10 +197,11 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
         "strategic_math": {
             "s6": s6_final, "w_arch": w_arch, "m_s8": m_s8, "architecture": t3_category
         },
-        "witness_reports": get_compiler().synthesize_dossier_content({
-            "v": verdict, "s": det_score, "c": coverage, "arch": t3_category, "killer_laws": failing_det
-        }),
-        "ai_model_used": get_compiler().model_used,
+        # H-1 (accepted ruling, ported Round 17): the external narrative
+        # provider was removed; the dossier generator never read these
+        # fields and the dashboard renders its built-in pending state.
+        "witness_reports": {},
+        "ai_model_used": None,
         "pdb_b64": base64.b64encode(content_bytes).decode(),
     })
 

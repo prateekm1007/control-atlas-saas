@@ -3,7 +3,6 @@ services:
     build: ./backend
     container_name: brain
     environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
       - PYTHONPATH=/app
     ports: ["8000:8000"]
     volumes: ["./nkg:/app/nkg"]

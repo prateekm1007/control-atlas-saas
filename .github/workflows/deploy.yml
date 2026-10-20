@@ -1,147 +1,48 @@
-name: Deploy Toscanini to EC2
+name: Deploy Toscanini (manual dispatch only)
 
-# WP-14 (Constitution 7.2/7.3): deployment is GATED and SHA-EXACT.
+# Round-17 auditor direction 2a (2026-10-20), superseding A-10:
 #
-# This workflow CANNOT run merely because a commit was pushed to main. It runs
-# only after the "Toscanini Stability Gate" completes for a main-branch run,
-# and it deploys the EXACT SHA the gate verified — never whatever origin/main
-# happens to be when the job executes.
+# This workflow is INERT BY DESIGN. It replaces the previous deploy
+# workflow that ran on every gate completion for main (workflow_run
+# trigger) and referenced deployment hosts and credentials.
 #
-# Negative paths that abort before any SSH connection:
-#   - gate did not conclude 'success'
-#   - gate ran for a branch other than main
-#   - gate workflow identity (name/path) mismatch
-#   - deployment secrets missing (fail-closed preflight)
-#   - checkout SHA != gated SHA (integrity check)
-#   - bounded post-deploy health verification fails -> automated rollback
+# Properties (verifiable from this file):
+#   - TRIGGERS: `workflow_dispatch` ONLY. No `push` trigger. No
+#     `workflow_run` trigger. Nothing that happens in this repository —
+#     no push, no pull request, no gate completion — can start this
+#     workflow. Only an authenticated user with write access, acting
+#     manually in the Actions UI, can dispatch it.
+#   - DEPLOYMENT: none. This job checks out nothing, connects to no
+#     host, reads no secrets, and deploys nothing. It exists so the
+#     file name, history, and this explanation are preserved, and so
+#     that any future automated deploy must be an explicit, reviewed
+#     change to this file rather than a trigger away.
+#
+# Constitution (EC 7): deployment MUST depend on successful tests and
+# validation for the same source SHA, and an independent push-triggered
+# deployment MUST NOT bypass a failed quality gate. Until a gated
+# deployment pipeline is deliberately re-introduced and reviewed, the
+# only safe deployment control is: no automated deployment at all.
+#
+# Fail-closed posture (EC 3): there is no deployment code here to fail
+# open. The job exits successfully after stating that it is inert;
+# a non-zero exit would misrepresent an attempted deployment as failed.
 
 on:
-  workflow_run:
-    workflows: ["Toscanini Stability Gate"]
-    types: [completed]
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: deploy-production
-  cancel-in-progress: false
-
 jobs:
   deploy:
-    name: Gated production deploy (exact SHA + health + rollback)
+    name: Manual deployment — intentionally inert (no deploy logic)
     runs-on: ubuntu-latest
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main' &&
-      github.event.workflow_run.name == 'Toscanini Stability Gate' &&
-      github.event.workflow_run.path == '.github/workflows/toscanini-gate.yml'
-    env:
-      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
-      EC2_HOST: ${{ secrets.EC2_HOST }}
-      EC2_USER: ${{ secrets.EC2_USER }}
-      EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
     steps:
-      - name: Preflight — deployment secrets present (fail closed, values never logged)
+      - name: State the inert posture (no checkout, no secrets, no host, no deploy)
         run: |
-          set -euo pipefail
-          missing=0
-          for v in EC2_HOST EC2_USER EC2_SSH_KEY; do
-            if [ -z "${!v:-}" ]; then
-              echo "FATAL: deployment secret ${v} is not configured"
-              missing=1
-            fi
-          done
-          if [ "${missing}" -ne 0 ]; then
-            echo "Deployment aborted: missing deployment secrets (fail-closed)."
-            exit 1
-          fi
-          echo "Preflight OK: deployment secrets present; gated SHA ${DEPLOY_SHA}"
-
-      # Pinned to actions/checkout v4.2.2 by commit SHA (supply-chain policy).
-      - name: Checkout exact gated SHA
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Integrity check — checkout SHA must equal gated SHA
-        run: |
-          set -euo pipefail
-          head_sha="$(git rev-parse HEAD)"
-          echo "gated (tested) SHA : ${DEPLOY_SHA}"
-          echo "checkout SHA       : ${head_sha}"
-          if [ "${head_sha}" != "${DEPLOY_SHA}" ]; then
-            echo "FATAL: checkout SHA does not match the gated SHA — refusing to deploy."
-            exit 1
-          fi
-
-      - name: Install SSH key (file-based, 0600, never echoed)
-        run: |
-          set -euo pipefail
-          install -m 600 /dev/null /tmp/deploy_key
-          printf '%s\n' "${EC2_SSH_KEY}" > /tmp/deploy_key
-          echo "SSH key installed with 0600 permissions"
-
-      - name: Deploy EXACT gated SHA to EC2 (records pre-deploy rollback point)
-        run: |
-          set -euo pipefail
-          ssh -i /tmp/deploy_key \
-              -o StrictHostKeyChecking=accept-new \
-              -o ConnectTimeout=15 \
-              -o ServerAliveInterval=30 \
-              "${EC2_USER}@${EC2_HOST}" "bash -s" -- "${DEPLOY_SHA}" \
-              < scripts/deploy/deploy_remote.sh
-
-      - name: Bounded post-deploy health verification (/health must be healthy)
-        run: |
-          set -euo pipefail
-          attempts=10
-          interval=15
-          for i in $(seq 1 "${attempts}"); do
-            echo "health attempt ${i}/${attempts} ..."
-            if curl -fsS --max-time 10 "http://${EC2_HOST}:8000/health" -o /tmp/health.json; then
-              if python3 -c 'import json,sys; d=json.load(open("/tmp/health.json")); assert d.get("status")=="healthy", d.get("status")'; then
-                echo "HEALTHY: /health reported status=healthy"
-                echo "HEALTH_CHECK_PASSED=true" >> "$GITHUB_ENV"
-                exit 0
-              fi
-            fi
-            sleep "${interval}"
-          done
-          echo "FATAL: /health did not reach status=healthy within $((attempts*interval))s (bounded)."
-          exit 1
-
-      - name: Record deployment evidence in job summary
-        if: always()
-        run: |
-          set -euo pipefail
-          {
-            echo "## Deployment record"
-            echo ""
-            echo "| Field | Value |"
-            echo "|---|---|"
-            echo "| gated (tested) SHA | ${DEPLOY_SHA} |"
-            echo "| deployed SHA | ${DEPLOY_SHA} (remote checkout pinned) |"
-            echo "| gate conclusion | success (required by trigger) |"
-            echo "| health check | ${HEALTH_CHECK_PASSED:-false} |"
-            echo "| rollback | $(if [ "${HEALTH_CHECK_PASSED:-false}" = "true" ]; then echo not-needed; else echo triggered-on-failure; fi) |"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Automated rollback to pre-deploy SHA on failure
-        if: failure()
-        run: |
-          set -euo pipefail
-          echo "Health verification failed — rolling back to the pre-deploy SHA."
-          ssh -i /tmp/deploy_key \
-              -o StrictHostKeyChecking=accept-new \
-              -o ConnectTimeout=15 \
-              -o ServerAliveInterval=30 \
-              "${EC2_USER}@${EC2_HOST}" "bash -s" \
-              < scripts/deploy/rollback_remote.sh
-
-      - name: Remove SSH key material
-        if: always()
-        run: rm -f /tmp/deploy_key && echo "SSH key material removed"
+          echo "This workflow is dispatch-only and intentionally performs NO deployment."
+          echo "It contains no deployment logic, references no hosts or secrets, and"
+          echo "cannot be triggered by any push, pull request, or gate completion."
+          echo "Re-introducing automated deployment requires an explicit reviewed"
+          echo "change to this file (Constitution EC 7: gated on the exact SHA)."

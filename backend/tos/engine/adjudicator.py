@@ -5,7 +5,7 @@ Stages 3 (Adjudication) and 4 (Scoring) extracted from main.py.
 
 This module has ZERO knowledge of:
 - FastAPI, HTTP, file I/O
-- PDF generation, Gemini narrative
+- PDF generation (narrative layer removed, H-1)
 - PDB bytes or Structure objects
 
 It takes measurements in, returns verdicts out.

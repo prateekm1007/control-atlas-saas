@@ -1,15 +1,29 @@
 """
-WP-14 workflow-policy assertions: deployment must be gate-gated, SHA-exact,
-health-verified, and rollback-capable.
+Deploy workflow policy assertions — Round-17 contract (dispatch-only, inert).
 
-Constitution 7.2/7.3: "Deployment MUST depend on successful tests, validation,
-and build for the same source SHA... An independent push-triggered deployment
-MUST NOT bypass a failed quality gate."
+Supersession record (EC 1): this module previously pinned the WP-14 design
+(workflow_run-triggered, host-based deployment with health check and
+rollback). The Round-17 auditor direction 2a (2026-10-20, under full
+delegation) replaces that design: ``deploy.yml`` becomes a
+``workflow_dispatch``-only file with no push trigger, no workflow_run
+trigger, and no host references — superseding owner action A-10. The tests
+below were rewritten to assert the NEW binding contract with equivalent
+structural rigor. No assertion was merely deleted: every old protection
+(gate-gated start, SHA discipline, credential hygiene, serialization) maps
+to its new-contract counterpart, and the new strongest property is
+asserted directly — NOTHING that happens in this repository can start a
+deployment.
 
-These tests parse .github/workflows/deploy.yml and the paired remote scripts
-and assert the POLICY as structure — so any future edit that re-opens a
-deploy bypass (failed gate, wrong branch, SHA drift, missing health check,
-removed rollback) fails the CI gate itself.
+Constitution 7 (EC 7): "Deployment MUST depend on successful tests,
+validation, and build for the same source SHA... An independent
+push-triggered deployment MUST NOT bypass a failed quality gate." The
+dispatch-only file satisfies this maximally: no repository event can
+deploy; re-introducing automated deployment requires an explicit, reviewed
+change to deploy.yml — which these tests will flag.
+
+The legacy remote scripts (scripts/deploy/deploy_remote.sh,
+rollback_remote.sh) remain in-tree but are intentionally unreferenced by
+any workflow; re-wiring them is a deliberate policy change.
 """
 import re
 from pathlib import Path
@@ -19,8 +33,13 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[2]
 DEPLOY_YML = REPO / ".github" / "workflows" / "deploy.yml"
-DEPLOY_SH = REPO / "scripts" / "deploy" / "deploy_remote.sh"
-ROLLBACK_SH = REPO / "scripts" / "deploy" / "rollback_remote.sh"
+WORKFLOWS_DIR = REPO / ".github" / "workflows"
+
+FORBIDDEN_TRIGGERS = {
+    "push", "pull_request", "workflow_run", "schedule", "check_suite",
+    "issues", "issue_comment", "pull_request_target", "create", "delete",
+    "deployment", "status", "release", "page_build",
+}
 
 
 @pytest.fixture(scope="module")
@@ -38,34 +57,71 @@ def deploy_job(doc):
     return d["jobs"]["deploy"]
 
 
-# ── trigger: only a completed main-branch gate run may start deployment ──────
+# ── trigger discipline: manual dispatch ONLY; no repository event deploys ────
 
-def test_trigger_is_workflow_run_on_gate(doc):
+def test_trigger_is_workflow_dispatch_only(doc):
     _, _, trigger = doc
-    assert set(trigger.keys()) == {"workflow_run"}
-    wr = trigger["workflow_run"]
-    assert wr["workflows"] == ["Toscanini Stability Gate"]
-    assert wr["types"] == ["completed"]
-    assert wr["branches"] == ["main"]
+    assert trigger is not None, "deploy.yml must declare a trigger"
+    assert set(trigger.keys()) == {"workflow_dispatch"}, (
+        f"deploy.yml triggers must be workflow_dispatch only; found {set(trigger.keys())}"
+    )
 
 
-def test_gate_failure_cannot_deploy(deploy_job):
-    cond = deploy_job["if"]
-    assert "github.event.workflow_run.conclusion == 'success'" in cond
+def test_no_event_trigger_can_start_a_deployment(doc):
+    """The Round-17 core property: no push, PR, gate completion, or any
+    other repository event may start this workflow."""
+    _, _, trigger = doc
+    present = FORBIDDEN_TRIGGERS & set(trigger.keys())
+    assert not present, f"forbidden automatic trigger(s) present: {present}"
 
 
-def test_non_main_branch_cannot_deploy(deploy_job):
-    cond = deploy_job["if"]
-    assert "github.event.workflow_run.head_branch == 'main'" in cond
+def test_file_text_declares_no_event_triggers(doc):
+    """Structural guard: the words must not appear as YAML keys even in
+    commented-out form that a future edit could re-enable accidentally.
+    (Comments that EXPLAIN their absence are permitted and asserted.)"""
+    text, _, _ = doc
+    for key in ("push:", "pull_request:", "workflow_run:", "schedule:"):
+        for line in text.splitlines():
+            stripped = line.strip()
+            assert not stripped.startswith(key) or stripped.startswith("#"), (
+                f"active trigger key '{key}' found in deploy.yml"
+            )
 
 
-def test_workflow_identity_is_validated(deploy_job):
-    cond = deploy_job["if"]
-    assert "github.event.workflow_run.name == 'Toscanini Stability Gate'" in cond
-    assert "github.event.workflow_run.path == '.github/workflows/toscanini-gate.yml'" in cond
+# ── no host, no transport, no credentials: the file cannot deploy anything ──
+
+def test_no_host_references(doc):
+    text, _, _ = doc
+    assert "EC2" not in text, "deploy.yml must not reference EC2"
+    assert "ec2" not in text.lower(), "deploy.yml must not reference hosts (ec2)"
 
 
-# ── supply chain: minimal permissions, pinned action, no credentials to PRs ──
+def test_no_ssh_or_transport_commands(doc):
+    text, _, _ = doc
+    for pattern in (r"\bssh\b", r"\bscp\b", r"\brsync\b", r"\bcurl\b", r"\bwget\b"):
+        assert not re.search(pattern, text, re.IGNORECASE), (
+            f"deploy.yml must contain no transport command: {pattern}"
+        )
+
+
+def test_no_secrets_are_referenced(doc):
+    text, _, _ = doc
+    assert "secrets." not in text, "deploy.yml must reference no secrets"
+
+
+def test_job_performs_no_deployment_and_says_so(deploy_job):
+    steps = deploy_job["steps"]
+    assert steps, "deploy job must have steps"
+    names = " ".join(s.get("name", "") for s in steps)
+    assert "inert" in names.lower(), (
+        "the deploy job must state in its step name that it is intentionally inert"
+    )
+    for s in steps:
+        assert "uses" not in s, f"inert deploy job must not use actions: {s.get('name')}"
+        assert "ssh" not in s.get("run", "").lower()
+
+
+# ── supply chain: minimal permissions; any action must be SHA-pinned ─────────
 
 def test_permissions_are_read_only(doc):
     _, d, _ = doc
@@ -74,96 +130,24 @@ def test_permissions_are_read_only(doc):
 
 def test_all_actions_pinned_to_full_commit_sha(doc):
     text, _, _ = doc
-    uses = re.findall(r"uses:\s*(\S+)", text)
-    assert uses, "no actions found"
+    uses = re.findall(r"^\s*uses:\s*(\S+)", text, re.MULTILINE)
     for u in uses:
         assert re.search(r"@[0-9a-f]{40}$", u), f"action not SHA-pinned: {u}"
 
 
-def test_checkout_uses_gated_sha_and_no_persisted_credentials(deploy_job):
-    steps = deploy_job["steps"]
-    co = [s for s in steps if s.get("uses", "").startswith("actions/checkout")]
-    assert len(co) == 1
-    with_ref = co[0].get("with", {})
-    assert with_ref.get("ref") == "${{ github.event.workflow_run.head_sha }}"
-    assert with_ref.get("persist-credentials") is False
+# ── no checkout: the workflow never touches repository content ───────────────
 
-
-# ── SHA discipline: deploy the gated SHA, never drifting origin/main ────────
-
-def test_no_reset_to_origin_main_anywhere(doc):
+def test_no_checkout_of_code(doc):
     text, _, _ = doc
-    assert "reset --hard origin/main" not in text
+    assert "actions/checkout" not in text, "inert deploy workflow must not check out code"
 
 
-def test_integrity_step_asserts_checkout_equals_gated_sha(deploy_job):
-    steps = deploy_job["steps"]
-    integ = [s for s in steps if "Integrity check" in s.get("name", "")]
-    assert len(integ) == 1
-    assert "head_sha\" ] != \"${DEPLOY_SHA}\"" in integ[0]["run"] or \
-           "!= \"${DEPLOY_SHA}\"" in integ[0]["run"]
+# ── legacy remote scripts stay unreferenced by the deploy workflow ───────────
 
-
-def test_remote_script_pins_exact_sha():
-    src = DEPLOY_SH.read_text()
-    assert 'DEPLOY_SHA="${1:?FATAL: deploy SHA argument required}"' in src
-    assert 'git checkout --force "${DEPLOY_SHA}"' in src
-    # No CODE may reset to origin/main (comments mentioning the prohibition are fine).
-    code_lines = [l for l in src.splitlines() if not l.lstrip().startswith("#")]
-    assert not any("origin/main" in l for l in code_lines), "remote script drifts to origin/main"
-    assert '!= "${DEPLOY_SHA}"' in src  # remote mismatch guard
-
-
-# ── fail-closed secrets: missing deployment secrets abort before SSH ────────
-
-def test_missing_deployment_secrets_abort(deploy_job):
-    preflight = [s for s in deploy_job["steps"] if s.get("name", "").startswith("Preflight")]
-    assert len(preflight) == 1
-    run = preflight[0]["run"]
-    for secret in ("EC2_HOST", "EC2_USER", "EC2_SSH_KEY"):
-        assert secret in run
-    assert "exit 1" in run
-
-
-# ── health: bounded verification against /health with healthy-status assert ──
-
-def test_bounded_health_verification(deploy_job):
-    health = [s for s in deploy_job["steps"] if "health verification" in s.get("name", "")]
-    assert len(health) == 1
-    run = health[0]["run"]
-    assert "/health" in run
-    assert 'assert d.get("status")=="healthy"' in run
-    assert "attempts=10" in run and "interval=15" in run  # bounded, not unbounded
-
-
-# ── rollback: automated path exists and is wired to failure ─────────────────
-
-def test_automated_rollback_on_failure(deploy_job):
-    rb = [s for s in deploy_job["steps"] if s.get("run", "").find("rollback_remote.sh") != -1]
-    assert len(rb) == 1
-    assert rb[0].get("if") == "failure()"
-    assert "Automated rollback" in rb[0].get("name", "")
-
-
-def test_rollback_script_restores_recorded_sha():
-    src = ROLLBACK_SH.read_text()
-    assert ".pre_deploy_sha" in src
-    assert 'git checkout --force "${PRE_DEPLOY_SHA}"' in src
-
-
-# ── credentials hygiene: 0600 key file + unconditional cleanup ───────────────
-
-def test_ssh_key_installed_0600_and_cleaned(deploy_job):
-    steps = deploy_job["steps"]
-    install = [s for s in steps if "Install SSH key" in s.get("name", "")]
-    cleanup = [s for s in steps if s.get("name", "").startswith("Remove SSH key")]
-    assert len(install) == 1 and "install -m 600" in install[0]["run"]
-    assert len(cleanup) == 1 and cleanup[0].get("if") == "always()"
-    assert "rm -f /tmp/deploy_key" in cleanup[0]["run"]
-
-
-# ── serialization: one production deploy at a time ───────────────────────────
-
-def test_concurrency_serializes_deployments(doc):
-    _, d, _ = doc
-    assert d["concurrency"]["group"] == "deploy-production"
+def test_remote_deploy_scripts_not_referenced(doc):
+    text, _, _ = doc
+    for script in ("deploy_remote.sh", "rollback_remote.sh"):
+        assert script not in text, (
+            f"deploy.yml must not reference the legacy script {script} "
+            "(re-wiring deployment requires an explicit reviewed change)"
+        )
