@@ -74,7 +74,7 @@ the acceptance job.
 
 | Fingerprint | Rule | File:line | Classification basis |
 |---|---|---|---|
-| `dfdaacf259febea9a65dce63040c5ef2e2113901:docs/audit-evidence/2026-10-19/preflight.json:generic-api-key:5` | generic-api-key | `docs/audit-evidence/2026-10-19/preflight.json:5` | matched text is the task-ID list ["P0-credential-containment", "WP-13-jwt-secret-fail-closed", …] — matched text is a bracketed list of internal task identifiers (P0/WP labels; one label contains a word that the generic-api-key rule treats as a keyword followed by a hyphen and a 10+ character value) — no credential material; the literal label is deliberately NOT reproduced here because quoting it re-creates the very match this row classifies. |
+| `dfdaacf259febea9a65dce63040c5ef2e2113901:docs/audit-evidence/2026-10-19/preflight.json:generic-api-key:5` | generic-api-key | `docs/audit-evidence/2026-10-19/preflight.json:5` | matched text is a bracketed list of internal task identifiers (P0/WP labels; one label contains a word that the generic-api-key rule treats as a keyword followed by a hyphen and a 10+ character value) — no credential material; the literal label is deliberately NOT reproduced here because quoting it re-creates the very match this row classifies. |
 
 ## Verification commands (reproducible)
 
@@ -88,3 +88,4 @@ python3 scripts/ci/gitleaks_disposition_check.py   # cross-check: ignore entries
 | Fingerprint | Rule | File:line | Classification basis |
 |---|---|---|---|
 | `9da33ef48a19fd54ed7072df0868aa216480982e:docs/evidence/ec16-ec26/GITLEAKS_FINDINGS_DISPOSITION.md:generic-api-key:76` | generic-api-key | `docs/evidence/ec16-ec26/GITLEAKS_FINDINGS_DISPOSITION.md:76` | the first pushed revision of this document (commit 9da33ef) quoted the original preflight.json matched text while classifying it; the quote re-created the structural match (keyword + hyphen + 10+ char value). The current revision paraphrases without the literal; the historical commit is preserved (no history rewrite), so the fingerprint is classified here — the scanner reported the same fingerprint twice (commit+line pair), one ignore entry covers both. |
+| `f29ea8c18dab3b104489a9fa0f0ec5f0aa252c83:docs/evidence/ec16-ec26/GITLEAKS_FINDINGS_DISPOSITION.md:generic-api-key:77` | generic-api-key | `docs/evidence/ec16-ec26/GITLEAKS_FINDINGS_DISPOSITION.md:77` | the second revision (commit f29ea8c) accidentally retained the quoted prefix alongside the paraphrase (a defective string replacement); the prefix is removed in the current revision; history preserved (no rewrite); same FALSE-POSITIVE-DOCUMENTATION-QUOTE class |

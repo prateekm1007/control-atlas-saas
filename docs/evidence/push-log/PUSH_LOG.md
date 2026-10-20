@@ -246,3 +246,30 @@
   local verification: all-refs scan exit 0 (no leaks found); this push-log append;
   manifest refresh. Single-writer guard: expected remote tip
   9da33ef48a19fd54ed7072df0868aa216480982e; push ABORTED on deviation.
+
+## 2026-10-20T14:41:59Z | P-023-CONFIRM | push-confirm | branch=activation/ec23-r18 remote_sha=9da33ef48a19fd54ed7072df0868aa216480982e credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/activation/ec23-r18 -> 9da33ef48a19fd54ed7072df0868aa216480982e (observed post-push-1)"
+
+- Push 1 accepted as a new ref (guard held). CI on 9da33ef: the synthetic-fixture
+  detection control PASSED; the scans and the manifest check flagged real defects
+  (documented in P-030-INTENT and fixed in push 2) — the checker and the scan behaved
+  exactly as designed.
+
+## 2026-10-20T14:41:59Z | P-030-CONFIRM | push-confirm | branch=activation/ec23-r18 remote_sha=f29ea8c18dab3b104489a9fa0f0ec5f0aa252c83 credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/activation/ec23-r18 -> f29ea8c18dab3b104489a9fa0f0ec5f0aa252c83 (observed post-push-2)"
+
+- Push 2 accepted as a fast-forward 9da33ef -> f29ea8c (guard held). CI on f29ea8c:
+  manifest check + inventory PASS; the all-refs scan correctly flagged ONE more finding —
+  the second revision of the disposition document had accidentally retained the quoted
+  prefix alongside the paraphrase (defective string replacement) — classified per
+  fingerprint as FALSE-POSITIVE-DOCUMENTATION-QUOTE and removed in push 3; history
+  preserved, no rewrite. The scan loop demonstrably fails closed on every unclassified
+  occurrence, including self-referential ones.
+
+## 2026-10-20T14:41:59Z | P-033-INTENT | push-intent | branch=activation/ec23-r18 head_at_intent=DEFERRED base=f29ea8c18dab3b104489a9fa0f0ec5f0aa252c83 expected_remote_tip_before_push=f29ea8c18dab3b104489a9fa0f0ec5f0aa252c83 credential=OWNER-PAT-1 authorized_by="Round-18 direction 6 (EC-23) continuation: disposition row text repaired (quoted prefix removed), new self-referential fingerprint classified, two-phase pairs completed"
+
+- Push 3 content (disclosed pre-push): the disposition doc row repaired (the leftover
+  quoted prefix removed — the paraphrase stands alone); the f29ea8c:77 fingerprint added
+  to .gitleaksignore + the disposition record (46 fingerprints, cross-check CONSISTENT);
+  P-023-CONFIRM + P-030-CONFIRM + this INTENT; manifest refresh. Verification AFTER this
+  commit and BEFORE the push: gitleaks all-refs scan over the committed tree must exit 0.
+  Single-writer guard: remote tip expected exactly
+  f29ea8c18dab3b104489a9fa0f0ec5f0aa252c83; push ABORTED on deviation.
