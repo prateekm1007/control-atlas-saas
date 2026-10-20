@@ -909,3 +909,17 @@ verification, the portable 40-row cohort metadata table, A-02 issuer-side
 revocation and the EC2 deployment secrets remain OPEN. After any verified
 merge, PRs #31-#36 revalidate serially against the resulting `main` (EC-21 is
 not waived) and PRs #23-#29 close only on proven unique-content coverage.
+
+### 15.6 The package manifest is pinned over the COMMITTED bytes (Round-24
+repair, disclosed)
+
+The first push of this cycle failed its package-integrity job (Governance
+Acceptance run 39515766450): the manifest had been regenerated over the
+working-tree bytes of a CRLF checkout while the repository stores LF blobs, so
+every digest mismatched on the Linux runner. The repair is recorded, not
+hidden: the manifest is regenerated over the committed bytes and
+`scripts/ci/manifest_check.py` hashes the committed artifact (the index entry)
+instead of the materialised checkout, which makes the check platform-independent
+and makes the manifest pin the artifact that actually ships. The failed run is
+disclosed in `P-082-CONFIRM`; no digest was fudged and no scope file was
+dropped.

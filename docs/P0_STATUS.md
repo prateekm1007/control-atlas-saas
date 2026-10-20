@@ -458,3 +458,13 @@ remain OPEN; PRs #31-#36 revalidate serially against the resulting `main`
 coverage. The scientific hard stop is preserved in full: no production
 deployment, no v25 calibration, no held-out evaluation, no threshold or cohort
 changes, no law-semantic changes, no golden-artifact regeneration.
+
+**Package-manifest platform defect (found by the first push of this cycle,
+disclosed):** the manifest had been regenerated over the WORKING-TREE bytes
+of a CRLF checkout while the repository stores LF blobs, so all 46 digests
+mismatched on the Linux runner and the package-integrity job failed on the
+first push of this branch (run `39515766450`). The repair: the manifest is
+regenerated over the COMMITTED bytes and `manifest_check.py` hashes the
+committed artifact (the index entry) instead of the materialised checkout, so
+the check no longer depends on the line endings a platform produces. The
+failed run is disclosed in `P-082-CONFIRM` and is not smoothed over.

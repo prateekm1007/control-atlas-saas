@@ -144,3 +144,17 @@ current: 11 checker scripts under scripts/ci/ (unchanged this cycle) and 7
 workflow drafts under proposals/ci/ (unchanged); the acceptance suite is AT-01..AT-35
 with AT-35 registered and mapped in the INDEX rows for EC-16/19/20. No token
 value appears in this receipt, in the repository, or in any worklog.
+
+## 2026-10-20T23:45:00Z | R18 | record | Round-24 cycle, second push: the package manifest had been
+regenerated over the WORKING-TREE bytes of a CRLF checkout while the repository
+stores LF blobs, so every digest mismatched on the Linux runner and the
+package-integrity job of the first push (Governance Acceptance run 39515766450,
+Stability Gate run 39515766416 conclusion=success) FAILED. Repair: the manifest
+is regenerated over the COMMITTED bytes and `scripts/ci/manifest_check.py` now
+hashes the committed artifact (the index entry) instead of the materialised
+checkout, so the check is platform-independent and pins the shipped artifact.
+The failed run is disclosed in P-082-CONFIRM; no digest was fudged, no scope
+file was dropped, and the failure is not smoothed over. The push-log protocol
+records for this push are P-082-CONFIRM (the first push of the branch) and
+P-083-INTENT (the terminal intent bound to the exact candidate with the true
+pre-push tip 6ff3402ae7e13b51a131e9c760f9ae0cb1376f1f).

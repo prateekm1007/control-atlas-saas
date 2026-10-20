@@ -81,6 +81,21 @@ def load_manifest(path: Path) -> dict[str, str]:
     return manifest
 
 
+def index_bytes(repo: Path, rel: str) -> bytes:
+    """The COMMITTED (index) bytes of a tracked file.
+
+    Falls back to the working tree when the path is not in the index (an
+    untracked file can only be in the scope through a manual manifest entry,
+    which the scope check rejects anyway).
+    """
+    r = subprocess.run(["git", "-C", str(repo), "cat-file", "blob", ":" + rel],
+                       capture_output=True)
+    if r.returncode == 0:
+        return r.stdout
+    fp = repo / rel
+    return fp.read_bytes() if fp.is_file() else b""
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo-root", default=".")
@@ -119,9 +134,16 @@ def main() -> int:
         if not fp.is_file():
             findings.append(f"manifest entry is not a file in the working tree: {f}")
             continue
-        h = hashlib.sha256(fp.read_bytes()).hexdigest()
+        # The manifest pins the COMMITTED artifact bytes (the index entry),
+        # not whatever a particular checkout materialises. Hashing the working
+        # tree made the check platform-dependent: on a checkout whose line
+        # endings differ from the stored blobs (Windows CRLF against LF blobs)
+        # every digest mismatched, so a correct manifest was reported as
+        # corrupt on one platform and accepted on another. The committed bytes
+        # are the artifact the manifest is about.
+        h = hashlib.sha256(index_bytes(repo, f)).hexdigest()
         if h != manifest[f]:
-            findings.append(f"digest mismatch: {f} (manifest {manifest[f][:16]}... != actual {h[:16]}...)")
+            findings.append(f"digest mismatch: {f} (manifest {manifest[f][:16]}... != committed {h[:16]}...)")
 
     if findings:
         print("\n".join(f"FAIL: {f}" for f in findings))
