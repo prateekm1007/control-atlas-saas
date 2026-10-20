@@ -63,7 +63,14 @@ are inert; that gap is exactly what the Round-19 live workflow closes).
 
 ### 2b. PROPOSED rules (not in force; activation pending per direction 6)
 
-EC-16, EC-18, EC-19, EC-20, EC-21, EC-23, EC-24, EC-26 remain PROPOSED. Their checks now run
+**Activation-record update on this candidate (activation/ec24-r19):** EC-24 flip to ACTIVE citing the live governance-acceptance jobs (see the INDEX inventory). This takes effect only when the complete gate is green on this exact candidate AND the auditor records the activation in the register (direction 6); until both happen the rules remain PROPOSED in force.
+
+| Rule ID | Status on this candidate | Enforcement point(s) | Acceptance test(s) |
+|---|---|---|---|
+| EC-24 | ACTIVE on merge (record pending auditor registration) | ACTIVE | procedural:docs/evidence/push-log/PUSH_LOG.md, procedural:docs/evidence/push-log/PUSH_LOG_SCHEMA.md, workflow:.github/workflows/governance-acceptance.yml#push-log-integrity |
+
+
+EC-16, EC-18, EC-19, EC-20, EC-21, EC-23, EC-26 remain PROPOSED. Their checks now run
 live in the governance-acceptance workflow (claim-verification, push-log-integrity,
 declared-base, secret-scan-all-refs, reading-note-inventory jobs), but RUNNING a check is not
 ACTIVATING a rule: each becomes in force only when its activation candidate passes on the
