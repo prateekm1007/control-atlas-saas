@@ -51,13 +51,28 @@ jobs:
           cd backend
           python -c "
           import sys; sys.path.insert(0, '.')
-          from tos.governance.station_sop import compute_canon_hash
+          from tos.governance.station_sop import compute_canon_hash, compute_law_semantic_hash
           from tos.governance.modality_matrix import compute_matrix_hash
+          import pathlib
           c = compute_canon_hash()
           m = compute_matrix_hash()
+          s = compute_law_semantic_hash()
           assert c == '6a9cd4b4349b81de', f'Canon drifted: {c}'
           assert m == 'ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4', f'Matrix drifted: {m}'
-          print(f'Canon:  {c}')
-          print(f'Matrix: {m[:16]}...')
+          # WP-SCI-1: the semantic law hash binds thresholds, units, operators,
+          # scopes, measurement containment and modality rules. A mismatch means
+          # law MEANING drifted without an explicit reviewed re-pin — fail the
+          # gate until governance/law_semantic.sha256 is updated in the PR.
+          pinned = pathlib.Path('../governance/law_semantic.sha256').read_text().strip()
+          assert s == pinned, (
+            'Law semantic hash drifted: '
+            f'computed={s} pinned={pinned}. Law definitions/thresholds/status '
+            'semantics changed without a reviewed update — update '
+            'governance/law_semantic.sha256 explicitly in this PR with the new value '
+            'and justification, or revert the semantic change.'
+          )
+          print(f'Canon:    {c}')
+          print(f'Matrix:   {m[:16]}...')
+          print(f'Semantic: {s[:16]}...')
           print('All hashes verified.')
           "
