@@ -1,15 +1,19 @@
 """
 OD-07 — Audit identity and legacy lookup (auditor, delegated by owner,
-2026-10-20).
+2026-10-20; ruling REAFFIRMED and corrected in Round 14).
 
 Rules under test:
-- The audit ID is the full 64-hex SHA-256 of the canonical input,
-  COMBINED with the canon hash and matrix hash (identity triple);
-  identical input shares an ID (covered for the ID itself by
-  test_ids.py; here we assert the explicit identity triple).
-- A legacy lookup resolves 8-character references: both pre-WP-5
-  filename records and the deterministic governance.legacy_audit_id of
-  post-WP-5 records.
+- The audit ID is the SHA-256 of ONE canonical serialization that
+  includes the structure's coordinate hash, the canon hash, and the
+  matrix hash. Same coordinates under a different canon or matrix
+  produce a DIFFERENT ID (the ruling test, added Round 14). Identical
+  input under the same semantics shares one ID.
+- The separate audit_identity object of the first implementation is
+  REMOVED (it left canon/matrix beside the ID instead of inside it);
+  the binding values live in governance_fingerprint.
+- A legacy lookup resolves 8-character references read-only: both
+  pre-WP-5 filename records and the deterministic
+  governance.legacy_audit_id of newer records. No writes on GET.
 - Key scope applies, fail-closed: /audit lookups only return records
   created by the calling key; unattributed (legacy/anonymous) records
   are not visible to any key.
@@ -32,6 +36,7 @@ from tos.storage.audit_store import (
     store_audit_result, get_audit_result,
     resolve_audit_ref, compute_legacy_audit_id,
 )
+from tos.governance.audit_identity import compute_audit_id
 from tos.saas.key_store import hash_key
 from tos.governance.station_sop import LAW_CANON_HASH
 from tos.governance.modality_matrix import compute_matrix_hash
@@ -75,34 +80,71 @@ def _ingest_1crn():
 
 class TestAuditIdentity:
 
-    def test_response_carries_identity_triple(self):
-        """OD-07: 64-hex canonical SHA-256 combined with canon + matrix."""
+    def test_audit_id_binds_coord_canon_and_matrix(self):
+        """OD-07 ruling: the ID is the SHA-256 of the canonical
+        serialization binding the coordinate hash, the canon hash, and
+        the matrix hash (the binding values carried by the fingerprint)."""
         r = _ingest_1crn()
         assert r.status_code == 200, r.text
-        gov = r.json()["governance"]
-        ident = gov["audit_identity"]
-        assert ident["audit_id"] == gov["audit_id"]
-        assert len(ident["audit_id"]) == 64
-        int(ident["audit_id"], 16)
-        assert ident["canon_hash"] == LAW_CANON_HASH
-        assert ident["matrix_hash"] == compute_matrix_hash()
-        # The fingerprint carries the same binding values.
+        body = r.json()
+        gov = body["governance"]
         fp = gov["governance_fingerprint"]
-        assert fp["canon_hash"] == ident["canon_hash"]
-        assert fp["matrix_hash"] == ident["matrix_hash"]
+        assert gov["audit_id"] == compute_audit_id(
+            body["provenance"]["hash"], fp["canon_hash"], fp["matrix_hash"])
+        assert len(gov["audit_id"]) == 64
+        int(gov["audit_id"], 16)
+        assert gov["audit_id"] == gov["audit_id"].lower()
+        assert fp["canon_hash"] == LAW_CANON_HASH
+        assert fp["matrix_hash"] == compute_matrix_hash()
+        # The superseded separate identity object is gone.
+        assert "audit_identity" not in gov
 
     def test_identical_input_shares_identity(self):
-        a = _ingest_1crn().json()["governance"]["audit_identity"]
-        b = _ingest_1crn().json()["governance"]["audit_identity"]
+        a = _ingest_1crn().json()["governance"]["audit_id"]
+        b = _ingest_1crn().json()["governance"]["audit_id"]
         assert a == b
 
-    def test_audit_id_still_sha256_of_coord_hash(self):
-        """Confirmation: main.py's deterministic SHA-256 is unchanged and
-        is NOT replaced by a UUID."""
+    def test_audit_id_is_not_the_bare_coord_hash(self):
+        """Round 14 correction: the bare sha256(coord_hash) form is the
+        DEVIATION (same ID under different canon/matrix). It is
+        superseded and must not reappear."""
         body = _ingest_1crn().json()
         coord_hash = body["provenance"]["hash"]
-        assert body["governance"]["audit_id"] == \
+        assert body["governance"]["audit_id"] != \
             hashlib.sha256(coord_hash.encode()).hexdigest()
+
+    def test_same_coords_different_canon_different_id(self):
+        """THE ruling test (Round 14, direction 2): same coordinates,
+        different canon hash, DIFFERENT ID."""
+        digest = "a" * 64
+        matrix = "b" * 64
+        id1 = compute_audit_id(digest, "c" * 16, matrix)
+        id2 = compute_audit_id(digest, "d" * 16, matrix)
+        assert id1 != id2
+        assert compute_audit_id(digest, "c" * 16, matrix) == id1  # deterministic
+
+    def test_same_coords_different_matrix_different_id(self):
+        """Ruling, matrix component: same coordinates, different matrix
+        hash, DIFFERENT ID."""
+        digest = "a" * 64
+        canon = "c" * 16
+        assert compute_audit_id(digest, canon, "b" * 64) != \
+            compute_audit_id(digest, canon, "e" * 64)
+
+    def test_same_input_different_canon_changes_response_id(self, monkeypatch):
+        """Integration form of the ruling test: the SAME uploaded file
+        audited under a different canon hash (simulated law-semantics
+        change) yields a different audit_id in the response."""
+        first = _ingest_1crn().json()["governance"]["audit_id"]
+        real_canon = main_mod.LAW_CANON_HASH
+        monkeypatch.setattr(main_mod, "LAW_CANON_HASH", "f" * 16,
+                            raising=True)
+        try:
+            second = _ingest_1crn().json()["governance"]["audit_id"]
+        finally:
+            monkeypatch.setattr(main_mod, "LAW_CANON_HASH", real_canon,
+                                raising=True)
+        assert first != second
 
     def test_legacy_ref_is_deterministic_pre_wp5_scheme(self):
         body = _ingest_1crn().json()
@@ -193,6 +235,20 @@ class TestLegacyLookup:
         for bad in ("xyz", "", "g" * 20):
             r = client.get(f"/audit/{bad}" if bad else "/audit/%20", headers=KEY_A)
             assert r.json()["status"] == "not_found"
+
+    def test_legacy_lookup_writes_nothing(self):
+        """Round 14 reaffirmation: the legacy lookup is READ-ONLY — a GET
+        must not create, rewrite, or rename any stored record (stored-
+        record rewrites belong to the explicit migration script
+        scripts/migrate_audit_ids_od07.py, never to a read path)."""
+        body = _ingest_1crn().json()
+        legacy = body["governance"]["legacy_audit_id"]
+        from tos.storage.audit_store import _get_audit_dir
+        before = sorted(p.name for p in _get_audit_dir().iterdir())
+        r = client.get(f"/audit/{legacy}", headers=KEY_A)
+        assert r.status_code == 200 and r.json()["status"] == "success"
+        after = sorted(p.name for p in _get_audit_dir().iterdir())
+        assert before == after
 
 
 class TestRefinementPdbLegacyResolution:

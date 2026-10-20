@@ -52,10 +52,19 @@ class TestAuditIds:
         assert audit_id == audit_id.lower()
 
     def test_audit_id_derives_deterministically_from_coord_hash(self):
+        """OD-07 (Round 14 correction): deterministic derivation from the
+        coordinate hash COMBINED with the canon and matrix hashes — the
+        bare sha256(coord_hash) form is superseded (it kept the same ID
+        across law-semantics changes)."""
         r = self._ingest_1crn()
         body = r.json()
         coord_hash = body["provenance"]["hash"]
-        assert body["governance"]["audit_id"] == hashlib.sha256(coord_hash.encode()).hexdigest()
+        fp = body["governance"]["governance_fingerprint"]
+        from tos.governance.audit_identity import compute_audit_id
+        assert body["governance"]["audit_id"] == compute_audit_id(
+            coord_hash, fp["canon_hash"], fp["matrix_hash"])
+        assert body["governance"]["audit_id"] != \
+            hashlib.sha256(coord_hash.encode()).hexdigest()
 
     def test_identical_structures_share_one_audit_id(self):
         """Owner decision: deterministic dedup kept (brief §4.4)."""
