@@ -157,3 +157,9 @@
 - ID selection: P-017 is globally unused across all published branch logs
   (census recorded in INCIDENT-2026-10-20-P015-COLLISION.md section 4.4; the
   c4a0fcc history reached P-016-INTENT, unconfirmed).
+
+## 2026-10-20T14:53:35Z | P-017-CONFIRM | push-confirm | branch=repair/round19-mainline-acceptance remote_sha=2dcbbd781a2c14a13844db439c88d73f61332e76 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/repair/round19-mainline-acceptance -> 2dcbbd781a2c14a13844db439c88d73f61332e76 (re-verified 2026-10-20T14:53:35Z immediately before this follow-up push; first push evidenced by gate run 39438362505 created 2026-10-20T14:20:43Z on this exact head)"
+
+- First push of this ref completed as declared by P-017-INTENT (new branch; expected_remote_tip_before_push=ABSENT). PR #30 opened from this branch with the template-compliant body (Status-summary NOT_RUN at open time).
+- CI on the exact pushed tip 2dcbbd7: Toscanini Stability Gate SUCCESS (push run 39438362505; pull_request run 39438788810). Governance Acceptance failed (push run 39438362567; PR run 39438788822) on two workflow defects root-caused from the job logs and fixed by the commit carrying this entry: the EC-23 positive control seeded Amazon's documented example key, which gitleaks 8.30.1 allowlists (aws-access-token rule allowlist regex '.+EXAMPLE$'; job 118681317783), and the claim-verification lint step lacked its GH_TOKEN env (job 118682808091). Re-runs on this branch's new tip are the completing evidence (run IDs recorded in the round report).
+- This follow-up push appends this entry and carries the two workflow fixes; ordinary push, no force; remote tip verified at 2dcbbd7 immediately before.
