@@ -124,3 +124,33 @@ r2 archive acceptance remains BLOCKED pending independent verifier execution aga
 delivered bytes; the hard stop (OD-16) is in force; no merge to `main`, no deployment, no
 v25 calibration, no held-out evaluation, no threshold/cohort changes, no golden-artifact
 regeneration occurred in this cycle.
+
+## 8. Round-19 mainline repair (added 2026-10-20, SERIES-2026-10-20-R19)
+
+Branch `repair/round19-mainline-acceptance`, created from the exact current `main`
+@ `f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd` (auditor direction 2: repair forward through a
+reviewed, narrowly scoped PR; no direct push to main; no force-push; no administrative merge).
+
+| Direction | Item | State on the repair branch |
+|---|---|---|
+| 3A | Two remaining non-documentation provider-SDK references | REMOVED (`proposals/remediation/toscanini-gate.branch-triggers.yml`, `fixtures/toscanini_gate_AIN_DEFECT.yml`); reviewed content carried from the unmerged `c4a0fcc` edits (content-only; no history merge; no push-log copy) |
+| 3B | Remediation README | CORRECTED to the current live state (gate `["**"]` triggers, dispatch-only inert deploy); patches labeled SUPERSEDED/HISTORICAL with exact historical blob links; policy vs active enforcement kept distinct |
+| 3C | Package manifest | Scope defined and machine-enforced (`scripts/ci/manifest_check.py`); `SHA256SUMS` regenerated over the full 38-file scope; clean-checkout verification recorded in the round report |
+| 4 | Push-log collision + force-update deviation | Recorded in `docs/evidence/push-log/INCIDENT-2026-10-20-P015-COLLISION.md` (dated, evidence-backed; no historical entry rewritten); `P-017-INTENT` appended with a globally unused ID (census across all published branch logs); validator hardened (duplicate IDs, malformed confirmations, missing fields, INTENT/CONFIRM pairing with PENDING disclosure) |
+| 5 | EC-20 job failures (PRs #18/#19/#20) | Root cause found and fixed: repo-wide `pytest --collect-only` aborts with INTERNALERROR when importing legacy script-style modules that `sys.exit()` at import time (`gpu_worker/tests/*.py`), so named acceptance tests registered as "not collectable" (runs 39417485854/39417488957/39417492355; reproduced locally on the exact head `748544f` in a pytest-only environment before fixing). Collection is now scoped per-file (AT-18) |
+| 6 | EC-26 checker gap | FIXED: ACTIVE rules must map to LIVE workflows (unpinned, under `.github/workflows/`, present in the working tree); negative tests added (AT-17). Rerun on the consolidated activation candidate follows after this repair merges |
+| 7 | Live end-to-end enforcement | `.github/workflows/governance-acceptance.yml` added (gate untouched): acceptance suite AT-01..AT-20, reading-note/inventory validation with ACTIVE-liveness, status vocabulary against an in-job runs manifest, push-log schema + parent-prefix, deploy-trigger lint on the actual tree, package manifest + forbidden-reference checks, PR-body claim verification with executed acceptance tests, declared-base verification, full-history all-refs secret scan with controls and a documented baseline classification (known H-1 history fingerprints disclosed every run; A-02 stays open) |
+
+**Status of the activation program after this repair (direction 6 adjudications):** EC-21
+accepted in principle (rebase onto the repaired base, records reconciled, all checks rerun on
+the exact final candidate — then register update + reviewed-PR merge; NOT yet active);
+EC-26/EC-16/EC-19/EC-20 fixes landed here, activation candidates to be built/rerun (NOT yet
+active); EC-18/EC-23/EC-24 candidates to be built and tested; EC-17/EC-22/EC-25 remain in
+force with live enforcement from this repair forward. PRs #18/#19/#20 (three copies of the
+same workflow) are superseded by the consolidated candidate once it passes.
+
+**Unchanged program-level state:** A-01 remains ACCEPTED RISK (no rotation reminder, per
+direction 8); the scientific hard stop is preserved (no law semantics, calibration,
+thresholds, cohorts, held-out evaluation, golden artifacts, or deployment); the portable
+40-row cohort metadata table and the independent r2 archive acceptance remain OPEN and are
+not closed by this repair.
