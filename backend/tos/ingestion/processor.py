@@ -25,6 +25,85 @@ MODIFIED_RESIDUE_PARENTS = {
     "PCA": "GLU", "NLE": "LEU",  # pyroglutamate, norleucine
 }
 
+# N8 (Round-11, v2 — audit-corrected default): alternate-conformer
+# selection POLICY.
+#   per_residue  — DEFAULT (Round-11 audit direction: "per-residue
+#                  default"): choose ONE altloc ID per residue (highest
+#                  TOTAL occupancy, first-seen on ties), keep blank-altloc
+#                  (shared) atoms plus the chosen conformer's atoms. This
+#                  prevents chimera residues that mix atom sets from
+#                  different conformers.
+#   per_atom     — opt-in legacy behavior (the original P0 item 6 rule):
+#                  for each (chain, residue, atom_name) keep the
+#                  highest-occupancy record; ties keep the first in file
+#                  order. Still available explicitly via
+#                  altloc_policy=ALTLOC_POLICY_PER_ATOM for byte-level
+#                  comparison with pre-N8 deliveries.
+# v1 of this patch shipped per_residue as opt-in with per_atom kept as
+# the engine default; the Round-11 audit rejected that (N8 default
+# error). v2 flips the module default to per_residue as directed. The
+# flip is an audit-directed semantic change and is recorded as such in
+# the delivery register (not a silent change).
+ALTLOC_POLICY_PER_ATOM = "per_atom"
+ALTLOC_POLICY_PER_RESIDUE = "per_residue"
+ALTLOC_POLICY = ALTLOC_POLICY_PER_RESIDUE
+
+
+def _select_conformers(records: List["Atom"], policy: str) -> List["Atom"]:
+    """Apply the alternate-conformer selection policy to parsed records.
+
+    per_residue (N8 v2, DEFAULT per the Round-11 audit direction): first
+    choose one altloc ID per residue — the ID whose atoms carry the
+    highest TOTAL occupancy, ties broken by first appearance in file
+    order — then keep blank-altloc atoms (shared atoms) and the chosen
+    ID's atoms, applying the per-atom rule within the survivors as a
+    safety net.
+
+    per_atom (opt-in legacy, the original P0 item 6 rule): for each
+    (chain, res_seq, icode, atom_name) keep the highest-occupancy
+    record; ties keep the FIRST record in file order. Byte-for-byte the
+    pre-N8 behavior, available explicitly for comparison.
+
+    Both policies guarantee exactly one atom per (chain, residue,
+    atom_name).
+    """
+    if policy == ALTLOC_POLICY_PER_RESIDUE:
+        totals: dict = {}            # (residue key, altloc) -> total occupancy
+        for rec in records:
+            alt = rec.altloc
+            if alt in ("", " "):
+                continue  # shared atoms belong to every conformer
+            rk = (rec.chain_id, rec.res_seq, rec.insertion_code)
+            k = (rk, alt)
+            totals[k] = totals.get(k, 0.0) + rec.occupancy
+        chosen: dict = {}            # residue key -> (altloc, total)
+        for (rk, alt), total in totals.items():
+            # dict preserves first-seen order: overwrite only on a
+            # strictly greater total, so ties keep the FIRST-seen ID.
+            if rk not in chosen or total > chosen[rk][1]:
+                chosen[rk] = (alt, total)
+        records = [
+            r for r in records
+            if r.altloc in ("", " ") or (
+                (r.chain_id, r.res_seq, r.insertion_code) in chosen
+                and r.altloc == chosen[(r.chain_id, r.res_seq,
+                                        r.insertion_code)][0])
+        ]
+    elif policy != ALTLOC_POLICY_PER_ATOM:
+        raise ValueError(f"unknown altloc policy: {policy!r}")
+
+    atoms: List[Atom] = []
+    best_by_key: dict = {}
+    for rec in records:
+        key = (rec.chain_id, rec.res_seq, rec.insertion_code, rec.atom_name)
+        incumbent = best_by_key.get(key)
+        if incumbent is None:
+            best_by_key[key] = len(atoms)
+            atoms.append(rec)
+        elif rec.occupancy > atoms[incumbent].occupancy:
+            atoms[incumbent] = rec
+    return atoms
+
 @dataclass
 class Atom:
     """Industrial-grade Atom representation for forensic audit."""
@@ -101,7 +180,8 @@ def _extract_resolution(lines: List[str]) -> Optional[float]:
 
 class IngestionProcessor:
     @staticmethod
-    def run(content: bytes, filename: str, task: str, mode: str):
+    def run(content: bytes, filename: str, task: str, mode: str,
+            altloc_policy: str = ALTLOC_POLICY):
         """
         Parses raw structure bytes with Modality Filters. The format is
         detected from the CONTENT (P0 item 13) — mmCIF input is parsed
@@ -113,17 +193,24 @@ class IngestionProcessor:
         4. HETATM Retention (P0 item 5): polymer-associated modified
            residues (MSE, SEC, ...) are kept and mapped to their parent
            amino acid; waters/ligands/ions stay excluded.
+        5. Conformer selection (N8 v2, audit-corrected default): ONE
+           conformer per RESIDUE by default (highest total occupancy,
+           first-seen ID on ties — chimera prevention). The legacy
+           per-atom rule (P0 item 6) remains available explicitly via
+           altloc_policy="per_atom" for byte-level comparison with
+           pre-N8 deliveries.
         """
         try:
             fmt = detect_structure_format(content)
         except ValueError:
             fmt = "pdb"  # legacy behavior: let the line parser reject it
         if fmt == "cif":
-            return IngestionProcessor._run_cif(content)
-        return IngestionProcessor._run_pdb(content)
+            return IngestionProcessor._run_cif(content, altloc_policy)
+        return IngestionProcessor._run_pdb(content, altloc_policy)
 
     @staticmethod
-    def _run_cif(content: bytes) -> "Structure":
+    def _run_cif(content: bytes,
+                 altloc_policy: str = ALTLOC_POLICY) -> "Structure":
         """mmCIF ingestion via gemmi (P0 item 13: no in-house CIF parser).
 
         Reads the ``_atom_site`` table through gemmi's CIF API and maps it
@@ -196,8 +283,7 @@ class IngestionProcessor:
             except (TypeError, ValueError):
                 resolution = None
 
-        atoms: List[Atom] = []
-        best_by_key = {}
+        records: List[Atom] = []
         source_residue_keys = set()
 
         for row in tab:
@@ -262,15 +348,11 @@ class IngestionProcessor:
                 insertion_code=icode, b_iso=b_iso,
                 label_seq_id=label_seq, altloc=altloc, occupancy=occupancy,
             )
-            key = (atom_obj.chain_id, atom_obj.res_seq,
-                   atom_obj.insertion_code, atom_obj.atom_name)
-            incumbent = best_by_key.get(key)
-            if incumbent is None:
-                best_by_key[key] = len(atoms)
-                atoms.append(atom_obj)
-            elif atom_obj.occupancy > atoms[incumbent].occupancy:
-                atoms[incumbent] = atom_obj
+            records.append(atom_obj)
 
+        # P0 item 6 / N8: conformer selection per policy (single shared
+        # implementation for both parse paths).
+        atoms = _select_conformers(records, altloc_policy)
         b_values = [a.b_iso for a in atoms]
         # OD-07: no ingestion-level identifier (see Structure.audit_id).
         return Structure(
@@ -282,10 +364,10 @@ class IngestionProcessor:
         )
 
     @staticmethod
-    def _run_pdb(content: bytes) -> "Structure":
+    def _run_pdb(content: bytes,
+                 altloc_policy: str = ALTLOC_POLICY) -> "Structure":
         lines = content.decode(errors="ignore").splitlines()
-        atoms = []
-        best_by_key = {}
+        records: List[Atom] = []
         source_residue_keys = set()
 
         # Pre-classify for filtering logic
@@ -349,20 +431,15 @@ class IngestionProcessor:
                     altloc=altloc, occupancy=occupancy
                 )
 
-                # P0 item 6: exactly one conformer per atom — highest
-                # occupancy wins, ties keep the FIRST record in file order.
-                # Selection happens at parse time so that every consumer
-                # of structure.atoms (LAW-130/155/200 included) sees one
-                # atom per (chain, residue, atom_name).
-                key = (chain_id, res_seq, icode, atom_name)
-                incumbent = best_by_key.get(key)
-                if incumbent is None:
-                    best_by_key[key] = len(atoms)
-                    atoms.append(atom_obj)
-                elif atom_obj.occupancy > atoms[incumbent].occupancy:
-                    atoms[incumbent] = atom_obj
+                records.append(atom_obj)
             except (ValueError, IndexError):
                 continue
+
+        # P0 item 6 / N8: conformer selection per policy — exactly one
+        # atom per (chain, residue, atom_name) under BOTH policies, so
+        # every consumer of structure.atoms (LAW-130/155/200 included)
+        # keeps seeing one atom per key.
+        atoms = _select_conformers(records, altloc_policy)
 
         # Confidence reflects the RETAINED conformers only.
         b_values = [a.b_iso for a in atoms]
