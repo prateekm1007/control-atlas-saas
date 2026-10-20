@@ -18,7 +18,7 @@
 
 Per the auditor's 2026-10-20 ruling (D-5, under full delegation): **EC-17 (push on completion), EC-22 (status vocabulary), and EC-25 (no deploy on push) are IN FORCE** upon merge of D-2 (`governance/canonical-docs` merged to main as `b851e01`, gate run 39412416212 = success). They are recorded `ACTIVE` in the rule inventory below; the auditor records this activation in the decision register.
 
-**EC-16, EC-18, EC-19, EC-20, EC-21, EC-23, EC-24, and EC-26 remain PROPOSED**: each becomes in force only when its activation workflow has run green on a feature branch AND the auditor records it in the register (Direction 6 of the same ruling).
+**EC-16, EC-18, EC-19, EC-20, EC-21, EC-24, EC-26 remain PROPOSED**: each becomes in force only when its activation workflow has run green on a feature branch AND the auditor records it in the register (Direction 6 of the same ruling).
 
 The base in-force set is unchanged: the EC sections enforced by the pinned constitutions (`ENGINEERING_CONSTITUTION.md` blob `b6bb35e8…`, `constitution.md` blob `211ad2c5…`) plus OBS-153 / CRIT-154 — as mapped in the Round-12 reading note (worklog Task 35) and in `docs/evidence/reading-note/READING_NOTE_LATEST.md`.
 
@@ -59,7 +59,7 @@ pinned-blobs: b6bb35e84956d84a8c9d9e65734c212baf3ed075,211ad2c5d4b40059d9f3f03de
 | EC-20 | PROPOSED | script:scripts/ci/verify_claimed_shas.py, workflow:proposals/ci/verify-claimed-shas.yml#acceptance-tests-executed | AT-09 |
 | EC-21 | PROPOSED | script:scripts/ci/check_declared_base.py, workflow:proposals/ci/check-declared-base.yml#declared-base | AT-02, AT-10 |
 | EC-22 | ACTIVE | script:scripts/ci/status_vocabulary_lint.py, workflow:.github/workflows/governance-acceptance.yml#status-vocabulary | AT-04, AT-11, AT-19 |
-| EC-23 | PROPOSED | workflow:proposals/ci/gitleaks-all-branches.yml#gitleaks, workflow:proposals/ci/gitleaks-all-branches.yml#gitleaks-all-refs | AT-15 |
+| EC-23 | ACTIVE | workflow:.github/workflows/governance-acceptance.yml#secret-scan-all-refs, procedural:docs/evidence/ec16-ec26/SECRET_SCAN_FINDINGS_SUMMARY.json | AT-15 |
 | EC-24 | PROPOSED | procedural:docs/evidence/push-log/PUSH_LOG.md, procedural:docs/evidence/push-log/PUSH_LOG_SCHEMA.md | AT-13 |
 | EC-25 | ACTIVE | script:scripts/ci/workflow_deploy_trigger_lint.py, workflow:.github/workflows/governance-acceptance.yml#ec25-trigger-lint, procedural:proposals/remediation/README.md | AT-03, AT-14 |
 | EC-26 | PROPOSED | script:scripts/ci/reading_note_map_check.py, workflow:proposals/ci/reading-note-map-check.yml#map | AT-06, AT-08 |
