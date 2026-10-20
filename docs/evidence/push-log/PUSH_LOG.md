@@ -367,3 +367,10 @@
   the reconciliation record. This completes every intent/confirm pair on this branch:
   P-020 (confirmed), P-028 (confirmed), P-034 (this entry), P-044 (final — CONFIRMED-LIVE
   via the carrying-tip proof in CI).
+
+## 2026-10-20T15:11:03Z | P-045-INTENT | push-intent | branch=activation/ec16-ec20-consolidated head_at_intent=DEFERRED base=af71355 expected_remote_tip_before_push=af71355 credential=OWNER-PAT-1 authorized_by="Round-18 direction 5 continuation: the ordinary gate's --no-git secret scan flagged the P-034-CONFIRM evidence field (the keyword api + ':' + a PUBLIC commit id — structural false positive, no credential); classified per-fingerprint in .gitleaksignore with the justification inline (append-only evidence cannot be reworded)"
+
+- Push 3 content (disclosed pre-push): .gitleaksignore (one fingerprint + inline
+  justification; the canonical disposition record on branch activation/ec23-r18 absorbs
+  this row at merge time); this INTENT; manifest refresh. Single-writer guard: remote
+  tip expected exactly af71355; push ABORTED on deviation.

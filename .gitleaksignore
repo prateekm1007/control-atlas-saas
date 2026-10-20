@@ -1,0 +1,14 @@
+# .gitleaksignore — per-fingerprint dispositions on this branch (Round-18).
+# Format: one fingerprint per line; lines starting with '#' are comments.
+# Every entry is justified inline and cross-referenced in the round report; the
+# canonical disposition record (docs/evidence/ec16-ec26/GITLEAKS_FINDINGS_DISPOSITION.md,
+# branch activation/ec23-r18) absorbs these rows at merge time. This is NOT a blanket
+# ignore: any NEW finding fails the scans fail-closed.
+#
+# FALSE-POSITIVE-STRUCTURAL-QUOTE (append-only evidence quoting a public object ID):
+# PUSH_LOG.md line 361 is the P-034-CONFIRM entry, whose evidence field reads
+# "commits API: <40-hex public commit id> retrievable (HTTP 200 …)" — the generic-api-key
+# rule matches the keyword "api" + ":" + the public commit hash. The hash is a public
+# Git object identity, not a credential; the entry is append-only push-log evidence and
+# cannot be reworded (EC-18). No secret value exists on this line.
+docs/evidence/push-log/PUSH_LOG.md:generic-api-key:361
