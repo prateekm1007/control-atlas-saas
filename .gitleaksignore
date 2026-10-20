@@ -10,7 +10,6 @@
 #   rewriting its keys would break the digest binding. Any OTHER finding
 #   in ANY other file still fails the gate (this exemption is scoped to
 #   this file and this rule only).
-docs/audit-evidence/2026-10-20/modres-census-v2/n7_od16_40target_table.json:#:generic-api-key
 # Exact fingerprints of the 40 digest findings (no-git scan mode uses
 # file:ruleID:line; the artifact is sealed/byte-exact so line numbers
 # are stable):
