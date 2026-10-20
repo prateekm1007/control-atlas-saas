@@ -13,7 +13,7 @@ Auditor revisions 2026-10-20 implemented here:
       (fail closed) and are never reported as "commit absent" or as success.
     * Least-privilege + redaction: the token is read from GH_TOKEN/GITHUB_TOKEN only, is never
       printed, and error output never includes request headers or credentials.
-  EC-20 (item 3.2):
+  EC-20 (item 3.2 + Round-18 direction 5):
     * The former --check-tests-in-diff presence check is REMOVED (a path-substring match cannot
       validate pytest node IDs and does not execute anything).
     * --check-tests instead: parses Acceptance-Tests: from the PR body, verifies each identifier
@@ -22,6 +22,15 @@ Auditor revisions 2026-10-20 implemented here:
       shell command: identifiers are validated against the collected set and passed as argument
       ARRAY elements (subprocess without shell). The command argv, candidate SHA, environment,
       run IDs, counts, and exit status are captured into an evidence JSON (--evidence-out).
+    * Round-18: collection is SCOPED to the intended acceptance-test suite via --suite-dir
+      (the activation workflow passes scripts/ci/tests). Bare root-level pytest collection is
+      unreliable on this repository: gpu_worker/tests/test_credits.py raises SystemExit at
+      import time, which aborts pytest with INTERNALERROR and kills the whole collection
+      session (proven from run 39417492355 logs and reproduced locally). With --suite-dir:
+        - collection runs ONLY over that directory;
+        - a collection exit != 0 is a FAIL-CLOSED finding even if some IDs were emitted;
+        - every requested node's file must live INSIDE the suite directory;
+        - the collection argv, exit status, and suite dir are recorded in the evidence.
 
 Other modes:
   --local                     offline claimed-SHA verification against the local object store (tests).
@@ -151,8 +160,12 @@ def _pytest(repo: str, *argv: str):
                           capture_output=True, text=True, cwd=repo, shell=False)
 
 
-def collect_test_ids(repo: str) -> tuple[set[str], str]:
-    r = _pytest(repo, "--collect-only", "-q")
+def collect_test_ids(repo: str, suite_dir: str | None = None):
+    """Collect pytest IDs, scoped to suite_dir when given. Returns (ids, note, exit)."""
+    argv = ["--collect-only", "-q"]
+    if suite_dir:
+        argv.append(suite_dir)
+    r = _pytest(repo, *argv)
     ids = set()
     for line in r.stdout.splitlines():
         line = line.strip()
@@ -160,16 +173,32 @@ def collect_test_ids(repo: str) -> tuple[set[str], str]:
             continue
         if "::" in line:
             ids.add(line.split()[0])
-    return ids, (r.stdout[-2000:] if r.returncode != 0 else "")
+    note = "" if r.returncode == 0 else (
+        f"pytest --collect-only exited {r.returncode}; collection is UNRELIABLE (fail closed). "
+        f"tail: {r.stdout[-800:] or r.stderr[-800:]}")
+    return ids, note, r.returncode
 
 
-def run_acceptance_tests(test_ids: list[str], repo: str, evidence_out: str | None):
+def run_acceptance_tests(test_ids: list[str], repo: str, evidence_out: str | None,
+                         suite_dir: str | None = None):
     """Execute named acceptance tests on the exact candidate. Returns (findings, evidence)."""
     findings: list[str] = []
     started = datetime.now(timezone.utc)
     candidate = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True,
                                cwd=repo).stdout.strip()
-    collected, collect_note = collect_test_ids(repo)
+    collected, collect_note, collect_exit = collect_test_ids(repo, suite_dir)
+    if suite_dir:
+        for t in test_ids:
+            node_file = t.split("::", 1)[0]
+            norm = os.path.normpath(os.path.join(repo, node_file))
+            suite_norm = os.path.normpath(os.path.join(repo, suite_dir))
+            if not norm.startswith(suite_norm + os.sep):
+                findings.append(f"EC-20 named test {t} is OUTSIDE the declared acceptance-test "
+                                f"suite {suite_dir} (fail closed; suite-scoped collection only "
+                                f"proves tests inside the suite)")
+    if collect_exit != 0:
+        findings.append(f"EC-20 collection failed on the exact candidate (pytest exit "
+                        f"{collect_exit}); test execution cannot be verified (fail closed)")
     missing = [t for t in test_ids if t not in collected]
     for t in missing:
         findings.append(f"EC-20 acceptance test named but not collectable on the candidate: {t}")
@@ -200,6 +229,10 @@ def run_acceptance_tests(test_ids: list[str], repo: str, evidence_out: str | Non
         "command_argv": executed_argv,
         "shell_used": False,
         "python": sys.version.split()[0],
+        "suite_dir": suite_dir,
+        "collection_command_argv": [sys.executable, "-m", "pytest", "--collect-only", "-q"]
+                                   + ([suite_dir] if suite_dir else []),
+        "collection_exit_status": collect_exit,
         "tests_requested": test_ids,
         "tests_missing_from_collection": missing,
         "tests_executed": to_run,
@@ -225,6 +258,9 @@ def main() -> int:
     ap.add_argument("--require-directive-id-only", action="store_true")
     ap.add_argument("--check-tests", action="store_true",
                     help="EC-20: execute the named Acceptance-Tests on this candidate")
+    ap.add_argument("--suite-dir", default=None,
+                    help="EC-20: scope pytest collection to this directory (the intended "
+                         "acceptance-test suite, e.g. scripts/ci/tests); default: repo root")
     ap.add_argument("--evidence-out", metavar="FILE", help="write the EC-20 evidence JSON here")
     ap.add_argument("--api-json", help="offline fixture: canned GitHub API response (tests)")
     args = ap.parse_args()
@@ -250,11 +286,12 @@ def main() -> int:
         if not tests:
             findings.append("EC-20 Acceptance-Tests: field missing or empty (fail closed)")
         else:
-            tf, ev = run_acceptance_tests(tests, os.getcwd(), args.evidence_out)
+            tf, ev = run_acceptance_tests(tests, os.getcwd(), args.evidence_out, args.suite_dir)
             findings.extend(tf)
             if not tf:
                 print(f"OK  : EC-20 executed {len(ev['tests_executed'])} named test(s) on "
-                      f"candidate {ev['candidate_sha'][:12]} counts={ev['counts']}")
+                      f"candidate {ev['candidate_sha'][:12]} counts={ev['counts']} "
+                      f"suite={ev['suite_dir'] or '<repo root>'}")
 
     directive_only = args.require_directive_id_only
     if not directive_only:

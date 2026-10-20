@@ -64,6 +64,18 @@
     "AT-16": {
       "name": "Inventory consistency: workflow/checker/test counts in README, receipt, index agree with the actual tree",
       "node": "scripts/ci/tests/test_acceptance.py::test_at16_inventory_counts"
+    },
+    "AT-17": {
+      "name": "EC-26 negative (Round-18): an ACTIVE rule mapped only to inert proposals/ci workflow drafts fails; a declared Enforcement label that disagrees with the computed class fails; an honest INERT declaration passes",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at17_inert_enforcement_negative"
+    },
+    "AT-18": {
+      "name": "EC-26 (Round-18): LIVE requires the actual active workflow trigger and job in .github/workflows; a live mapping with a missing job or empty trigger fails",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at18_live_enforcement_verification"
+    },
+    "AT-19": {
+      "name": "EC-20 (Round-18): suite-scoped collection (scripts/ci/tests) avoids uncollectable root-level files; collection failure fails closed; nodes outside the declared suite are rejected",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at19_suite_scoped_collection"
     }
   }
 }

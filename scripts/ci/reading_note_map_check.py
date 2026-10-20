@@ -40,6 +40,7 @@ END = "<!-- END RULE INVENTORY"
 STATUS_RE = re.compile(r"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|$")
 KEYVAL_RE = re.compile(r"^([a-z][a-z0-9-]*):\s*(.+)$", re.I)
 VALID_STATUS = {"ACTIVE", "PROPOSED"}
+VALID_ENF = {"LIVE", "PROCEDURAL", "INERT", "NONE"}
 ITEM_SPLIT = re.compile(r"[,;]\s*")
 ITEM_RE = re.compile(r"^(NONE|AT-\d+|(script|procedural|workflow|pytest):(.+))$", re.S)
 
@@ -117,12 +118,23 @@ def resolve_refs(value: str, repo: str):
 
 
 def parse_index(path: str):
-    """Return (meta, rules). Fail closed on malformed structure."""
+    """Return (meta, rules). Fail closed on malformed structure.
+
+    Round-18 (EC-26): the inventory table may be the legacy 4-column form
+      | Rule ID | Status | Enforcement point(s) | Acceptance test(s) |
+    or the Round-18 5-column form that separates normative policy status from
+    enforcement status:
+      | Rule ID | Status | Enforcement | Enforcement point(s) | Acceptance test(s) |
+    The declared `Enforcement` cell (5-column form) must equal the class the checker
+    COMPUTES from the referenced points (LIVE / PROCEDURAL / INERT / NONE); a lying
+    label fails closed.
+    """
     text = open(path, encoding="utf-8").read()
     if BEGIN not in text or END not in text:
         raise ValueError(f"rule inventory block missing from {path}")
     block = text.split(BEGIN, 1)[1].split(END, 1)[0].strip("\n")
     meta, rules, seen_ids, in_table = {}, [], [], False
+    header_seen = None
     for raw in block.splitlines():
         line = raw.strip()
         if not line:
@@ -135,20 +147,36 @@ def parse_index(path: str):
             cells = [c.strip() for c in line.strip("|").split("|")]
             if all(re.fullmatch(r"-{2,}", c or "-") for c in cells):
                 continue  # separator row
-            if len(cells) != 4:
-                raise ValueError(f"malformed inventory row (need 4 columns): {raw!r}")
+            low = [c.lower() for c in cells]
             if not in_table:
-                if [c.lower() for c in cells] != ["rule id", "status", "enforcement point(s)", "acceptance test(s)"]:
+                if low == ["rule id", "status", "enforcement point(s)", "acceptance test(s)"]:
+                    header_seen = 4
+                elif low == ["rule id", "status", "enforcement", "enforcement point(s)",
+                             "acceptance test(s)"]:
+                    header_seen = 5
+                else:
                     raise ValueError(f"unexpected inventory header: {raw!r}")
                 in_table = True
                 continue
-            rid, status, enf, tests = cells
+            if header_seen == 5:
+                if len(cells) != 5:
+                    raise ValueError(f"malformed inventory row (need 5 columns): {raw!r}")
+                rid, status, enf_status, enf, tests = cells
+            else:
+                if len(cells) != 4:
+                    raise ValueError(f"malformed inventory row (need 4 columns): {raw!r}")
+                rid, status, enf, tests = cells
+                enf_status = None
             if rid in seen_ids:
                 raise ValueError(f"duplicate rule ID in inventory: {rid}")
             seen_ids.append(rid)
             if status not in VALID_STATUS:
                 raise ValueError(f"unknown status token {status!r} for {rid} (allowed: {sorted(VALID_STATUS)})")
-            rules.append({"id": rid, "status": status, "enforcement": enf, "tests": tests})
+            if enf_status is not None and enf_status not in VALID_ENF:
+                raise ValueError(f"unknown enforcement token {enf_status!r} for {rid} "
+                                 f"(allowed: {sorted(VALID_ENF)})")
+            rules.append({"id": rid, "status": status, "enforcement": enf, "tests": tests,
+                          "enforcement_status": enf_status})
     if not in_table:
         raise ValueError("inventory block contains no rule table")
     if not rules:
@@ -157,6 +185,125 @@ def parse_index(path: str):
     if len(set(ids)) != len(ids):
         raise ValueError("duplicate rule IDs (fail closed)")
     return meta, rules
+
+
+def live_workflow_files(repo: str) -> dict[str, dict]:
+    """Load every LIVE workflow (under .github/workflows/). Returns {relpath: doc}."""
+    out = {}
+    wf_dir = os.path.join(repo, ".github", "workflows")
+    if not os.path.isdir(wf_dir):
+        return out
+    if yaml is None:
+        return out
+    for fn in sorted(os.listdir(wf_dir)):
+        if fn.endswith((".yml", ".yaml")):
+            try:
+                doc = yaml.safe_load(open(os.path.join(wf_dir, fn), encoding="utf-8")) or {}
+            except Exception:
+                doc = {}
+            out[f".github/workflows/{fn}"] = doc
+    return out
+
+
+def _workflow_is_live(repo: str, filespec: str, job: str, live_docs: dict) -> tuple[bool, str]:
+    """(is_live, reason) for one workflow:FILE#JOB point.
+
+    Liveness is decided against the LIVE tree (.github/workflows/ in the current
+    checkout, with a non-empty `on:` trigger and the referenced job present). A
+    provenance pin (@ref) does not block liveness when the same file is live here;
+    it only falls back to the pinned blob for job-existence validation.
+    """
+    fpath, _, ref = (filespec.rpartition("@") if "@" in filespec else (filespec, "", ""))
+    norm = fpath[2:] if fpath.startswith("./") else fpath
+    doc_live = live_docs.get(norm)
+    doc = doc_live
+    if doc is None and ref:
+        t = subprocess.run(["git", "show", f"{ref}:{fpath}"], capture_output=True, text=True,
+                           cwd=repo).stdout
+        if t and yaml is not None:
+            doc = yaml.safe_load(t) or {}
+    if doc is None:
+        return False, f"workflow file not present in the live tree or pinned ref: {fpath}"
+    jobs = doc.get("jobs") or {}
+    job_ok = any(str(k) == job or (isinstance(v, dict) and str(v.get("name")) == job)
+                 for k, v in jobs.items())
+    if not job_ok:
+        return False, f"job {job!r} not found in workflow {fpath}"
+    if doc_live is None:
+        return False, (f"workflow {fpath} exists only at pinned ref @{ref} and is NOT part "
+                       f"of the live tree")
+    triggers = doc_live.get("on", doc_live.get(True, {})) or {}
+    if isinstance(triggers, dict):
+        trigger_names = sorted(triggers.keys())
+    elif isinstance(triggers, list):
+        trigger_names = sorted(str(t) for t in triggers)
+    else:
+        trigger_names = []
+    if not trigger_names:
+        return False, f"live workflow {fpath} has no active trigger block"
+    return True, "live workflow with active trigger and existing job"
+
+
+def classify_enforcement(enforcement_cell: str, repo: str, live_docs: dict):
+    """Compute the enforcement class for a rule row.
+
+    Returns (computed_class, notes). Classes:
+      LIVE       - at least one point is a live .github/workflows job with an active
+                   trigger, or a script/pytest path that a live workflow invokes.
+      INERT      - no live point; the row's workflow points exist only as inert drafts
+                   (outside .github/workflows, i.e. under proposals/).
+      PROCEDURAL - no live and no workflow points; only script/procedural/pytest points
+                   that no live workflow invokes.
+      NONE       - no resolvable points at all.
+    """
+    notes: list[str] = []
+    refs, none_declared = resolve_refs(enforcement_cell, repo)
+    if none_declared or (not refs and not enforcement_cell.strip()):
+        return "NONE", notes
+    live_script_paths: set[str] = set()
+    for rel, doc in live_docs.items():
+        jobs = doc.get("jobs") or {}
+        for _, job in jobs.items():
+            if not isinstance(job, dict):
+                continue
+            steps = job.get("steps") or []
+            for st in steps:
+                if isinstance(st, dict) and st.get("run"):
+                    txt = str(st["run"])
+                    for m2 in re.finditer(r"[\w./-]+\.py", txt):
+                        live_script_paths.add(m2.group(0).lstrip("./"))
+    has_live = has_workflow = has_other = False
+    for item in [v.strip() for v in ITEM_SPLIT.split(enforcement_cell) if v.strip()]:
+        m = ITEM_RE.match(item)
+        if not m:
+            continue
+        kind, target = m.group(2), m.group(3).strip()
+        if kind == "workflow":
+            has_workflow = True
+            filespec_all, _, job = target.rpartition("#")
+            filespec, _, _ = (filespec_all.rpartition("@") if "@" in filespec_all
+                              else (filespec_all, "", ""))
+            ok, why = _workflow_is_live(repo, filespec, job.strip(), live_docs)
+            if ok:
+                has_live = True
+            else:
+                notes.append(f"workflow point {item!r}: {why}")
+        elif kind in ("script", "pytest"):
+            node_file = target.split("::", 1)[0] if kind == "pytest" else target
+            nf_norm = node_file[2:] if node_file.startswith("./") else node_file
+            if nf_norm in live_script_paths:
+                has_live = True
+            else:
+                has_other = True
+        else:  # procedural
+            has_other = True
+    if has_live:
+        return "LIVE", notes
+    if has_workflow:
+        return "INERT", notes
+    if has_other:
+        return "PROCEDURAL", notes
+    return "NONE", notes
 
 
 def main() -> int:
@@ -207,6 +354,34 @@ def main() -> int:
     if not required:
         print("FAIL: derived required rule set is empty; fail closed")
         return 1
+
+    live_docs = live_workflow_files(repo)
+
+    # EC-26 (Round-18): separate normative policy status from enforcement status.
+    # An ACTIVE rule must never rely ONLY on inert workflow drafts under proposals/,
+    # and a declared Enforcement label must equal the computed class (fail closed).
+    for r in rules:
+        computed, notes = classify_enforcement(r["enforcement"], repo, live_docs)
+        for n in notes:
+            print(f"NOTE: {r['id']}: {n}")
+        if r["status"] == "ACTIVE" and computed == "INERT":
+            findings.append(f"{r['id']}: policy status is ACTIVE but every workflow point "
+                            f"is an inert draft outside .github/workflows (computed "
+                            f"enforcement = INERT); an in-force rule cannot be enforced only "
+                            f"by inert drafts")
+        if r["status"] == "ACTIVE" and computed == "NONE":
+            findings.append(f"{r['id']}: policy status is ACTIVE but no enforcement point "
+                            f"resolves (computed enforcement = NONE)")
+        declared = r.get("enforcement_status")
+        if declared is not None and declared != computed:
+            findings.append(f"{r['id']}: declared Enforcement {declared!r} does not match the "
+                            f"computed class {computed!r} (labels are derived, not claimed)")
+        elif declared is None:
+            print(f"NOTE: {r['id']}: legacy 4-column row; computed enforcement = {computed} "
+                  f"(declare it in the Enforcement column to make the label checkable)")
+        if computed == "LIVE":
+            print(f"NOTE: {r['id']}: enforcement verified LIVE (active trigger + existing job "
+                  f"or live-invoked script)")
 
     for r in required:
         for cell, kind in ((r["enforcement"], "enforcement"), (r["tests"], "test")):

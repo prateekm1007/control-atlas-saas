@@ -617,3 +617,145 @@ def test_at16_inventory_counts():
     receipt = open(os.path.join(REPO, "docs", "evidence", "ec16-ec26", "RECEIPT.md")).read()
     check("AT-16", "receipt carries the corrected counts (7 workflows / 6 checkers)",
           "7 workflow" in receipt and "6 checker" in receipt, "correction entry missing")
+
+
+# ------------------------------------------------- AT-17 (EC-26 inert negative, R18)
+
+def _write_index5(d, rows, header5=True):
+    """rows: list of (rid, status, enf_declared_or_None, points)."""
+    reg = {"tests": {f"AT-{i:02d}": {"name": f"t{i}", "node": f"x.py::test_t{i}"} for i in range(1, 9)}}
+    open(os.path.join(d, "registry.json"), "w").write(json.dumps(reg))
+    if header5:
+        head = "| Rule ID | Status | Enforcement | Enforcement point(s) | Acceptance test(s) |"
+        lines = []
+        for rid, status, declared, points in rows:
+            lines.append(f"| {rid} | {status} | {declared} | {points} | AT-01 |")
+    else:
+        head = "| Rule ID | Status | Enforcement point(s) | Acceptance test(s) |"
+        lines = []
+        for rid, status, declared, points in rows:
+            lines.append(f"| {rid} | {status} | {points} | AT-01 |")
+    idx = f"""# index
+<!-- BEGIN RULE INVENTORY -->
+reading-note-path: docs/note.md
+pinned-blobs: b6bb35e84956d84a8c9d9e65734c212baf3ed075
+{head}
+|---|---|---|---|---|
+{chr(10).join(lines)}
+<!-- END RULE INVENTORY -->
+"""
+    os.makedirs(os.path.join(d, "docs", "directives"), exist_ok=True)
+    open(os.path.join(d, "docs", "directives", "INDEX.md"), "w").write(idx)
+    open(os.path.join(d, "AGENTS.md"), "w").write("# agents\n")
+    os.makedirs(os.path.join(d, "docs"), exist_ok=True)
+    open(os.path.join(d, "docs", "note.md"), "w").write(
+        "blob b6bb35e84956d84a8c9d9e65734c212baf3ed075 read\n| EC-16 | -> c |\n")
+    # a real inert draft workflow under proposals/ci (exists, has the job, NOT live):
+    os.makedirs(os.path.join(d, "proposals", "ci"), exist_ok=True)
+    open(os.path.join(d, "proposals", "ci", "draft.yml"), "w").write(
+        "name: draft\non:\n  push:\n    branches: ['**']\n"
+        "jobs:\n  draft-job:\n    runs-on: ubuntu-latest\n"
+        "    steps: [{run: echo}]\n")
+    return d
+
+
+def test_at17_inert_enforcement_negative():
+    # 1. legacy 4-column: ACTIVE rule mapped ONLY to an inert proposals/ci draft -> FAIL
+    d = _write_index5(tempfile.mkdtemp(), [("EC-16", "ACTIVE", None,
+                                            "workflow:proposals/ci/draft.yml#draft-job")],
+                      header5=False)
+    r = run("reading_note_map_check.py", "--index", "docs/directives/INDEX.md",
+            "--repo-root", d, "--registry", "registry.json", "--include-proposed")
+    check("AT-17", "ACTIVE rule mapped only to inert drafts fails (legacy table)",
+          r.returncode == 1 and "inert" in r.stdout.lower(), r.stdout)
+    # 2. 5-column: declared LIVE while the only point is an inert draft -> label mismatch FAIL
+    d2 = _write_index5(tempfile.mkdtemp(), [("EC-16", "ACTIVE", "LIVE",
+                                             "workflow:proposals/ci/draft.yml#draft-job")])
+    r = run("reading_note_map_check.py", "--index", "docs/directives/INDEX.md",
+            "--repo-root", d2, "--registry", "registry.json", "--include-proposed")
+    check("AT-17", "declared LIVE on an inert-only mapping fails (label mismatch)",
+          r.returncode == 1 and "does not match the computed class" in r.stdout, r.stdout)
+    # 3. 5-column: honest INERT declaration on the same mapping -> passes
+    d3 = _write_index5(tempfile.mkdtemp(), [("EC-16", "PROPOSED", "INERT",
+                                             "workflow:proposals/ci/draft.yml#draft-job")])
+    r = run("reading_note_map_check.py", "--index", "docs/directives/INDEX.md",
+            "--repo-root", d3, "--registry", "registry.json", "--include-proposed")
+    check("AT-17", "honest INERT declaration passes (policy/enforcement separated)",
+          r.returncode == 0, r.stdout)
+
+
+# --------------------------------- AT-18 (EC-26 live trigger/job verification, R18)
+
+def test_at18_live_enforcement_verification():
+    d = _write_index5(tempfile.mkdtemp(), [("EC-16", "PROPOSED", "LIVE",
+                                            "workflow:.github/workflows/live.yml#the-job")])
+    # 1. live workflow exists with trigger + job -> LIVE label passes
+    os.makedirs(os.path.join(d, ".github", "workflows"), exist_ok=True)
+    open(os.path.join(d, ".github", "workflows", "live.yml"), "w").write(
+        "name: live\non:\n  push:\n    branches: ['**']\n"
+        "jobs:\n  the-job:\n    runs-on: ubuntu-latest\n"
+        "    steps: [{run: python3 scripts/ci/tool.py}]\n")
+    r = run("reading_note_map_check.py", "--index", "docs/directives/INDEX.md",
+            "--repo-root", d, "--registry", "registry.json", "--include-proposed")
+    check("AT-18", "live workflow with trigger and job verifies LIVE",
+          r.returncode == 0 and "verified LIVE" in r.stdout, r.stdout)
+    # 2. same file with NO trigger block -> LIVE fails
+    open(os.path.join(d, ".github", "workflows", "live.yml"), "w").write(
+        "name: live\n# on: disabled\njobs:\n  the-job:\n    runs-on: ubuntu-latest\n"
+        "    steps: [{run: echo}]\n")
+    r = run("reading_note_map_check.py", "--index", "docs/directives/INDEX.md",
+            "--repo-root", d, "--registry", "registry.json", "--include-proposed")
+    check("AT-18", "LIVE without an active trigger fails",
+          r.returncode == 1 and "no active trigger" in r.stdout, r.stdout)
+    # 3. missing job -> LIVE fails
+    open(os.path.join(d, ".github", "workflows", "live.yml"), "w").write(
+        "name: live\non:\n  push: {}\njobs:\n  other-job:\n"
+        "    runs-on: ubuntu-latest\n    steps: [{run: echo}]\n")
+    r = run("reading_note_map_check.py", "--index", "docs/directives/INDEX.md",
+            "--repo-root", d, "--registry", "registry.json", "--include-proposed")
+    check("AT-18", "LIVE with a missing job fails",
+          r.returncode == 1 and "not found" in r.stdout, r.stdout)
+
+
+# ------------------------------------- AT-19 (EC-20 suite-scoped collection, R18)
+
+def test_at19_suite_scoped_collection():
+    proj = tempfile.mkdtemp()
+    subprocess.run(["git", "init", "-q"], cwd=proj)
+    subprocess.run(["git", "config", "user.email", "t@t"], cwd=proj)
+    subprocess.run(["git", "config", "user.name", "t"], cwd=proj)
+    os.makedirs(os.path.join(proj, "scripts", "ci", "tests"), exist_ok=True)
+    open(os.path.join(proj, "scripts", "ci", "tests", "test_suite.py"), "w").write(
+        "def test_at01_inside_suite():\n    assert True\n")
+    # a root-level file that exits at import time (the gpu_worker defect shape):
+    open(os.path.join(proj, "test_import_exit.py"), "w").write(
+        "import sys\nsys.exit(1)\n")
+    subprocess.run(["git", "add", "."], cwd=proj, capture_output=True)
+    subprocess.run(["git", "commit", "-qm", "c"], cwd=proj, capture_output=True)
+    ev = os.path.join(proj, "evidence.json")
+    node = "scripts/ci/tests/test_suite.py::test_at01_inside_suite"
+    # 1. suite-scoped collection is reliable even with a root-level import-exit file
+    body = tmpfile(f"Acceptance-Tests:\n  {node}\n")
+    r = run("verify_claimed_shas.py", "--body", body, "--check-tests",
+            "--suite-dir", "scripts/ci/tests", "--evidence-out", ev, cwd=proj)
+    check("AT-19", "suite-scoped collection passes despite a root-level import-exit file",
+          r.returncode == 0, r.stdout)
+    e = json.load(open(ev))
+    check("AT-19", "evidence records the scoped collection command and suite dir",
+          e.get("suite_dir") == "scripts/ci/tests" and "scripts/ci/tests" in " ".join(
+              e.get("collection_command_argv", [])), json.dumps(e)[:200])
+    check("AT-19", "evidence records collection exit status 0",
+          e.get("collection_exit_status") == 0, json.dumps(e.get("collection_exit_status")))
+    # 2. a node OUTSIDE the declared suite is rejected
+    body2 = tmpfile("Acceptance-Tests:\n  test_import_exit.py::anything\n")
+    r = run("verify_claimed_shas.py", "--body", body2, "--check-tests",
+            "--suite-dir", "scripts/ci/tests", "--evidence-out", ev, cwd=proj)
+    check("AT-19", "node outside the declared suite is rejected",
+          r.returncode == 1 and "OUTSIDE the declared acceptance-test suite" in r.stdout,
+          r.stdout)
+    # 3. collection failure fails closed (nonexistent suite dir)
+    body3 = tmpfile(f"Acceptance-Tests:\n  {node}\n")
+    r = run("verify_claimed_shas.py", "--body", body3, "--check-tests",
+            "--suite-dir", "scripts/ci/tests/nonexistent", "--evidence-out", ev, cwd=proj)
+    check("AT-19", "collection failure fails closed",
+          r.returncode == 1 and "collection failed" in r.stdout.lower(), r.stdout)

@@ -1,0 +1,116 @@
+# Round-18 acceptance gate (auditor direction 3D, 2026-10-20).
+#
+# The ordinary Stability Gate (secret scan + unit tests + hash locks) alone is NOT
+# sufficient for the EC-16..EC-26 amendment package: this workflow adds the package's
+# OWN acceptance-specific protection to ACTIVE CI, run against the EXACT candidate:
+#   1. the acceptance suite AT-01..AT-19 (scripts/ci/tests/run_all.py);
+#   2. rule-inventory + reading-note validation (EC-26 semantics, incl. the
+#      policy-status vs enforcement-status separation and the ACTIVE-inert negative);
+#   3. the EC-25 deploy-trigger lint over the LIVE workflows;
+#   4. governed-artifact manifest verification (complete scope, fresh hashes — this
+#      checkout IS a clean checkout of the exact candidate);
+#   5. the push-log protocol check (two-phase pairing + append-only prefix +
+#      remote verification of recorded SHAs against actual remote refs).
+# A green unit-test/secret-scan pair without these checks does not qualify the
+# amendment package.
+
+name: Round-18 acceptance gate
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    name: Acceptance suite + inventory + lint + manifest + push-log (exact candidate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history: push-log ancestry + append-only parent checks
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pyyaml
+
+      - name: 1. Acceptance suite (AT-01..AT-19) on the exact candidate
+        run: python3 scripts/ci/tests/run_all.py
+
+      - name: 2. Rule inventory + reading-note validation (EC-26)
+        run: |
+          python3 scripts/ci/reading_note_map_check.py \
+            --index docs/directives/INDEX.md --repo-root .
+
+      - name: 3. Deploy-trigger lint over live workflows (EC-25)
+        run: python3 scripts/ci/workflow_deploy_trigger_lint.py .github/workflows
+
+      - name: 4. Governed-artifact manifest verification (clean checkout)
+        run: python3 scripts/ci/manifest_check.py --verify
+
+      - name: 5a. Status vocabulary lint (EC-22, manifest-backed)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Build the runs manifest from the live Actions API for every run ID cited
+          # in the governed status documents, then lint both documents against it.
+          python3 - <<'PY' > "$RUNNER_TEMP/runs.json"
+          import json, os, re, sys, urllib.request
+          slug = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ.get("GH_TOKEN", "")
+          text = ""
+          for p in ("docs/P0_STATUS.md", "docs/directives/INDEX.md"):
+              if os.path.exists(p):
+                  text += open(p, encoding="utf-8").read() + "\n"
+          run_ids = sorted(set(re.findall(r"\b\d{15,}\b", text)))
+          runs = {}
+          for rid in run_ids:
+              url = f"https://api.github.com/repos/{slug}/actions/runs/{rid}"
+              req = urllib.request.Request(url, headers={
+                  "Accept": "application/vnd.github+json",
+                  "Authorization": f"token {token}"} if token else {
+                  "Accept": "application/vnd.github+json"})
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      d = json.loads(r.read().decode())
+                  runs[rid] = {"head_sha": d.get("head_sha", ""),
+                               "conclusion": d.get("conclusion", "")}
+              except Exception as e:
+                  # a run ID cited in a status doc that cannot be resolved stays
+                  # ABSENT from the manifest; the lint fails closed on RUN_PASS
+                  # claims citing it (never fabricated).
+                  print(f"note: run {rid} not resolvable ({e})", file=sys.stderr, flush=True)
+          json.dump({"runs": runs}, sys.stdout)
+          PY
+          LINT_RC=0
+          python3 scripts/ci/status_vocabulary_lint.py docs/P0_STATUS.md \
+            --runs-manifest "$RUNNER_TEMP/runs.json" || LINT_RC=1
+          python3 scripts/ci/status_vocabulary_lint.py docs/directives/INDEX.md \
+            --runs-manifest "$RUNNER_TEMP/runs.json" || LINT_RC=1
+          exit $LINT_RC
+
+      - name: "5b. Push-log protocol: pairing + append-only + remote verification"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          python3 scripts/ci/evidence_sequence_check.py docs/evidence/push-log/PUSH_LOG.md \
+            --pushlog-schema \
+            --remote-slug "${{ github.repository }}" \
+            --head-sha "$HEAD_SHA"
+          if git cat-file -e "HEAD~1:docs/evidence/push-log/PUSH_LOG.md" 2>/dev/null; then
+            git show "HEAD~1:docs/evidence/push-log/PUSH_LOG.md" > "$RUNNER_TEMP/older_pushlog.md"
+            python3 scripts/ci/evidence_sequence_check.py docs/evidence/push-log/PUSH_LOG.md \
+              --parent-prefix "$RUNNER_TEMP/older_pushlog.md"
+          fi

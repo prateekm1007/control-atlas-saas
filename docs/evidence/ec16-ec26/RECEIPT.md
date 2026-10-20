@@ -30,3 +30,14 @@
 ## 2026-10-20T09:52:31Z | R9 | test | acceptance suite EXTENDED and re-run locally: AT-01..AT-16, 91 check() assertions, all passing on the exact candidate (see docs/evidence/ec16-ec26/LOCAL_TEST_LOG.md for exact commands, SHA, environment, counts, exit codes); GitHub Actions CI status for these commits: NOT RUN — the workflows are inert drafts under proposals/ci/ and no run ID exists, so NO CI-pass claim is made or implied
 
 - Supersedes R4's "24 checks" claim: the suite was extended per auditor item 3.9 to cover the 3.1–3.8 defect classes (fail-closed negatives, test execution, remote verification, manifest-backed statuses, strict SHA lists, append-only parent-prefix, remediation fixtures, action pinning, inventory counts). R4 remains preserved above, unchanged.
+
+## 2026-10-20T13:47:19Z | R10 | record | Round-18 inventory correction: the package now carries SEVEN checker scripts under scripts/ci/ (the six above + manifest_check.py, the governed-artifact manifest checker added by the Round-18 fix-forward) and the acceptance suite is EXTENDED to AT-01..AT-19 (AT-17/AT-18/AT-19 added); R8/R9 counts are preserved unchanged above (append-only)
+
+- AT-16 is updated to enforce the new counts mechanically ("seven checker scripts exist").
+- The seven workflow drafts under proposals/ci/ are unchanged by Round-18 (activation happens
+  under .github/workflows/ on the activation branches, never by editing the drafts).
+- AT-17/AT-18 cover the EC-26 Round-18 semantics (ACTIVE rules may not map only to inert
+  drafts; the Enforcement column is computed and validated; live trigger/job verification).
+- AT-19 covers the EC-20 Round-18 fix (suite-scoped collection; the root-level collection
+  failure on gpu_worker/tests/test_credits.py is proven and scoped out; fail-closed on
+  collection errors; out-of-suite node IDs rejected).
