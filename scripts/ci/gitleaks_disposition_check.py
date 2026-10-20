@@ -19,7 +19,8 @@ IGNORE = ".gitleaksignore"
 DISPO = "docs/evidence/ec16-ec26/GITLEAKS_FINDINGS_DISPOSITION.md"
 FP = re.compile(r"^[0-9a-f]{40}:[^:]+:[^:]+:\d+$")
 VALID_CLASSES = {"FALSE-POSITIVE-PROVENANCE-DIGEST", "FALSE-POSITIVE-IDENTIFIER-LIST",
-                 "DOCUMENTED-HISTORICAL-A-02"}
+                 "DOCUMENTED-HISTORICAL-A-02",
+                 "FALSE-POSITIVE-DOCUMENTATION-QUOTE"}
 
 
 def main() -> int:

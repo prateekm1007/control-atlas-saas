@@ -110,7 +110,9 @@ def parse_manifest(repo: str, manifest: str):
             errors.append(f"manifest line {n}: malformed (expected '<64hex>  <path>'): {line!r}")
             continue
         digest, rel = parts[0].strip(), parts[1].strip()
-        rel = rel.replace(os.sep, "/").lstrip("./")
+        rel = rel.replace(os.sep, "/")
+        if rel.startswith("./"):
+            rel = rel[2:]  # strip ONLY a literal "./" prefix; ".gitleaksignore" keeps its dot
         if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
             errors.append(f"manifest line {n}: digest is not 64 lowercase hex: {digest!r}")
             continue
@@ -131,6 +133,10 @@ def verify(repo: str, manifest: str) -> int:
     # listed entries must exist, hash-match and be in scope
     for rel, digest in sorted(entries.items()):
         p = os.path.join(repo, rel)
+        if not os.path.isfile(p) and os.path.isfile(os.path.join(repo, "." + rel)):
+            # a previously-mangled entry (leading dot stripped by the old parser):
+            # treat as a finding, not a silent rename
+            findings.append(f"listed path lost its leading dot (parser defect history): {rel}")
         if not os.path.isfile(p):
             findings.append(f"listed but MISSING from the tree: {rel}")
             continue

@@ -233,3 +233,16 @@
   mirrored 1:1 into .gitleaksignore; scripts/ci/gitleaks_disposition_check.py cross-checks
   the two files (fail closed); local verification: scan exit 0 WITH the ignore file over
   210 commits / exit 1 without it; push-log append; manifest refresh.
+
+## 2026-10-20T14:31:29Z | P-030-INTENT | push-intent | branch=activation/ec23-r18 head_at_intent=DEFERRED base=9da33ef48a19fd54ed7072df0868aa216480982e expected_remote_tip_before_push=9da33ef48a19fd54ed7072df0868aa216480982e credential=OWNER-PAT-1 authorized_by="Round-18 direction 6 (EC-23) continuation: CI-found defects fixed (manifest parser dot-stripping; the disposition document's own first revision re-created the structural match it classified — now classified per-fingerprint as FALSE-POSITIVE-DOCUMENTATION-QUOTE)"
+
+- Push 2 content (disclosed pre-push): scripts/ci/manifest_check.py synced from the
+  fix-forward fix (4f7c28b) — the path parser stripped the leading dot of
+  .gitleaksignore (CI finding \"listed but MISSING from the tree: gitleaksignore\");
+  the disposition document no longer reproduces the literal task-ID text (paraphrased);
+  the historical revision's fingerprint is classified as
+  FALSE-POSITIVE-DOCUMENTATION-QUOTE with the full explanation (history preserved, no
+  rewrite; .gitleaksignore gains exactly one fingerprint; cross-check CONSISTENT at 45);
+  local verification: all-refs scan exit 0 (no leaks found); this push-log append;
+  manifest refresh. Single-writer guard: expected remote tip
+  9da33ef48a19fd54ed7072df0868aa216480982e; push ABORTED on deviation.

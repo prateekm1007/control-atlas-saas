@@ -12,6 +12,7 @@ the acceptance job.
 
 | Class | Count | Meaning |
 |---|---|---|
+| FALSE-POSITIVE-DOCUMENTATION-QUOTE | 1 (one fingerprint, reported twice by the scanner) | a historical revision of THIS document quoted the original matched text while classifying it, re-creating the structural match; fixed in the current revision by not reproducing the literal; history is never rewritten |
 | DOCUMENTED-HISTORICAL-A-02 | 2 | the former provider key (A-02) — compromised until issuer-side revocation evidence; revocation is a SEPARATE open requirement |
 | FALSE-POSITIVE-IDENTIFIER-LIST | 1 | matched text is an internal task-identifier list — structural false positive |
 | FALSE-POSITIVE-PROVENANCE-DIGEST | 41 | matched text is a recorded content digest (SHA-256) of public API responses — structural false positive |
@@ -73,7 +74,7 @@ the acceptance job.
 
 | Fingerprint | Rule | File:line | Classification basis |
 |---|---|---|---|
-| `dfdaacf259febea9a65dce63040c5ef2e2113901:docs/audit-evidence/2026-10-19/preflight.json:generic-api-key:5` | generic-api-key | `docs/audit-evidence/2026-10-19/preflight.json:5` | matched text is the task-ID list ["P0-credential-containment", "WP-13-jwt-secret-fail-closed", …] — matched text is the task-ID list ["P0-credential-containment", "WP-13-jwt-secret-fail-closed", …] — internal task identifiers, no credential material. |
+| `dfdaacf259febea9a65dce63040c5ef2e2113901:docs/audit-evidence/2026-10-19/preflight.json:generic-api-key:5` | generic-api-key | `docs/audit-evidence/2026-10-19/preflight.json:5` | matched text is the task-ID list ["P0-credential-containment", "WP-13-jwt-secret-fail-closed", …] — matched text is a bracketed list of internal task identifiers (P0/WP labels; one label contains a word that the generic-api-key rule treats as a keyword followed by a hyphen and a 10+ character value) — no credential material; the literal label is deliberately NOT reproduced here because quoting it re-creates the very match this row classifies. |
 
 ## Verification commands (reproducible)
 
@@ -81,3 +82,9 @@ the acceptance job.
 gitleaks detect --source . --log-opts="--all" --redact --report-path /tmp/report.json   # exit 0 WITH this .gitleaksignore; exit 1 without it
 python3 scripts/ci/gitleaks_disposition_check.py   # cross-check: ignore entries == disposition rows
 ```
+
+## FALSE-POSITIVE-DOCUMENTATION-QUOTE (self-referential)
+
+| Fingerprint | Rule | File:line | Classification basis |
+|---|---|---|---|
+| `9da33ef48a19fd54ed7072df0868aa216480982e:docs/evidence/ec16-ec26/GITLEAKS_FINDINGS_DISPOSITION.md:generic-api-key:76` | generic-api-key | `docs/evidence/ec16-ec26/GITLEAKS_FINDINGS_DISPOSITION.md:76` | the first pushed revision of this document (commit 9da33ef) quoted the original preflight.json matched text while classifying it; the quote re-created the structural match (keyword + hyphen + 10+ char value). The current revision paraphrases without the literal; the historical commit is preserved (no history rewrite), so the fingerprint is classified here — the scanner reported the same fingerprint twice (commit+line pair), one ignore entry covers both. |
