@@ -33,7 +33,10 @@ from tos.telemetry.usage_logger import log_usage as log_usage_telemetry
 from tos.security.tokens import validate_refinement_token
 from tos.saas.key_store import hash_key, get_tier_for_key, get_gpu_allocation_for_key
 from tos.storage.comparisons import store_comparison, get_comparison
-from tos.storage.audit_store import store_audit_result, get_audit_result, _get_audit_dir
+from tos.storage.audit_store import (
+    store_audit_result, get_audit_result, _get_audit_dir,
+    resolve_audit_ref, compute_legacy_audit_id,
+)
 
 
 # ── Week 12: Hard caps ────────────────────────────────────────────────────────
@@ -127,7 +130,8 @@ def _compute_coord_hash(structure) -> str:
     return hashlib.sha256(coord_string.encode()).hexdigest()
 
 
-def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_category: str):
+def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str,
+                      t3_category: str, key_hash: str = ""):
     # 🛡️ PIL-IMM-20: Immutable Ingestion
     structure = IngestionProcessor.run(force_bytes(content_bytes), "origin.pdb", "Audit", mode)
     
@@ -180,6 +184,19 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
             # Deterministic — structurally identical submissions share an ID
             # (owner decision: dedup kept). Replaces collision-prone md5[:8].
             "audit_id": hashlib.sha256(coord_hash.encode()).hexdigest(),
+            # OD-07 (auditor, delegated by owner, 2026-10-20): the audit
+            # identity is the 64-hex canonical SHA-256 COMBINED with the
+            # canon hash and matrix hash in force — the same input audited
+            # under a different canon/matrix is a different identity. The
+            # legacy_audit_id is the deterministic pre-WP-5 md5[:8] ref,
+            # carried so old 8-char references keep resolving (lookup only;
+            # it is never the canonical identity).
+            "audit_identity": {
+                "audit_id": hashlib.sha256(coord_hash.encode()).hexdigest(),
+                "canon_hash": LAW_CANON_HASH,
+                "matrix_hash": compute_matrix_hash(),
+            },
+            "legacy_audit_id": compute_legacy_audit_id(coord_hash),
             "station_version": STATION_METADATA["version"],
             "timestamp_utc": datetime.now(timezone.utc).isoformat(),
             "governance_fingerprint": {
@@ -209,6 +226,12 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
         "ai_model_used": get_compiler().model_used,
         "pdb_b64": base64.b64encode(content_bytes).decode(),
     })
+
+    # OD-07: key scope applies — the creating key's hash is stored on the
+    # record so /audit lookups can be scoped (fail-closed, same convention
+    # as the WP-2 comparison records). Anonymous/unkeyed submissions store
+    # "" and are therefore not visible to any keyed lookup.
+    payload["created_by_key_hash"] = key_hash or ""
 
     try:
         payload["pdf_b64"] = base64.b64encode(generate_v21_dossier(payload)).decode()
@@ -284,7 +307,11 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
     return payload
 
 @app.post("/ingest", response_model=ToscaniniResponse)
-async def ingest(mode: str = Form(...), candidate_id: str = Form(...), t3_category: str = Form("NONE"), file: UploadFile = File(None), _auth=Depends(verify_api_key)):
+async def ingest(mode: str = Form(...), candidate_id: str = Form(...), t3_category: str = Form("NONE"), file: UploadFile = File(None), request: Request = None, _auth=Depends(verify_api_key)):
+    # OD-07: key scope applies — attribute the stored audit record to the
+    # calling key (same pattern as /refinement/submit).
+    _api_key_raw = request.headers.get("X-API-Key", "") if request else ""
+    _key_hash = hash_key(_api_key_raw) if _api_key_raw else ""
     if file:
         validate_upload(file)
         content = await file.read()
@@ -305,7 +332,10 @@ async def ingest(mode: str = Form(...), candidate_id: str = Form(...), t3_catego
                     "message": "No structure source could provide this candidate. Nothing was scored or recorded.",
                 },
             )
-    return await asyncio.get_event_loop().run_in_executor(None, partial(_run_physics_sync, content, candidate_id, mode, t3_category))
+    return await asyncio.get_event_loop().run_in_executor(
+        None,
+        partial(_run_physics_sync, content, candidate_id, mode, t3_category,
+                key_hash=_key_hash))
 
 
 
@@ -314,6 +344,7 @@ async def batch_ingest(
     mode: str = Form("Audit"),
     t3_category: str = Form("NONE"),
     file: UploadFile = File(...),
+    request: Request = None,
     _auth=Depends(verify_api_key),
 ):
     """
@@ -324,10 +355,16 @@ async def batch_ingest(
     zip_bytes = await file.read()
     await enforce_size_limit(zip_bytes)
 
+    # OD-07: key scope applies — batch-created records carry the calling
+    # key's hash for scoped /audit lookups.
+    _api_key_raw = request.headers.get("X-API-Key", "") if request else ""
+    _key_hash = hash_key(_api_key_raw) if _api_key_raw else ""
     try:
         batch_result = await asyncio.get_event_loop().run_in_executor(
             None,
-            partial(process_batch, zip_bytes, _run_physics_sync, mode, t3_category),
+            partial(process_batch, zip_bytes,
+                    partial(_run_physics_sync, key_hash=_key_hash),
+                    mode, t3_category),
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -407,9 +444,22 @@ async def search(query: str = Form(...), _auth=Depends(verify_api_key)):
 
 @app.get("/refinement/pdb/{audit_id}")
 async def get_original_pdb(audit_id: str, _auth=Depends(verify_api_key)):
-    """Serve the original PDB file stored at ingest time."""
+    """Serve the original PDB file stored at ingest time.
+
+    OD-07: accepts a canonical 64-hex ID or a legacy 8-char reference.
+    Legacy resolution looks up the record's ``governance.audit_id`` so
+    the file (stored under the canonical name since WP-5) is found; the
+    pre-WP-5 ``<legacy>.pdb`` filename still resolves unchanged. The
+    endpoint's auth model is unchanged (key-authenticated; the callback
+    round-trip depends on it) — no key filtering is added here.
+    """
     from tos.storage.audit_store import _get_audit_dir
-    pdb_path = _get_audit_dir() / f"{audit_id}.pdb"
+    canonical = audit_id
+    if len(audit_id) != 64:
+        record = resolve_audit_ref(audit_id)  # internal resolution, no key filter
+        if record:
+            canonical = (record.get("governance", {}) or {}).get("audit_id") or audit_id
+    pdb_path = _get_audit_dir() / f"{canonical}.pdb"
     if not pdb_path.exists():
         raise HTTPException(status_code=404, detail=f"PDB not found for audit {audit_id}")
     from fastapi.responses import Response
@@ -486,11 +536,14 @@ async def refinement_callback(
         mode = "experimental" if file.filename.endswith('.pdb') else "predicted"
         
         # Run audit on refined structure
+        # OD-07: refined audits inherit the key attribution embedded in
+        # the token claims (WP-2), so the owning key can look them up.
         refined_audit = _run_physics_sync(
             content_bytes, 
             file.filename, 
             mode, 
-            "NONE"
+            "NONE",
+            key_hash=(payload.get("created_by_key_hash") or ""),
         )
         
         refined_audit_id = refined_audit["governance"]["audit_id"]
@@ -978,8 +1031,11 @@ async def internal_callback(request: Request):
     # 5. Re-audit refined structure and store the comparison.
     try:
         refined_bytes = bytes.fromhex(payload.refined_pdb_hex)
+        # OD-07: refined audits inherit the job's key attribution so the
+        # owning key can look them up (fail-closed when absent).
         refined_audit = _run_physics_sync(
-            refined_bytes, f"refined_{payload.job_id}.pdb", "experimental", "NONE"
+            refined_bytes, f"refined_{payload.job_id}.pdb", "experimental", "NONE",
+            key_hash=(job.get("created_by_key_hash") or "") if job else "",
         )
         refined_audit_id = refined_audit["governance"]["audit_id"]
 
@@ -1010,9 +1066,20 @@ async def internal_callback(request: Request):
 
 
 @app.get("/audit/{audit_id}")
-async def get_stored_audit(audit_id: str, _auth=Depends(verify_api_key)):
-    """Retrieve a previously stored audit result by ID."""
-    result = get_audit_result(audit_id)
+async def get_stored_audit(audit_id: str, request: Request = None, _auth=Depends(verify_api_key)):
+    """Retrieve a previously stored audit result by ID.
+
+    OD-07: ``audit_id`` may be the canonical 64-hex SHA-256 identity or a
+    legacy 8-character reference (either a pre-WP-5 filename record or
+    the deterministic ``governance.legacy_audit_id`` of a newer record).
+    Key scope applies (fail-closed): only records created by the calling
+    key are returned — records without key attribution (legacy or
+    anonymous) are not visible to any key, mirroring the WP-2
+    comparisons convention.
+    """
+    _api_key_raw = request.headers.get("X-API-Key", "") if request else ""
+    _key_hash = hash_key(_api_key_raw) if _api_key_raw else ""
+    result = resolve_audit_ref(audit_id, key_hash=_key_hash)
     if result:
         return {"status": "success", "audit": result}
     return {"status": "not_found", "message": f"Audit {audit_id} not found or expired"}

@@ -19,8 +19,22 @@ class GovernanceFingerprint(BaseModel):
     policy_ref: str
 
 
+class AuditIdentity(BaseModel):
+    """OD-07: the audit identity — the full 64-hex canonical SHA-256 of
+    the input, combined with the canon hash and matrix hash in force.
+    Identical input under the same canon/matrix shares the identity."""
+    audit_id: str
+    canon_hash: str
+    matrix_hash: str
+
+
 class Governance(BaseModel):
     audit_id: str
+    # OD-07 additions (additive, optional — backward compatible):
+    # the explicit identity triple and the deterministic legacy 8-char
+    # reference (lookup only; never the canonical identity).
+    audit_identity: Optional[AuditIdentity] = None
+    legacy_audit_id: Optional[str] = None
     station_version: str
     timestamp_utc: str
     governance_fingerprint: GovernanceFingerprint

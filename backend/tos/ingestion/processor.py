@@ -1,7 +1,6 @@
 import numpy as np
 from dataclasses import dataclass
 from typing import List, Optional
-import uuid
 import re
 
 from ..generation.afdb import detect_structure_format
@@ -65,6 +64,12 @@ class ConfidenceProfile:
 class Structure:
     """Canonical structure container used by the physics engine."""
     atoms: List[Atom]
+    # OD-07 (auditor, delegated by owner, 2026-10-20): the audit identity
+    # is the full 64-hex SHA-256 of the canonical input computed at the
+    # API layer (main.py) and combined with the canon/matrix hashes. The
+    # ingestion layer carries NO identifier — the previous per-parse
+    # uuid4()[:8] value was random, collision-prone, and could masquerade
+    # as an audit identity, so it was removed (empty string here).
     audit_id: str
     confidence: ConfidenceProfile
     # P0 item 9: number of distinct polymer residues present in the SOURCE
@@ -267,10 +272,10 @@ class IngestionProcessor:
                 atoms[incumbent] = atom_obj
 
         b_values = [a.b_iso for a in atoms]
-        audit_id = str(uuid.uuid4())[:8]
+        # OD-07: no ingestion-level identifier (see Structure.audit_id).
         return Structure(
             atoms=atoms,
-            audit_id=f"AUD-{audit_id}",
+            audit_id="",
             confidence=ConfidenceProfile(b_values, is_experimental, method,
                                          resolution),
             source_residue_count=len(source_residue_keys) if source_residue_keys else None,
@@ -361,10 +366,10 @@ class IngestionProcessor:
 
         # Confidence reflects the RETAINED conformers only.
         b_values = [a.b_iso for a in atoms]
-        audit_id = str(uuid.uuid4())[:8]
+        # OD-07: no ingestion-level identifier (see Structure.audit_id).
         return Structure(
             atoms=atoms,
-            audit_id=f"AUD-{audit_id}",
+            audit_id="",
             confidence=ConfidenceProfile(b_values, is_experimental, method, resolution),
             source_residue_count=len(source_residue_keys) if source_residue_keys else None
         )
