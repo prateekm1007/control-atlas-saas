@@ -235,3 +235,23 @@
   policy status stays PROPOSED per the auditor ruling); this push-log append; manifest
   refresh. Single-writer guard: expected remote tip 075f1065c38b7f0135b092daa1dd443b79a7a6ff;
   push ABORTED on deviation.
+
+## 2026-10-20T14:41:24Z | P-022-CONFIRM | push-confirm | branch=activation/ec21-r18 remote_sha=075f1065c38b7f0135b092daa1dd443b79a7a6ff credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/activation/ec21-r18 -> 075f1065c38b7f0135b092daa1dd443b79a7a6ff (observed post-push-1)"
+
+- Push 1 accepted as a new ref (guard held). CI on 075f106: EC-21 declared-base job
+  SUCCESS; the acceptance gate flagged the Enforcement label mismatch (declared INERT vs
+  computed LIVE) — fixed in push 2 per the computed truth.
+
+## 2026-10-20T14:41:24Z | P-029-CONFIRM | push-confirm | branch=activation/ec21-r18 remote_sha=98af2ef5b73ba54e2a10b4a3325c2b1b34a02d07f credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/activation/ec21-r18 -> 98af2ef5b73ba54e2a10b4a3325c2b1b34a02d07f (observed post-push-2)"
+
+- Push 2 accepted as a fast-forward 075f106 -> 98af2ef (guard held). CI: EC-21 job
+  SUCCESS; acceptance gate reported PENDING for P-022-INTENT (correct behavior — the
+  confirm is completed by this entry; a new intent must never precede the previous
+  confirm; process note recorded on the fix-forward branch).
+
+## 2026-10-20T14:41:24Z | P-032-INTENT | push-intent | branch=activation/ec21-r18 head_at_intent=DEFERRED base=98af2ef5b73ba54e2a10b4a3325c2b1b34a02d07f expected_remote_tip_before_push=98af2ef5b73ba54e2a10b4a3325c2b1b34a02d07f credential=OWNER-PAT-1 authorized_by="Round-18 direction 6 (EC-21) continuation: completing the two-phase pairs before any further intent"
+
+- Push 3 content (disclosed pre-push): this append (P-022-CONFIRM, P-029-CONFIRM, this
+  INTENT) and the manifest refresh; no other content changes. Single-writer guard:
+  remote tip expected exactly 98af2ef5b73ba54e2a10b4a3325c2b1b34a02d07f; push ABORTED on
+  deviation.
