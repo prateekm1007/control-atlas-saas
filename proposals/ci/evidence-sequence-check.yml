@@ -1,11 +1,14 @@
 # INERT DRAFT — activates only on owner approval (EC-18), see move-map in proposals/ci/README.md
-name: EC18 evidence sequence
+name: EC18 evidence sequence + append-only
 on:
   pull_request:
   push:
     branches: ["**"]
+permissions:
+  contents: read
 jobs:
   sequence:
+    name: EC-18 monotonic sequences + parent-prefix append-only integrity
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,6 +17,19 @@ jobs:
           FAIL=0
           for LOG in $(git ls-files 'docs/evidence/**/*.md' | grep -E 'RECEIPT|PUSH_LOG|SEQUENCE|LOG' || true); do
             CT=$(git log -1 --format=%cI -- "$LOG")
+            # Sequence checks (timestamps, IDs, drift):
             python3 scripts/ci/evidence_sequence_check.py "$LOG" --commit-time "$CT" || FAIL=1
+            # Append-only integrity: the previous commit's version must be a byte-prefix of
+            # the current one (prior entries may never be edited or deleted):
+            if git cat-file -e "HEAD~1:$LOG" 2>/dev/null; then
+              git show "HEAD~1:$LOG" > "$RUNNER_TEMP/older_log.md"
+              python3 scripts/ci/evidence_sequence_check.py "$LOG" \
+                --parent-prefix "$RUNNER_TEMP/older_log.md" || FAIL=1
+            fi
           done
+          # Push-log truthfulness: CONFIRM entries must carry real 40-hex SHAs:
+          if [ -f docs/evidence/push-log/PUSH_LOG.md ]; then
+            python3 scripts/ci/evidence_sequence_check.py docs/evidence/push-log/PUSH_LOG.md \
+              --pushlog-schema || FAIL=1
+          fi
           exit $FAIL

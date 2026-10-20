@@ -47,3 +47,23 @@
 ## 2026-10-20T06:06:00Z | P-011 | push | branch=proposal/ec16-ec26-enforcement sha=self-referential-tip credential=OWNER-PAT-1
 
 - LIVE entry for this package's push. Self-reference limit, disclosed: an entry cannot contain the 40-hex SHA of the commit that first publishes it, so the subject carries the disclosed marker `self-referential-tip` (NOT a SHA) and the entry ships inside the commit it describes. The actual pushed tip is verified post-hoc via `ls-remote` immediately after the push and quoted in the worklog and round report (that verification record is written later and would be labeled RECONSTRUCTED if ever appended here).
+
+## 2026-10-20T09:34:59Z | P-011-CONFIRM | push-confirm | branch=proposal/ec16-ec26-enforcement remote_sha=17eb88184c9f461c6bc9ee592f916f7ff4c921c4 credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/proposal/ec16-ec26-enforcement"
+
+- Correction of P-011 under the two-phase schema (`PUSH_LOG_SCHEMA.md`, defined 2026-10-20;
+  auditor item 3.6): the original P-011 entry carried `sha=self-referential-tip`, which is not
+  an object identity and cannot serve as evidence of what was pushed. This CONFIRM entry
+  records the remote-verified tip.
+- Evidence source: `git ls-remote origin` executed 2026-10-20 ~09:04:30Z in the correction
+  session returned `refs/heads/proposal/ec16-ec26-enforcement -> 17eb88184c9f461c6bc9ee592f916f7ff4c921c4`
+  (output quoted in the session worklog and re-verified at CONFIRM write time below).
+- Timestamp reconciliation (differences explained, not averaged away): P-011's stated time
+  2026-10-20T06:06:00Z is the entry-author's claimed push-issuance time written inside the
+  pushed commit; GitHub commit metadata for 17eb881 records author/committer time
+  2026-10-20T06:07:23Z (83 s later — the entry was drafted immediately before `git commit`).
+  The moment the remote accepted the ref update is NOT established by either artifact; it was
+  not observed at push time. This CONFIRM entry's timestamp (09:34:59Z) is the truthful write
+  time of the confirmation, NOT a claim about when the push executed.
+- Prior entries, including P-011 itself, are preserved unchanged per the append-only rule;
+  the parent-version check (`evidence_sequence_check.py --parent-prefix` against
+  `17eb881:docs/evidence/push-log/PUSH_LOG.md`) enforces this from this commit forward.
