@@ -538,3 +538,48 @@
   pushed again, P-078-CONFIRM records the remote-verified tip after that
   push returns. Until then the tip pushed by this INTENT is disclosed as
   PENDING by the evidence-sequence checker — the designed, truthful state.
+
+## 2026-10-20T21:47:00Z | P-078-CONFIRM | push-confirm | branch=repair/round19-mainline-acceptance remote_sha=443d6063b42c40ae47b6ea0607e45d31c12239d2 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/repair/round19-mainline-acceptance -> 443d6063b42c40ae47b6ea0607e45d31c12239d2 (re-verified 2026-10-20T21:40:40Z immediately before this confirmation was written; the push itself was the ordinary fast-forward 908de6dbb9bb..443d6063b42c declared by P-078-INTENT); push-event checks on this exact head: Toscanini Stability Gate run 39492676189 conclusion=success and Governance Acceptance run 39492676299 conclusion=success (both created 2026-10-20T20:31:18Z, all seven always-on jobs); PR-event checks on this exact head: Toscanini Stability Gate run 39494188745 conclusion=success and Governance Acceptance run 39494188726 conclusion=failure (both created 2026-10-20T20:41:54Z; exactly one failing governance job - pre-merge-verification, the approval-impossible state recorded in register Part 14)"
+
+- Two-phase completion for the push declared by P-078-INTENT (head_at_intent was
+  DEFERRED; the remote-verified tip is recorded here after the push returned,
+  never backdated). This entry confirms THAT push; it does not confirm any
+  later tip of this branch. The run facts were fetched from the Actions API at
+  2026-10-20T20:41:56Z and the live ref was re-verified at 2026-10-20T21:40:40Z
+  in the Round-23 sanctioned cycle.
+
+## 2026-10-20T21:48:00Z | P-079 | intent-reconcile | voids=P-077 branch=repair/round19-mainline-acceptance credential=OWNER-PAT-1 evidence="the P-077 merge-intent resolved to 443d6063b42c40ae47b6ea0607e45d31c12239d2 (its introducing commit), and its authorization premise - a merge gated on a fresh non-author approval recorded on PR #30 - is unsatisfiable while the only credential holder is the PR's author (register Part 14 finding A-04 family); the auditor's Round-23 ruling sanctions removing the pre-merge gate duplicate and its own merge route; redeclared as P-080 on this push"
+
+- Truthful void record: P-077's content is preserved unchanged in the log;
+  only its pairing obligation is discharged by this redeclaration.
+
+## 2026-10-20T21:49:00Z | P-080 | merge-intent | target=main pr=30 source_branch=repair/round19-mainline-acceptance expected_pre_merge_base=f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-23 directions 2 and 4 (merge the repair branch into main through a merge commit; no force, no squash; document exactly what was done and exactly what failed if the standard reviewed-merge route cannot be completed; the pre-merge-verification job is deleted per D-R2 and register Part 14, and the merge may be executed by the credential holder without a recorded non-author approval, disclosed as such)"
+
+- Redeclaration on the exact final candidate (expected_head=DEFERRED resolves
+  to the commit introducing this record). expected_pre_merge_base is the live
+  main tip at declaration time (f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd,
+  re-verified by fresh ls-remote at 2026-10-20T21:40:40Z; if main moves, this
+  intent fails its base verification). The merge is NOT performed by this
+  push: after this push and the gate report on this exact candidate, the merge
+  executes through the merge-commit route the auditor sanctioned. Because the
+  PR's author and the credential holder are the same identity, no non-author
+  approval can be recorded; the post-merge governance run is expected to
+  classify the merge transition accordingly (disclosed, honest rather than
+  silently passing). The platform-required Stability Gate checks are
+  unaffected by the D-R2 deletion.
+
+## 2026-10-20T21:50:00Z | P-081-INTENT | push-intent | branch=repair/round19-mainline-acceptance head_at_intent=DEFERRED expected_remote_tip_before_push=443d6063b42c40ae47b6ea0607e45d31c12239d2 credential=OWNER-PAT-1 authorized_by="auditor Round-23 directions 1-5: post the constitution reading note on the repair branch; delete the pre-merge-verification job keeping every other job; run the Stability Gate on the exact final tip and report the run record; merge the repair branch into main with a merge commit (no force, no squash); then prune the 25 named branches via authenticated API deletions and stop; no product work"
+
+- This push carries: the D-R2 workflow edit (the pre-merge-verification job
+  removed from .github/workflows/governance-acceptance.yml; every other job
+  and the pull-requests: read permission untouched), the Round-23 reading
+  note (full rewrite), P-078-CONFIRM, the void + redeclaration pair
+  (P-079/P-080), this INTENT, and the regenerated manifest digest rows for
+  the two edited evidence documents. No source, checker, or test content is
+  modified.
+- ID selection: P-079..P-081 verified unused across the published log (the
+  highest previously used identifier is P-078 on this branch's records).
+- head_at_intent is DEFERRED per the two-phase schema; if this branch is
+  pushed again, P-081-CONFIRM records the remote-verified tip after that
+  push returns. Until then the tip pushed by this INTENT is disclosed as
+  PENDING by the evidence-sequence checker - the designed, truthful state.

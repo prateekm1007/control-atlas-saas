@@ -50,9 +50,12 @@ on:
   pull_request:
     branches: ["**"]
 
-# Round-22 direction 5: the merge/pre-merge verification calls the pull
-# request and pull-request-review APIs with the job token; the narrowly
-# scoped pull-requests: read permission is REQUIRED for token-based access
+# Round-23 direction 2: the pre-merge-verification job is removed (auditor
+# direction; register Part 14 records that approvals cannot be produced on
+# this repository by the credential holder, who is the PR author). The
+# pull-requests: read permission REMAINS REQUIRED: the push-log-integrity
+# canary and the evidence-sequence checker call the pull-request and
+# pull-request-review APIs with the job token on push and PR events alike
 # (contents: read alone is insufficient). Least privilege: read-only, nothing
 # else is granted.
 permissions:
@@ -348,113 +351,6 @@ jobs:
           python3 scripts/ci/check_declared_base.py \
             --declaration "$RUNNER_TEMP/pr_body.md" \
             --repo-slug "${{ github.repository }}"
-
-  pre-merge-verification:
-    name: EC-24 pre-merge PR/head/review verification
-    # Round-22 direction 5: a FUNCTIONING pre-merge gate. A post-merge
-    # verifier is not a substitute for checking the CURRENT PR/head/review
-    # state BEFORE the merge executes. This job verifies on every PR event
-    # that (a) the active merge-intent binds the exact candidate and the
-    # declared base is still the live target tip, (b) the PR's head SHA and
-    # source ref match the candidate, its base matches the declared target,
-    # and (c) a FRESH approving review from a non-author reviewer applies to
-    # the EXACT head. The job is EXPECTED TO FAIL while no independent
-    # approval exists on the exact head -- that is the gate functioning, not
-    # a defect; the merge stays blocked until the approval is recorded and
-    # this check re-runs green.
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-      - name: API canary - authenticated PR/review/event reads must succeed (fail closed)
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import json, os, sys, urllib.request
-          repo = os.environ["GITHUB_REPOSITORY"]
-          tok = os.environ["GH_TOKEN"]
-          pr = "${{ github.event.pull_request.number }}"
-          def get(url):
-              req = urllib.request.Request(url, headers={
-                  "Authorization": "Bearer %s" % tok,
-                  "Accept": "application/vnd.github+json"})
-              with urllib.request.urlopen(req, timeout=30) as r:
-                  return r.status, r.read()
-          checks = [
-              ("pull request detail", "https://api.github.com/repos/%s/pulls/%s" % (repo, pr)),
-              ("pull request reviews", "https://api.github.com/repos/%s/pulls/%s/reviews?per_page=1" % (repo, pr)),
-              ("repository events", "https://api.github.com/repos/%s/events?per_page=1" % repo),
-          ]
-          failed = False
-          for name, url in checks:
-              try:
-                  status, _ = get(url)
-                  print("canary OK: %s -> HTTP %d" % (name, status))
-              except Exception as e:  # noqa: BLE001
-                  print("canary FAIL: %s -> %s" % (name, type(e).__name__))
-                  failed = True
-          if failed:
-              print("FAIL: the authenticated PR/review/events reads are not available; "
-                    "the pre-merge verification cannot run (fail closed)")
-              sys.exit(1)
-          PY
-      - name: Build the runs manifest from GitHub Actions records
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          python3 - <<'PY'
-          import json, os, urllib.request
-          runs = {}
-          page = 1
-          while page <= 10:
-              req = urllib.request.Request(
-                  "https://api.github.com/repos/%s/actions/runs?per_page=100&page=%d"
-                  % (os.environ["GITHUB_REPOSITORY"], page),
-                  headers={"Authorization": "Bearer %s" % os.environ["GH_TOKEN"],
-                           "Accept": "application/vnd.github+json"})
-              with urllib.request.urlopen(req, timeout=30) as resp:
-                  data = json.load(resp)
-              for run in data.get("workflow_runs", []):
-                  runs[str(run["id"])] = {"head_sha": run["head_sha"],
-                                          "head_branch": run.get("head_branch"),
-                                          "event": run.get("event"),
-                                          "conclusion": run["conclusion"]}
-              if len(data.get("workflow_runs", [])) < 100:
-                  break
-              page += 1
-          json.dump({"runs": runs}, open("runs_manifest.json", "w"), indent=1)
-          print("runs manifest: %d run record(s)" % len(runs))
-          PY
-      - name: Pre-merge verification of the current PR/head/review state
-        env:
-          BRANCH_UNDER_TEST: ${{ github.head_ref }}
-          EXPECTED_TIP: ${{ github.event.pull_request.head.sha }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          if git rev-parse --verify HEAD~1 >/dev/null 2>&1 \
-             && git cat-file -e HEAD~1:docs/evidence/push-log/PUSH_LOG.md 2>/dev/null; then
-            git show HEAD~1:docs/evidence/push-log/PUSH_LOG.md > "$RUNNER_TEMP/pushlog_prev.md"
-            python3 scripts/ci/evidence_sequence_check.py \
-              docs/evidence/push-log/PUSH_LOG.md --pushlog-schema --remote-verify \
-              --branch "$BRANCH_UNDER_TEST" --expect-tip "$EXPECTED_TIP" \
-              --runs-manifest runs_manifest.json \
-              --repo "${{ github.repository }}" --api-token-env GH_TOKEN \
-              --pre-merge-verify --pr-number "$PR_NUMBER" \
-              --parent-prefix "$RUNNER_TEMP/pushlog_prev.md"
-          else
-            python3 scripts/ci/evidence_sequence_check.py \
-              docs/evidence/push-log/PUSH_LOG.md --pushlog-schema --remote-verify \
-              --branch "$BRANCH_UNDER_TEST" --expect-tip "$EXPECTED_TIP" \
-              --runs-manifest runs_manifest.json \
-              --repo "${{ github.repository }}" --api-token-env GH_TOKEN \
-              --pre-merge-verify --pr-number "$PR_NUMBER"
-          fi
 
   secret-scan-all-refs:
     name: EC-23 full-history secret scan with controls
