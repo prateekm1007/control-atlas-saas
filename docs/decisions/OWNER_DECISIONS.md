@@ -1,11 +1,24 @@
-# OWNER_DECISIONS — Consolidated Decision Register (rev 7)
+# OWNER_DECISIONS — Consolidated Decision Register (rev 9)
 
-**Provenance.** This is the single consolidated decision register, rev 7.
-Rev 7 (this revision) appends the 2026-10-20 auditor adjudications of the
+**Provenance.** This is the single consolidated decision register, rev 9
+(Round-20, 2026-10-20). Rev 8 — the Round-19 records (the P-015-CONFIRM
+collision and force-update deviation, the repair-forward adjudication, the
+live end-to-end enforcement, and the precise activation states per rule) —
+was prepared on the `docs/owner-decisions-r19` branch but never entered the
+reviewed path (no register PR was open; auditor Round-20 direction 6). Rev 9
+carries the FULL rev-8 content into this reviewed path **content-only** (no
+merge of the divergent register-branch history; every prior decision and
+evidence preserved unchanged) and appends Part 12 — the Round-20 records
+(the auditor's "Round-19 is not closed" ruling, the two critical EC-23/EC-24
+acceptance-defect fixes, the EC-26 trigger-liveness gap closure, and the
+R19 follow-up-push reconciliation). Every row of rev 7 and rev 8 is preserved
+unchanged (append-only register discipline; status conversions never happen
+silently).
+Rev 7 appended the 2026-10-20 auditor adjudications of the
 EC-16…EC-26 amendment proposals and the two meta-amendments (Part 6), the
 updated owner/auditor action rows (Part 7), the push-authorization
 reconciliation (Part 8), and the preserved-blockers statement (Part 9).
-Rev 7 supersedes rev 6 (Round 14, published as `0773f0b`) on this same
+Rev 7 superseded rev 6 (Round 14, published as `0773f0b`) on this same
 canonical path; rev 6 in turn superseded rev 5 (drafted in Round 13, never published before that
 branch) on this same canonical path; rev 4 (delivered on
 `evidence/round9-r2-2026-10-20` @ `7e3a3395…`, `outputs/OWNER_DECISIONS.md`)
@@ -322,3 +335,236 @@ is not present in this environment and is NOT evaluated here. Reconciliation = a
 force-push, per the A-09 discipline. Attribution of the concurrent pushes follows A-09:
 git identity alone does not establish credential identity; the owner's token-history
 review remains the authority.
+
+## Part 11 — Round-19 mainline repair records (AUDITOR-ADJUDICATED, 2026-10-20)
+
+Recorded from the auditor's Round-19 directions 1–8 (full delegation, same
+discipline as Part 6: decision status and implementation status are separate;
+nothing here claims an owner signature).
+
+### 11.1 Merge-collision adjudication (direction 2) — APPLIED
+
+Current `main` @ `f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd` is the baseline and is
+repaired FORWARD through a reviewed, narrowly scoped PR
+(`repair/round19-mainline-acceptance`); it is not replaced by or merged with
+`c4a0fcc` (preserved as evidence; no further force-push). The
+`a0e321c -> c4a0fcc` force-with-lease update is recorded as a deviation from
+rev 7 Part 8 (appended commits only) in
+`docs/evidence/push-log/INCIDENT-2026-10-20-P015-COLLISION.md`, together with
+the `P-015-CONFIRM` identifier collision between the two competing histories.
+No push is attributed to a person from git metadata alone (A-09 discipline).
+
+### 11.2 Mainline acceptance defects (direction 3) — REPAIRED on the branch
+
+- 3A: the two remaining non-documentation provider-SDK references removed
+  (reviewed content carried from `c4a0fcc` content-only).
+- 3B: the remediation README corrected to the current live state; patches
+  labeled superseded/historical with exact blob links; policy status and
+  active enforcement recorded separately.
+- 3C: package manifest scope defined and machine-enforced
+  (`scripts/ci/manifest_check.py`); `SHA256SUMS` regenerated over the full
+  38-file scope; verified in a clean checkout (all 38 digests OK via
+  `sha256sum -c`).
+
+### 11.3 EC-20 activation failures (direction 5) — ROOT CAUSE FOUND AND FIXED
+
+PRs #18/#19/#20 all fail their EC-20 job (runs 39417485854 / 39417488957 /
+39417492355) because `verify_claimed_shas.py --check-tests` collected tests
+repo-wide; legacy script-style modules under `gpu_worker/tests/` execute at
+import time and `sys.exit()` at module level, aborting pytest collection with
+INTERNALERROR so the named acceptance tests registered as "not collectable".
+Reproduced locally on the exact head `748544f` in a pytest-only environment
+before fixing; the fix (per-file scoped collection, AT-18) was verified to
+execute the named tests on that same head. The three duplicate workflow
+additions are consolidated into one activation candidate
+(`activation/ec16-ec19-ec20-r19`); PRs #18/#19/#20 are superseded (branches
+preserved as historical evidence).
+
+### 11.4 Activation states (direction 6) — precise, as of this register revision
+
+| Rule | Policy status | Implementation status |
+|---|---|---|
+| EC-17 / EC-22 / EC-25 | ACTIVE (in force, prior ruling) | Live automated enforcement begins with the Round-19 repair's `governance-acceptance.yml` (before it: policy in force, checks inert — recorded, not smoothed over) |
+| EC-16 / EC-19 / EC-20 | PROPOSED — NOT active | Fixes landed in the repair; consolidated activation candidate prepared (`activation/ec16-ec19-ec20-r19`); activation requires the complete gate green on the exact candidate AND the auditor's register recording |
+| EC-21 | PROPOSED — NOT active (accepted in principle) | Original push confirmed against the live remote ref (`7f5d50c`, run 39417494195 on that head); rebased candidate `activation/ec21-r19` prepared with the reconciliation record; same activation condition |
+| EC-26 | PROPOSED — NOT active | Checker gap fixed in the repair (ACTIVE rules must cite live workflows; AT-17 negatives); candidate `activation/ec26-r19` prepared; same activation condition |
+| EC-18 / EC-23 / EC-24 | PROPOSED — NOT active | Candidates prepared (`activation/ec18-r19`, `activation/ec23-r19`, `activation/ec24-r19`); EC-23's live job runs the checksum-pinned scanner with positive/negative controls and the documented H-1 history baseline (A-02 stays open); same activation condition |
+
+### 11.5 Live end-to-end enforcement (direction 7) — IMPLEMENTED on the branch
+
+`.github/workflows/governance-acceptance.yml` (push + pull_request, all
+branches; the Stability Gate is untouched) runs on every relevant PR and push:
+the full acceptance suite (AT-01..AT-20), reading-note/inventory validation
+with the ACTIVE-liveness rule, status-vocabulary validation against an
+in-job runs manifest built from Actions records, push-log schema + unique-ID +
+pairing + append-only parent-prefix validation, the deploy-trigger lint
+against the actual `.github/workflows/` tree, the package manifest +
+forbidden-reference checks, PR-body claim verification with EXECUTED named
+acceptance tests, declared-base verification, and the full-history all-refs
+secret scan with controls. A green base gate remains necessary, not
+sufficient.
+
+### 11.6 Standing items (direction 8) — UNCHANGED
+
+A-01 remains ACCEPTED RISK (no rotation reminder issued; the token value
+appears nowhere). The scientific hard stop is preserved in full: no law
+semantics, calibration, thresholds, cohorts, held-out evaluation, golden
+artifacts, or deployment. The portable 40-row cohort metadata table and the
+independent r2 archive acceptance remain OPEN and are not closed by the
+amendment or repair work. Merges of the repair and the activation candidates
+go through reviewed PRs on exact-candidate green checks; no force-push; no
+administrative merges.
+
+## Part 12 — Round-20 records (AUDITOR-ADJUDICATED, 2026-10-20)
+
+Recorded from the auditor's Round-20 ruling ("Round-19 is not closed") and
+directions 1–8, under the same delegated authority and register discipline as
+Part 6/Part 11: decision status and implementation status remain separate; no
+owner signature is claimed; nothing here converts a status silently.
+
+### 12.1 The ruling and the two critical deficiencies
+
+The auditor independently verified the live refs and ruled Round-19 NOT
+closed despite green checks on PR #30's then-head `f44bf4d…` (gate run
+`39443515998`, Governance Acceptance run `39443516042`): green is necessary,
+not sufficient. Two critical deficiencies were found in the new controls,
+plus one EC-26 gap and one register gap:
+
+1. **EC-23 false-positive-classification defect.** The all-refs scan
+   tolerated EVERY `generic-api-key` finding under `docs/` or `evidence/` as
+   an evidence-digest class — a category exemption under which a newly
+   introduced credential in those directories would also pass. Separately,
+   the positive control treated any nonzero scanner exit as proof of
+   detection, so a scanner crash or invocation error could masquerade as a
+   successful control.
+2. **EC-24 verification defect.** The schema checker validated field syntax
+   but never verified that a recorded `remote_sha` equals the live remote ref
+   for the stated branch, nor that the `evidence=` field supports the recorded
+   SHA. Materially: the P-017…P-024 confirmations record the earlier
+   first-push tips while the current PR heads are different tips
+   (`f44bf4d`, `bd8d86a`, `32d272d`, `151b8c1`, `97067a0`, `fa854f8`,
+   `28ee983`, `df98f5e`); those confirmations are valid for the pushes they
+   describe but do not confirm the newer tips, and the pushes that carried
+   them were not themselves reconciled. The Round-19 report's claim that the
+   push protocol was fully closed was therefore not supported.
+3. **EC-26 gap.** The liveness test checked the workflow's path and job
+   existence but not that its `on:` triggers actually fire on the events the
+   claimed enforcement requires (a manual-dispatch-only workflow under
+   `.github/workflows/` with the named job would have satisfied it).
+4. **Register gap.** Register rev 8 sat on `docs/owner-decisions-r19` outside
+   the reviewed path; PR #30 still carried rev 7 and no register PR was open.
+
+### 12.2 EC-23 fix — reviewed fingerprint allowlist + verified controls
+
+- The category exemption is REPLACED by an explicit, reviewed allowlist:
+  `docs/evidence/ec16-ec26/secret_scan_baseline.json` (47 documented
+  fingerprints: source, classification, and reason per entry; documented in
+  `SECRET_SCAN_BASELINE.md` in the same directory) enforced by
+  `scripts/ci/secret_baseline_check.py`. Unknown fingerprints FAIL wherever
+  the file lives — including `docs/` and `evidence/`. A fingerprint that
+  matches while its rule/file contradict the reviewed entry FAILS. The
+  baseline is validated itself (required fields, unique fingerprints, known
+  classification tokens, H-1 entries require the A-02 note).
+- The two historical H-1 findings (the former provider key at pre-release
+  commit `b66f0e3b…`) remain a SEPARATE `DOCUMENTED-HISTORICAL-A-02` class,
+  disclosed on every run and tolerated only while register A-02 stays open
+  (issuer-side revocation unverified; deployment blocked; history never
+  rewritten as a substitute for revocation).
+- The positive control now runs with `--exit-code 101` (findings-found is
+  distinct from execution errors, which exit 1) and is verified by
+  `scripts/ci/secret_control_check.py`: the report must exist and parse; the
+  expected finding for the seeded synthetic key must be present; the expected
+  rule (`aws-access-token`) must actually have fired; no unexpected findings;
+  and the assembled key must be redacted everywhere (absent from report bytes
+  and the captured scanner log; the key travels via an environment variable,
+  never argv or file content). The clean-repository negative control must
+  exit 0 with an empty report. Acceptance tests: AT-21 (allowlist), AT-22
+  (controls).
+- The all-refs scan itself runs with `--exit-code 0`, so any nonzero exit is
+  a scanner execution failure and fails closed (the `|| true` masking is
+  removed).
+
+### 12.3 EC-24 fix — remote-ref verification and truthful reconciliation
+
+- `scripts/ci/evidence_sequence_check.py --remote-verify` now: (a) fetches
+  the live ref (`git ls-remote`) for every CONFIRM/RECONCILE's claimed branch
+  and compares the exact SHA — equal = CURRENT, different = HISTORICAL
+  (valid for the push it describes, explicitly NOT a confirmation of the
+  newer tip); (b) requires the `evidence=` field to support the recorded SHA
+  (the SHA and the claimed branch must appear in the evidence or entry body;
+  a cited Actions run ID whose manifest `head_sha` contradicts the recorded
+  SHA FAILS — fabricated support); (c) requires the branch under test's live
+  tip to be DECLARED — by an unpaired INTENT (PENDING, disclosed, never
+  implied complete) or an exact-tip CONFIRM/RECONCILE — with an undeclared
+  tip (the Round-19 follow-up-push class), an ls-remote failure, or an absent
+  remote ref failing closed; (d) classifies missing confirmation as PENDING,
+  never backdated or fabricated.
+- The eight Round-19 follow-up pushes are reconciled TRUTHFULLY by
+  `push-reconcile` records **P-050…P-057** (schema v3, defined in
+  `PUSH_LOG_SCHEMA.md`; narrative in
+  `RECONCILIATION-2026-10-20-R19-FOLLOWUP-PUSHES.md`): dated, live-ref
+  verified at the reconciliation window `2026-10-20T15:58:48Z`, with
+  check-run citations for each exact head, and an explicit disclosure that no
+  INTENT existed for those pushes (recorded, not smoothed over). No prior
+  entry was edited; the append-only parent-prefix check stays in force.
+- The Governance Acceptance `push-log-integrity` job now runs the full
+  verification on every push/PR event with the event's exact branch and tip.
+  Acceptance tests: AT-24.
+
+### 12.4 EC-26 fix — trigger liveness
+
+ACTIVE rules' `workflow:` references must now declare the events their
+enforcement claims (`~events=push+pull_request` suffix in the INDEX
+inventory), and the live workflow's `on:` block must actually contain each
+declared event with branch filters covering the enforcement branch (`main`).
+Manual-only (`workflow_dispatch`-only), branch-disabled, and otherwise
+untriggered workflows FAIL; the previous AT-17 path/job checks are retained.
+Acceptance tests: AT-23. EC-26 remains PROPOSED until the revised checks
+pass on the exact candidate (auditor direction 5).
+
+### 12.5 Register discipline for this revision (status distinctions)
+
+Per auditor direction 6, this register distinguishes, for every rule touched
+this round: the auditor's decision status (recorded here), the policy status
+(ACTIVE/PROPOSED in the INDEX inventory), the implementation status (what is
+built and where), the exact candidate (the repair-branch tip carrying this
+revision — recorded in the push log P-058 records and PR #30's body, and
+verified by the claim-verification and push-log-integrity jobs on that exact
+SHA), the CI results on that exact SHA (delivered by those jobs' runs; run
+IDs recorded in the push-log confirmations and the round report), and whether
+a rule's automation is LIVE ON `main` versus merely present on a PR branch
+(nothing in this Part is live on `main`; `main` remains at `f535a71…` until
+PR #30 merges through the reviewed path).
+
+### 12.6 Activation adjudications applied (auditor direction 7)
+
+| Rule | Decision status | Policy status | Implementation status |
+|---|---|---|---|
+| EC-16 / EC-19 / EC-20 | PROPOSED until the consolidated PR has every required check green on the exact final candidate and its activation is recorded in the register | PROPOSED | fixes live on the repair branch; consolidated candidate `activation/ec16-ec19-ec20-r19` awaits the post-merge rebase/revalidation |
+| EC-18 | PROPOSED until its evidence selection and sequence validation pass on the exact candidate | PROPOSED | parent-prefix + remote-verification layers implemented (AT-13/AT-24) |
+| EC-21 | Accepted in principle only; its EC-21 failure on the latest PR events is expected while the declared repair base is not on `main`; do not weaken the check; revalidate after the repair merges | PROPOSED | declared-base job live on the repair branch |
+| EC-23 | PROPOSED; the positive-control and broad-exemption blockers are fixed on the repair candidate; activation recorded only when the revised checks pass on the exact candidate | PROPOSED | fingerprint allowlist + verified controls (AT-21/AT-22); all-refs scan rerun on the exact candidate |
+| EC-24 | PROPOSED; push-confirm verification now verifies live remote refs | PROPOSED | remote-ref verification layer + RECONCILE records (AT-24) |
+| EC-26 | PROPOSED until trigger liveness actually passes on the exact candidate | PROPOSED | `~events=` grammar + live-on trigger validation (AT-23) |
+| EC-17 / EC-22 / EC-25 | Prior decision remains in force; no claim that automated enforcement is live on `main` until the reviewed workflow is merged and verified there | ACTIVE (policy) | live jobs run on the repair branch's own pushes/PRs only — NOT on `main` |
+
+Merge path (binding): PR #30 merges only after the critical defects are
+fixed, ALL checks are green on the exact final candidate, and the required
+independent review is satisfied (GitHub reported no approving review; do not
+bypass branch protection or repeat the administrative-merge path). After
+that merge, PRs #31–#36 are serially rebased/revalidated against the new
+`main` and their complete PR-event workflows rerun (their current EC-21
+failures are not passes and must not be waived). PRs #23–#29 close as
+superseded only after a file-by-file comparison proves their unique changes
+are covered by the reviewed R19 series; their branch refs and audit evidence
+are preserved.
+
+### 12.7 Standing items (direction 8) — UNCHANGED
+
+A-01 remains ACCEPTED RISK: the owner rotates the PAT at the owner's
+pleasure; no rotation reminder is issued and none is implied here; the token
+value appears nowhere. The scientific hard stop is preserved in full: no
+deployment, no v25 calibration, no held-out evaluation, no threshold or
+cohort changes, no law-semantic changes, no golden-artifact regeneration.
+The independent r2 archive verification and the portable 40-row cohort
+metadata table remain OPEN and are not closed by this governance work.

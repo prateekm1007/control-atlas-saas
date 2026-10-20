@@ -12,6 +12,16 @@ Auditor revision 2026-10-20 (fail-closed redesign):
     For ACTIVE rules, a `workflow:` reference must additionally be LIVE: unpinned,
     under `.github/workflows/`, and present in the working tree (Round-19 fix --
     a `proposals/ci/...` reference is inert and must not satisfy an ACTIVE rule).
+  - Round-20 trigger-liveness fix (auditor direction 5): liveness is more than
+    path + job existence. A workflow under `.github/workflows/` whose `on:`
+    block contains only `workflow_dispatch` would satisfy the Round-19 test
+    without enforcing any push or pull_request. An ACTIVE rule's `workflow:`
+    reference MUST therefore declare the events its enforcement claims, with
+    the suffix `~events=push+pull_request`, and the live workflow MUST
+    actually be triggered by every declared event with branch filters that
+    include the enforcement branch (manual-only, branch-disabled, or otherwise
+    untriggered workflows FAIL). PROPOSED rules may cite inert drafts (their
+    activation path is the reviewed copy into the live path).
   - Every acceptance test named in the inventory must EXIST:
       AT-nn    -> key in scripts/ci/tests/ACCEPTANCE_TESTS.json
       pytest:NODE / workflow:FILE#JOB -> as above
@@ -27,6 +37,7 @@ Auditor revision 2026-10-20 (fail-closed redesign):
 Exit codes: 0 = pass; 1 = fail; 2 = usage/internal error.
 """
 import argparse
+import fnmatch
 import json
 import os
 import subprocess
@@ -73,7 +84,63 @@ def _yaml_doc(repo: str, filespec: str):
     return None
 
 
-def resolve_refs(value: str, repo: str, require_live: bool = False):
+TRIGGER_EVENTS = {"push", "pull_request", "pull_request_target"}
+
+
+def _on_block(doc: dict):
+    """Return the workflow's `on:` value, handling the YAML 1.1 `on`->True gotcha."""
+    for key in (True, "on", "On", "ON"):
+        if isinstance(doc, dict) and key in doc:
+            return doc[key]
+    return None
+
+
+def _validate_triggers(filespec: str, doc: dict, events: list[str],
+                       branch: str, findings: list[str]):
+    """Round-20: the live workflow must actually run on every declared event.
+
+    Fails closed for: manual-only workflows (workflow_dispatch and friends),
+    missing declared events, and branch filters that exclude the enforcement
+    branch (branches / branches-ignore).
+    """
+    on_val = _on_block(doc)
+    if on_val is None:
+        findings.append(f"workflow {filespec} declares no 'on:' triggers at all "
+                        f"(cannot enforce {', '.join(events)})")
+        return
+    if isinstance(on_val, str):
+        on_val = [on_val]
+    if isinstance(on_val, list):
+        on_val = {str(e): None for e in on_val}
+    if not isinstance(on_val, dict):
+        findings.append(f"workflow {filespec} has an unparseable 'on:' block")
+        return
+    for ev in events:
+        if ev not in on_val:
+            have = ", ".join(sorted(str(k) for k in on_val)) or "(none)"
+            findings.append(f"workflow {filespec} is NOT triggered by {ev!r} "
+                            f"(its triggers: {have}) -- the claimed enforcement "
+                            f"would not run on that event")
+            continue
+        cfg = on_val.get(ev)
+        if cfg is None or not isinstance(cfg, dict):
+            continue  # event with no filter: runs for every branch
+        pats = cfg.get("branches")
+        if isinstance(pats, list) and pats:
+            if not any(fnmatch.fnmatchcase(branch, str(p)) for p in pats):
+                findings.append(f"workflow {filespec} trigger {ev} filters branches "
+                                f"{pats}, which exclude the enforcement branch "
+                                f"{branch!r} (disabled for the required branch)")
+        pats = cfg.get("branches-ignore")
+        if isinstance(pats, list) and pats:
+            if any(fnmatch.fnmatchcase(branch, str(p)) for p in pats):
+                findings.append(f"workflow {filespec} trigger {ev} ignores the "
+                                f"enforcement branch {branch!r} "
+                                f"(branches-ignore {pats})")
+
+
+def resolve_refs(value: str, repo: str, require_live: bool = False,
+                  enforcement_branch: str = "main"):
     """Validate each named reference in a cell. Returns (findings, none_declared).
 
     Round-19 EC-26 fix: when require_live is set (rule status ACTIVE), a
@@ -84,6 +151,12 @@ def resolve_refs(value: str, repo: str, require_live: bool = False):
     can name a branch whose version has the job while the live working-tree
     version does not. PROPOSED rules may still cite inert drafts (their
     activation path is the reviewed copy into the live path).
+
+    Round-20 trigger-liveness fix: an ACTIVE rule's workflow reference must
+    also declare its required events (`~events=push+pull_request` suffix) and
+    the live workflow must be triggered by each declared event with branch
+    filters covering the enforcement branch. Without the annotation the
+    reference fails -- path + job existence alone no longer proves liveness.
     """
     findings = []
     items = [v.strip() for v in ITEM_SPLIT.split(value) if v.strip()]
@@ -105,13 +178,23 @@ def resolve_refs(value: str, repo: str, require_live: bool = False):
             if not _path_exists(repo, target):
                 findings.append(f"named enforcement file does not exist: {target}")
         elif kind == "workflow":
-            filespec_all, _, job = target.rpartition("#")
+            base, _, ev_spec = target.partition("~events=")
+            events = ([e.strip() for e in ev_spec.split("+") if e.strip()]
+                      if ev_spec else None)
+            filespec_all, _, job = base.rpartition("#")
             filespec, _, ref = (filespec_all.rpartition("@")
                                 if "@" in filespec_all else (filespec_all, "", ""))
             job = job.strip()
             if not filespec or not job:
                 findings.append(f"malformed workflow reference {item!r} (need file#JOB)")
                 continue
+            if events is not None:
+                bad = [e for e in events if e not in TRIGGER_EVENTS]
+                if bad:
+                    findings.append(f"workflow reference {item!r} declares unknown "
+                                    f"event token(s) {bad} (allowed: "
+                                    f"{sorted(TRIGGER_EVENTS)})")
+                    events = None
             if require_live:
                 if ref:
                     findings.append(f"ACTIVE rule pins its workflow to @{ref}; the live "
@@ -125,6 +208,12 @@ def resolve_refs(value: str, repo: str, require_live: bool = False):
                     findings.append(f"ACTIVE rule's workflow is absent from the working tree "
                                     f"(not live on this candidate): {item}")
                     continue
+                if events is None:
+                    findings.append(f"ACTIVE rule's workflow reference must declare the "
+                                    f"events its enforcement claims (append "
+                                    f"'~events=push+pull_request'); path + job existence "
+                                    f"alone does not prove liveness: {item}")
+                    continue
             doc = _yaml_doc(repo, filespec_all)
             if doc is None:
                 findings.append(f"named workflow file does not exist: {filespec}")
@@ -135,6 +224,9 @@ def resolve_refs(value: str, repo: str, require_live: bool = False):
                 if not any(str(k) == job or (isinstance(v, dict) and str(v.get("name")) == job)
                            for k, v in jobs.items()):
                     findings.append(f"workflow job not found: {job!r} in {filespec}")
+                elif events:
+                    _validate_triggers(filespec, doc, events,
+                                       enforcement_branch, findings)
         elif kind == "pytest":
             node_file = target.split("::", 1)[0]
             if not _path_exists(repo, node_file):
@@ -195,6 +287,9 @@ def main() -> int:
                     help="also require PROPOSED rules to be mapped (self-test mode for this branch)")
     ap.add_argument("--require-strings", default="",
                     help="comma-separated strings that must appear in the note (series ID, base SHA, ...)")
+    ap.add_argument("--enforcement-branch", default="main",
+                    help="branch the ACTIVE-rule workflows must actually trigger for "
+                         "(default: main)")
     args = ap.parse_args()
     repo = os.path.abspath(args.repo_root)
     findings = []
@@ -237,7 +332,8 @@ def main() -> int:
     for r in required:
         require_live = r["status"] == "ACTIVE"
         for cell, kind in ((r["enforcement"], "enforcement"), (r["tests"], "test")):
-            refs, none_declared = resolve_refs(cell, repo, require_live=require_live)
+            refs, none_declared = resolve_refs(cell, repo, require_live=require_live,
+                                               enforcement_branch=args.enforcement_branch)
             for f in refs:
                 findings.append(f"{r['id']} {kind}: {f}")
             if none_declared:

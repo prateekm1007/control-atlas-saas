@@ -154,3 +154,30 @@ direction 8); the scientific hard stop is preserved (no law semantics, calibrati
 thresholds, cohorts, held-out evaluation, golden artifacts, or deployment); the portable
 40-row cohort metadata table and the independent r2 archive acceptance remain OPEN and are
 not closed by this repair.
+
+## 9. Round-20 acceptance-defect repair (added 2026-10-20, SERIES-2026-10-20-R20)
+
+Auditor ruling: Round-19 is NOT closed. The green checks on PR #30's head
+`f44bf4d…` (gate `39443515998`, Governance Acceptance `39443516042`) did not
+detect two critical deficiencies in the new controls; a green base gate is
+necessary, not sufficient. This section records the repair, implemented on the
+same branch `repair/round19-mainline-acceptance` (base `main` @ `f535a71…`,
+fix-forward from `f44bf4d…`; no merge approved; no direct push to main; no
+force-push).
+
+| Direction | Defect found by the audit | Fix on this candidate |
+|---|---|---|
+| 3 | EC-23 all-refs scan tolerated every generic-api-key finding under docs/ or evidence/ (a new credential there would pass); positive control accepted any nonzero scanner exit | Broad category exemption REPLACED by the reviewed fingerprint allowlist `docs/evidence/ec16-ec26/secret_scan_baseline.json` (47 documented entries; source/classification/reason each; unknown fingerprints FAIL wherever they live; H-1 separate under A-02) enforced by `scripts/ci/secret_baseline_check.py`; controls verified by `scripts/ci/secret_control_check.py` (expected finding + fired rule `aws-access-token` + key redaction; `--exit-code 101` disambiguates findings from execution errors, which fail closed; negative control verified against its report). AT-21, AT-22 |
+| 4 | EC-24 checker verified SHA syntax but never the live remote ref, nor that evidence supports the SHA; the R19 follow-up pushes were unreconciled | `evidence_sequence_check.py --remote-verify`: live-ref comparison per CONFIRM/RECONCILE (CURRENT/HISTORICAL), evidence support (SHA + branch in evidence; contradicting cited run IDs FAIL), branch-under-test tip declaration (unpaired INTENT = PENDING disclosed; undeclared tip FAILS); the eight R19 tips reconciled truthfully by RECONCILE records P-050..P-057 (never backdated; schema v3); the `push-log-integrity` CI job runs the full verification with event-context branch/tip. AT-24 |
+| 5 | EC-26 liveness checked path + job but not the `on:` triggers (manual-only would pass) | ACTIVE workflow references must declare `~events=…` and the live workflow must actually trigger on each declared event with branch coverage of `main`; manual-only / branch-disabled / untriggered FAIL. AT-23 (AT-17 retained) |
+| 6 | Register rev 8 stranded outside the reviewed path; PR #30 carried rev 7 | Rev-8 content carried into the reviewed path content-only (no history merge of `docs/owner-decisions-r19`) and extended as register **rev 9** (Part 12: the Round-20 records with the decision/policy/implementation/candidate/CI/live-on-main distinctions). This P0_STATUS section and the directives INDEX are updated from verified results; the Round-19 status report remains as historical evidence |
+| 7 | Activation adjudications | All eight rules remain PROPOSED per the Round-20 table (register Part 12.6); PR #30 merges only on exact-candidate green + the required independent review; #31-#36 serially revalidated after that merge; #23-#29 close only on proven replacement coverage |
+
+**Status of this repair:** the fixes, tests, and records above are complete
+on the candidate; CI runs on the exact final candidate are the completing
+evidence (run IDs recorded in the push-log confirmations and the round
+report when observed). The two program-level standing items are unchanged
+and NOT closed by this work: the independent r2 archive verification and the
+portable 40-row cohort metadata table remain OPEN; A-01 remains ACCEPTED
+RISK (no rotation reminder, per direction 8); the scientific hard stop is
+preserved in full.

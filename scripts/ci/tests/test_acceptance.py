@@ -809,3 +809,422 @@ def test_at19_status_summary_grammar():
     pm = tmpfile("Status-summary: PUSHED\nStatus-summary: MERGED\n")
     r = run("status_vocabulary_lint.py", pm, "--runs-manifest", _empty_manifest())
     check("AT-19", "PUSHED/MERGED Status-summary tokens pass", r.returncode == 0, r.stdout)
+
+
+# --------------------- AT-21 (EC-23 fingerprint allowlist, Round-20)
+
+def _at21_baseline_entry(fp, rule="generic-api-key", file="docs/x.md", cls=None):
+    return {
+        "fingerprint": fp,
+        "rule": rule,
+        "file": file,
+        "line": 5,
+        "commit": fp.split(":", 1)[0],
+        "classification": cls or "FALSE-POSITIVE-PROVENANCE-DIGEST",
+        "source": "test scan fixture",
+        "basis": "test basis: recorded content digest, not a credential",
+    }
+
+
+def _at21_baseline(entries, a02=False):
+    doc = {"metadata": {"scanner_version": "8.30.1", "policy": "explicit reviewed allowlist"},
+           "entries": entries}
+    if a02 or any(e["classification"] == "DOCUMENTED-HISTORICAL-A-02" for e in entries):
+        doc["a02_note"] = "A-02 stays open; issuer-side revocation unverified."
+    return tmpfile(json.dumps(doc), ".json")
+
+
+def _at21_report(rows):
+    return tmpfile(json.dumps(rows), ".json")
+
+
+def test_at21_secret_baseline_allowlist():
+    """Round-20 direction 3: the all-refs classification must be an explicit,
+    reviewed fingerprint allowlist -- a new finding under docs/ or evidence/
+    FAILS (the Round-19 category exemption admitted that class)."""
+    fp = "a" * 40 + ":docs/digests.json:generic-api-key:12"
+    # 1. exact documented allowlisted fingerprint passes
+    r = run("secret_baseline_check.py", "--report",
+            _at21_report([{"Fingerprint": fp, "RuleID": "generic-api-key",
+                           "File": "docs/digests.json", "StartLine": 12}]),
+            "--baseline", _at21_baseline([_at21_baseline_entry(fp)]))
+    check("AT-21", "exact documented allowlisted fingerprint passes",
+          r.returncode == 0 and "PASS" in r.stdout, r.stdout)
+    # 2. a NEW finding under docs/ (unknown fingerprint) FAILS -- the core fix
+    new_fp = "b" * 40 + ":docs/new_evidence.md:generic-api-key:3"
+    r = run("secret_baseline_check.py", "--report",
+            _at21_report([{"Fingerprint": new_fp, "RuleID": "generic-api-key",
+                           "File": "docs/new_evidence.md", "StartLine": 3}]),
+            "--baseline", _at21_baseline([_at21_baseline_entry(fp)]))
+    check("AT-21", "new finding under docs/ fails (no category exemption)",
+          r.returncode == 1 and "UNKNOWN FINGERPRINT" in r.stdout
+          and "docs/new_evidence.md" in r.stdout, r.stdout)
+    # 3. same failure class under evidence/
+    ev_fp = "c" * 40 + ":evidence/snap.json:generic-api-key:9"
+    r = run("secret_baseline_check.py", "--report",
+            _at21_report([{"Fingerprint": ev_fp, "RuleID": "generic-api-key",
+                           "File": "evidence/snap.json", "StartLine": 9}]),
+            "--baseline", _at21_baseline([_at21_baseline_entry(fp)]))
+    check("AT-21", "new finding under evidence/ fails",
+          r.returncode == 1 and "UNKNOWN FINGERPRINT" in r.stdout, r.stdout)
+    # 4. fingerprint matches but rule/file contradict the reviewed entry -> FAIL
+    r = run("secret_baseline_check.py", "--report",
+            _at21_report([{"Fingerprint": fp, "RuleID": "aws-access-token",
+                           "File": "docs/digests.json", "StartLine": 12}]),
+            "--baseline", _at21_baseline([_at21_baseline_entry(fp)]))
+    check("AT-21", "matched fingerprint with contradicting rule fails",
+          r.returncode == 1 and "contradiction" in r.stdout, r.stdout)
+    # 5. baseline integrity: an entry without basis/source/classification fails
+    broken = _at21_baseline_entry(fp); del broken["basis"]
+    r = run("secret_baseline_check.py", "--report",
+            _at21_report([{"Fingerprint": fp, "RuleID": "generic-api-key",
+                           "File": "docs/digests.json", "StartLine": 12}]),
+            "--baseline", _at21_baseline([broken]))
+    check("AT-21", "undocumented baseline entry fails (allowlist is review material)",
+          r.returncode == 1 and "missing required field" in r.stdout, r.stdout)
+    # 6. H-1 class disclosed with the A-02 note, not silently suppressed
+    h1_fp = "d" * 40 + ":system_diagnosis.py:gcp-api-key:8"
+    r = run("secret_baseline_check.py", "--report",
+            _at21_report([{"Fingerprint": h1_fp, "RuleID": "gcp-api-key",
+                           "File": "system_diagnosis.py", "StartLine": 8}]),
+            "--baseline", _at21_baseline(
+                [_at21_baseline_entry(h1_fp, rule="gcp-api-key",
+                                      file="system_diagnosis.py",
+                                      cls="DOCUMENTED-HISTORICAL-A-02")]))
+    check("AT-21", "H-1 fingerprint disclosed with the open A-02 blocker",
+          r.returncode == 0 and "A-02 open" in r.stdout, r.stdout)
+    # 7. empty report passes (allowlist is not a must-appear set)
+    r = run("secret_baseline_check.py", "--report", _at21_report([]),
+            "--baseline", _at21_baseline([_at21_baseline_entry(fp)]))
+    check("AT-21", "empty report passes", r.returncode == 0, r.stdout)
+    # 8. missing report fails closed (scanner produced nothing)
+    r = run("secret_baseline_check.py", "--report", "/nonexistent-report.json",
+            "--baseline", _at21_baseline([_at21_baseline_entry(fp)]))
+    check("AT-21", "missing report fails closed", r.returncode == 1
+          and "does not exist" in r.stdout, r.stdout)
+    # 9. duplicate report rows for one fingerprint collapse honestly
+    row = {"Fingerprint": fp, "RuleID": "generic-api-key",
+           "File": "docs/digests.json", "StartLine": 12}
+    r = run("secret_baseline_check.py", "--report", _at21_report([row, dict(row)]),
+            "--baseline", _at21_baseline([_at21_baseline_entry(fp)]))
+    check("AT-21", "duplicate report rows for one fingerprint collapse",
+          r.returncode == 0 and "2 report row(s) / 1 distinct" in r.stdout, r.stdout)
+    # 10. the real tracked baseline is well-formed and self-consistent
+    real = os.path.join(REPO, "docs", "evidence", "ec16-ec26", "secret_scan_baseline.json")
+    doc = json.load(open(real))
+    check("AT-21", "real baseline has 47 documented entries with required fields",
+          len(doc["entries"]) == 47 and all(
+              all(k in e for k in ("fingerprint", "rule", "file", "classification",
+                                   "source", "basis")) for e in doc["entries"]),
+          str(len(doc.get("entries", []))))
+    h1 = [e for e in doc["entries"] if e["classification"] == "DOCUMENTED-HISTORICAL-A-02"]
+    check("AT-21", "real baseline keeps the two H-1 fingerprints separate with the A-02 note",
+          len(h1) == 2 and "A-02" in doc.get("a02_note", ""), str(len(h1)))
+
+
+# --------------------- AT-22 (EC-23 controls, Round-20)
+
+def test_at22_secret_scan_controls():
+    """Round-20 direction 3: a scanner crash or invocation error must not
+    satisfy the positive control; the control must verify the expected finding,
+    the fired rule, and key redaction; the clean negative control must pass."""
+    key = "AKIA" + "T7W2QZ5XN4PRM3KV"
+    os.environ["SEEDED_KEY_AT22"] = key
+    good_row = {"RuleID": "aws-access-token", "File": "fixture.txt",
+                "StartLine": 1, "Secret": "REDACTED", "Match": "REDACTED"}
+    rep = lambda rows: tmpfile(json.dumps(rows), ".json")
+    # 1. genuine detection: exit 101 + expected finding + redacted key -> PASS
+    r = run("secret_control_check.py", "positive", "--report", rep([good_row]),
+            "--exit-code", "101", "--expect-rule", "aws-access-token",
+            "--expect-file", "fixture.txt", "--key-env", "SEEDED_KEY_AT22")
+    check("AT-22", "genuine detection with redaction passes",
+          r.returncode == 0 and "redaction verified" in r.stdout, r.stdout)
+    # 2. scanner exit 0 (nothing found) fails the control
+    r = run("secret_control_check.py", "positive", "--report", rep([good_row]),
+            "--exit-code", "0", "--expect-rule", "aws-access-token",
+            "--expect-file", "fixture.txt", "--key-env", "SEEDED_KEY_AT22")
+    check("AT-22", "exit 0 (key NOT detected) fails", r.returncode == 1
+          and "NOT detected" in r.stdout, r.stdout)
+    # 3. scanner execution error (exit 1) must not satisfy the control
+    r = run("secret_control_check.py", "positive", "--report", rep([good_row]),
+            "--exit-code", "1", "--expect-rule", "aws-access-token",
+            "--expect-file", "fixture.txt", "--key-env", "SEEDED_KEY_AT22")
+    check("AT-22", "scanner execution error does not satisfy the positive control",
+          r.returncode == 1 and "execution error" in r.stdout.lower()
+          and "masquerading" in r.stdout, r.stdout)
+    # 4. missing report fails closed
+    r = run("secret_control_check.py", "positive", "--report", "/nonexistent-at22.json",
+            "--exit-code", "101", "--expect-rule", "aws-access-token",
+            "--expect-file", "fixture.txt", "--key-env", "SEEDED_KEY_AT22")
+    check("AT-22", "missing report fails closed", r.returncode == 1
+          and "no report" in r.stdout, r.stdout)
+    # 5. malformed report fails closed
+    bad = tmpfile("{not json", ".json")
+    r = run("secret_control_check.py", "positive", "--report", bad,
+            "--exit-code", "101", "--expect-rule", "aws-access-token",
+            "--expect-file", "fixture.txt", "--key-env", "SEEDED_KEY_AT22")
+    check("AT-22", "malformed report fails closed", r.returncode == 1
+          and "not parseable" in r.stdout, r.stdout)
+    # 6. unredacted key in the report fails the control
+    leaked = dict(good_row, Secret=key)
+    r = run("secret_control_check.py", "positive", "--report", rep([leaked]),
+            "--exit-code", "101", "--expect-rule", "aws-access-token",
+            "--expect-file", "fixture.txt", "--key-env", "SEEDED_KEY_AT22")
+    check("AT-22", "unredacted key in the report fails",
+          r.returncode == 1 and "redaction FAILED" in r.stdout, r.stdout)
+    # 7. wrong rule fired fails
+    wrong = dict(good_row, RuleID="gcp-api-key")
+    r = run("secret_control_check.py", "positive", "--report", rep([wrong]),
+            "--exit-code", "101", "--expect-rule", "aws-access-token",
+            "--expect-file", "fixture.txt", "--key-env", "SEEDED_KEY_AT22")
+    check("AT-22", "expected rule not firing fails", r.returncode == 1
+          and "expected rule did not fire" in r.stdout, r.stdout)
+    # 8. unexpected additional finding fails
+    extra = dict(good_row, RuleID="gcp-api-key", File="other.txt")
+    r = run("secret_control_check.py", "positive", "--report", rep([good_row, extra]),
+            "--exit-code", "101", "--expect-rule", "aws-access-token",
+            "--expect-file", "fixture.txt", "--key-env", "SEEDED_KEY_AT22")
+    check("AT-22", "unexpected additional finding fails", r.returncode == 1
+          and "unexpected additional" in r.stdout, r.stdout)
+    # 9. the raw key must not appear anywhere in the report bytes
+    withkey = tmpfile(json.dumps([dict(good_row)]) + "\n# " + key + "\n", ".json")
+    r = run("secret_control_check.py", "positive", "--report", withkey,
+            "--exit-code", "101", "--expect-rule", "aws-access-token",
+            "--expect-file", "fixture.txt", "--key-env", "SEEDED_KEY_AT22")
+    check("AT-22", "raw key appearing anywhere in the report fails",
+          r.returncode == 1 and "raw seeded key appears" in r.stdout, r.stdout)
+    # 10. clean repository: exit 0 + zero findings passes; anything else fails
+    r = run("secret_control_check.py", "negative", "--report", rep([]), "--exit-code", "0")
+    check("AT-22", "clean repository passes the negative control",
+          r.returncode == 0, r.stdout)
+    r = run("secret_control_check.py", "negative", "--report", rep([good_row]),
+            "--exit-code", "101")
+    check("AT-22", "clean repository with a finding fails",
+          r.returncode == 1 and "false positive" in r.stdout, r.stdout)
+    r = run("secret_control_check.py", "negative", "--report", rep([]), "--exit-code", "1")
+    check("AT-22", "clean repository with scanner error fails",
+          r.returncode == 1 and "expected 0" in r.stdout, r.stdout)
+
+
+# --------------------- AT-23 (EC-26 trigger liveness, Round-20)
+
+def test_at23_workflow_trigger_liveness():
+    """Round-20 direction 5: a workflow under .github/workflows/ with the named
+    job but only a manual-dispatch trigger must NOT satisfy an ACTIVE rule;
+    liveness requires the declared events to actually trigger, with branch
+    coverage of the enforcement branch."""
+    d = tempfile.mkdtemp()
+    os.makedirs(os.path.join(d, ".github", "workflows"), exist_ok=True)
+    wf = os.path.join(d, ".github", "workflows", "gate.yml")
+
+    def write_wf(text):
+        open(wf, "w").write(text)
+
+    reg = {"tests": {}}
+    open(os.path.join(d, "registry.json"), "w").write(json.dumps(reg))
+    os.makedirs(os.path.join(d, "docs", "directives"), exist_ok=True)
+
+    def idx(enf):
+        text = ("# index\n<!-- BEGIN RULE INVENTORY -->\n"
+                "reading-note-path: docs/note.md\n"
+                "pinned-blobs: b6bb35e84956d84a8c9d9e65734c212baf3ed075\n"
+                "| Rule ID | Status | Enforcement point(s) | Acceptance test(s) |\n"
+                "|---|---|---|---|\n"
+                "| EC-X | ACTIVE | " + enf + " | NONE |\n"
+                "<!-- END RULE INVENTORY -->\n")
+        open(os.path.join(d, "docs", "directives", "INDEX.md"), "w").write(text)
+        open(os.path.join(d, "docs", "note.md"), "w").write(
+            "blob b6bb35e84956d84a8c9d9e65734c212baf3ed075 read\n| EC-X | -> mapped |\n")
+
+    def run_idx():
+        return run("reading_note_map_check.py", "--index", "docs/directives/INDEX.md",
+                   "--repo-root", d, "--registry", "registry.json")
+
+    job = "jobs:\n  secret-scan:\n    name: Secret Scan\n    runs-on: ubuntu-latest\n"
+    # 1. valid push/PR workflow with matching annotation passes
+    write_wf("name: gate\non:\n  push:\n    branches: ['**']\n  pull_request:\n"
+             "    branches: ['**']\n" + job)
+    idx("workflow:.github/workflows/gate.yml#secret-scan~events=push+pull_request")
+    r = run_idx()
+    check("AT-23", "valid push/PR workflow with declared events passes",
+          r.returncode == 0, r.stdout)
+    # 2. path-correct, job exists, but MANUAL-ONLY -> fails
+    write_wf("name: gate\non:\n  workflow_dispatch:\n" + job)
+    idx("workflow:.github/workflows/gate.yml#secret-scan~events=push+pull_request")
+    r = run_idx()
+    check("AT-23", "manual-only (workflow_dispatch) workflow fails",
+          r.returncode == 1 and "NOT triggered by" in r.stdout, r.stdout)
+    # 3. push trigger with a branch filter excluding main -> fails
+    write_wf("name: gate\non:\n  push:\n    branches: [feature-x]\n" + job)
+    idx("workflow:.github/workflows/gate.yml#secret-scan~events=push")
+    r = run_idx()
+    check("AT-23", "branch filter excluding the enforcement branch fails",
+          r.returncode == 1 and "exclude the enforcement branch" in r.stdout, r.stdout)
+    # 4. branches-ignore covering main -> fails
+    write_wf("name: gate\non:\n  push:\n    branches-ignore: [main]\n" + job)
+    idx("workflow:.github/workflows/gate.yml#secret-scan~events=push")
+    r = run_idx()
+    check("AT-23", "branches-ignore covering the enforcement branch fails",
+          r.returncode == 1 and "ignores the enforcement branch" in r.stdout, r.stdout)
+    # 5. ACTIVE reference without the events annotation -> fails
+    write_wf("name: gate\non:\n  push:\n" + job)
+    idx("workflow:.github/workflows/gate.yml#secret-scan")
+    r = run_idx()
+    check("AT-23", "ACTIVE workflow reference without ~events declaration fails",
+          r.returncode == 1 and "must declare the events" in r.stdout, r.stdout)
+    # 6. unknown event token in the annotation -> fails
+    idx("workflow:.github/workflows/gate.yml#secret-scan~events=banana")
+    r = run_idx()
+    check("AT-23", "unknown event token in the annotation fails",
+          r.returncode == 1 and "unknown event token" in r.stdout, r.stdout)
+    # 7. list-form on: [push, pull_request] passes
+    write_wf("name: gate\non: [push, pull_request]\n" + job)
+    idx("workflow:.github/workflows/gate.yml#secret-scan~events=push+pull_request")
+    r = run_idx()
+    check("AT-23", "list-form on: [push, pull_request] passes",
+          r.returncode == 0, r.stdout)
+    # 8. no on: block at all -> fails
+    write_wf("name: gate\n" + job)
+    idx("workflow:.github/workflows/gate.yml#secret-scan~events=push")
+    r = run_idx()
+    check("AT-23", "workflow with no on: block fails",
+          r.returncode == 1 and "no 'on:' triggers" in r.stdout, r.stdout)
+    # 9. pull_request declared but workflow only has push -> fails
+    write_wf("name: gate\non:\n  push:\n" + job)
+    idx("workflow:.github/workflows/gate.yml#secret-scan~events=pull_request")
+    r = run_idx()
+    check("AT-23", "declared pull_request missing from the workflow fails",
+          r.returncode == 1 and "NOT triggered by 'pull_request'" in r.stdout, r.stdout)
+    # 10. PROPOSED rule citing the same manual-only workflow is allowed (inert)
+    text = open(os.path.join(d, "docs", "directives", "INDEX.md")).read()
+    open(os.path.join(d, "docs", "directives", "INDEX.md"), "w").write(
+        text.replace("| EC-X | ACTIVE |", "| EC-X | PROPOSED |"))
+    r = run("reading_note_map_check.py", "--index", "docs/directives/INDEX.md",
+            "--repo-root", d, "--registry", "registry.json", "--include-proposed")
+    check("AT-23", "PROPOSED rule citing a manual-only draft is allowed (activation path)",
+          r.returncode == 0, r.stdout)
+
+
+# --------------------- AT-24 (EC-24 remote-ref verification, Round-20)
+
+def test_at24_pushlog_remote_verification():
+    """Round-20 direction 4: every confirmation must be verified against the
+    live remote ref; stale confirmations are HISTORICAL, not current; the
+    branch under test's tip must be declared; fabricated evidence, mismatched
+    branches, unpaired confirmations, and missing remote verification fail."""
+    import subprocess as sp
+    sha = lambda c: c * 40
+    d = tempfile.mkdtemp()
+    bare = os.path.join(d, "remote.git")
+    sp.run(["git", "init", "-q", "--bare", bare], check=True)
+    src = os.path.join(d, "src")
+    sp.run(["git", "init", "-q", src], check=True)
+
+    def commit_and_push(tag):
+        sp.run(["git", "-C", src, "-c", "user.email=t@t", "-c", "user.name=t",
+                "commit", "-q", "--allow-empty", "-m", tag], check=True)
+        sp.run(["git", "-C", src, "push", "-q", bare, "HEAD:refs/heads/b"], check=True)
+        return sp.run(["git", "-C", src, "rev-parse", "HEAD"],
+                      capture_output=True, text=True).stdout.strip()
+
+    s1 = commit_and_push("first")
+    s2 = commit_and_push("second")
+
+    def log_with(entries):
+        return tmpfile(entries, ".md")
+
+    def rv(log, branch="b", tip=s2, remote=bare, extra=()):
+        return run("evidence_sequence_check.py", log, "--pushlog-schema",
+                   "--remote-verify", "--remote", remote,
+                   "--branch", branch, "--expect-tip", tip, *extra)
+
+    # 1. CURRENT confirmation: live tip matches the recorded remote_sha -> PASS
+    cur = log_with("## 2026-10-20T10:00:00Z | P-1-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
+                   "## 2026-10-20T11:00:00Z | P-1-CONFIRM | push-confirm | branch=b remote_sha=%s "
+                   "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b -> %s\"\n" % (s2, s2))
+    r = rv(cur)
+    check("AT-24", "CURRENT confirmation (live tip == remote_sha) passes",
+          r.returncode == 0 and "CURRENT" in r.stdout, r.stdout)
+    # 2. valid-but-stale SHA: CONFIRM for the older tip; current tip undeclared -> FAIL
+    stale = log_with("## 2026-10-20T10:00:00Z | P-2-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
+                     "## 2026-10-20T11:00:00Z | P-2-CONFIRM | push-confirm | branch=b remote_sha=%s "
+                     "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b -> %s\"\n" % (s1, s1))
+    r = rv(stale)
+    check("AT-24", "stale confirmation is HISTORICAL and the undeclared current tip FAILS",
+          r.returncode == 1 and "HISTORICAL" in r.stdout and "UNDECLARED" in r.stdout,
+          r.stdout)
+    # 3. same stale confirmation, but the current tip carries an unpaired INTENT -> PENDING pass
+    pend = log_with("## 2026-10-20T10:00:00Z | P-3-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
+                    "## 2026-10-20T11:00:00Z | P-3-CONFIRM | push-confirm | branch=b remote_sha=%s "
+                    "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b -> %s\"\n"
+                    "## 2026-10-20T12:00:00Z | P-4-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n" % (s1, s1))
+    r = rv(pend)
+    check("AT-24", "tip declared by an unpaired INTENT is PENDING, not a failure",
+          r.returncode == 0 and "PENDING" in r.stdout and "P-4-INTENT" in r.stdout,
+          r.stdout)
+    # 4. RECONCILE declaring the current tip -> passes; RECONCILE does not consume INTENTs
+    rec = log_with("## 2026-10-20T10:00:00Z | P-5-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
+                   "## 2026-10-20T11:00:00Z | P-5-CONFIRM | push-confirm | branch=b remote_sha=%s "
+                   "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b -> %s\"\n"
+                   "## 2026-10-20T12:00:00Z | P-6 | push-reconcile | branch=b remote_sha=%s "
+                   "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b -> %s verified now\"\n"
+                   "## 2026-10-20T13:00:00Z | P-7-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
+                   % (s1, s1, s2, s2))
+    r = rv(rec)
+    check("AT-24", "RECONCILE declaring the current tip passes and leaves INTENTs unconsumed",
+          r.returncode == 0 and "CURRENT" in r.stdout and "P-7-INTENT" in r.stdout
+          and "PENDING" in r.stdout, r.stdout)
+    # 5. mismatched branch: CONFIRM claims branch=b but the evidence names only branch=c
+    mism = log_with("## 2026-10-20T10:00:00Z | P-8-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
+                    "## 2026-10-20T11:00:00Z | P-8-CONFIRM | push-confirm | branch=b remote_sha=%s "
+                    "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/c -> %s\"\n" % (s2, s2))
+    r = rv(mism)
+    check("AT-24", "confirmation whose evidence names a different branch fails",
+          r.returncode == 1 and "mismatched branch" in r.stdout, r.stdout)
+    # 6. fabricated evidence: neither field nor body contains the recorded SHA
+    fab = log_with("## 2026-10-20T10:00:00Z | P-9-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
+                   "## 2026-10-20T11:00:00Z | P-9-CONFIRM | push-confirm | branch=b remote_sha=%s "
+                   "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b (ok)\"\n" % sha("e"))
+    r = rv(fab)
+    check("AT-24", "fabricated evidence string fails",
+          r.returncode == 1 and "fabricated or unsupported evidence" in r.stdout, r.stdout)
+    # 7. unpaired confirmation fails under remote verification too
+    unpaired = log_with("## 2026-10-20T11:00:00Z | P-10-CONFIRM | push-confirm | branch=b "
+                        "remote_sha=%s credential=OWNER-PAT-1 evidence=\"git ls-remote origin "
+                        "refs/heads/b -> %s\"\n" % (s2, s2))
+    r = rv(unpaired)
+    check("AT-24", "unpaired confirmation fails",
+          r.returncode == 1 and "no preceding" in r.stdout, r.stdout)
+    # 8. missing remote verification: unreachable remote fails closed
+    r = rv(cur, remote=os.path.join(d, "nonexistent.git"))
+    check("AT-24", "unreachable remote fails closed (missing remote verification)",
+          r.returncode == 1 and "could not be verified" in r.stdout
+          and "fail closed" in r.stdout, r.stdout)
+    # 9. runs-manifest contradiction: cited run's head_sha differs -> FAIL
+    man = tmpfile(json.dumps({"runs": {"999999": {"head_sha": sha("9"),
+                                                  "conclusion": "success"}}}), ".json")
+    contra = log_with("## 2026-10-20T10:00:00Z | P-11-INTENT | push-intent | branch=b credential=OWNER-PAT-1\n"
+                      "## 2026-10-20T11:00:00Z | P-11-CONFIRM | push-confirm | branch=b remote_sha=%s "
+                      "credential=OWNER-PAT-1 evidence=\"git ls-remote origin refs/heads/b -> %s; gate run 999999\"\n"
+                      % (s2, s2))
+    r = rv(contra, extra=("--runs-manifest", man))
+    check("AT-24", "cited run whose head_sha contradicts the recorded SHA fails",
+          r.returncode == 1 and "evidence does not support" in r.stdout, r.stdout)
+    # 10. runs-manifest corroboration passes
+    man2 = tmpfile(json.dumps({"runs": {"999999": {"head_sha": s2,
+                                                   "conclusion": "success"}}}), ".json")
+    r = rv(contra, extra=("--runs-manifest", man2))
+    check("AT-24", "cited run corroborating the recorded SHA passes",
+          r.returncode == 0, r.stdout)
+    # 11. expect-tip mismatch (checked-out candidate is not the live tip) fails
+    r = rv(cur, tip=s1)
+    check("AT-24", "candidate that is not the live tip fails",
+          r.returncode == 1 and "not the expected candidate" in r.stdout, r.stdout)
+    # 12. the real mainline log classifies every confirmation without fabricating
+    #     (classification-only: the CI push-log-integrity job additionally enforces
+    #     tip declaration with --branch/--expect-tip from the event context, which
+    #     a PR-event merge checkout cannot reproduce here)
+    real = os.path.join(REPO, "docs", "evidence", "push-log", "PUSH_LOG.md")
+    r = run("evidence_sequence_check.py", real, "--pushlog-schema", "--remote-verify")
+    check("AT-24", "the real mainline log passes remote classification (no fabrication)",
+          r.returncode == 0, r.stdout)

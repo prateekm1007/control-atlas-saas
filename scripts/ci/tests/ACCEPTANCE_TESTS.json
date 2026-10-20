@@ -80,6 +80,22 @@
     "AT-19": {
       "name": "EC-22 Status-summary grammar (Round-19): PR-body Status-summary lines carry the same vocabulary as STATUS: lines -- off-vocabulary tokens (e.g. ACTIVATION_PENDING) fail, NOT_RUN/PUSHED/MERGED pass, RUN_PASS inside Status-summary is validated against the runs manifest",
       "node": "scripts/ci/tests/test_acceptance.py::test_at19_status_summary_grammar"
+    },
+    "AT-21": {
+      "name": "EC-23 fingerprint allowlist (exact documented fp passes; new docs//evidence/ finding fails; contradiction fails; baseline integrity; H-1 separate under A-02; empty report passes; fail-closed missing report)",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at21_secret_baseline_allowlist"
+    },
+    "AT-22": {
+      "name": "EC-23 scan controls (genuine detection + fired rule + redaction verified; scanner exit 0/1, missing/malformed report, unredacted key, unexpected findings all fail; clean-repository negative control passes)",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at22_secret_scan_controls"
+    },
+    "AT-23": {
+      "name": "EC-26 trigger liveness (valid push/PR passes; manual-only, branch-excluded, branches-ignore, missing annotation, unknown event token, absent on: block all fail; PROPOSED drafts allowed)",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at23_workflow_trigger_liveness"
+    },
+    "AT-24": {
+      "name": "EC-24 remote-ref verification (CURRENT/HISTORICAL classification; stale-but-undeclared tip fails; PENDING declared tip passes; RECONCILE records; mismatched branch, fabricated evidence, unpaired confirm, unreachable remote, contradicting run evidence all fail)",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at24_pushlog_remote_verification"
     }
   }
 }

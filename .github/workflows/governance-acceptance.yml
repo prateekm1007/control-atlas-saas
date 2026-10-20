@@ -7,22 +7,35 @@ name: Governance Acceptance
 # file is the live enforcement point cited by the INDEX inventory).
 #
 # Job map (rule -> job):
-#   acceptance-suite        AT-01..AT-20 full acceptance suite (EC-6/EC-20 dogfood)
+#   acceptance-suite        AT-01..AT-24 full acceptance suite (EC-6/EC-20 dogfood)
 #   reading-note-inventory  EC-26/EC-2: inventory derivation, note mapping, and
-#                           ACTIVE-rule liveness (unpinned, under .github/workflows/)
+#                           ACTIVE-rule liveness + trigger liveness (~events=)
 #   status-vocabulary       EC-22/EC-12: vocabulary + runs-manifest validation over
 #                           the evidence files that make machine-checkable claims
 #   push-log-integrity      EC-18/EC-17/EC-24: schema, unique IDs, INTENT/CONFIRM
-#                           pairing (pending disclosed), append-only parent-prefix
+#                           pairing (pending disclosed), append-only parent-prefix,
+#                           and Round-20 live remote-ref verification (every
+#                           CONFIRM/RECONCILE vs ls-remote; the branch under test's
+#                           tip must be declared; cited run IDs vs the manifest)
 #   ec25-trigger-lint       EC-25/EC-7: deploy-trigger lint against the ACTUAL
 #                           current .github/workflows/ tree
 #   package-integrity       direction 3C/7: manifest coverage + digests, and the
 #                           package-scoped forbidden-reference check
 #   claim-verification      EC-16/EC-19/EC-20 on PR bodies (PR events only)
 #   declared-base           EC-21 on PR bodies (PR events only)
-#   secret-scan-all-refs    EC-23: full-history all-refs secret scan with
-#                           positive/negative controls and a documented
-#                           classification of the known baseline findings
+#   secret-scan-all-refs    EC-23: full-history all-refs secret scan; the controls
+#                           are verified, not assumed (Round-20): the positive
+#                           control must produce the expected finding with the
+#                           expected rule fired and the key redacted (scanner
+#                           crashes exit 1 and fail closed; findings-found is
+#                           disambiguated via --exit-code 101), the clean negative
+#                           control must exit 0 with an empty report, and the
+#                           all-refs findings must match the REVIEWED fingerprint
+#                           allowlist (docs/evidence/ec16-ec26/
+#                           secret_scan_baseline.json; unknown fingerprints FAIL
+#                           wherever they live -- no docs//evidence/ category
+#                           exemption; the two H-1 history fingerprints stay a
+#                           separate A-02 class, disclosed every run)
 #
 # Supply-chain: no third-party actions are used in this workflow (only the
 # first-party actions/checkout and actions/setup-python, tag-pinned exactly as
@@ -116,24 +129,62 @@ jobs:
             --runs-manifest runs_manifest.json
 
   push-log-integrity:
-    name: EC-18 push-log schema and append-only integrity
+    name: EC-18/EC-24 push-log schema, append-only, remote verification
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - name: Schema + unique IDs + INTENT/CONFIRM pairing + parent-prefix
+      - name: Build the runs manifest from GitHub Actions records
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          runs = {}
+          page = 1
+          while page <= 10:
+              req = urllib.request.Request(
+                  "https://api.github.com/repos/%s/actions/runs?per_page=100&page=%d"
+                  % (os.environ["GITHUB_REPOSITORY"], page),
+                  headers={"Authorization": "Bearer %s" % os.environ["GH_TOKEN"],
+                           "Accept": "application/vnd.github+json"})
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  data = json.load(resp)
+              for run in data.get("workflow_runs", []):
+                  runs[str(run["id"])] = {"head_sha": run["head_sha"],
+                                          "conclusion": run["conclusion"]}
+              if len(data.get("workflow_runs", [])) < 100:
+                  break
+              page += 1
+          json.dump({"runs": runs}, open("runs_manifest.json", "w"), indent=1)
+          print("runs manifest: %d run record(s)" % len(runs))
+          PY
+      - name: Schema + append-only + pairing + live remote-ref verification
+        # Round-20 direction 4: every CONFIRM/RECONCILE is verified against the
+        # live remote ref for its claimed branch; a confirmation for a different
+        # tip is classified HISTORICAL, not current; the branch under test's
+        # live tip must be declared (unpaired INTENT => PENDING, disclosed; an
+        # undeclared tip -- the Round-19 follow-up-push class -- FAILS); cited
+        # run IDs are checked against the manifest (contradicting head FAILS).
+        env:
+          BRANCH_UNDER_TEST: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+          EXPECTED_TIP: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           if git rev-parse --verify HEAD~1 >/dev/null 2>&1 \
              && git cat-file -e HEAD~1:docs/evidence/push-log/PUSH_LOG.md 2>/dev/null; then
             git show HEAD~1:docs/evidence/push-log/PUSH_LOG.md > "$RUNNER_TEMP/pushlog_prev.md"
             python3 scripts/ci/evidence_sequence_check.py \
-              docs/evidence/push-log/PUSH_LOG.md --pushlog-schema \
+              docs/evidence/push-log/PUSH_LOG.md --pushlog-schema --remote-verify \
+              --branch "$BRANCH_UNDER_TEST" --expect-tip "$EXPECTED_TIP" \
+              --runs-manifest runs_manifest.json \
               --parent-prefix "$RUNNER_TEMP/pushlog_prev.md"
           else
             python3 scripts/ci/evidence_sequence_check.py \
-              docs/evidence/push-log/PUSH_LOG.md --pushlog-schema
+              docs/evidence/push-log/PUSH_LOG.md --pushlog-schema --remote-verify \
+              --branch "$BRANCH_UNDER_TEST" --expect-tip "$EXPECTED_TIP" \
+              --runs-manifest runs_manifest.json
           fi
 
   ec25-trigger-lint:
@@ -264,98 +315,104 @@ jobs:
           echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tgz" | sha256sum -c -
           tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks && chmod +x /tmp/gitleaks
           /tmp/gitleaks version
-      - name: Positive control - a seeded DOCUMENTED fake key MUST be detected
+      - name: Positive control - the seeded SYNTHETIC key must be genuinely detected
+        # Round-20 direction 3: a nonzero exit alone proves nothing (a scanner
+        # crash also exits nonzero). The scan runs with --exit-code 101 so
+        # findings-found is distinct from execution errors (which exit 1), and
+        # scripts/ci/secret_control_check.py verifies the REPORT: the expected
+        # finding for the seeded file, the expected rule (aws-access-token)
+        # actually fired, no unexpected extra findings, and the assembled key
+        # redacted everywhere (report bytes + captured log). The key is passed
+        # via an environment variable, never argv or file content, and is
+        # assembled at runtime from two non-adjacent parts so this tracked file
+        # cannot match the aws-access-token rule and pollute the real-repo
+        # scans. (Defect history: the first Round-19 version seeded Amazon's
+        # documented example key, which gitleaks 8.30.1's default config
+        # allowlists -- runs 39438362567 et al., job log 118681317783; the
+        # second version accepted any nonzero exit -- Round-20 audit finding.)
+        env:
+          SEED_PIECE_A: "AKIA"
+          SEED_PIECE_B: "T7W2QZ5XN4PRM3KV"
         run: |
           set -uo pipefail
-          # Safe fixture: a SYNTHETIC AWS-shaped token, assembled at runtime
-          # from two deliberately non-adjacent quoted parts (never a real
-          # credential; never committed to this repository; --redact keeps the
-          # assembled value out of the log). Because the parts are never
-          # adjacent in this tracked file, the workflow itself cannot match
-          # the aws-access-token rule and pollute the real-repo scans below.
-          # (Defect history: the first version seeded Amazon's DOCUMENTED
-          # example key, which gitleaks 8.30.1's default config allowlists,
-          # so the control failed closed on runs 39438362567 et al.; root-
-          # caused from Actions job log 118681317783 plus local probe runs
-          # with the same pinned binary; fixed in the Round-19 follow-up.)
+          SEED_AWS_TOKEN="${SEED_PIECE_A}${SEED_PIECE_B}"
+          export SEEDED_KEY="$SEED_AWS_TOKEN"
           rm -rf /tmp/seedrepo && mkdir -p /tmp/seedrepo && cd /tmp/seedrepo
           git init -q && git config user.email t@t && git config user.name t
-          SEED_AWS_TOKEN="AKIA""T7W2QZ5XN4PRM3KV"
           printf 'aws_access_key_id = %s\n' "$SEED_AWS_TOKEN" > fixture.txt
           git add fixture.txt && git commit -qm "seeded fixture"
           set +e
-          /tmp/gitleaks detect --source . --log-opts="--all" --redact --verbose > /tmp/seed_scan.log 2>&1
+          /tmp/gitleaks detect --source . --log-opts="--all" --redact --exit-code 101 \
+            --report-path /tmp/seed_report.json --report-format json > /tmp/seed_scan.log 2>&1
           RC=$?
           set -e
-          if [ "$RC" -eq 0 ]; then
-            echo "FAIL: seeded fake key was NOT detected - the scan is not trustworthy"; exit 1
-          fi
-          echo "PASS: seeded fake key detected (exit $RC)"
-      - name: Negative control - a clean repo MUST pass
+          python3 "$GITHUB_WORKSPACE/scripts/ci/secret_control_check.py" positive \
+            --report /tmp/seed_report.json --exit-code "$RC" \
+            --expect-rule aws-access-token --expect-file fixture.txt \
+            --key-env SEEDED_KEY --log-file /tmp/seed_scan.log
+      - name: Negative control - a clean repo must pass (verified, not assumed)
         run: |
+          set -uo pipefail
           rm -rf /tmp/cleanrepo && mkdir -p /tmp/cleanrepo && cd /tmp/cleanrepo
           git init -q && git config user.email t@t && git config user.name t
           echo "just a clean file" > clean.txt
           git add clean.txt && git commit -qm "clean"
-          /tmp/gitleaks detect --source . --log-opts="--all" --redact \
-            || { echo "FAIL: clean repo flagged"; exit 1; }
-          echo "PASS: clean repo exits 0"
+          set +e
+          /tmp/gitleaks detect --source . --log-opts="--all" --redact --exit-code 101 \
+            --report-path /tmp/clean_report.json --report-format json > /tmp/clean_scan.log 2>&1
+          RC=$?
+          set -e
+          python3 "$GITHUB_WORKSPACE/scripts/ci/secret_control_check.py" negative \
+            --report /tmp/clean_report.json --exit-code "$RC"
       - name: HEAD-tree scan of the exact candidate (fails on any finding)
         run: |
           set -uo pipefail
-          /tmp/gitleaks detect --source . --no-git --redact --exit-code 1 -v \
-            && echo "PASS: HEAD tree clean" || { echo "FAIL: HEAD tree has findings"; exit 1; }
-      - name: All-refs full-history scan with baseline classification
+          set +e
+          /tmp/gitleaks detect --source . --no-git --redact --exit-code 101 -v \
+            --report-path /tmp/headtree_report.json --report-format json > /tmp/headtree_scan.log 2>&1
+          RC=$?
+          set -e
+          if [ "$RC" -eq 0 ]; then
+            echo "PASS: HEAD tree clean"
+          elif [ "$RC" -eq 101 ]; then
+            echo "FAIL: HEAD tree has findings (baseline classification below; see the report artifact)"
+            python3 scripts/ci/secret_baseline_check.py \
+              --report /tmp/headtree_report.json \
+              --baseline docs/evidence/ec16-ec26/secret_scan_baseline.json || true
+            exit 1
+          else
+            echo "FAIL: scanner execution error (exit $RC) is not a pass"
+            tail -20 /tmp/headtree_scan.log || true
+            exit 1
+          fi
+      - name: All-refs full-history scan against the reviewed fingerprint allowlist
+        # Round-20 direction 3: the Round-19 docs//evidence/ category exemption
+        # is REPLACED by the explicit reviewed allowlist
+        # (docs/evidence/ec16-ec26/secret_scan_baseline.json + its MD record):
+        # every finding must match a documented fingerprint; unknown
+        # fingerprints FAIL wherever they live; the two H-1 history fingerprints
+        # are a separate A-02 class, disclosed on every run (issuer-side
+        # revocation stays open). The scan itself runs with --exit-code 0, so a
+        # nonzero exit here is a scanner execution failure and fails closed.
         run: |
           set -euo pipefail
-          /tmp/gitleaks detect --source . --log-opts="--all" --redact \
-            --report-path /tmp/gitleaks_all_refs.json --report-format json --exit-code 0 || true
-          python3 - <<'PY'
-          import json, sys
-          # Known baseline of the full-history scan (documented, dated 2026-10-20):
-          #  - the H-1 former provider key exists in PRE-RELEASE history at commit
-          #    b66f0e3b (system_diagnosis.py:8, probe_models.py:5, rule gcp-api-key).
-          #    History is immutable by policy (no rewrite as a substitute for
-          #    revocation); the open remediation is issuer-side revocation (A-02,
-          #    register). These two fingerprints are tolerated ONLY while that
-          #    record stands and are printed on every run.
-          #  - generic-api-key hits under docs/ or evidence/ are the known
-          #    digest-string false-positive class in evidence tables (census
-          #    precedent); reported, never silently suppressed.
-          #  - anything else FAILS the job.
-          KNOWN_H1 = {
-              "b66f0e3bc8b5e86f5810ff52b598d917420ac7a3:system_diagnosis.py:gcp-api-key:8",
-              "b66f0e3bc8b5e86f5810ff52b598d917420ac7a3:probe_models.py:gcp-api-key:5",
-          }
-          findings = json.load(open("/tmp/gitleaks_all_refs.json"))
-          new, evidence_class, known_h1 = [], [], []
-          for f in findings:
-              fp, rule, path = f["Fingerprint"], f["RuleID"], f["File"]
-              if fp in KNOWN_H1:
-                  known_h1.append(fp)
-              elif rule == "generic-api-key" and (path.startswith("docs/")
-                                                  or path.startswith("evidence/")):
-                  evidence_class.append(fp)
-              else:
-                  new.append((fp, rule, path))
-          print("all-refs findings: %d total | known H-1 history (A-02 open): %d | "
-                "evidence digest false-positive class (reported): %d | NEW: %d"
-                % (len(findings), len(known_h1), len(evidence_class), len(new)))
-          for fp in known_h1:
-              print("  KNOWN (A-02): %s" % fp)
-          for fp in evidence_class:
-              print("  REPORTED (evidence digest class): %s" % fp)
-          if new:
-              for fp, rule, path in new:
-                  print("  NEW FINDING: %s [%s] %s" % (fp, rule, path))
-              print("FAIL: new secret finding(s) outside the documented baseline")
-              sys.exit(1)
-          print("PASS: no new secret findings outside the documented baseline "
-                "(known classes disclosed above; report artifact uploaded)")
-          PY
+          /tmp/gitleaks detect --source . --log-opts="--all" --redact --exit-code 0 \
+            --report-path /tmp/gitleaks_all_refs.json --report-format json
+          python3 scripts/ci/secret_baseline_check.py \
+            --report /tmp/gitleaks_all_refs.json \
+            --baseline docs/evidence/ec16-ec26/secret_scan_baseline.json
       - name: Upload the redacted all-refs report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ec23-gitleaks-all-refs-report
           path: /tmp/gitleaks_all_refs.json
+      - name: Upload the control reports (positive, negative, HEAD tree)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ec23-control-reports
+          path: |
+            /tmp/seed_report.json
+            /tmp/clean_report.json
+            /tmp/headtree_report.json
