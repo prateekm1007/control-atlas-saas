@@ -439,3 +439,40 @@
   the published branch logs. head_at_intent is DEFERRED per the two-phase
   schema; if this branch is pushed again, P-070-CONFIRM records the
   remote-verified tip after that push returns.
+
+
+## 2026-10-20T19:12:00Z | P-070-CONFIRM | push-confirm | branch=repair/round19-mainline-acceptance remote_sha=47022bea13e685b7baa164a8964e4fa7b9bf5d1d credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/repair/round19-mainline-acceptance -> 47022bea13e685b7baa164a8964e4fa7b9bf5d1d (re-verified 2026-10-20T19:06:39Z after the push returned; the push was an ordinary fast-forward 75f6a8b..47022be, single-writer pre-checked, main verified untouched at f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd immediately before and after); push-event checks on this exact head: Toscanini Stability Gate run 39480624653 conclusion=success, Governance Acceptance run 39480624773 conclusion=FAILURE; PR-event checks on this exact head: gate run 39480632051 success, governance-acceptance run 39480632049 FAILURE"
+
+- Two-phase completion for the push declared by P-070-INTENT. The push carried
+  P-069-CONFIRM, this INTENT, the evidence table regenerated in the correct
+  order, and the manifest over the final table bytes — the digest-mismatch
+  finding from 75f6a8b is gone; exactly ONE finding remains on this head.
+- The Governance Acceptance failure is recorded HONESTLY: "the active
+  merge-intent P-068 declares head 75f6a8b… but the candidate is 47022be… —
+  redeclare the merge-intent on the exact final candidate before merging".
+  This is the DESIGNED interaction between the two-phase protocol and the
+  exact-candidate binding: every bookkeeping push advances the candidate and
+  therefore invalidates the previous merge-intent declaration; the checker's
+  own remediation (redeclare) is applied by this follow-up push. The Stability
+  Gate passed on this exact head.
+
+## 2026-10-20T19:12:30Z | P-071 | intent-reconcile | voids=P-068 branch=repair/round19-mainline-acceptance credential=OWNER-PAT-1 evidence="the P-068 merge-intent resolved to 75f6a8b (its introducing commit), which the P-070 evidence-cycle push superseded; redeclared as P-072 on this push per the checker's exact-candidate rule"
+
+- Truthful void record: P-068's content is preserved unchanged in the log.
+
+## 2026-10-20T19:13:00Z | P-072 | merge-intent | target=main pr=30 source_branch=repair/round19-mainline-acceptance expected_pre_merge_base=f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-21 directions 6 and 9 (merge only after the Round-21 blockers are fixed, the full gate passes on the final SHA, the post-merge main transition is demonstrated, and the required independent approval is recorded; merge through the protected PR mechanism with a MERGE COMMIT; after that merge, PRs #31-#36 revalidate serially against the resulting main; EC-21 is not waived)"
+
+- Redeclared on the exact final candidate introduced by this push. NO further
+  bookkeeping push is planned after this one: the branch tip carrying this
+  record is intended to BE the reviewed merge candidate. The merge executes
+  only through the protected PR mechanism after the complete gate is green on
+  this exact candidate AND the required independent approval exists.
+
+## 2026-10-20T19:13:30Z | P-073-INTENT | push-intent | branch=repair/round19-mainline-acceptance head_at_intent=DEFERRED expected_remote_tip_before_push=47022bea13e685b7baa164a8964e4fa7b9bf5d1d credential=OWNER-PAT-1 authorized_by="auditor Round-19 direction 7 and Round-21 direction 8 (continuation): redeclare the merge-intent on the exact final candidate per the checker's remediation; no source, workflow, or documentation content changes beyond the push log, the regenerated evidence table, and the manifest; no direct push to main; no force-push"
+
+- This push carries: P-070-CONFIRM, this void + redeclaration pair, this
+  INTENT, the evidence table regenerated AFTER this log append, and the
+  manifest regenerated over those final bytes. ID selection: P-069..P-073
+  verified unused across the published branch logs. head_at_intent is DEFERRED
+  per the two-phase schema; if this branch is pushed again, P-073-CONFIRM
+  records the remote-verified tip after that push returns.

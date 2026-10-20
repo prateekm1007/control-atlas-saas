@@ -1,6 +1,6 @@
 # Round-21 evidence table (GENERATED FROM LIVE EVIDENCE)
 
-- **Generated:** 2026-10-20T19:05:27Z by `scripts/ci/generate_evidence_table.py` (committed; re-runnable).
+- **Generated:** 2026-10-20T19:12:07Z by `scripts/ci/generate_evidence_table.py` (committed; re-runnable).
 - **Sources:** anonymous `git ls-remote` against `https://github.com/prateekm1007/control-atlas-saas.git` at the generation timestamp; the GitHub Actions API (`/repos/prateekm1007/control-atlas-saas`) for every run citation found in the push log; the push log itself for the entry inventory. Nothing in this table is hand-copied.
 - **Scope note:** the exact final candidate SHA of the Round-21 repair is the commit carrying the terminal `P-060-INTENT` (this table is part of that commit, so it cannot embed the commit's own SHA); the candidate is bound by the push-log terminal intent and PR #30's body after the push. Run rows below are the verified pre-candidate history.
 
@@ -9,7 +9,7 @@
 | Branch | Live tip SHA |
 |---|---|
 | `main` | `f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd` |
-| `repair/round19-mainline-acceptance` | `75f6a8bc950204bdb1b375dbeda697a1bc549026` |
+| `repair/round19-mainline-acceptance` | `47022bea13e685b7baa164a8964e4fa7b9bf5d1d` |
 | `activation/ec16-ec19-ec20-r19` | `bd8d86a3a93c1717921587f9585f2b97baf22836` |
 | `activation/ec21-r19` | `32d272d3243f62224248c9d29eb5dcb0c8a20e5a` |
 | `activation/ec26-r19` | `151b8c12d6e5286cc3153461677b193b6d57495d` |
@@ -46,9 +46,9 @@
 | `P-014-CONFIRM` | push-confirm | `governance/canonical-docs` | `b12f30e95255`… | `d51ad7c7fcbe`… | HISTORICAL (valid for the push it describes) |
 | `P-015-INTENT` | push-intent | `proposal/ec16-ec26-enforcement-rebased` | `-`… | `3745cd2af2e0`… | INTENT (terminal pending disclosed by the checker) |
 | `P-015-CONFIRM` | push-confirm | `proposal/ec16-ec26-enforcement-rebased` | `0f1e9a8856ba`… | `3745cd2af2e0`… | HISTORICAL (valid for the push it describes) |
-| `P-017-INTENT` | push-intent | `repair/round19-mainline-acceptance` | `-`… | `75f6a8bc9502`… | INTENT (terminal pending disclosed by the checker) |
-| `P-017-CONFIRM` | push-confirm | `repair/round19-mainline-acceptance` | `2dcbbd781a2c`… | `75f6a8bc9502`… | HISTORICAL (valid for the push it describes) |
-| `P-050` | push-reconcile | `repair/round19-mainline-acceptance` | `f44bf4d93f8d`… | `75f6a8bc9502`… | HISTORICAL (valid for the push it describes) |
+| `P-017-INTENT` | push-intent | `repair/round19-mainline-acceptance` | `-`… | `47022bea13e6`… | INTENT (terminal pending disclosed by the checker) |
+| `P-017-CONFIRM` | push-confirm | `repair/round19-mainline-acceptance` | `2dcbbd781a2c`… | `47022bea13e6`… | HISTORICAL (valid for the push it describes) |
+| `P-050` | push-reconcile | `repair/round19-mainline-acceptance` | `f44bf4d93f8d`… | `47022bea13e6`… | HISTORICAL (valid for the push it describes) |
 | `P-051` | push-reconcile | `activation/ec16-ec19-ec20-r19` | `bd8d86a3a93c`… | `bd8d86a3a93c`… | CURRENT |
 | `P-052` | push-reconcile | `activation/ec21-r19` | `32d272d3243f`… | `32d272d3243f`… | CURRENT |
 | `P-053` | push-reconcile | `activation/ec26-r19` | `151b8c12d6e5`… | `151b8c12d6e5`… | CURRENT |
@@ -56,24 +56,28 @@
 | `P-055` | push-reconcile | `activation/ec23-r19` | `fa854f8f3b7f`… | `fa854f8f3b7f`… | CURRENT |
 | `P-056` | push-reconcile | `activation/ec24-r19` | `28ee983e0f98`… | `28ee983e0f98`… | CURRENT |
 | `P-057` | push-reconcile | `docs/owner-decisions-r19` | `df98f5e36710`… | `df98f5e36710`… | CURRENT |
-| `P-058-INTENT` | push-intent | `repair/round19-mainline-acceptance` | `-`… | `75f6a8bc9502`… | INTENT (terminal pending disclosed by the checker) |
-| `P-058-CONFIRM` | push-confirm | `repair/round19-mainline-acceptance` | `c1680eaf3d33`… | `75f6a8bc9502`… | HISTORICAL (valid for the push it describes) |
-| `P-059-INTENT` | push-intent | `repair/round19-mainline-acceptance` | `-`… | `75f6a8bc9502`… | INTENT (terminal pending disclosed by the checker) |
-| `P-059-CONFIRM` | push-confirm | `repair/round19-mainline-acceptance` | `62fab8a5ad0c`… | `75f6a8bc9502`… | HISTORICAL (valid for the push it describes) |
-| `P-060-INTENT` | push-intent | `repair/round19-mainline-acceptance` | `-`… | `75f6a8bc9502`… | INTENT (terminal pending disclosed by the checker) |
-| `P-061` | merge-intent | `repair/round19-mainline-acceptance` | `-`… | `75f6a8bc9502`… | MERGE-INTENT |
+| `P-058-INTENT` | push-intent | `repair/round19-mainline-acceptance` | `-`… | `47022bea13e6`… | INTENT (terminal pending disclosed by the checker) |
+| `P-058-CONFIRM` | push-confirm | `repair/round19-mainline-acceptance` | `c1680eaf3d33`… | `47022bea13e6`… | HISTORICAL (valid for the push it describes) |
+| `P-059-INTENT` | push-intent | `repair/round19-mainline-acceptance` | `-`… | `47022bea13e6`… | INTENT (terminal pending disclosed by the checker) |
+| `P-059-CONFIRM` | push-confirm | `repair/round19-mainline-acceptance` | `62fab8a5ad0c`… | `47022bea13e6`… | HISTORICAL (valid for the push it describes) |
+| `P-060-INTENT` | push-intent | `repair/round19-mainline-acceptance` | `-`… | `47022bea13e6`… | INTENT (terminal pending disclosed by the checker) |
+| `P-061` | merge-intent | `repair/round19-mainline-acceptance` | `-`… | `47022bea13e6`… | MERGE-INTENT |
 | `P-062` | evidence-back | `proposal/ec16-ec26-enforcement` | `17eb88184c9f`… | `c4a0fcc33579`… | EVIDENCE-BACK (reviewed historical support) |
 | `P-063` | evidence-back | `docs/owner-decisions` | `78b147d55660`… | `afd445cc3c8e`… | EVIDENCE-BACK (reviewed historical support) |
 | `P-064` | evidence-back | `proposal/ec16-ec26-enforcement` | `dab33d946fe3`… | `c4a0fcc33579`… | EVIDENCE-BACK (reviewed historical support) |
 | `P-065` | evidence-back | `governance/canonical-docs` | `b12f30e95255`… | `d51ad7c7fcbe`… | EVIDENCE-BACK (reviewed historical support) |
-| `P-060-CONFIRM` | push-confirm | `repair/round19-mainline-acceptance` | `0fe4840d1f51`… | `75f6a8bc9502`… | HISTORICAL (valid for the push it describes) |
-| `P-066-INTENT` | push-intent | `repair/round19-mainline-acceptance` | `-`… | `75f6a8bc9502`… | INTENT (terminal pending disclosed by the checker) |
-| `P-066-CONFIRM` | push-confirm | `repair/round19-mainline-acceptance` | `ab63821ef628`… | `75f6a8bc9502`… | HISTORICAL (valid for the push it describes) |
-| `P-067` | intent-reconcile | `repair/round19-mainline-acceptance` | `-`… | `75f6a8bc9502`… | INTENT-RECONCILE (voids a named intent) |
-| `P-068` | merge-intent | `repair/round19-mainline-acceptance` | `-`… | `75f6a8bc9502`… | MERGE-INTENT |
-| `P-069-INTENT` | push-intent | `repair/round19-mainline-acceptance` | `-`… | `75f6a8bc9502`… | INTENT (terminal pending disclosed by the checker) |
-| `P-069-CONFIRM` | push-confirm | `repair/round19-mainline-acceptance` | `75f6a8bc9502`… | `75f6a8bc9502`… | CURRENT |
-| `P-070-INTENT` | push-intent | `repair/round19-mainline-acceptance` | `-`… | `75f6a8bc9502`… | INTENT (terminal pending disclosed by the checker) |
+| `P-060-CONFIRM` | push-confirm | `repair/round19-mainline-acceptance` | `0fe4840d1f51`… | `47022bea13e6`… | HISTORICAL (valid for the push it describes) |
+| `P-066-INTENT` | push-intent | `repair/round19-mainline-acceptance` | `-`… | `47022bea13e6`… | INTENT (terminal pending disclosed by the checker) |
+| `P-066-CONFIRM` | push-confirm | `repair/round19-mainline-acceptance` | `ab63821ef628`… | `47022bea13e6`… | HISTORICAL (valid for the push it describes) |
+| `P-067` | intent-reconcile | `repair/round19-mainline-acceptance` | `-`… | `47022bea13e6`… | INTENT-RECONCILE (voids a named intent) |
+| `P-068` | merge-intent | `repair/round19-mainline-acceptance` | `-`… | `47022bea13e6`… | MERGE-INTENT |
+| `P-069-INTENT` | push-intent | `repair/round19-mainline-acceptance` | `-`… | `47022bea13e6`… | INTENT (terminal pending disclosed by the checker) |
+| `P-069-CONFIRM` | push-confirm | `repair/round19-mainline-acceptance` | `75f6a8bc9502`… | `47022bea13e6`… | HISTORICAL (valid for the push it describes) |
+| `P-070-INTENT` | push-intent | `repair/round19-mainline-acceptance` | `-`… | `47022bea13e6`… | INTENT (terminal pending disclosed by the checker) |
+| `P-070-CONFIRM` | push-confirm | `repair/round19-mainline-acceptance` | `47022bea13e6`… | `47022bea13e6`… | CURRENT |
+| `P-071` | intent-reconcile | `repair/round19-mainline-acceptance` | `-`… | `47022bea13e6`… | INTENT-RECONCILE (voids a named intent) |
+| `P-072` | merge-intent | `repair/round19-mainline-acceptance` | `-`… | `47022bea13e6`… | MERGE-INTENT |
+| `P-073-INTENT` | push-intent | `repair/round19-mainline-acceptance` | `-`… | `47022bea13e6`… | INTENT (terminal pending disclosed by the checker) |
 
 ## 3. Cited Actions runs (GitHub API at generation time)
 
@@ -114,6 +118,10 @@
 | 39479847948 | Governance Acceptance | push | repair/round19-mainline-acceptance | `75f6a8bc9502…` | failure |
 | 39479856955 | Governance Acceptance | pull_request | repair/round19-mainline-acceptance | `75f6a8bc9502…` | failure |
 | 39479856971 | Toscanini Stability Gate | pull_request | repair/round19-mainline-acceptance | `75f6a8bc9502…` | success |
+| 39480624653 | Toscanini Stability Gate | push | repair/round19-mainline-acceptance | `47022bea13e6…` | success |
+| 39480624773 | Governance Acceptance | push | repair/round19-mainline-acceptance | `47022bea13e6…` | failure |
+| 39480632049 | Governance Acceptance | pull_request | repair/round19-mainline-acceptance | `47022bea13e6…` | failure |
+| 39480632051 | Toscanini Stability Gate | pull_request | repair/round19-mainline-acceptance | `47022bea13e6…` | success |
 
 ## 4. Remaining pending state (disclosed, never smoothed over)
 
