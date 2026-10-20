@@ -18,7 +18,7 @@
 
 Per the auditor's 2026-10-20 ruling (D-5, under full delegation): **EC-17 (push on completion), EC-22 (status vocabulary), and EC-25 (no deploy on push) are IN FORCE** upon merge of D-2 (`governance/canonical-docs` merged to main as `b851e01`, gate run 39412416212 = success). They are recorded `ACTIVE` in the rule inventory below; the auditor records this activation in the decision register.
 
-**EC-16, EC-18, EC-19, EC-20, EC-21, EC-23, EC-24, and EC-26 remain PROPOSED**: each becomes in force only when its activation workflow has run green on a feature branch AND the auditor records it in the register (Direction 6 of the same ruling).
+**EC-16, EC-19, EC-20, EC-21, EC-23, EC-24, EC-26 remain PROPOSED**: each becomes in force only when its activation workflow has run green on a feature branch AND the auditor records it in the register (Direction 6 of the same ruling).
 
 The base in-force set is unchanged: the EC sections enforced by the pinned constitutions (`ENGINEERING_CONSTITUTION.md` blob `b6bb35e8…`, `constitution.md` blob `211ad2c5…`) plus OBS-153 / CRIT-154 — as mapped in the Round-12 reading note (worklog Task 35) and in `docs/evidence/reading-note/READING_NOTE_LATEST.md`.
 
@@ -54,7 +54,7 @@ pinned-blobs: b6bb35e84956d84a8c9d9e65734c212baf3ed075,211ad2c5d4b40059d9f3f03de
 | CRIT-154 | ACTIVE | procedural:constitution.md | NONE |
 | EC-16 | PROPOSED | script:scripts/ci/verify_claimed_shas.py, workflow:proposals/ci/verify-claimed-shas.yml#claimed-shas | AT-01, AT-12 |
 | EC-17 | ACTIVE | procedural:docs/evidence/push-log/PUSH_LOG.md, script:scripts/ci/evidence_sequence_check.py, workflow:.github/workflows/governance-acceptance.yml#push-log-integrity | AT-13, AT-20 |
-| EC-18 | PROPOSED | script:scripts/ci/evidence_sequence_check.py, workflow:proposals/ci/evidence-sequence-check.yml#sequence | AT-05, AT-13 |
+| EC-18 | ACTIVE | script:scripts/ci/evidence_sequence_check.py, workflow:.github/workflows/governance-acceptance.yml#push-log-integrity | AT-05, AT-13, AT-20 |
 | EC-19 | PROPOSED | workflow:proposals/ci/verify-claimed-shas.yml#pr-fields, procedural:docs/directives/INDEX.md | AT-01, AT-07 |
 | EC-20 | PROPOSED | script:scripts/ci/verify_claimed_shas.py, workflow:proposals/ci/verify-claimed-shas.yml#acceptance-tests-executed | AT-09 |
 | EC-21 | PROPOSED | script:scripts/ci/check_declared_base.py, workflow:proposals/ci/check-declared-base.yml#declared-base | AT-02, AT-10 |
