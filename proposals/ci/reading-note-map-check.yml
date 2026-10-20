@@ -1,0 +1,28 @@
+# INERT DRAFT — activates only on owner approval (EC-26), see move-map in proposals/ci/README.md
+name: EC26 reading note maps rules
+on:
+  pull_request:
+    paths: ['docs/evidence/reading-note/**', 'docs/directives/INDEX.md', 'scripts/ci/**']
+permissions:
+  contents: read
+jobs:
+  map:
+    name: EC-26 reading note maps rules to checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Derive required rule set from the canonical index (never from the PR body)
+        run: |
+          # Fail closed if the machine-readable inventory is missing:
+          grep -q "BEGIN RULE INVENTORY" docs/directives/INDEX.md || {
+            echo "FAIL: rule inventory block missing from docs/directives/INDEX.md"; exit 1; }
+          python3 scripts/ci/reading_note_map_check.py \
+            --index docs/directives/INDEX.md \
+            --repo-root .
+      - name: Self-test mode (this package maps its own PROPOSED rules too)
+        run: |
+          python3 scripts/ci/reading_note_map_check.py \
+            --index docs/directives/INDEX.md \
+            --repo-root . \
+            --include-proposed \
+            --require-strings "SERIES-2026-10-20-EC"

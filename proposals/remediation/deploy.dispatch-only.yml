@@ -1,0 +1,99 @@
+# PROPOSED REPLACEMENT for .github/workflows/deploy.yml — dispatch-only, gated (EC-25)
+#
+# INERT: this file lives under proposals/remediation/ and is NOT a workflow. It is applied
+# only through the approved merge path together with the no-deploy-on-push lint activation,
+# per the move-map precondition in proposals/ci/README.md.
+#
+# Defect it remediates (verified from main @ 2195a048, deploy.yml blob 838627b4):
+#   the `deploy` job triggers on `push: branches: [main]` with no gate — every push to main
+#   rebuilds and redeploys EC2 regardless of required-check results.
+#
+# GitHub-settings prerequisites (must be CONFIGURED AND VERIFIED, not presumed from YAML):
+#   * a "production" deployment environment with required reviewers and deployment-branch
+#     restrictions (restricted to main);
+#   * the Stability Gate ("Unit Tests + Hash Lock", "Secret Scan (gitleaks)") configured as
+#     required checks on main (A-04);
+#   * direct pushes to main disabled for normal development (A-04);
+#   * deployment secrets (EC2_HOST/EC2_USER/EC2_SSH_KEY) referenced only inside this
+#     protected job, never in steps that run on untrusted refs.
+
+name: Deploy Toscanini to EC2 (dispatch-only, gated)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Approved deployment ref (must resolve to refs/heads/main)"
+        required: true
+        default: "main"
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  gated-production-deploy:
+    name: gated-production-deploy
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: EC-25 gate — validate exact SHA and required checks before any deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_REF: ${{ github.event.inputs.ref }}
+        run: |
+          set -euo pipefail
+          GIT_TERMINAL_PROMPT=0
+          fail() { echo "DEPLOY-GATE FAILURE: $*" >&2; exit 1; }
+          # 1. The requested ref must be exactly main (the approved deployment ref).
+          [ "$REQUESTED_REF" = "main" ] || fail "ref '$REQUESTED_REF' is not the approved deployment ref (main)"
+          # 2. Resolve the CURRENT main head from the remote (exact-SHA validation).
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          MAIN_SHA=$(curl -sf -H "Authorization: token $GH_TOKEN" "$API/git/ref/heads/main" \
+                     | python3 -c 'import json,sys; print(json.load(sys.stdin)["object"]["sha"])') \
+                     || fail "could not resolve refs/heads/main from the remote"
+          [ "$GITHUB_SHA" = "$MAIN_SHA" ] || fail "dispatch SHA $GITHUB_SHA != current main head $MAIN_SHA (stale approval)"
+          # 3. Required checks must have SUCCEEDED on that exact SHA (Stability Gate).
+          curl -sf -H "Authorization: token $GH_TOKEN" "$API/commits/$MAIN_SHA/check-runs?per_page=100" \
+            | python3 -c '
+          import json, sys
+          d = json.load(sys.stdin)
+          required = {"Unit Tests + Hash Lock", "Secret Scan (gitleaks)"}
+          runs = {r["name"]: r["conclusion"] for r in d.get("check_runs", [])}
+          missing = required - set(runs)
+          failed = {n: c for n, c in runs.items() if n in required and c != "success"}
+          if missing: print("missing required checks:", sorted(missing)); sys.exit(1)
+          if failed: print("required checks not green:", failed); sys.exit(1)
+          print("required checks green on", d["check_runs"][0]["head_sha"][:12])' \
+            || fail "required checks are not green on $MAIN_SHA"
+          echo "DEPLOY-GATE: exact SHA $MAIN_SHA validated; required checks green"
+      - name: Checkout the approved ref
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Deploy to EC2 (secrets available only inside this protected job)
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3, API-verified 2026-10-20
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/deployments/toscanini-demo/control-atlas-saas
+            echo "Deploying exact SHA: $(git ls-remote origin refs/heads/main | cut -f1)"
+            git fetch origin
+            git clean -fd
+            git reset --hard origin/main
+            docker compose down
+            docker compose build --no-cache
+            docker compose up -d
+            docker image prune -f
+      - name: Post-deploy health signal (deployment command success is not health)
+        run: |
+          echo "Post-deploy health verification belongs to the runbook (EC §8):"
+          echo "record the exact deployed SHA and run the documented health check;"
+          echo "a successful docker compose up is NOT proof of service health."
