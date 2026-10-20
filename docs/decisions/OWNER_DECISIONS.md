@@ -1,4 +1,4 @@
-# OWNER_DECISIONS — Consolidated Decision Register (rev 9)
+# OWNER_DECISIONS — Consolidated Decision Register (rev 12)
 
 **Provenance.** This is the single consolidated decision register, rev 9
 (Round-20, 2026-10-20). Rev 8 — the Round-19 records (the P-015-CONFIRM
@@ -836,3 +836,76 @@ law-semantic changes, no golden-artifact regeneration without their approved
 gates. The independent r2 evidence-archive verification, the portable 40-row
 cohort metadata table, A-02 issuer-side revocation, and the EC2 deployment
 secrets remain OPEN and are not closed by this governance work.
+
+## Part 15 - Round-24 records (AUDITOR-ADJUDICATED, 2026-10-20; register rev 12)
+
+### 15.1 The ruling and the state it was recorded against
+
+The Round-21B auditor directions (items 1-8: re-establish a clean
+constitution-governed baseline; EC-23 report-derived metadata leakage; EC-24
+claim separation and branch-level reconciliation; the protected-main merge
+gate; EC-26 conservative glob coverage; stale evidence and candidate identity;
+credential handling; one ordered repair commit) were received while the
+Round-21B repair was already in progress.
+
+The live state was therefore RE-ESTABLISHED, not assumed: a parallel session
+completed the Round-22 repair (`443d606`) and the Round-23 cycle (`d81c874`),
+and PR #30 was merged into `main` as merge commit `63da0e347002ed9b77071ff1ed0cefda7c0ce88a` (first parent
+`f535a71b`, second parent `d81c874`). This cycle audited the MERGED
+implementation against the auditor's defect list and repaired what was still
+open there. No prior published record was edited; the push log was appended
+only.
+
+### 15.2 Adjudication table (Round-24)
+
+| Auditor defect | State in the merged implementation | Round-24 disposition |
+|---|---|---|
+| EC-23 report-derived metadata leakage | CLOSED by the Round-22 repair (AT-30): per-row type validation, count-only diagnostics, fixed messages, broad-exception safety; no report-derived string reaches stdout/stderr | verified against the live code; unchanged in this cycle |
+| EC-24 claim separation (existence vs push provenance vs CI success) | CLOSED by the Round-22 repair (AT-31/AT-32): event/head_branch validated on every citation, P-011 reclassified NOT-PROVEN, P-013 PUSH-PROVEN through the events feed, CI-success claimed only from a successful run | verified live against the real remote (the re-adjudication reproduces exactly); unchanged in this cycle |
+| EC-24 branch-level reconciliation, global unmatched-intent invariant | CLOSED by the Round-22 repair (AT-32) | verified; unchanged in this cycle |
+| EC-26 conservative glob coverage, ordered negative patterns | CLOSED by the Round-22 repair (AT-34) | verified; unchanged in this cycle |
+| EC-16/19/20: the PR body must declare the EXACT current head and cite a same-head successful run | **OPEN in the merged state**: `verify_claimed_shas.py` verified only that each claimed SHA exists; a stale-but-real body passed the gate | **REPAIRED in this cycle** (`--expect-head-sha` + live-body read in the workflow; AT-35 fails on the prior implementation) |
+| The protected-main merge gate | The Round-22 repair added the merge-transition proof and a pre-merge gate; the Round-23 cycle REMOVED the pre-merge job (register Part 14: in this single-operator repository the PR author is the credential holder, so an independent approval is unsatisfiable). The `pull-requests: read` scope and the live API canary remain | left as the auditor decided; the resulting merge-transition FAILURE on `main` is disclosed, not suppressed (15.4) |
+| Push-log gate must run everywhere, not only in the CI platform | **OPEN in the merged state**: the introducing-commit lookup built a git pathspec from the OS path string; where the path spelling differs from git's (Windows short form vs long form) the pathspec fell outside the repository and the whole gate failed closed on valid logs (eight acceptance groups unrunnable on that platform) | **REPAIRED in this cycle** (the pickaxe now runs from the log's own directory) |
+| Credential handling | no credential file inside any Git working tree in this cycle; the PAT was supplied through the process environment only; no token value in any file, log, or artifact | confirmed; A-01 unchanged |
+| Stale evidence / candidate identity | the evidence-table generator derives the terminal intent and the active merge-intent from the log (Round-22 repair) | verified; regenerated in this cycle |
+| One ordered repair commit, ordinary fast-forward push, remote verification | not applicable to the merged state (the repair had already been merged by another session) | this cycle ships ONE ordered commit on a new branch `repair/round24-claim-head-binding` from the merged `main`, pushed by ordinary fast-forward, with the remote SHA and both event classes verified afterwards |
+
+### 15.3 What this cycle changed
+
+`scripts/ci/verify_claimed_shas.py` (exact-head binding), the
+`claim-verification` job of `.github/workflows/governance-acceptance.yml`
+(live body + explicit expected head), `scripts/ci/evidence_sequence_check.py`
+(pathspec portability), `scripts/ci/tests/test_acceptance.py` (AT-35, AT-13
+harness), `scripts/ci/tests/ACCEPTANCE_TESTS.json`, `docs/directives/INDEX.md`
+(the EC-16/19/20 rows cite AT-35), the push log, this register, P0_STATUS
+section 13, the reading note and the receipt, plus the regenerated evidence
+table and manifest. No scientific, threshold, cohort, law-semantic, deployment
+or protection change.
+
+### 15.4 The merge transition of PR #30 - OPEN, DISCLOSED
+
+The merge happened; the repository's own gate does not verify it. The pull
+request carries no independent approval (only a bot `COMMENTED` review), and
+the declared pre-merge base `f535a71b` is no longer the live tip of `main`.
+`main`'s Governance Acceptance run `39504181997` is RED on the push-log
+integrity job for that reason, and the repair branch's last push (`d81c874`,
+run `39507046623`) is RED for the same reason. This cycle did NOT invent an
+approval, did NOT weaken the gate, and did NOT write any log entry that
+claims the merge was verified. Whether the merged state is to be recorded as a
+disclosed unverified merge, and whether any later merge may be declared through
+a reviewed pull request at all, is the auditor's decision.
+
+### 15.5 Standing items - UNCHANGED
+
+A-01 remains ACCEPTED RISK (no rotation reminder, no rotation initiation, no
+credential operations, no token value written anywhere). A-04 (exact
+branch-protection required-check configuration) stays OPEN until independently
+verified; protection is never bypassed. The scientific hard stop is preserved
+in full: no production deployment, no v25 calibration, no held-out evaluation,
+no threshold or cohort changes, no law-semantic changes, no golden-artifact
+regeneration without their approved gates. The independent r2 evidence-archive
+verification, the portable 40-row cohort metadata table, A-02 issuer-side
+revocation and the EC2 deployment secrets remain OPEN. After any verified
+merge, PRs #31-#36 revalidate serially against the resulting `main` (EC-21 is
+not waived) and PRs #23-#29 close only on proven unique-content coverage.

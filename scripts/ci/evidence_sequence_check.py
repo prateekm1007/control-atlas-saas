@@ -614,19 +614,42 @@ class LogRepo:
         self.ok = False
         self.toplevel = None
         self.rel = None
+        self.log_dir = os.path.dirname(os.path.abspath(log_path))
+        self.log_name = os.path.basename(log_path)
         try:
-            r = subprocess.run(["git", "-C", os.path.dirname(os.path.abspath(log_path)),
+            r = subprocess.run(["git", "-C", self.log_dir,
                                 "rev-parse", "--show-toplevel"],
                                capture_output=True, text=True, timeout=30)
             if r.returncode == 0 and r.stdout.strip():
                 self.toplevel = r.stdout.strip()
-                self.rel = os.path.relpath(os.path.abspath(log_path), self.toplevel)
+                try:
+                    self.rel = os.path.relpath(
+                        os.path.realpath(log_path),
+                        os.path.realpath(self.toplevel)).replace("\\", "/")
+                except (OSError, ValueError):
+                    self.rel = self.log_name
                 self.ok = True
         except (OSError, subprocess.TimeoutExpired):
             pass
 
     def _git(self, *args):
         return subprocess.run(["git", "-C", self.toplevel, *args],
+                              capture_output=True, text=True, timeout=60)
+
+    def _git_in_log_dir(self, *args):
+        """Run git FROM the log's own directory.
+
+        The pickaxe query needs a pathspec. A path computed from the OS path
+        string breaks whenever the two spellings of the same directory differ
+        -- on Windows the 8.3 short form of a temp directory (C:\\Users\\ADMINI~1\\...)
+        versus the long form git reports (C:/Users/Administrator/...) -- which
+        produced a pathspec OUTSIDE the repository, made every
+        introducing-commit lookup fail closed on a perfectly valid log, and
+        turned the whole push-log gate red on that platform. Running git from
+        the log's directory with the file name as the pathspec is
+        spelling-independent.
+        """
+        return subprocess.run(["git", *args], cwd=self.log_dir,
                               capture_output=True, text=True, timeout=60)
 
     def object_exists(self, sha: str) -> bool:
@@ -652,7 +675,7 @@ class LogRepo:
         if not self.ok:
             return None
         needle = f"{eid} | {verb}"
-        r = self._git("log", "-S", needle, "--format=%H", "--", self.rel)
+        r = self._git_in_log_dir("log", "-S", needle, "--format=%H", "--", self.log_name)
         if r.returncode != 0:
             return None
         lines = [l for l in r.stdout.splitlines() if l.strip()]

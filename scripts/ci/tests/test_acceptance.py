@@ -527,9 +527,15 @@ def test_at12_strict_sha_lists():
 def test_at13_append_only_pushlog():
     older_path = os.path.join(REPO, "docs", "evidence", "push-log", "PUSH_LOG.md")
     older = open(older_path, "rb").read()
-    # 1. real current log vs 17eb881 version: append-only holds
-    r = run("evidence_sequence_check.py", older_path, "--parent-prefix",
-            tmpfile(older.decode("utf-8"), ".md"))
+    # 1. real current log vs 17eb881 version: append-only holds. The comparison
+    #    copy is written in BINARY mode: text mode translates the line endings a
+    #    second time on Windows and the checker then compares two different byte
+    #    strings (a false "SHRUNK" failure that made the whole suite
+    #    un-runnable on that platform).
+    same = tmpfile("", ".md")
+    with open(same, "wb") as fh:
+        fh.write(older)
+    r = run("evidence_sequence_check.py", older_path, "--parent-prefix", same)
     check("AT-13", "real PUSH_LOG preserves the 17eb881 version as prefix", r.returncode == 0, r.stdout)
     # 2. synthetic: pure append passes
     d = tempfile.mkdtemp()
@@ -2894,3 +2900,81 @@ def test_at34_glob_coverage_and_ordered_filters():
     check("AT-34", "a paths-ignore covering a governed witness shape fails",
           r.returncode == 1 and "paths-ignore" in r.stdout
           and "excludes the governed path" in r.stdout, r.stdout)
+
+
+# ------------------- AT-35 (EC-16/19/20 exact-head binding, Round-24)
+
+def test_at35_claim_exact_head_binding():
+    """Round-24 direction 7: the PR body's Claimed-SHAs must contain the EXACT
+    current pull-request head, and the Status-summary must cite a successful run
+    on that SAME head. A body that declares only stale -- but real -- SHAs, or
+    cites a real historical run, fails: "real but stale" is not evidence for
+    the current candidate."""
+    # REAL commits of this repository: the claim gate verifies the claimed SHAs
+    # against the object store, so the fixture uses real commits (the current
+    # candidate and its parent).
+    head = rev(["rev-parse", "HEAD"])
+    stale = rev(["rev-parse", "HEAD~1"])
+    d = tempfile.mkdtemp()
+
+    def body(sha_field, status_line):
+        return ("Directive-ID: EC-16/19/20\n"
+                "Closes-items: EC-16, EC-19, EC-20\n"
+                "Base-SHA: " + "0" * 40 + "\n"
+                "Claimed-SHAs: " + sha_field + "\n"
+                "Acceptance-Tests: AT-35\n"
+                "Status-summary: " + status_line + "\n")
+
+    def check_body(text, expect_head, manifest=None, extra=()):
+        p = os.path.join(d, "body.md")
+        open(p, "w", newline="").write(text)
+        args = ["--body", p, "--expect-head-sha", expect_head, "--local"]
+        if manifest:
+            args += ["--runs-manifest", manifest]
+        args += list(extra)
+        return run("verify_claimed_shas.py", *args)
+
+    man_ok = tmpfile(json.dumps({"runs": {"555555": {"head_sha": head,
+                                                     "conclusion": "success",
+                                                     "event": "push"}}}), ".json")
+    man_stale = tmpfile(json.dumps({"runs": {"666666": {"head_sha": stale,
+                                                        "conclusion": "success",
+                                                        "event": "push"}}}), ".json")
+
+    # 1. the body declares the exact head and cites a successful run on it -> PASS
+    r = check_body(body(head, "RUN_PASS(run_id=555555, sha=%s)" % head), head, man_ok)
+    check("AT-35", "a body that declares the exact head and cites a same-head successful run passes",
+          r.returncode == 0, r.stdout + r.stderr)
+    # 2. the body declares only a STALE (but real) SHA -> FAIL
+    r = check_body(body(stale, "RUN_PASS(run_id=666666, sha=%s)" % stale), head, man_stale)
+    check("AT-35", "a body that declares only a stale SHA fails (the exact head must be declared)",
+          r.returncode == 1 and "does not declare the exact current pull-request head" in r.stdout,
+          r.stdout)
+    # 3. the body declares the head but cites a run on another commit -> FAIL
+    r = check_body(body(head, "RUN_PASS(run_id=666666, sha=%s)" % stale), head, man_stale)
+    check("AT-35", "a real but stale run id is not evidence for the current head",
+          r.returncode == 1 and "cites no successful run on the exact current head" in r.stdout,
+          r.stdout)
+    # 4. the body declares the head but cites no run at all -> FAIL
+    r = check_body(body(head, "NOT_RUN"), head, man_ok)
+    check("AT-35", "a Status-summary without a run on the exact head fails",
+          r.returncode == 1 and "cites no successful run on the exact current head" in r.stdout,
+          r.stdout)
+    # 5. the cited run exists but did not succeed -> FAIL
+    man_fail = tmpfile(json.dumps({"runs": {"555555": {"head_sha": head,
+                                                        "conclusion": "failure",
+                                                        "event": "push"}}}), ".json")
+    r = check_body(body(head, "RUN_PASS(run_id=555555, sha=%s)" % head), head, man_fail)
+    check("AT-35", "a failed run on the exact head does not satisfy the claim gate",
+          r.returncode == 1 and "not success" in r.stdout, r.stdout)
+    # 6. the cited run is not in the manifest -> FAIL (unverifiable)
+    r = check_body(body(head, "RUN_PASS(run_id=999999, sha=%s)" % head), head, man_ok)
+    check("AT-35", "an unverifiable cited run fails closed",
+          r.returncode == 1 and "not in the runs manifest" in r.stdout, r.stdout)
+    # 7. without --expect-head-sha the gate keeps its previous behaviour (the
+    #    head binding is opt-in for local use, always on in CI)
+    p = os.path.join(d, "body_plain.md")
+    open(p, "w", newline="").write(body(stale, "NOT_RUN"))
+    r = run("verify_claimed_shas.py", "--body", p, "--local")
+    check("AT-35", "without --expect-head-sha the legacy behaviour is unchanged",
+          r.returncode == 0, r.stdout + r.stderr)

@@ -378,3 +378,83 @@ verification, the portable 40-row cohort metadata table, A-02 issuer-side
 revocation, and EC2 deployment secrets remain OPEN. The scientific hard stop
 is preserved in full; A-01 remains ACCEPTED RISK (no rotation reminder, no
 credential operations, token values never written anywhere).
+
+## 13. Round-24 cycle (audit of the merged R22/R23 state; EC-16/19/20 exact-head binding; push-log portability)
+
+**Context (verified live, not assumed):** while the Round-21B repair was in
+progress, a parallel session completed the Round-22 repair (`443d606`) and the
+Round-23 cycle (`d81c874`), and PR #30 was MERGED into `main` as merge commit
+`63da0e347002ed9b77071ff1ed0cefda7c0ce88a` (first parent `f535a71b`, second parent `d81c874eaedc13c6fdbaed5102ad7e638449036d`). This
+cycle therefore re-established the baseline on the merged `main`, audited the
+merged implementation against the auditor's defect list, and repaired the
+defects that are still open there.
+
+**Audit result (live, not inherited):** the merged implementation closes
+EC-23 (per-row type validation, count-only diagnostics, fixed messages, broad
+exception safety -- AT-30), EC-24 (commit existence vs branch-push provenance
+vs CI success separated; event/head_branch validation; NOT-PROVEN
+reclassification of P-011; PUSH-PROVEN adjudication of P-013 through the
+events feed; reconciliation invariants; global unmatched-intent invariant --
+AT-31/AT-32/AT-33), and EC-26 (conservative witness-based glob coverage with
+ordered negative patterns, empty/malformed filter rejection -- AT-34). The
+live push-log verification against the real remote confirms the re-adjudication:
+P-011 is classified NOT-PROVEN, P-012/P-013/P-014 are PUSH-PROVEN with the
+CI-success claim explicitly separated.
+
+**Still open in the merged state, repaired by this cycle:**
+
+1. **EC-16/19/20 (auditor direction 7) -- the PR-body claim gate did not bind
+   the body to the exact current head.** `scripts/ci/verify_claimed_shas.py`
+   verified that each claimed SHA exists, but never required the body to
+   DECLARE the current pull-request head and never required the
+   `Status-summary` to cite a successful run ON THAT HEAD; a stale-but-real
+   body passed. The checker now takes the expected head as an explicit input
+   (`--expect-head-sha`, supplied by the workflow from
+   `github.event.pull_request.head.sha`, never inferred from the body's own
+   claim list), requires `Claimed-SHAs` to contain that exact SHA, and requires
+   a `RUN_PASS(run_id=..., sha=<that head>)` citation whose run is real,
+   successful and on that same head. The workflow also reads the LIVE pull
+   request body (the event payload is stale once the body is edited after the
+   trigger). AT-35 is the adversarial test; it FAILS on the prior
+   implementation.
+2. **Push-log gate portability (found by running the suite locally, not in
+   CI).** The introducing-commit lookup built its git pathspec from the OS path
+   string; where the two spellings of the same directory differ (on Windows the
+   8.3 short form of a temporary directory versus the long form git reports)
+   the pathspec fell OUTSIDE the repository, every lookup failed, and the gate
+   failed closed on a valid log -- eight acceptance groups could not run on that
+   platform at all. The lookup now runs git from the log's own directory with
+   the file name as the pathspec, which is spelling-independent.
+3. **AT-13 harness portability.** The append-only self-comparison wrote its
+   copy in text mode, so the line endings were translated a second time on
+   Windows and the checker compared two different byte strings (a false
+   "SHRUNK" failure). The copy is now written in binary mode.
+
+**Open auditor decision (NOT papered over):** the merge transition of PR #30
+is NOT verified by this repository's own gate. The pull request carries no
+independent approval (only a bot `COMMENTED` review), and the declared
+pre-merge base `f535a71b` is no longer the live tip of `main` after the merge.
+Consequently `main`'s Governance Acceptance run `39504181997` is RED on the
+push-log-integrity job, and the repair branch's last push (`d81c874`, run
+`39507046623`) is RED for the same reason. No approval was invented, no gate
+was weakened, and no log entry claims a merge that the evidence does not
+support. How the merged state is to be recorded (and whether a later merge
+may be declared through a reviewed pull request at all) is the auditor's
+decision, not the coder's.
+
+**Credential handling (verified, never narrated):** the PAT was supplied only
+through the process environment (`GH_PAT`); no credential file was created in
+any Git working tree, the working copy used by this cycle
+(`E:\atlas-work\control-atlas-saas`) lies outside the operator's home Git
+repository, and no token value appears in any file, log, commit message or
+evidence artifact. A-01 remains ACCEPTED RISK; no rotation was initiated or
+reminded.
+
+**Standing items (unchanged):** A-04 branch-protection verification, the
+independent r2 evidence-archive verification, the portable 40-row cohort
+metadata table, A-02 issuer-side revocation and the EC2 deployment secrets
+remain OPEN; PRs #31-#36 revalidate serially against the resulting `main`
+(EC-21 not waived) and PRs #23-#29 close only on proven unique-content
+coverage. The scientific hard stop is preserved in full: no production
+deployment, no v25 calibration, no held-out evaluation, no threshold or cohort
+changes, no law-semantic changes, no golden-artifact regeneration.

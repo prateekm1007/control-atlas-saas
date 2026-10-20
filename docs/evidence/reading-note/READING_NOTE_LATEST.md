@@ -182,3 +182,83 @@ available to reviewers and to any future maintainer with review authority.)
   table, the independent archive verification, A-02 issuer-side revocation, and the EC2
   deployment secrets remain OPEN. A-04 (branch-protection required-check configuration)
   was verified live on 2026-10-20 and stays as recorded in register Part 14.
+
+## 8. Round-24 cycle - reading record (2026-10-20, SERIAL 4)
+
+**Directive series:** the Round-21B auditor directions (items 1-8) received
+while the Round-21B repair was in progress; this cycle re-established the
+baseline on the MERGED `main` and repaired the defects still open there.
+Register: Part 15 (auditor-adjudicated). Branch: `repair/round24-claim-head-binding`.
+
+**Constitution read (BEFORE any edit of this cycle, in full, both files):**
+
+| Document | Pinned blob (full SHA-1) | Verified | Read window (UTC) |
+|---|---|---|---|
+| `constitution.md` | `211ad2c5d4b40059d9f3f03de12e0701f9235bc7` | YES - re-hashed from `origin/main` with `git rev-parse` | 2026-10-20T23:14:43Z - 23:15:25Z (read in full: 11 lines; OBS-153 and CRIT-154 both ACTIVE) |
+| `ENGINEERING_CONSTITUTION.md` | `b6bb35e84956d84a8c9d9e65734c212baf3ed075` | YES - re-hashed from `origin/main` with `git rev-parse` | 2026-10-20T23:14:43Z - 23:15:25Z (read in full: 178 lines, EC 1-15 + Final Rule) |
+| `AGENTS.md` | `85767237399ffb30f3e45894d9dfbe6f4240584f` | YES | read in full in the earlier segment of this session (75 lines) |
+| `docs/coder/BRIEF.md` | `052a84ca829d321dc0841a4b1c8702145dcbf6b5` | YES | read in full in the earlier segment of this session |
+| `docs/directives/INDEX.md` | `244f76eab550951a35305350c76af6ac4ed19b92` (pre-R24 row) | YES | read in full (inventory parsed; 20 required ACTIVE rules derived) |
+| `docs/evidence/push-log/PUSH_LOG_SCHEMA.md` (schema v5) | `83aa798b7a9731e63be2a9664e502b7631a42674` | YES | read in full |
+| `docs/evidence/push-log/PUSH_LOG.md` | current at `63da0e347002ed9b77071ff1ed0cefda7c0ce88a` | YES | read in full (P-001..P-082-INTENT) |
+| `docs/decisions/OWNER_DECISIONS.md` (register rev 11, Parts 1-14) | `12906bf5997a3e2c6b5c41e5d5c60fee14613274` | YES | read (Part 14 carries the R22/R23 adjudications) |
+| `docs/P0_STATUS.md` (sections 1-12) | `a31517abbc046c495930ba19ef7aeaf8bb72f2d0` | YES | read |
+
+**Live state re-verified before the first write of this cycle (2026-10-20T23:0xZ):**
+`main` = `63da0e347002ed9b77071ff1ed0cefda7c0ce88a` (the merge commit of PR #30; first parent `f535a71b`,
+second parent `d81c874eaedc13c6fdbaed5102ad7e638449036d`); `repair/round19-mainline-acceptance` =
+`d81c874eaedc13c6fdbaed5102ad7e638449036d`; PR #30 is MERGED and CLOSED with no independent approval on
+record (only a bot `COMMENTED` review on `2dcbbd78`). The worktree used by
+this cycle is `E:\atlas-work\control-atlas-saas`, OUTSIDE the operator's
+home Git repository.
+
+**Rule mapping for this cycle (EC-26; the inventory in INDEX.md is normative):**
+
+| Rule ID | Anchor | Enforcement point(s) | Acceptance test(s) |
+|---|---|---|---|
+| EC-16 | Claimed-SHA verification bound to the exact candidate | script:scripts/ci/verify_claimed_shas.py; workflow:.github/workflows/governance-acceptance.yml#claim-verification~events=pull_request | AT-01, AT-12, AT-35 |
+| EC-19 | PR-body directive fields (incl. the exact-head declaration) | workflow:.github/workflows/governance-acceptance.yml#claim-verification~events=pull_request | AT-01, AT-07, AT-35 |
+| EC-20 | the named acceptance tests are EXECUTED on the candidate | script:scripts/ci/verify_claimed_shas.py | AT-09, AT-18, AT-35 |
+| EC-17 | push on completion; the log is append-only | script:scripts/ci/evidence_sequence_check.py; workflow:.github/workflows/governance-acceptance.yml#push-log-integrity | AT-13, AT-24, AT-26, AT-31, AT-32, AT-33 |
+| EC-6 | testing and evidence | script:scripts/ci/tests/run_all.py; workflow:.github/workflows/governance-acceptance.yml#acceptance-suite | AT-16 |
+| EC-A2 | the pre-coding protocol (constitutions first) | script:scripts/ci/reading_note_map_check.py; this reading record | AT-06, AT-08, AT-34 |
+| EC-A12 | definition of done ("not run" is never "passed") | script:scripts/ci/status_vocabulary_lint.py | AT-04, AT-11, AT-19 |
+
+**What this cycle changed (one ordered commit on `repair/round24-claim-head-binding`):**
+`scripts/ci/verify_claimed_shas.py` (the exact-head binding: `--expect-head-sha`
+supplied explicitly by the workflow; `Claimed-SHAs` must contain that exact
+SHA; the `Status-summary` must cite a real, successful run ON that head),
+the `claim-verification` job of the governance workflow (the LIVE pull-request
+body is read from the API - the event payload is stale once the body is edited
+after the trigger), `scripts/ci/evidence_sequence_check.py` (the
+introducing-commit pickaxe now runs from the log's own directory: a pathspec
+built from the OS path string fell outside the repository where the path
+spelling differs from git's, which made the whole gate fail closed on a valid
+log and left eight acceptance groups unrunnable on that platform),
+`scripts/ci/tests/test_acceptance.py` (AT-35; AT-13's append-only comparison
+copy is written in binary mode), the acceptance registry, the INDEX rows for
+EC-16/19/20, the push log, register Part 15, P0_STATUS section 13, this record
+and the receipt, plus the regenerated evidence table and manifest.
+
+**Verification performed before the push (exact commands, exact counts):**
+the full acceptance suite (pytest over `scripts/ci/tests/test_acceptance.py`),
+the push-log checker against the LIVE remote with the Actions and events APIs
+(`--repo prateekm1007/control-atlas-saas --api-token-env GH_TOKEN`), the
+manifest check, the reading-note map check, the status-vocabulary lint, the
+deploy-trigger lint and the secret controls. Results are recorded in the
+receipt of this cycle.
+
+**Disclosed, not smoothed over:** the merge transition of PR #30 is NOT
+verified by this repository's own gate (no independent approval on the pull
+request; the declared pre-merge base is no longer the live tip of `main`).
+`main`'s Governance Acceptance run `39504181997` is RED on the push-log
+integrity job for that reason, and the repair branch's last push (`d81c874`,
+run `39507046623`) is RED for the same reason. No approval was invented, no
+gate was weakened, and no log entry claims a merge the evidence does not
+support. The auditor's decision on the merged state is OPEN (register 15.4).
+
+**Credential handling:** the PAT was supplied only through the process
+environment (`GH_PAT`); no credential file was created inside any Git working
+tree; no token value appears in any file, log, commit message or evidence
+artifact. A-01 remains ACCEPTED RISK (no rotation reminder, no rotation
+initiation, no credential operations).

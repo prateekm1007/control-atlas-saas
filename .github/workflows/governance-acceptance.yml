@@ -285,17 +285,51 @@ jobs:
         with: { python-version: "3.12" }
       - name: Install test dependencies
         run: pip install pytest pyyaml
-      - name: Write the PR body to a file (no shell interpolation)
+      - name: Write the PR body to a file (the LIVE body, fetched from the API)
+        # Round-24: the event payload carries the body as it was at trigger
+        # time. A body edited AFTER the trigger (the normal two-phase flow:
+        # push the candidate, then declare it) would still be read stale from
+        # the payload. The live body is therefore fetched from the API; the
+        # payload is only a fallback when the API cannot be read (in which
+        # case the exact-head binding below still fails closed).
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
-        run: printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr_body.md"
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          body = os.environ.get("PR_BODY", "")
+          try:
+              req = urllib.request.Request(
+                  "https://api.github.com/repos/%s/pulls/%s"
+                  % (os.environ["GITHUB_REPOSITORY"], os.environ["PR_NUMBER"]),
+                  headers={"Authorization": "Bearer %s" % os.environ["GH_TOKEN"],
+                           "Accept": "application/vnd.github+json"})
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  live = json.load(r).get("body")
+              if live:
+                  body = live
+              else:
+                  print("NOTE: the live PR body is empty; using the event payload")
+          except Exception as e:  # noqa: BLE001
+              print("NOTE: the live PR body could not be fetched (%s); using the event "
+                    "payload (the exact-head binding still applies)" % type(e).__name__)
+          open(os.path.join(os.environ["RUNNER_TEMP"], "pr_body.md"), "w").write(body)
+          PY
       - name: Verify directive fields, claimed SHAs, and EXECUTE the named acceptance tests
+        # Round-24 direction 7: the body must declare the EXACT current pull
+        # request head and cite a successful run on that same head. The head
+        # SHA is passed as an explicit input (never inferred from the body's
+        # own claim list), so a body that describes a stale -- but real --
+        # candidate FAILS.
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           python3 scripts/ci/verify_claimed_shas.py \
             --body "$RUNNER_TEMP/pr_body.md" \
             --repo "${{ github.repository }}" \
+            --expect-head-sha "${{ github.event.pull_request.head.sha }}" \
             --check-tests \
             --evidence-out "$RUNNER_TEMP/ec20_evidence.json"
       - name: Lint the PR body's Status-summary vocabulary

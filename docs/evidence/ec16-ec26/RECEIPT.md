@@ -118,3 +118,29 @@
   to the new required PR fields merge_commit_sha/merged_at/commit_id/
   submitted_at — the old fixtures lacked exactly the fields the Round-22
   audit found unverified).
+
+## 2026-10-20T23:20:00Z | R17 | record | Round-24 cycle (branch `repair/round24-claim-head-binding`, based on the merged `main`
+`63da0e347002ed9b77071ff1ed0cefda7c0ce88a`): the merged Round-22/Round-23 implementation was audited against the
+auditor's defect list (EC-23, EC-24 and EC-26 are CLOSED there and reproduce
+against the live remote), and the two defects still open in the merged state were
+repaired in ONE ordered commit: (a) the EC-16/19/20 exact-head binding --
+`verify_claimed_shas.py --expect-head-sha` (supplied by the workflow from
+`github.event.pull_request.head.sha`) requires the PR body to DECLARE the exact
+current head and to cite a real, successful run ON that head, and the workflow
+reads the LIVE pull-request body; AT-35 is the adversarial test and FAILS on the
+prior implementation; (b) the push-log gate's introducing-commit lookup, whose
+git pathspec was built from the OS path string and fell outside the repository
+where the path spelling differs from git's (Windows short form vs long form) --
+the lookup now runs from the log's own directory; (c) AT-13's append-only
+comparison copy is now written in binary mode (text mode translated the line
+endings twice on Windows and produced a false "SHRUNK" failure). Register Part 15
+records the adjudication table and the OPEN item: the merge transition of PR #30
+is NOT verified by this repository's own gate (no independent approval; the
+declared pre-merge base is no longer the live tip of `main`), so `main`'s
+Governance Acceptance run 39504181997 is RED and the repair branch's last push
+(d81c874, run 39507046623) is RED for the same reason -- disclosed, never
+suppressed, no approval invented, no gate weakened. The count record is brought
+current: 11 checker scripts under scripts/ci/ (unchanged this cycle) and 7
+workflow drafts under proposals/ci/ (unchanged); the acceptance suite is AT-01..AT-35
+with AT-35 registered and mapped in the INDEX rows for EC-16/19/20. No token
+value appears in this receipt, in the repository, or in any worklog.
