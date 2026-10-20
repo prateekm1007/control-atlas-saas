@@ -30,3 +30,91 @@
 ## 2026-10-20T09:52:31Z | R9 | test | acceptance suite EXTENDED and re-run locally: AT-01..AT-16, 91 check() assertions, all passing on the exact candidate (see docs/evidence/ec16-ec26/LOCAL_TEST_LOG.md for exact commands, SHA, environment, counts, exit codes); GitHub Actions CI status for these commits: NOT RUN — the workflows are inert drafts under proposals/ci/ and no run ID exists, so NO CI-pass claim is made or implied
 
 - Supersedes R4's "24 checks" claim: the suite was extended per auditor item 3.9 to cover the 3.1–3.8 defect classes (fail-closed negatives, test execution, remote verification, manifest-backed statuses, strict SHA lists, append-only parent-prefix, remediation fixtures, action pinning, inventory counts). R4 remains preserved above, unchanged.
+
+## 2026-10-20T13:45:00Z | R11 | receive | auditor Round-19 directions 1-8: repair forward from main @ f535a71; remove the two remaining provider-SDK references; correct the remediation README; regenerate the scoped manifest; record the P-015-CONFIRM collision and the a0e321c->c4a0fcc force-with-lease deviation; fix the EC-20 activation failures; fix the EC-26 liveness gap; wire the full acceptance battery into the live CI path; activation adjudications per rule
+
+- Both constitutions re-read FIRST from the pinned blobs on `main` @ `f535a71` (read window and source SHAs in `docs/evidence/reading-note/READING_NOTE_LATEST.md`); earlier rounds' reading notes were not treated as this cycle's preflight evidence (direction 1).
+
+## 2026-10-20T13:46:00Z | R12 | verify | preflight recon on the exact baseline: the two `google-generativeai` lines confirmed at `proposals/remediation/toscanini-gate.branch-triggers.yml:36` and `proposals/remediation/fixtures/toscanini_gate_AIN_DEFECT.yml:23`; `SHA256SUMS` confirmed at 23 entries vs the 35-file intended package; PR #17's merged tree verified as `f535a71`; EC-20 job failures reproduced locally on the exact head `748544f` in a pytest-only environment (collection aborts: INTERNALERROR importing `gpu_worker/tests/test_credits.py`, module-level `sys.exit(1)`)
+
+- The reproduction evidence (checker output, evidence JSON with `tests_missing_from_collection`, collect probe showing the INTERNALERROR) is preserved in the round report; the fix (per-file scoped collection) was verified to EXECUTE the two named tests (counts {tests: 2, failures: 0}) on the same head before being committed.
+## 2026-10-20T17:15:00Z | R13 | record | Round-19-fix correction cycle on this repair branch (auditor Round-19-fix directions 1-8): the count correction continues — the package now carries NINE checker scripts under scripts/ci/ (9 checker scripts: the original six plus ec23_scan_check.py plus the Round-19 additions already present) and SEVEN workflow drafts under proposals/ci/ (7 workflow drafts unchanged); the governance-acceptance workflow is the live enforcement path
+
+- Direction 3 (EC-23): the all-refs scan's path-wide `generic-api-key` exemption under docs//evidence/ and the `|| true` error swallowing are REPLACED by an exact-fingerprint allowlist (`scripts/ci/ec23_allowlist.json`, 47 unique entries, census 48 raw findings over all refs on 2026-10-20, baseline report sha256 2d6bab7ebe5c395ac79c6f5e9a4ba22fa78c08ac8232a029ee583be4f923a919) validated by `scripts/ci/ec23_scan_check.py` (classify/positive-control/negative-control modes, all fail-closed); the positive control now asserts the expected rule+file finding AND verifies redaction (exit status alone is never acceptance); the H-1 class is kept separate from the digest false-positive classes; a passing scan is not proof of A-02 revocation. Disposition record: `docs/evidence/ec16-ec26/GITLEAKS_DISPOSITION_R19.md`.
+- Direction 4 (EC-18/24): `evidence_sequence_check.py` rewritten to perform the protocol's LIVE remote verification (commits-API existence with exact returned-SHA match; 404/422 = ABSENT; 401/403/429/5xx/network = VERIFICATION_FAILURE fail-closed; branch-tip/ancestry checks), deterministic FIFO pairing with correction-entry semantics, reconciliation integrity (exact entry_id+branch+sha binding, machine-checkable pointers, SUPERSEDED-BY-DOCUMENTED-REBUILD still checks remote existence, SUPERSEDED-BY-CORRECTION-ENTRY names its authoritative correction), and gate mode (`--require-complete`: PENDING and OFFLINE-CLEAN fail; COMPLETE only with live verification). Records: `PUSH_LOG_RECONCILIATION.json` + `.md` (six evidence-verified rebuild entries; every recorded SHA verified this session from fetched objects).
+- Direction 5 (EC-26): `reading_note_map_check.py` now validates trigger applicability for ACTIVE workflow points (workflow_dispatch-only, missing/empty triggers, finite branch lists without '**', tags-only push, finite paths filters all fail), retains the R19 unpinned/live-path rules, and computes the Enforcement class (LIVE/PROCEDURAL/INERT/NONE) validated against the declared label in the 5-column INDEX inventory — policy status and automation enforcement status are recorded separately.
+- Environment anomaly recorded honestly: reads of `proposals/remediation/toscanini-gate.branch-triggers.yml` (blob 3e9e0b4d) and the old fixture returned content that differed between read paths in this sandbox; the GIT BLOBS are the canonical evidence (codepoint-level verification in-process). Because the file could not be reliably edited here (writes reverted to the committed blob), the superseded draft was REMOVED (append-only: v1 remains in history at blob 3e9e0b4d) and the corrected draft was written to a NEW path `toscanini-gate.branch-triggers-v2.yml` (pull_request.branches repaired to the continuous set ["**"], matching the corrected live state); the defect fixture `toscanini_gate_AIN_DEFECT.yml` was recreated byte-faithfully (defect literal constructed via codepoints) after the tracked copy was found normalized.
+- Suite soundness fix: a conftest autouse fixture now fails any pytest node whose check() assertions recorded failures — the prior suite could report green under pytest while check() had recorded failures (the PR #30 tip f44bf4d9 carried 11 such hidden failures: AT-02/04/09/10/11/12/18 classes; all are genuinely green now, with tests corrected to the checkers' real contracts: file-path --api-json/--runs-manifest fixtures, full directive bodies for EC-20 evidence runs, timestamp-collision-free synthetic repos).
+
+## 2026-10-20T18:40:00Z | R14 | record | Round-20-fix soundness cycle on this repair branch (candidate 62fab8a): the count record is brought current — 10 checker scripts under scripts/ci/ at that point (the R20 set with secret_baseline_check.py + secret_control_check.py; the R19 interim ec23_scan_check.py + ec23_allowlist.json superseded by the reviewed baseline) and 7 workflow drafts under proposals/ci/ (unchanged)
+
+- Suite soundness: the R20 rewrite of `test_acceptance.py` lost the Round-19 conftest soundness fixture; on the exact candidate 62fab8a a pristine pytest run reported `24 passed` while a conftest probe surfaced 12 test nodes carrying hidden check() failures. Repaired in the Round-21-followup cycle (R15 below) on top of the R21 candidate.
+
+## 2026-10-20T18:55:00Z | R15 | record | Round-21-followup suite-soundness cycle on this repair branch (candidate 0fe4840 + this push): the count record is brought current — 11 checker scripts under scripts/ci/ (the R21 set adds generate_evidence_table.py) and 7 workflow drafts under proposals/ci/ (unchanged); the governance-acceptance workflow is the live enforcement path
+
+- The R21 commit (0fe4840) repaired the three Round-21 acceptance defects but did NOT restore the conftest soundness fixture; a pristine pytest run on the exact candidate reported `29 passed` while a conftest probe surfaced 15 test nodes carrying hidden check() failures (AT-04/09/10/11/12/14/16/17/18/21/23 R20 classes + AT-24/26/27/28 R21 classes). This cycle restores `scripts/ci/tests/conftest.py` (accumulate-and-report semantics preserved) and repairs every node to its checker's real contract: file-path `--api-json`/`--runs-manifest` fixtures; fail-closed EC-16/EC-19 fields in EC-20 evidence bodies; derived baseline-entry fields; event-annotated ACTIVE citations; a genuine orphan-line STACK_MISMATCH fixture; the true-defect AIN fixture restored; the draft's `on:` block genuinely repaired; the `main]`-substring collision fixed by precise token matching; salted synthetic repos (timestamp-collision class); AT-23 gains an explicit negative check. No check was weakened or deleted (EC §13).
+- Checker hardenings (EC-24): the claimed branch must be named IN THE EVIDENCE FIELD (the body fallback made the check vacuous); the terminal intent's declared pre-push tip is validated against the newest recorded branch state INDEPENDENTLY of the ancestry check (both findings can fire); a missing log file fails closed with a clear message instead of an unhandled traceback. The real PUSH_LOG passes the hardened checks with the CI-equivalent invocation.
+- Environment anomaly disclosed (recurring from R13/R14): reads of the draft `toscanini-gate.branch-triggers.yml` (blob 3e9e0b4d) again returned differing content across read paths in this sandbox; GIT BLOBS remain canonical and the repaired draft was verified at codepoint level in-process before commit.
+
+## 2026-10-20T20:10:00Z | R16 | record | Round-22 acceptance-defect cycle on this repair branch (candidate built on 908de6d): the count record is unchanged — 11 checker scripts under scripts/ci/ and 7 workflow drafts under proposals/ci/; the governance-acceptance workflow is the live enforcement path and now carries 10 jobs (7 always-run + 3 PR-only, adding pre-merge-verification)
+
+- Auditor Round-22 finding (direction 2, EC-23): the Round-21 fix removed the
+  direct `Secret`/`Match` prints but still interpolated report-derived
+  `RuleID`/`File`/`StartLine` values into failure diagnostics and
+  negative-control output. Repaired: every report element is type-validated
+  before examination (non-object rows, non-string RuleID/File, non-int
+  StartLine, non-string Secret/Match fail closed with fixed messages and row
+  contents withheld); unexpected findings report a COUNT only; the raw-key
+  checks cover the report bytes even when the schema fails; unexpected
+  internal errors fail closed with a fixed message. AT-30 proves the key
+  never reaches stdout/stderr on every path. Local re-run of the pinned
+  scanner controls on this cycle's tree: positive control PASS (genuine
+  detection, redaction verified), negative control PASS (verified empty
+  report), HEAD-tree scan PASS (verified empty report + fail-closed capture
+  log), all-refs scan PASS (48 findings / 47 reviewed fingerprints; the two
+  A-02 history entries disclosed separately).
+- Auditor Round-22 findings (directions 3-4, EC-24): commit existence was
+  conflated with branch-push provenance; cited runs' event/head_branch were
+  not validated; intent reconciliations lacked branch scope, one-void, and
+  consumed-intent rules; the unmatched-intent invariant was branch-local;
+  expected_remote_tip_before_push was not bound to push-event before/after
+  state. Repaired per schema v5 (see PUSH_LOG_SCHEMA.md): claim separation
+  (PUSH-PROVEN-BY-RUN / PUSH-PROVEN-BY-EVENT / NOT-PROVEN reclassification /
+  COMMIT-EXISTS-ONLY fail-closed), event+head_branch validation on every
+  citation, `review_ref=` adjudication references validated against this
+  register, global unmatched-intent invariant, PushEvent before/after binding
+  (all-zero before for ABSENT; prior unlogged updates and false ABSENT
+  fail). Verified against the LIVE log with a CI-equivalent manifest: P-012/
+  P-014-CONFIRM classify PUSH-PROVEN-BY-RUN (their failed conclusions
+  disclosed separately); P-011/P-013-CONFIRM fail closed pending this
+  cycle's re-adjudication records (register Part 14.4).
+- Auditor Round-22 findings (direction 5, merge transition): the workflow
+  lacked `pull-requests: read`; the checker trusted merge-commit parents
+  without merge_commit_sha/source-ref/merged_at/fresh-approval proof; no
+  pre-merge gate existed; DEFERRED supersession was broken. Repaired:
+  permission added (least privilege: read-only) with live API canaries in
+  both push-log-integrity and the NEW pre-merge-verification job; post-merge
+  verification checks merge_commit_sha == live candidate, head.ref ==
+  source_branch, merged_at present, latest-state-per-reviewer approvals
+  bound to the exact head (commit_id) and submitted before the merge
+  (dismissed/superseded rejected), and the merge PushEvent's before ==
+  declared base; the pre-merge-verification job verifies the CURRENT PR/
+  head/review state on PR events and is EXPECTED RED until the independent
+  approval exists (the functioning pre-merge gate; disclosed in P0_STATUS
+  §12 and the reading note); DEFERRED supersession resolves via introducing
+  commits on both source and target sides. AT-33 covers every failure mode
+  plus a sequential second merge.
+- Auditor Round-22 findings (direction 6, EC-26): representative-sample
+  coverage could be satisfied by a single matching sample; ordered negative
+  patterns and empty/malformed filters were mishandled. Repaired:
+  conservative witness-based glob coverage (structural witnesses from each
+  governed glob: multiple name shapes per wildcard component, `**` at depths
+  1-3, root/hidden/workflow paths for whole-tree governance), ordered `!`
+  semantics for paths AND branches (last match wins), empty filter lists and
+  malformed event configuration types fail closed. AT-34 covers the
+  auditor's full list.
+- Acceptance suite: AT-01..AT-34 registered and green (34/34 pytest +
+  run_all; no check weakened or deleted; AT-27/AT-28 fixtures strengthened
+  to the new required PR fields merge_commit_sha/merged_at/commit_id/
+  submitted_at — the old fixtures lacked exactly the fields the Round-22
+  audit found unverified).

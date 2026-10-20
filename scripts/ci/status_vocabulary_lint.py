@@ -29,7 +29,9 @@ import json
 import re
 import sys
 
-STATUS_LINE = re.compile(r"^\s*STATUS:\s*(.+?)\s*$")
+# Round-19: PR-body Status-summary lines carry the same grammar (the PR template
+# declares the vocabulary for them); both line forms are linted identically.
+STATUS_LINE = re.compile(r"^\s*(?:STATUS|Status-summary):\s*(.+?)\s*$")
 TOKEN = re.compile(r"^[A-Z_]+$")
 RUNPASS_ARGS = re.compile(r"^RUN_PASS\s*\((.*)\)\s*$")
 RUN_ID = re.compile(r"run_id=(\d+)")

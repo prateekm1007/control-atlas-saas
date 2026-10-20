@@ -14,10 +14,12 @@
 name: Toscanini Stability Gate
 
 on:
+on:
   push:
     branches: ["**"]
   pull_request:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   unit-tests:
@@ -33,7 +35,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install fpdf2 numpy fastapi uvicorn python-multipart scipy requests google-generativeai
+          pip install fpdf2 numpy fastapi uvicorn python-multipart scipy requests
 
       - name: Run unit tests
         run: cd backend && python -m pytest tests/ -v --tb=short

@@ -151,16 +151,49 @@ def _pytest(repo: str, *argv: str):
                           capture_output=True, text=True, cwd=repo, shell=False)
 
 
-def collect_test_ids(repo: str) -> tuple[set[str], str]:
-    r = _pytest(repo, "--collect-only", "-q")
-    ids = set()
-    for line in r.stdout.splitlines():
-        line = line.strip()
-        if line.endswith("::") or not line or line.startswith(("=", "!", "no tests")):
-            continue
-        if "::" in line:
-            ids.add(line.split()[0])
-    return ids, (r.stdout[-2000:] if r.returncode != 0 else "")
+def collect_test_ids(repo: str, files: list[str] | None = None) -> tuple[set[str], str]:
+    """Collect pytest node IDs, scoped to the named files when given.
+
+    Round-19 EC-20 fix (runs 39417485854 / 39417488957 / 39417492355): repo-wide
+    `pytest --collect-only` IMPORTS every test module under the root. Legacy
+    script-style modules (gpu_worker/tests/*.py) execute their whole suite at
+    import time and call sys.exit() at module level, which raises SystemExit
+    inside pytest's collector -> INTERNALERROR -> collection aborts with
+    "N test collected, M errors" and ZERO of the actually-named acceptance
+    tests register as collectable, so the check failed closed with "named but
+    not collectable" even though the named tests exist and pass.
+
+    Collection is therefore scoped per-file: only the files that contain the
+    named tests are imported. A named test whose file cannot be imported in
+    this environment still fails closed (honest: the check cannot execute it
+    here), but unrelated broken modules elsewhere in the tree cannot abort
+    the collection of the named tests.
+
+    Node IDs are normalized to repo-relative form: pytest displays node IDs
+    relative to rootdir, so --rootdir is pinned to the repo and file args are
+    passed absolute; a stray pyproject.toml/setup.cfg ABOVE the checkout can
+    otherwise hijack rootdir and skew the displayed paths.
+    """
+    ids: set[str] = set()
+    notes: list[str] = []
+    repo_abs = os.path.abspath(repo)
+    targets = files if files is not None else [None]
+    for target in targets:
+        arg = os.path.join(repo_abs, target) if target else None
+        argv = ["--collect-only", "-q", "--rootdir", repo_abs] + ([arg] if arg else [])
+        r = _pytest(repo, *argv)
+        for line in r.stdout.splitlines():
+            line = line.strip()
+            if line.endswith("::") or not line or line.startswith(("=", "!", "no tests")):
+                continue
+            if "::" in line:
+                ids.add(line.split()[0])
+        if r.returncode != 0:
+            scope = target or "<repo root>"
+            notes.append(f"collection exit {r.returncode} for {scope}:\n" + r.stdout[-1500:])
+    # defense in depth: if pytest still printed absolute paths, strip the repo prefix
+    ids = {i[len(repo_abs) + 1:] if i.startswith(repo_abs + os.sep) else i for i in ids}
+    return ids, "\n".join(notes)
 
 
 def run_acceptance_tests(test_ids: list[str], repo: str, evidence_out: str | None):
@@ -169,7 +202,15 @@ def run_acceptance_tests(test_ids: list[str], repo: str, evidence_out: str | Non
     started = datetime.now(timezone.utc)
     candidate = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True,
                                cwd=repo).stdout.strip()
-    collected, collect_note = collect_test_ids(repo)
+    # per-file scoped collection (see collect_test_ids docstring): bare paths
+    # name their own file; node IDs name the file before the first '::'.
+    named_files = sorted({(t.split("::", 1)[0] if "::" in t else t) for t in test_ids})
+    absent_files = [f for f in named_files
+                    if not os.path.isfile(os.path.join(repo, f))]
+    for f in absent_files:
+        findings.append(f"EC-20 named acceptance test file does not exist on the candidate: {f}")
+    collectable_files = [f for f in named_files if f not in absent_files]
+    collected, collect_note = collect_test_ids(repo, collectable_files)
     missing = [t for t in test_ids if t not in collected]
     for t in missing:
         findings.append(f"EC-20 acceptance test named but not collectable on the candidate: {t}")
@@ -201,6 +242,7 @@ def run_acceptance_tests(test_ids: list[str], repo: str, evidence_out: str | Non
         "shell_used": False,
         "python": sys.version.split()[0],
         "tests_requested": test_ids,
+        "collection_scope_files": named_files,
         "tests_missing_from_collection": missing,
         "tests_executed": to_run,
         "junit_xml": junit,

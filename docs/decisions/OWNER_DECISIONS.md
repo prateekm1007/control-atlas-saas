@@ -1,11 +1,24 @@
-# OWNER_DECISIONS — Consolidated Decision Register (rev 7)
+# OWNER_DECISIONS — Consolidated Decision Register (rev 9)
 
-**Provenance.** This is the single consolidated decision register, rev 7.
-Rev 7 (this revision) appends the 2026-10-20 auditor adjudications of the
+**Provenance.** This is the single consolidated decision register, rev 9
+(Round-20, 2026-10-20). Rev 8 — the Round-19 records (the P-015-CONFIRM
+collision and force-update deviation, the repair-forward adjudication, the
+live end-to-end enforcement, and the precise activation states per rule) —
+was prepared on the `docs/owner-decisions-r19` branch but never entered the
+reviewed path (no register PR was open; auditor Round-20 direction 6). Rev 9
+carries the FULL rev-8 content into this reviewed path **content-only** (no
+merge of the divergent register-branch history; every prior decision and
+evidence preserved unchanged) and appends Part 12 — the Round-20 records
+(the auditor's "Round-19 is not closed" ruling, the two critical EC-23/EC-24
+acceptance-defect fixes, the EC-26 trigger-liveness gap closure, and the
+R19 follow-up-push reconciliation). Every row of rev 7 and rev 8 is preserved
+unchanged (append-only register discipline; status conversions never happen
+silently).
+Rev 7 appended the 2026-10-20 auditor adjudications of the
 EC-16…EC-26 amendment proposals and the two meta-amendments (Part 6), the
 updated owner/auditor action rows (Part 7), the push-authorization
 reconciliation (Part 8), and the preserved-blockers statement (Part 9).
-Rev 7 supersedes rev 6 (Round 14, published as `0773f0b`) on this same
+Rev 7 superseded rev 6 (Round 14, published as `0773f0b`) on this same
 canonical path; rev 6 in turn superseded rev 5 (drafted in Round 13, never published before that
 branch) on this same canonical path; rev 4 (delivered on
 `evidence/round9-r2-2026-10-20` @ `7e3a3395…`, `outputs/OWNER_DECISIONS.md`)
@@ -322,3 +335,504 @@ is not present in this environment and is NOT evaluated here. Reconciliation = a
 force-push, per the A-09 discipline. Attribution of the concurrent pushes follows A-09:
 git identity alone does not establish credential identity; the owner's token-history
 review remains the authority.
+
+## Part 11 — Round-19 mainline repair records (AUDITOR-ADJUDICATED, 2026-10-20)
+
+Recorded from the auditor's Round-19 directions 1–8 (full delegation, same
+discipline as Part 6: decision status and implementation status are separate;
+nothing here claims an owner signature).
+
+### 11.1 Merge-collision adjudication (direction 2) — APPLIED
+
+Current `main` @ `f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd` is the baseline and is
+repaired FORWARD through a reviewed, narrowly scoped PR
+(`repair/round19-mainline-acceptance`); it is not replaced by or merged with
+`c4a0fcc` (preserved as evidence; no further force-push). The
+`a0e321c -> c4a0fcc` force-with-lease update is recorded as a deviation from
+rev 7 Part 8 (appended commits only) in
+`docs/evidence/push-log/INCIDENT-2026-10-20-P015-COLLISION.md`, together with
+the `P-015-CONFIRM` identifier collision between the two competing histories.
+No push is attributed to a person from git metadata alone (A-09 discipline).
+
+### 11.2 Mainline acceptance defects (direction 3) — REPAIRED on the branch
+
+- 3A: the two remaining non-documentation provider-SDK references removed
+  (reviewed content carried from `c4a0fcc` content-only).
+- 3B: the remediation README corrected to the current live state; patches
+  labeled superseded/historical with exact blob links; policy status and
+  active enforcement recorded separately.
+- 3C: package manifest scope defined and machine-enforced
+  (`scripts/ci/manifest_check.py`); `SHA256SUMS` regenerated over the full
+  38-file scope; verified in a clean checkout (all 38 digests OK via
+  `sha256sum -c`).
+
+### 11.3 EC-20 activation failures (direction 5) — ROOT CAUSE FOUND AND FIXED
+
+PRs #18/#19/#20 all fail their EC-20 job (runs 39417485854 / 39417488957 /
+39417492355) because `verify_claimed_shas.py --check-tests` collected tests
+repo-wide; legacy script-style modules under `gpu_worker/tests/` execute at
+import time and `sys.exit()` at module level, aborting pytest collection with
+INTERNALERROR so the named acceptance tests registered as "not collectable".
+Reproduced locally on the exact head `748544f` in a pytest-only environment
+before fixing; the fix (per-file scoped collection, AT-18) was verified to
+execute the named tests on that same head. The three duplicate workflow
+additions are consolidated into one activation candidate
+(`activation/ec16-ec19-ec20-r19`); PRs #18/#19/#20 are superseded (branches
+preserved as historical evidence).
+
+### 11.4 Activation states (direction 6) — precise, as of this register revision
+
+| Rule | Policy status | Implementation status |
+|---|---|---|
+| EC-17 / EC-22 / EC-25 | ACTIVE (in force, prior ruling) | Live automated enforcement begins with the Round-19 repair's `governance-acceptance.yml` (before it: policy in force, checks inert — recorded, not smoothed over) |
+| EC-16 / EC-19 / EC-20 | PROPOSED — NOT active | Fixes landed in the repair; consolidated activation candidate prepared (`activation/ec16-ec19-ec20-r19`); activation requires the complete gate green on the exact candidate AND the auditor's register recording |
+| EC-21 | PROPOSED — NOT active (accepted in principle) | Original push confirmed against the live remote ref (`7f5d50c`, run 39417494195 on that head); rebased candidate `activation/ec21-r19` prepared with the reconciliation record; same activation condition |
+| EC-26 | PROPOSED — NOT active | Checker gap fixed in the repair (ACTIVE rules must cite live workflows; AT-17 negatives); candidate `activation/ec26-r19` prepared; same activation condition |
+| EC-18 / EC-23 / EC-24 | PROPOSED — NOT active | Candidates prepared (`activation/ec18-r19`, `activation/ec23-r19`, `activation/ec24-r19`); EC-23's live job runs the checksum-pinned scanner with positive/negative controls and the documented H-1 history baseline (A-02 stays open); same activation condition |
+
+### 11.5 Live end-to-end enforcement (direction 7) — IMPLEMENTED on the branch
+
+`.github/workflows/governance-acceptance.yml` (push + pull_request, all
+branches; the Stability Gate is untouched) runs on every relevant PR and push:
+the full acceptance suite (AT-01..AT-20), reading-note/inventory validation
+with the ACTIVE-liveness rule, status-vocabulary validation against an
+in-job runs manifest built from Actions records, push-log schema + unique-ID +
+pairing + append-only parent-prefix validation, the deploy-trigger lint
+against the actual `.github/workflows/` tree, the package manifest +
+forbidden-reference checks, PR-body claim verification with EXECUTED named
+acceptance tests, declared-base verification, and the full-history all-refs
+secret scan with controls. A green base gate remains necessary, not
+sufficient.
+
+### 11.6 Standing items (direction 8) — UNCHANGED
+
+A-01 remains ACCEPTED RISK (no rotation reminder issued; the token value
+appears nowhere). The scientific hard stop is preserved in full: no law
+semantics, calibration, thresholds, cohorts, held-out evaluation, golden
+artifacts, or deployment. The portable 40-row cohort metadata table and the
+independent r2 archive acceptance remain OPEN and are not closed by the
+amendment or repair work. Merges of the repair and the activation candidates
+go through reviewed PRs on exact-candidate green checks; no force-push; no
+administrative merges.
+
+## Part 12 — Round-20 records (AUDITOR-ADJUDICATED, 2026-10-20)
+
+Recorded from the auditor's Round-20 ruling ("Round-19 is not closed") and
+directions 1–8, under the same delegated authority and register discipline as
+Part 6/Part 11: decision status and implementation status remain separate; no
+owner signature is claimed; nothing here converts a status silently.
+
+### 12.1 The ruling and the two critical deficiencies
+
+The auditor independently verified the live refs and ruled Round-19 NOT
+closed despite green checks on PR #30's then-head `f44bf4d…` (gate run
+`39443515998`, Governance Acceptance run `39443516042`): green is necessary,
+not sufficient. Two critical deficiencies were found in the new controls,
+plus one EC-26 gap and one register gap:
+
+1. **EC-23 false-positive-classification defect.** The all-refs scan
+   tolerated EVERY `generic-api-key` finding under `docs/` or `evidence/` as
+   an evidence-digest class — a category exemption under which a newly
+   introduced credential in those directories would also pass. Separately,
+   the positive control treated any nonzero scanner exit as proof of
+   detection, so a scanner crash or invocation error could masquerade as a
+   successful control.
+2. **EC-24 verification defect.** The schema checker validated field syntax
+   but never verified that a recorded `remote_sha` equals the live remote ref
+   for the stated branch, nor that the `evidence=` field supports the recorded
+   SHA. Materially: the P-017…P-024 confirmations record the earlier
+   first-push tips while the current PR heads are different tips
+   (`f44bf4d`, `bd8d86a`, `32d272d`, `151b8c1`, `97067a0`, `fa854f8`,
+   `28ee983`, `df98f5e`); those confirmations are valid for the pushes they
+   describe but do not confirm the newer tips, and the pushes that carried
+   them were not themselves reconciled. The Round-19 report's claim that the
+   push protocol was fully closed was therefore not supported.
+3. **EC-26 gap.** The liveness test checked the workflow's path and job
+   existence but not that its `on:` triggers actually fire on the events the
+   claimed enforcement requires (a manual-dispatch-only workflow under
+   `.github/workflows/` with the named job would have satisfied it).
+4. **Register gap.** Register rev 8 sat on `docs/owner-decisions-r19` outside
+   the reviewed path; PR #30 still carried rev 7 and no register PR was open.
+
+### 12.2 EC-23 fix — reviewed fingerprint allowlist + verified controls
+
+- The category exemption is REPLACED by an explicit, reviewed allowlist:
+  `docs/evidence/ec16-ec26/secret_scan_baseline.json` (47 documented
+  fingerprints: source, classification, and reason per entry; documented in
+  `SECRET_SCAN_BASELINE.md` in the same directory) enforced by
+  `scripts/ci/secret_baseline_check.py`. Unknown fingerprints FAIL wherever
+  the file lives — including `docs/` and `evidence/`. A fingerprint that
+  matches while its rule/file contradict the reviewed entry FAILS. The
+  baseline is validated itself (required fields, unique fingerprints, known
+  classification tokens, H-1 entries require the A-02 note).
+- The two historical H-1 findings (the former provider key at pre-release
+  commit `b66f0e3b…`) remain a SEPARATE `DOCUMENTED-HISTORICAL-A-02` class,
+  disclosed on every run and tolerated only while register A-02 stays open
+  (issuer-side revocation unverified; deployment blocked; history never
+  rewritten as a substitute for revocation).
+- The positive control now runs with `--exit-code 101` (findings-found is
+  distinct from execution errors, which exit 1) and is verified by
+  `scripts/ci/secret_control_check.py`: the report must exist and parse; the
+  expected finding for the seeded synthetic key must be present; the expected
+  rule (`aws-access-token`) must actually have fired; no unexpected findings;
+  and the assembled key must be redacted everywhere (absent from report bytes
+  and the captured scanner log; the key travels via an environment variable,
+  never argv or file content). The clean-repository negative control must
+  exit 0 with an empty report. Acceptance tests: AT-21 (allowlist), AT-22
+  (controls).
+- The all-refs scan itself runs with `--exit-code 0`, so any nonzero exit is
+  a scanner execution failure and fails closed (the `|| true` masking is
+  removed).
+
+### 12.3 EC-24 fix — remote-ref verification and truthful reconciliation
+
+- `scripts/ci/evidence_sequence_check.py --remote-verify` now: (a) fetches
+  the live ref (`git ls-remote`) for every CONFIRM/RECONCILE's claimed branch
+  and compares the exact SHA — equal = CURRENT, different = HISTORICAL
+  (valid for the push it describes, explicitly NOT a confirmation of the
+  newer tip); (b) requires the `evidence=` field to support the recorded SHA
+  (the SHA and the claimed branch must appear in the evidence or entry body;
+  a cited Actions run ID whose manifest `head_sha` contradicts the recorded
+  SHA FAILS — fabricated support); (c) requires the branch under test's live
+  tip to be DECLARED — by an unpaired INTENT (PENDING, disclosed, never
+  implied complete) or an exact-tip CONFIRM/RECONCILE — with an undeclared
+  tip (the Round-19 follow-up-push class), an ls-remote failure, or an absent
+  remote ref failing closed; (d) classifies missing confirmation as PENDING,
+  never backdated or fabricated.
+- The eight Round-19 follow-up pushes are reconciled TRUTHFULLY by
+  `push-reconcile` records **P-050…P-057** (schema v3, defined in
+  `PUSH_LOG_SCHEMA.md`; narrative in
+  `RECONCILIATION-2026-10-20-R19-FOLLOWUP-PUSHES.md`): dated, live-ref
+  verified at the reconciliation window `2026-10-20T15:58:48Z`, with
+  check-run citations for each exact head, and an explicit disclosure that no
+  INTENT existed for those pushes (recorded, not smoothed over). No prior
+  entry was edited; the append-only parent-prefix check stays in force.
+- The Governance Acceptance `push-log-integrity` job now runs the full
+  verification on every push/PR event with the event's exact branch and tip.
+  Acceptance tests: AT-24.
+
+### 12.4 EC-26 fix — trigger liveness
+
+ACTIVE rules' `workflow:` references must now declare the events their
+enforcement claims (`~events=push+pull_request` suffix in the INDEX
+inventory), and the live workflow's `on:` block must actually contain each
+declared event with branch filters covering the enforcement branch (`main`).
+Manual-only (`workflow_dispatch`-only), branch-disabled, and otherwise
+untriggered workflows FAIL; the previous AT-17 path/job checks are retained.
+Acceptance tests: AT-23. EC-26 remains PROPOSED until the revised checks
+pass on the exact candidate (auditor direction 5).
+
+### 12.5 Register discipline for this revision (status distinctions)
+
+Per auditor direction 6, this register distinguishes, for every rule touched
+this round: the auditor's decision status (recorded here), the policy status
+(ACTIVE/PROPOSED in the INDEX inventory), the implementation status (what is
+built and where), the exact candidate (the repair-branch tip carrying this
+revision — recorded in the push log P-058 records and PR #30's body, and
+verified by the claim-verification and push-log-integrity jobs on that exact
+SHA), the CI results on that exact SHA (delivered by those jobs' runs; run
+IDs recorded in the push-log confirmations and the round report), and whether
+a rule's automation is LIVE ON `main` versus merely present on a PR branch
+(nothing in this Part is live on `main`; `main` remains at `f535a71…` until
+PR #30 merges through the reviewed path).
+
+### 12.6 Activation adjudications applied (auditor direction 7)
+
+| Rule | Decision status | Policy status | Implementation status |
+|---|---|---|---|
+| EC-16 / EC-19 / EC-20 | PROPOSED until the consolidated PR has every required check green on the exact final candidate and its activation is recorded in the register | PROPOSED | fixes live on the repair branch; consolidated candidate `activation/ec16-ec19-ec20-r19` awaits the post-merge rebase/revalidation |
+| EC-18 | PROPOSED until its evidence selection and sequence validation pass on the exact candidate | PROPOSED | parent-prefix + remote-verification layers implemented (AT-13/AT-24) |
+| EC-21 | Accepted in principle only; its EC-21 failure on the latest PR events is expected while the declared repair base is not on `main`; do not weaken the check; revalidate after the repair merges | PROPOSED | declared-base job live on the repair branch |
+| EC-23 | PROPOSED; the positive-control and broad-exemption blockers are fixed on the repair candidate; activation recorded only when the revised checks pass on the exact candidate | PROPOSED | fingerprint allowlist + verified controls (AT-21/AT-22); all-refs scan rerun on the exact candidate |
+| EC-24 | PROPOSED; push-confirm verification now verifies live remote refs | PROPOSED | remote-ref verification layer + RECONCILE records (AT-24) |
+| EC-26 | PROPOSED until trigger liveness actually passes on the exact candidate | PROPOSED | `~events=` grammar + live-on trigger validation (AT-23) |
+| EC-17 / EC-22 / EC-25 | Prior decision remains in force; no claim that automated enforcement is live on `main` until the reviewed workflow is merged and verified there | ACTIVE (policy) | live jobs run on the repair branch's own pushes/PRs only — NOT on `main` |
+
+Merge path (binding): PR #30 merges only after the critical defects are
+fixed, ALL checks are green on the exact final candidate, and the required
+independent review is satisfied (GitHub reported no approving review; do not
+bypass branch protection or repeat the administrative-merge path). After
+that merge, PRs #31–#36 are serially rebased/revalidated against the new
+`main` and their complete PR-event workflows rerun (their current EC-21
+failures are not passes and must not be waived). PRs #23–#29 close as
+superseded only after a file-by-file comparison proves their unique changes
+are covered by the reviewed R19 series; their branch refs and audit evidence
+are preserved.
+
+### 12.7 Standing items (direction 8) — UNCHANGED
+
+A-01 remains ACCEPTED RISK: the owner rotates the PAT at the owner's
+pleasure; no rotation reminder is issued and none is implied here; the token
+value appears nowhere. The scientific hard stop is preserved in full: no
+deployment, no v25 calibration, no held-out evaluation, no threshold or
+cohort changes, no law-semantic changes, no golden-artifact regeneration.
+The independent r2 archive verification and the portable 40-row cohort
+metadata table remain OPEN and are not closed by this governance work.
+
+## Part 13 — Round-21 records (AUDITOR-ADJUDICATED, 2026-10-20; register rev 10)
+
+### 13.1 The ruling
+
+The auditor ruled: **PR #30 is not approved for merge yet.** Round-20's green
+CI results are real but necessary, not sufficient — the independent review
+found defects not covered by the acceptance tests: (a) the EC-23 control
+checker could disclose the very secret it detects in its failure path
+(critical); (b) EC-24 did not bind an unpaired intent to the current
+candidate, did not pair confirmations to their own intent identifiers, and
+did not validate `expected_remote_tip_before_push` (critical); (c) `HISTORICAL`
+did not prove a historical push was real and absent manifest runs were
+tolerated as unverified (critical); (d) the protected-main merge transition
+was unproven; (e) EC-26 lacked path-filter and invalid-filter-type
+validation; (f) status records required reconciliation. This Part records the
+adjudication and the Round-21 repair; per the discipline of Part 12.5, the
+decision status, policy status, implementation status, exact candidate, CI
+status, and main-activation status are recorded separately below.
+
+### 13.2 Repairs implemented on the Round-21 candidate (branch
+`repair/round19-mainline-acceptance`, fix-forward from `62fab8a…`)
+
+1. **EC-23 disclosure fix (direction 3):** the control checker prints no
+   `Secret`/`Match` values or raw report/log bytes on any path; a requested
+   capture log must exist and be readable (fail closed); the HEAD-tree clean
+   path requires the report to exist, parse, and carry zero findings — scanner
+   exit status alone is never trusted. AT-25 proves the synthetic key never
+   reaches stdout/stderr on success or failure paths.
+2. **EC-24 binding fix (direction 4):** identifier pairing; the single
+   accepted terminal intent must be introduced by the exact candidate under
+   test, declare the verified pre-push tip (matching the newest recorded
+   branch state; no intervening ref update), and the live remote tip must be
+   the exact expected tip; excess unmatched intents FAIL unless voided by an
+   `intent-reconcile` record; the terminal state is labeled PENDING, never
+   COMPLETE, and no push is manufactured merely to eliminate a correctly
+   disclosed terminal PENDING (auditor adjudication). AT-26.
+3. **EC-24 historical proof (direction 5):** a HISTORICAL confirmation is
+   proven by ancestry from the live tip, or — off the lineage — by a reviewed
+   `evidence-back` record whose SHA is a real remote commit (object store or
+   the commits API); every run citation anywhere in an entry verifies via the
+   manifest, else the Actions API; failed/cancelled runs are disclosed and
+   cannot prove a push; a manifest omission fails the gate. The four
+   off-lineage legacy confirmations are backed by reviewed records
+   P-062..P-065. AT-27.
+4. **Protected-main merge transition (direction 6):** the `merge-intent` verb
+   pre-declares a reviewed merge (P-061: PR #30, base `f535a71…`, head
+   DEFERRED-resolved to the exact final candidate). A push to `main` is
+   DECLARED only by a VERIFIED merge-intent: merge-commit parents = declared
+   base + approved head; the intent rides the PR branch; the PR is merged
+   with an approving non-author review. Raced, unrelated, direct, or
+   unapproved updates FAIL. Deterministic AT-28 covers the legitimate merge
+   and every failure class. The merge itself is NOT performed by the writer.
+5. **EC-26 path coverage (direction 7):** ACTIVE workflow references declare
+   `~governs=`; restrictive or invalid path/branch filters FAIL. AT-29.
+   Policy status and enforcement status remain recorded separately; a checker
+   running on a feature branch activates nothing.
+6. **Status and evidence alignment (direction 8):** P0_STATUS top metadata
+   corrected and section 10 added; INDEX R19 row reads CLOSE-OUT REJECTED and
+   R20 SUPERSEDED-BY-R21 with nothing live on `main`; this Part 13 appended;
+   push-log schema v4; the Round-21 reading note replaces the prior one; the
+   Round-21 evidence table is generated from live evidence (generator +
+   committed output). The PAT-hygiene sweep remains a LOCAL coder claim —
+   GitHub CI does not independently verify it; no token value appears in any
+   repository file, worklog, or evidence artifact.
+
+### 13.3 Adjudication table (direction 10)
+
+| Rule | Decision status | Policy status | Implementation status | Live on main |
+|---|---|---|---|---|
+| EC-23 | PROPOSED until the secret-disclosure regression is fixed and the exact-candidate scan controls pass | PROPOSED | disclosure fix + report validation on the Round-21 candidate (AT-25); the exact-candidate CI run is the completing evidence | NO |
+| EC-24 | PROPOSED until intent binding, identifier pairing, historical verification, reconciliation validation, and the protected-main transition pass | PROPOSED | all five layers implemented (AT-26/AT-27/AT-28); exact-candidate CI run is the completing evidence | NO |
+| EC-26 | PROPOSED until trigger, branch, and relevant path-filter checks pass on the exact candidate | PROPOSED | trigger + branch + path-filter + invalid-type validation implemented (AT-23/AT-29) | NO |
+| EC-16 / EC-19 / EC-20 / EC-21 | PROPOSED until their reviewed and rebased activation candidates pass all required checks | PROPOSED | live jobs run on the repair branch's own events; activation candidates await the post-#30 serial revalidation | NO |
+| EC-17 / EC-22 / EC-25 | In force as policy under earlier auditor decisions | ACTIVE | live jobs run on the repair branch's own pushes/PRs only | NO (until PR #30 merges and the post-merge verification succeeds) |
+
+### 13.4 Merge path (binding)
+
+PR #30 merges only after: the Round-21 blockers are fixed on the exact final
+candidate; the full Stability Gate and Governance Acceptance pass on that
+SHA's push and PR events; the post-merge `main` transition is demonstrated
+(AT-28 plus the pre-declared P-061); and the required independent approval is
+recorded on the PR. The merge is executed only through GitHub's protected PR
+mechanism with a MERGE COMMIT. After that merge: PRs #31–#36 revalidate
+serially against the resulting `main` (declared bases updated; fresh
+exact-head results; their own merge-intents declared before each merges;
+EC-21 is not waived); PRs #23–#29 close only after a path-by-path diff proves
+their unique changes are covered and their historical refs/evidence are
+preserved.
+
+### 13.5 Standing items — UNCHANGED
+
+A-01 remains ACCEPTED RISK: the owner rotates the PAT at the owner's
+pleasure; no rotation reminder, no rotation initiation, no credential
+operations; the token value is never written into the repository or any
+evidence. The scientific hard stop is preserved in full: no production
+deployment, no v25 calibration, no held-out evaluation, no threshold or
+cohort changes, no law-semantic changes, no golden-artifact regeneration
+without their approved gates. The independent r2 evidence-archive
+verification, the portable 40-row cohort metadata table, A-02 issuer-side
+revocation, and the EC2 deployment secrets remain OPEN and are not closed by
+this governance work.
+
+## Part 14 — Round-22 records (AUDITOR-ADJUDICATED, 2026-10-20; register rev 11)
+
+**Status of this Part:** auditor-adjudicated per the binding Round-22 decision;
+NOT owner-signed. It explicitly supersedes Round-21's closure CLAIM (not the
+historical record): Round-21 is NOT CLOSED, PR #30 is NOT APPROVED FOR MERGE,
+and EC-23/EC-24/EC-26 remain PROPOSED and are not live on `main`.
+
+### 14.1 The ruling (transcribed from the auditor's Round-22 decision)
+
+Green CI is necessary but not sufficient; the independent audit found further
+fail-open cases in EC-23, EC-24 and EC-26 that the existing acceptance tests
+did not cover. `main` remains at `f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd`;
+no merge, no activation of governance rules on `main`, no gate weakening. Work
+proceeds on `repair/round19-mainline-acceptance` through ordinary fast-forward
+pushes and the reviewed PR path. The mandated repairs: (2) EC-23 — no
+report-derived value may reach stdout/stderr; per-element schema validation
+failing closed; redaction checks not weakened; AT extension covering
+RuleID/File/StartLine/unexpected fields/Secret/Match/non-object entries/
+malformed reports with captured stdout+stderr assertions. (3) EC-24 — commit
+existence, branch-push provenance, and CI success as separate claims; run
+event/head_branch validation; re-audit of P-062..P-065; P-011/P-013 proof
+search with honest NOT PROVEN classification when insufficient; machine-
+verifiable review/decision references for historical backing records. (4)
+EC-24 — branch-scoped, unique, valid intent reconciliation; global
+unmatched-intent invariant; expected_remote_tip_before_push bound to trusted
+push-event before/after state (all-zero before for new branches; no PR-event
+substitution); ABSENT backed by the ref's absent prior state. (5) merge
+transition — `pull-requests: read` + live canary; merge_commit_sha, source
+ref, merged_at, fresh non-author approval on the exact head (dismissals and
+supersessions handled; pagination); pre-merge PR-event verification; A-04
+stays an open blocker; DEFERRED supersession fixed; sequential-merge test.
+(6) EC-26 — sound conservative glob coverage; ordered negative patterns;
+empty/malformed filters fail closed. (7) document/evidence reconciliation
+with the append-only push log preserved. (8) two-phase push mechanics with
+truthful reclassification, then stop for review. A-01 remains ACCEPTED RISK
+(no rotation reminders, no rotation initiation, never reveal or store the
+token). No merge of PR #30 until all Round-22 blockers are fixed and
+independently reviewed on the exact new head; then live Stability Gate +
+Governance Acceptance, functioning pre-merge approval verification, and the
+protected-PR merge-commit strategy; after a verified merge, #31–#36
+revalidate serially and #23–#29 close only on proven unique-content coverage.
+The scientific hard stop is preserved in full.
+
+### 14.2 Repairs delivered on the Round-22 candidate
+
+EC-23: `scripts/ci/secret_control_check.py` type-validates every report
+element before examination and never interpolates report-derived values into
+diagnostics (counts, booleans, argv-supplied expectations, validated integers
+only); malformed reports/rows fail closed with fixed messages; the raw-key
+checks cover the report bytes even when the schema fails; broad-exception
+paths fail closed with a fixed message (AT-30). EC-24: claim separation
+(commit existence / push provenance / CI success) with event + head_branch
+validation on every cited run; off-lineage confirmations require push-event
+runs, live Events-API PushEvents, adjudicated `push_event=` citations, or
+`push-not-proven` reclassifications with machine-verifiable `review_ref=`
+references into THIS register (the reference must resolve to a Part whose
+section mentions the backed entry — "reviewed" is never merely a string
+written by the same record's author); intent reconciliations enforce
+preceding eligible targets, branch scope (merge-intent: source_branch),
+one-void-per-target, no voiding of consumed intents, and the GLOBAL
+unmatched-intent invariant; the terminal intent's declared pre-push state is
+bound to the PushEvent before/after state when the events source is
+configured (the CI gate always configures it; local tool mode discloses).
+Merge transition: `pull-requests: read` + live canaries; merge_commit_sha /
+source head.ref / merged_at / fresh non-author approval on the exact head
+(commit_id, pre-merge timing, latest-state-per-reviewer) / merge PushEvent
+before; the new pre-merge-verification job is the functioning pre-merge gate
+(expected red until the independent approval exists — by design, disclosed).
+EC-26: conservative witness-based glob coverage with ordered negative
+patterns and fail-closed empty/malformed filters (AT-34). Acceptance suite
+AT-01..AT-34 green (no check weakened or deleted; AT-27/AT-28 fixtures
+strengthened to the new required PR fields). Schema v5 documents every new
+rule.
+
+### 14.3 Adjudication table (direction 8; supersedes the Round-21 table's rows for these rules)
+
+| Rule | Decision status | Policy status | Implementation status | Live on main |
+|---|---|---|---|---|
+| EC-23 | PROPOSED until the report-derived disclosure regression is fixed and the exact-candidate scan controls pass | PROPOSED | disclosure fix + type validation + AT-30 on the Round-22 candidate; the exact-candidate CI run is the completing evidence | NO |
+| EC-24 | PROPOSED until claim separation, provenance, reconciliation invariants, pre-push-state binding, and BOTH merge-transition verifications pass | PROPOSED | all layers implemented (AT-31/AT-32/AT-33; schema v5); exact-candidate CI run is the completing evidence | NO |
+| EC-26 | PROPOSED until conservative coverage, ordered negative patterns, and malformed-filter rejection pass on the exact candidate | PROPOSED | witness-based coverage + ordered semantics + AT-34; exact-candidate CI run is the completing evidence | NO |
+| EC-16 / EC-19 / EC-20 / EC-21 | PROPOSED until their reviewed and rebased activation candidates pass all required checks | PROPOSED | live jobs run on the repair branch's own events; activation candidates await the post-#30 serial revalidation | NO |
+| EC-17 / EC-22 / EC-25 | In force as policy under earlier auditor decisions | ACTIVE | live jobs run on the repair branch's own pushes/PRs only | NO (until PR #30 merges and the post-merge verification succeeds) |
+
+### 14.4 Historical evidence-back re-adjudication (direction 3; P-062..P-065)
+
+Search performed 2026-10-20T20:17:51Z with the owner PAT (A-01; the value is never written
+anywhere), covering every machine-verifiable source the auditor named:
+
+- **Actions runs on the exact heads** (GET /actions/runs?head_sha=…):
+  `17eb88184c9f…` total_count=0; `dab33d946fe3…` total_count=0 — no run of
+  any event type exists on either head; the pre-gate-trigger era is
+  confirmed by live query, not by trusting the prior record. P-012/P-014's
+  cited runs (39408223554 on docs/owner-decisions, 39408297643 on
+  governance/canonical-docs) DO exist as push-event runs with matching
+  head_branch and head_sha; their conclusion=failure is disclosed separately
+  and never counted as successful gate evidence.
+- **Events API** (full retained window: 300 events,
+  2026-10-18T16:00:59Z..2026-10-20T19:13:33Z, 20 PushEvents): no PushEvent
+  with after == `17eb88184c9f…` and none with after == `dab33d946fe3…`;
+  exactly ONE retained PushEvent on refs/heads/proposal/ec16-ec26-enforcement: id 24612279632, created
+  2026-10-20T10:32:21Z, before = `dab33d946fe3…` (after/size elided by the
+  API) — a later push's own record that the branch's prior tip was
+  `dab33d946fe3…`, consistent with P-013-CONFIRM's ls-remote at 10:28:58Z.
+- **Incident and retained-Git evidence**: the P-013-CONFIRM body's
+  "fast-forward 17eb881..dab33d9" narrative and the durability bundles prove
+  commit existence and describe the transition, but a log narrative is not
+  independent machine-verifiable ref-transition evidence (transcript-only
+  proof is rejected per direction 3.6).
+
+Adjudication (this Part is the canonical record the review_ref= fields of
+P-074/P-075 resolve to):
+
+- **P-011-CONFIRM (proposal/ec16-ec26-enforcement @ `17eb88184c9f…`) →
+  NOT PROVEN.** Reclassified by P-074 (push-not-proven): the push's own
+  event (~09:34Z per the log) rolled off the retained window, no Actions
+  run exists on the head, and no other ref-transition evidence survives.
+  The commit exists (P-062's commits-API HTTP 200); commit existence is not
+  push provenance. The original entries stay unchanged; this push is never
+  counted as evidence for any declaration.
+- **P-013-CONFIRM (proposal/ec16-ec26-enforcement @ `dab33d946fe3…`) →
+  PUSH-PROVEN by prior-tip citation.** Backed by P-075 (evidence-back,
+  review_ref=this Part): PushEvent 24612279632 (2026-10-20T10:32:21Z, same
+  ref) records its before as `dab33d946fe3…` — the ref provably pointed
+  there (refs move only by pushes), establishing the branch update that
+  P-013-CONFIRM records. The event is re-verifiable live while retained;
+  the citation is recorded in P-075 in the schema-v5 prior_tip form.
+- **P-012-CONFIRM and P-014-CONFIRM → PUSH-PROVEN by push-event runs**
+  (direction 3.3, verified live again this cycle): 39408223554 (event=push,
+  head_branch=docs/owner-decisions, head_sha=`78b147d5…`,
+  conclusion=failure) and 39408297643 (event=push,
+  head_branch=governance/canonical-docs, head_sha=`b12f30e9…`,
+  conclusion=failure). The push event on the exact branch and head proves
+  the ref pointed there; the FAILED conclusions are disclosed separately
+  and are not counted as successful gate evidence.
+
+### 14.5 Merge path (binding; unchanged in substance from Part 13.4, with the Round-22 additions)
+
+PR #30 merges only after: all Round-22 blockers are fixed on the exact final
+candidate; the full Stability Gate and Governance Acceptance pass on that
+SHA's push and PR events; the pre-merge-verification job passes WITH the
+required independent, non-author, current-head approval recorded on the PR
+(until then that job is expected red — the gate functioning); the merge
+executes only through GitHub's protected PR mechanism with a MERGE COMMIT;
+the post-merge `main` run verifies the merge-intent (parents,
+merge_commit_sha, source ref, merged_at, fresh approval, PushEvent before).
+After that merge: PRs #31–#36 revalidate serially against the resulting
+`main` (declared bases updated; fresh exact-head results; their own
+merge-intents declared before each merges; EC-21 is not waived); PRs #23–#29
+close only after a path-by-path diff proves their unique changes are covered
+and their historical refs/evidence are preserved.
+
+### 14.6 Standing items — UNCHANGED
+
+A-01 remains ACCEPTED RISK: the owner rotates the PAT at the owner's
+pleasure; no rotation reminder, no rotation initiation, no credential
+operations; the token value is never written into the repository or any
+evidence. A-04 (exact branch-protection required-check configuration) is an
+OPEN blocker until independently verified; protection is never bypassed. The
+scientific hard stop is preserved in full: no production deployment, no v25
+calibration, no held-out evaluation, no threshold or cohort changes, no
+law-semantic changes, no golden-artifact regeneration without their approved
+gates. The independent r2 evidence-archive verification, the portable 40-row
+cohort metadata table, A-02 issuer-side revocation, and the EC2 deployment
+secrets remain OPEN and are not closed by this governance work.

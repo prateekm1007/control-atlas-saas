@@ -1,0 +1,481 @@
+name: Governance Acceptance
+
+# Round-19 direction 7: the live CI path must exercise the intended acceptance
+# checks on every relevant PR and push -- a script that exists is not a script
+# CI really runs. This workflow is the consolidated live activation of the
+# checks drafted under proposals/ci/ (the drafts remain inert references; this
+# file is the live enforcement point cited by the INDEX inventory).
+#
+# Job map (rule -> job):
+#   acceptance-suite        AT-01..AT-24 full acceptance suite (EC-6/EC-20 dogfood)
+#   reading-note-inventory  EC-26/EC-2: inventory derivation, note mapping, and
+#                           ACTIVE-rule liveness + trigger liveness (~events=)
+#   status-vocabulary       EC-22/EC-12: vocabulary + runs-manifest validation over
+#                           the evidence files that make machine-checkable claims
+#   push-log-integrity      EC-18/EC-17/EC-24: schema, unique IDs, INTENT/CONFIRM
+#                           pairing (pending disclosed), append-only parent-prefix,
+#                           and Round-20 live remote-ref verification (every
+#                           CONFIRM/RECONCILE vs ls-remote; the branch under test's
+#                           tip must be declared; cited run IDs vs the manifest)
+#   ec25-trigger-lint       EC-25/EC-7: deploy-trigger lint against the ACTUAL
+#                           current .github/workflows/ tree
+#   package-integrity       direction 3C/7: manifest coverage + digests, and the
+#                           package-scoped forbidden-reference check
+#   claim-verification      EC-16/EC-19/EC-20 on PR bodies (PR events only)
+#   declared-base           EC-21 on PR bodies (PR events only)
+#   secret-scan-all-refs    EC-23: full-history all-refs secret scan; the controls
+#                           are verified, not assumed (Round-20): the positive
+#                           control must produce the expected finding with the
+#                           expected rule fired and the key redacted (scanner
+#                           crashes exit 1 and fail closed; findings-found is
+#                           disambiguated via --exit-code 101), the clean negative
+#                           control must exit 0 with an empty report, and the
+#                           all-refs findings must match the REVIEWED fingerprint
+#                           allowlist (docs/evidence/ec16-ec26/
+#                           secret_scan_baseline.json; unknown fingerprints FAIL
+#                           wherever they live -- no docs//evidence/ category
+#                           exemption; the two H-1 history fingerprints stay a
+#                           separate A-02 class, disclosed every run)
+#
+# Supply-chain: no third-party actions are used in this workflow (only the
+# first-party actions/checkout and actions/setup-python, tag-pinned exactly as
+# the established Stability Gate pins them). The critical scanner tooling is
+# pinned by SHA256 checksum of the official release artifact (stronger than an
+# action tag). Job names deliberately avoid the deploy/publish/rollback/release
+# regex so this push-triggered workflow can never be confused with a deploy.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+# Round-23 direction 2: the pre-merge-verification job is removed (auditor
+# direction; register Part 14 records that approvals cannot be produced on
+# this repository by the credential holder, who is the PR author). The
+# pull-requests: read permission REMAINS REQUIRED: the push-log-integrity
+# canary and the evidence-sequence checker call the pull-request and
+# pull-request-review APIs with the job token on push and PR events alike
+# (contents: read alone is insufficient). Least privilege: read-only, nothing
+# else is granted.
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  acceptance-suite:
+    name: Acceptance suite (AT-01..AT-34)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Install test dependencies
+        run: pip install pytest pyyaml
+      - name: Run the full acceptance suite on the exact candidate
+        run: python3 scripts/ci/tests/run_all.py
+
+  reading-note-inventory:
+    name: EC-26 reading-note and rule-inventory validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Install checker dependencies
+        run: pip install pyyaml
+      - name: Validate the inventory, the note, and ACTIVE-rule liveness
+        run: python3 scripts/ci/reading_note_map_check.py
+
+  status-vocabulary:
+    name: EC-22 status vocabulary against a runs manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Build the runs manifest from GitHub Actions records
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          runs = {}
+          page = 1
+          while page <= 10:
+              req = urllib.request.Request(
+                  "https://api.github.com/repos/%s/actions/runs?per_page=100&page=%d"
+                  % (os.environ["GITHUB_REPOSITORY"], page),
+                  headers={"Authorization": "Bearer %s" % os.environ["GH_TOKEN"],
+                           "Accept": "application/vnd.github+json"})
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  data = json.load(resp)
+              for run in data.get("workflow_runs", []):
+                  runs[str(run["id"])] = {"head_sha": run["head_sha"],
+                                          "conclusion": run["conclusion"]}
+              if len(data.get("workflow_runs", [])) < 100:
+                  break
+              page += 1
+          json.dump({"runs": runs}, open("runs_manifest.json", "w"), indent=1)
+          print("runs manifest: %d run record(s)" % len(runs))
+          PY
+      - name: Lint the evidence files that make machine-checkable claims
+        # Scope decision (documented): the lint runs over the evidence/report
+        # files that carry the STATUS/Status-summary grammar and guarded-phrase
+        # claims. docs/P0_STATUS.md workstream percentages are the auditor's
+        # human estimates, not RUN_PASS claims, and are deliberately not linted.
+        run: |
+          python3 scripts/ci/status_vocabulary_lint.py \
+            docs/evidence/reading-note/READING_NOTE_LATEST.md \
+            docs/evidence/ec16-ec26/RECEIPT.md \
+            docs/evidence/ec16-ec26/LOCAL_TEST_LOG.md \
+            docs/evidence/push-log/PUSH_LOG.md \
+            --runs-manifest runs_manifest.json
+
+  push-log-integrity:
+    name: EC-18/EC-24 push-log schema, append-only, remote verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: API canary - authenticated PR/review/event reads must succeed (fail closed)
+        # Round-22 direction 5: a live canary proves the pull-requests: read
+        # permission actually works for the endpoints the merge verification
+        # depends on. A 401/403/404 or a network failure fails the job BEFORE
+        # the checker runs, so a permission gap can never look like a pass.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, sys, urllib.request
+          repo = os.environ["GITHUB_REPOSITORY"]
+          tok = os.environ["GH_TOKEN"]
+          def get(url):
+              req = urllib.request.Request(url, headers={
+                  "Authorization": "Bearer %s" % tok,
+                  "Accept": "application/vnd.github+json"})
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  return r.status, r.read()
+          checks = [
+              ("pull request list", "https://api.github.com/repos/%s/pulls?per_page=1" % repo),
+              ("pull request detail", "https://api.github.com/repos/%s/pulls/30" % repo),
+              ("pull request reviews", "https://api.github.com/repos/%s/pulls/30/reviews?per_page=1" % repo),
+              ("repository events", "https://api.github.com/repos/%s/events?per_page=1" % repo),
+          ]
+          failed = False
+          for name, url in checks:
+              try:
+                  status, _ = get(url)
+                  print("canary OK: %s -> HTTP %d" % (name, status))
+              except Exception as e:  # noqa: BLE001
+                  print("canary FAIL: %s -> %s" % (name, type(e).__name__))
+                  failed = True
+          if failed:
+              print("FAIL: the authenticated PR/review/events reads are not available; "
+                    "the merge/pre-merge verification cannot run (fail closed)")
+              sys.exit(1)
+          PY
+      - name: Build the runs manifest from GitHub Actions records
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          runs = {}
+          page = 1
+          while page <= 10:
+              req = urllib.request.Request(
+                  "https://api.github.com/repos/%s/actions/runs?per_page=100&page=%d"
+                  % (os.environ["GITHUB_REPOSITORY"], page),
+                  headers={"Authorization": "Bearer %s" % os.environ["GH_TOKEN"],
+                           "Accept": "application/vnd.github+json"})
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  data = json.load(resp)
+              for run in data.get("workflow_runs", []):
+                  runs[str(run["id"])] = {"head_sha": run["head_sha"],
+                                          "head_branch": run.get("head_branch"),
+                                          "event": run.get("event"),
+                                          "conclusion": run["conclusion"]}
+              if len(data.get("workflow_runs", [])) < 100:
+                  break
+              page += 1
+          json.dump({"runs": runs}, open("runs_manifest.json", "w"), indent=1)
+          print("runs manifest: %d run record(s)" % len(runs))
+          PY
+      - name: Schema + append-only + pairing + live remote-ref verification
+        # Round-20 direction 4: every CONFIRM/RECONCILE is verified against the
+        # live remote ref for its claimed branch; a confirmation for a different
+        # tip is classified HISTORICAL, not current; the branch under test's
+        # live tip must be declared (unpaired INTENT => PENDING, disclosed; an
+        # undeclared tip -- the Round-19 follow-up-push class -- FAILS); cited
+        # run IDs are checked against the manifest (contradicting head FAILS).
+        # Round-21 directions 4-6: confirmations pair their own identifier's
+        # intent; the terminal intent must be introduced by the exact candidate
+        # and declare the verified pre-push tip; HISTORICAL confirmations off
+        # the current lineage require a reviewed evidence-back whose SHA is a
+        # real remote commit; every cited run verifies via the manifest, else
+        # the Actions API (--repo + GH_TOKEN) -- a manifest omission is never
+        # an approval; a push to main is declared only by a VERIFIED
+        # merge-intent (merge-commit parents, merged PR, approving non-author
+        # review).
+        env:
+          BRANCH_UNDER_TEST: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+          EXPECTED_TIP: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if git rev-parse --verify HEAD~1 >/dev/null 2>&1 \
+             && git cat-file -e HEAD~1:docs/evidence/push-log/PUSH_LOG.md 2>/dev/null; then
+            git show HEAD~1:docs/evidence/push-log/PUSH_LOG.md > "$RUNNER_TEMP/pushlog_prev.md"
+            python3 scripts/ci/evidence_sequence_check.py \
+              docs/evidence/push-log/PUSH_LOG.md --pushlog-schema --remote-verify \
+              --branch "$BRANCH_UNDER_TEST" --expect-tip "$EXPECTED_TIP" \
+              --runs-manifest runs_manifest.json \
+              --repo "${{ github.repository }}" --api-token-env GH_TOKEN \
+              --parent-prefix "$RUNNER_TEMP/pushlog_prev.md"
+          else
+            python3 scripts/ci/evidence_sequence_check.py \
+              docs/evidence/push-log/PUSH_LOG.md --pushlog-schema --remote-verify \
+              --branch "$BRANCH_UNDER_TEST" --expect-tip "$EXPECTED_TIP" \
+              --runs-manifest runs_manifest.json \
+              --repo "${{ github.repository }}" --api-token-env GH_TOKEN
+          fi
+
+  ec25-trigger-lint:
+    name: EC-25 workflow-trigger lint on the live workflows tree
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Install checker dependencies
+        run: pip install pyyaml
+      - name: Lint the actual current .github/workflows tree
+        run: python3 scripts/ci/workflow_deploy_trigger_lint.py .github/workflows
+
+  package-integrity:
+    name: Package manifest and forbidden-reference checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Manifest coverage and digest verification (direction 3C)
+        run: python3 scripts/ci/manifest_check.py
+      - name: Package-scoped forbidden-reference check
+        run: python3 scripts/ci/forbidden_reference_check.py
+
+  claim-verification:
+    name: EC-16/19/20 PR-body claim verification
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Install test dependencies
+        run: pip install pytest pyyaml
+      - name: Write the PR body to a file (no shell interpolation)
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr_body.md"
+      - name: Verify directive fields, claimed SHAs, and EXECUTE the named acceptance tests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/ci/verify_claimed_shas.py \
+            --body "$RUNNER_TEMP/pr_body.md" \
+            --repo "${{ github.repository }}" \
+            --check-tests \
+            --evidence-out "$RUNNER_TEMP/ec20_evidence.json"
+      - name: Lint the PR body's Status-summary vocabulary
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          printf '{"runs": {}}' > /dev/null  # RUN_PASS claims in bodies need the manifest; built below
+          python3 - <<'PY'
+          import json, os, urllib.request
+          runs = {}
+          page = 1
+          while page <= 10:
+              req = urllib.request.Request(
+                  "https://api.github.com/repos/%s/actions/runs?per_page=100&page=%d"
+                  % (os.environ["GITHUB_REPOSITORY"], page),
+                  headers={"Authorization": "Bearer %s" % os.environ["GH_TOKEN"],
+                           "Accept": "application/vnd.github+json"})
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  data = json.load(resp)
+              for run in data.get("workflow_runs", []):
+                  runs[str(run["id"])] = {"head_sha": run["head_sha"],
+                                          "conclusion": run["conclusion"]}
+              if len(data.get("workflow_runs", [])) < 100:
+                  break
+              page += 1
+          json.dump({"runs": runs}, open("runs_manifest.json", "w"), indent=1)
+          PY
+          python3 scripts/ci/status_vocabulary_lint.py "$RUNNER_TEMP/pr_body.md" \
+            --runs-manifest runs_manifest.json
+      - name: Upload EC-20 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ec20-acceptance-test-evidence
+          path: ${{ runner.temp }}/ec20_evidence.json
+
+  declared-base:
+    name: EC-21 declared-base verification
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Write the PR body to a file (no shell interpolation)
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr_body.md"
+      - name: Verify Base-SHA ancestry, remote presence, and stack parent
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/ci/check_declared_base.py \
+            --declaration "$RUNNER_TEMP/pr_body.md" \
+            --repo-slug "${{ github.repository }}"
+
+  secret-scan-all-refs:
+    name: EC-23 full-history secret scan with controls
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Fetch every remote ref (evidence branches included)
+        run: |
+          git fetch --prune --no-tags origin "+refs/heads/*:refs/remotes/origin/*"
+          if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+            echo "FAIL: shallow checkout; full-history scan not possible"; exit 1
+          fi
+          echo "refs to be scanned:"; git branch -r | wc -l
+      - name: Install the checksum-pinned gitleaks binary (immutable tooling pin)
+        run: |
+          set -euo pipefail
+          GITLEAKS_VER=8.30.1
+          GITLEAKS_SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+          curl -sSfL --retry 3 -o /tmp/gitleaks.tgz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VER}/gitleaks_${GITLEAKS_VER}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tgz" | sha256sum -c -
+          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks && chmod +x /tmp/gitleaks
+          /tmp/gitleaks version
+      - name: Positive control - the seeded SYNTHETIC key must be genuinely detected
+        # Round-20 direction 3: a nonzero exit alone proves nothing (a scanner
+        # crash also exits nonzero). The scan runs with --exit-code 101 so
+        # findings-found is distinct from execution errors (which exit 1), and
+        # scripts/ci/secret_control_check.py verifies the REPORT: the expected
+        # finding for the seeded file, the expected rule (aws-access-token)
+        # actually fired, no unexpected extra findings, and the assembled key
+        # redacted everywhere (report bytes + captured log). The key is passed
+        # via an environment variable, never argv or file content, and is
+        # assembled at runtime from two non-adjacent parts so this tracked file
+        # cannot match the aws-access-token rule and pollute the real-repo
+        # scans. (Defect history: the first Round-19 version seeded Amazon's
+        # documented example key, which gitleaks 8.30.1's default config
+        # allowlists -- runs 39438362567 et al., job log 118681317783; the
+        # second version accepted any nonzero exit -- Round-20 audit finding.)
+        env:
+          SEED_PIECE_A: "AKIA"
+          SEED_PIECE_B: "T7W2QZ5XN4PRM3KV"
+        run: |
+          set -uo pipefail
+          SEED_AWS_TOKEN="${SEED_PIECE_A}${SEED_PIECE_B}"
+          export SEEDED_KEY="$SEED_AWS_TOKEN"
+          rm -rf /tmp/seedrepo && mkdir -p /tmp/seedrepo && cd /tmp/seedrepo
+          git init -q && git config user.email t@t && git config user.name t
+          printf 'aws_access_key_id = %s\n' "$SEED_AWS_TOKEN" > fixture.txt
+          git add fixture.txt && git commit -qm "seeded fixture"
+          set +e
+          /tmp/gitleaks detect --source . --log-opts="--all" --redact --exit-code 101 \
+            --report-path /tmp/seed_report.json --report-format json > /tmp/seed_scan.log 2>&1
+          RC=$?
+          set -e
+          python3 "$GITHUB_WORKSPACE/scripts/ci/secret_control_check.py" positive \
+            --report /tmp/seed_report.json --exit-code "$RC" \
+            --expect-rule aws-access-token --expect-file fixture.txt \
+            --key-env SEEDED_KEY --log-file /tmp/seed_scan.log
+      - name: Negative control - a clean repo must pass (verified, not assumed)
+        run: |
+          set -uo pipefail
+          rm -rf /tmp/cleanrepo && mkdir -p /tmp/cleanrepo && cd /tmp/cleanrepo
+          git init -q && git config user.email t@t && git config user.name t
+          echo "just a clean file" > clean.txt
+          git add clean.txt && git commit -qm "clean"
+          set +e
+          /tmp/gitleaks detect --source . --log-opts="--all" --redact --exit-code 101 \
+            --report-path /tmp/clean_report.json --report-format json > /tmp/clean_scan.log 2>&1
+          RC=$?
+          set -e
+          python3 "$GITHUB_WORKSPACE/scripts/ci/secret_control_check.py" negative \
+            --report /tmp/clean_report.json --exit-code "$RC" \
+            --log-file /tmp/clean_scan.log
+      - name: HEAD-tree scan of the exact candidate (fails on any finding)
+        # Round-21 direction 3.4: a scanner exit code of 0 is NOT sufficient to
+        # claim success. The report must exist, parse, and conform to the
+        # empty-finding schema; the captured log must exist and be readable
+        # (fail closed) -- all verified by secret_control_check.py negative.
+        run: |
+          set -uo pipefail
+          set +e
+          /tmp/gitleaks detect --source . --no-git --redact --exit-code 101 -v \
+            --report-path /tmp/headtree_report.json --report-format json > /tmp/headtree_scan.log 2>&1
+          RC=$?
+          set -e
+          if [ "$RC" -eq 101 ]; then
+            echo "FAIL: HEAD tree has findings (baseline classification below; see the report artifact)"
+            python3 scripts/ci/secret_baseline_check.py \
+              --report /tmp/headtree_report.json \
+              --baseline docs/evidence/ec16-ec26/secret_scan_baseline.json || true
+            exit 1
+          fi
+          python3 scripts/ci/secret_control_check.py negative \
+            --report /tmp/headtree_report.json --exit-code "$RC" \
+            --log-file /tmp/headtree_scan.log
+      - name: All-refs full-history scan against the reviewed fingerprint allowlist
+        # Round-20 direction 3: the Round-19 docs//evidence/ category exemption
+        # is REPLACED by the explicit reviewed allowlist
+        # (docs/evidence/ec16-ec26/secret_scan_baseline.json + its MD record):
+        # every finding must match a documented fingerprint; unknown
+        # fingerprints FAIL wherever they live; the two H-1 history fingerprints
+        # are a separate A-02 class, disclosed on every run (issuer-side
+        # revocation stays open). The scan itself runs with --exit-code 0, so a
+        # nonzero exit here is a scanner execution failure and fails closed.
+        run: |
+          set -euo pipefail
+          /tmp/gitleaks detect --source . --log-opts="--all" --redact --exit-code 0 \
+            --report-path /tmp/gitleaks_all_refs.json --report-format json
+          python3 scripts/ci/secret_baseline_check.py \
+            --report /tmp/gitleaks_all_refs.json \
+            --baseline docs/evidence/ec16-ec26/secret_scan_baseline.json
+      - name: Upload the redacted all-refs report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ec23-gitleaks-all-refs-report
+          path: /tmp/gitleaks_all_refs.json
+      - name: Upload the control reports (positive, negative, HEAD tree)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ec23-control-reports
+          path: |
+            /tmp/seed_report.json
+            /tmp/clean_report.json
+            /tmp/headtree_report.json
