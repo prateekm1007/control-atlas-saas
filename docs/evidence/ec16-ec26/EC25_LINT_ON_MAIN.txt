@@ -1,0 +1,34 @@
+# EC-25 deploy-trigger lint against main @ 2195a048e87dcec4aa63e8dc7981b3bb6d237ca0 (report-only)
+# command: python3 scripts/ci/workflow_deploy_trigger_lint.py .github/workflows/ --report-only
+# executed: 2026-10-20T06:03:29Z (inert script; executed manually as evidence, no CI activation)
+
+# scanned 2 workflow file(s) under .github/workflows/
+FAIL: deploy.yml: job 'deploy' matches deploy regex and workflow triggers on ['push']
+
+# exit code (report-only): 0
+
+# ---------------------------------------------------------------- CORRECTION (2026-10-20, auditor item 3.7)
+# The finding above (deploy job on push trigger) stands. However, the parenthetical the
+# proposal package later added in prose ("deploy job on push: branches: ain]") misattributed
+# the malformed fragment. Exact tracked-file evidence:
+#   - .github/workflows/deploy.yml        blob 838627b460a374b2c789f73cdbcad3c8c38abc4d
+#     push trigger: branches: [main]      (line 5)  -- NO typo; the EC-25 violation is the
+#     push-triggered ungated deploy itself.
+#   - .github/workflows/toscanini-gate.yml blob b86274ef3bd29f4eb4c534e71327a5d4a72fb812
+#     line 5: push.branches: ["*"]        -- does not match nested branch names
+#     line 7: pull_request.branches: ain] -- the malformed "[ain]" fragment IS present at
+#     this exact path/blob/line (re-verified by byte-level read this session; the contrary
+#     observation in the audit checklist could not be reproduced against the tracked object).
+# The original text above is preserved unchanged (append-only).
+
+## APPENDIX (2026-10-20T11:23:35Z, added on the D-4 rebuild): release supersedes the observations above
+
+- The release integrated to main as `d292a38` (gate run 39411457483 = success) and the auditor
+  verified D-1 on it: `.github/workflows/deploy.yml` on main is `workflow_dispatch` only, with no
+  push or workflow_run trigger, and the gate's trigger list is `branches: ["**"]` (line 7). The
+  pre-release defects documented above (push-triggered ungated deploy; malformed/undersized
+  trigger fragments) no longer exist on main's tracked workflows.
+- This remediation file therefore remains what it was: PROPOSED/inert reference material under
+  `proposals/remediation/`, kept for the EC-25 acceptance fixtures. It does not modify any
+  `.github/` file on the rebuild branch (D-4: `.github/` restored byte-for-byte to main).
+- Original text above is preserved unchanged (append-only, EC-18).
