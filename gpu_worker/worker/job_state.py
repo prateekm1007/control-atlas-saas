@@ -26,12 +26,14 @@ def _r():
 
 
 def create_job(job_id: str, original_audit_id: str,
-               protocol: str, user_email: Optional[str] = None) -> Dict:
+               protocol: str, user_email: Optional[str] = None,
+               created_by_key_hash: Optional[str] = None) -> Dict:
     job = {
         "job_id":            job_id,
         "original_audit_id": original_audit_id,
         "protocol":          protocol,
         "user_email":        user_email,
+        "created_by_key_hash": created_by_key_hash,  # WP-2/3: key-scoped history
         "state":             STATE_QUEUED,
         "created_at":        datetime.now(timezone.utc).isoformat(),
         "updated_at":        datetime.now(timezone.utc).isoformat(),

@@ -1,1 +1,1 @@
-EXPLANATION = {"title": "Cavity Collapse", "principle": "Functional pockets must exist.", "rationale": "Binding requires defined cavities. Pocket collapse renders the design dead."}
+EXPLANATION = {"title": "Packing Quality", "principle": "Bounding-box volume per atom stays at or below 300 cubic Angstroms per atom.", "rationale": "The pinned code computes a heuristic packing-density score: structure bounding-box volume divided by atom count. It is NOT a binding-cavity volume rule (WP-8: previous text described pocket-collapse physics the code does not measure)."}

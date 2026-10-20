@@ -1,0 +1,533 @@
+{
+  "register_version": "1.1",
+  "generated": "2026-10-19 (rev 1.1: SEC-016 corrected to false positive on root cause, superseded by SEC-022; SEC-022 added, fixed_in_pr #12)",
+  "subject": "prateekm1007/control-atlas-saas",
+  "baseline_commit": "2195a048e87dcec4aa63e8dc7981b3bb6d237ca0",
+  "final_head": "014b155 (hardening/WP-10-hygiene-docs; PR #10)",
+  "secret_handling": "All secret values redacted. Provider identified by format family only (e.g. 'Google API key, AIza format'). No key material appears in this register, in diffs, or in test output.",
+  "rotation_notice": "Per operating rule 7: no provider-side key rotation or revocation is claimed. Provider-side actions are listed as pending in finding SEC-018 and in 10_operator_checklist.md.",
+  "status_vocabulary": {
+    "fixed_in_pr": "Remediated in the referenced work package; verified by named tests at final head.",
+    "open": "Present at final head; remediation requires a further commit (not permitted in this evidence-only task).",
+    "pending_provider": "Code-side remediation complete or impossible without history rewrite; requires provider-side action by the owner.",
+    "unverified": "Check could not be executed in this sandbox; stated precisely."
+  },
+  "findings": [
+    {
+      "id": "SEC-001",
+      "severity": "high",
+      "title": "Hardcoded Google (Gemini) provider API key in backend source at baseline",
+      "paths": [
+        "backend/tos/diagnosis/system_diagnosis.py (baseline path backend/system_diagnosis.py:8)"
+      ],
+      "first_observed": "baseline 2195a04 (key format: Google AIza family; value redacted)",
+      "status": "fixed_in_pr",
+      "remediation": {
+        "wp": "WP-1",
+        "pr": 1,
+        "commit": "ab5bc32"
+      },
+      "fix_summary": "Key literal removed; module now reads GEMINI_API_KEY from environment and exits with a clear error when unset.",
+      "tests": [],
+      "evidence": [
+        "git grep for AIza/sk-/api-key patterns: 0 hits at final head",
+        "gitleaks v8.30.1 --no-git scan of tracked tree at 014b155: no leaks (exit 0)",
+        "gitleaks scan of chain 2195a04..014b155 (10 commits): no leaks (exit 0)"
+      ]
+    },
+    {
+      "id": "SEC-002",
+      "severity": "high",
+      "title": "Implicit OPEN_MODE: authentication silently disabled when no API keys configured",
+      "paths": [
+        "backend/tos/security/auth.py"
+      ],
+      "first_observed": "baseline 2195a04",
+      "status": "fixed_in_pr",
+      "remediation": {
+        "wp": "WP-2",
+        "pr": 2,
+        "commit": "1425e15"
+      },
+      "fix_summary": "OPEN_MODE now requires explicit TOSCANINI_ALLOW_OPEN_MODE=1 AND absence of configured keys. Unconfigured production deployments fail closed: protected routes return 503 until keys are configured.",
+      "tests": [
+        {
+          "file": "backend/tests/test_api_key_guard.py",
+          "count": 39
+        }
+      ],
+      "evidence": [
+        "auth.py: OPEN_MODE = not ALLOWED_KEYS and (TOSCANINI_ALLOW_OPEN_MODE == '1'); 503 branch with fail-closed log line"
+      ]
+    },
+    {
+      "id": "SEC-003",
+      "severity": "high",
+      "title": "11 routes reachable without authentication at baseline",
+      "paths": [
+        "backend/main.py"
+      ],
+      "first_observed": "baseline 2195a04",
+      "status": "fixed_in_pr",
+      "remediation": {
+        "wp": "WP-2",
+        "pr": 2,
+        "commit": "1425e15"
+      },
+      "fix_summary": "Depends(verify_api_key) added to all protected routes. Default posture: authenticated. Public routes limited to /health, /laws, /definitions (reference data / monitoring). Parametrized ROUTE_MATRIX covers every registered route plus a drift guard that fails if unregistered routes appear.",
+      "tests": [
+        {
+          "file": "backend/tests/test_api_key_guard.py",
+          "count": 39
+        }
+      ],
+      "evidence": [
+        "04_route_authorization_matrix.md (generated from ROUTE_MATRIX at final head)"
+      ]
+    },
+    {
+      "id": "SEC-004",
+      "severity": "high",
+      "title": "Per-IP history endpoint exposed audit records across users (/history/ip)",
+      "paths": [
+        "backend/main.py (baseline route /history/ip/{ip})"
+      ],
+      "first_observed": "baseline 2195a04",
+      "status": "fixed_in_pr",
+      "remediation": {
+        "wp": "WP-2",
+        "pr": 2,
+        "commit": "1425e15"
+      },
+      "fix_summary": "/history/ip removed (dashboard option removed with it). History is now key-scoped: B1 tokens embed created_by_key_hash and history lookups filter on it.",
+      "tests": [
+        {
+          "file": "backend/tests/test_history_endpoints.py",
+          "count": 11
+        }
+      ],
+      "evidence": [
+        "ROUTE_MATRIX: /history/ip/1.2.3.4 now falls through to key-scoped /history/{user_email:path} (401 unauthenticated)"
+      ]
+    },
+    {
+      "id": "SEC-005",
+      "severity": "medium",
+      "title": "CORS wildcard origin at baseline",
+      "paths": [
+        "backend/main.py (CORSMiddleware allow_origins=['*'])"
+      ],
+      "first_observed": "baseline 2195a04",
+      "status": "fixed_in_pr",
+      "remediation": {
+        "wp": "WP-2",
+        "pr": 2,
+        "commit": "1425e15"
+      },
+      "fix_summary": "CORS origins now read from ALLOWED_ORIGINS env; empty/missing configuration yields no permissive default.",
+      "tests": [
+        {
+          "file": "backend/tests/test_api_key_guard.py",
+          "count": 39
+        }
+      ],
+      "evidence": [
+        "grep at final head: allow_origins sourced from ALLOWED_ORIGINS"
+      ]
+    },
+    {
+      "id": "SEC-006",
+      "severity": "high",
+      "title": "Internal worker callback accepted without service authentication",
+      "paths": [
+        "backend/main.py (/refinement/internal-callback)",
+        "gpu_worker/worker/tasks.py (auto_callback)"
+      ],
+      "first_observed": "baseline 2195a04",
+      "status": "fixed_in_pr",
+      "remediation": {
+        "wp": "WP-3",
+        "pr": 3,
+        "commit": "04a3f01"
+      },
+      "fix_summary": "HMAC-SHA256 signature over '<X-Timestamp>.<raw body>' using INTERNAL_CALLBACK_SECRET; 300-second replay window; constant-time compare_digest; 503 when server secret unset (fail-closed); worker refuses to send unsigned callbacks. Body validated by pydantic (hex + ATOM records); job existence checked.",
+      "tests": [
+        {
+          "file": "backend/tests/test_internal_callback_security.py",
+          "count": 12
+        }
+      ],
+      "evidence": [
+        "main.py:876-920 _verify_internal_signature; tasks.py auto_callback skips callback when execution failed or secret missing"
+      ]
+    },
+    {
+      "id": "SEC-007",
+      "severity": "high",
+      "title": "Acquisition failure fell back to fabricated/mock ATOM records",
+      "paths": [
+        "backend/tos/generation/dispatcher.py"
+      ],
+      "first_observed": "baseline 2195a04",
+      "status": "fixed_in_pr",
+      "remediation": {
+        "wp": "WP-4",
+        "pr": 4,
+        "commit": "ab53180"
+      },
+      "fix_summary": "RCSB/AFDB exhaustion raises SourceUnavailable; /ingest returns 503 naming sources tried; no verdict written, no NKG record written. _mock path deleted.",
+      "tests": [
+        {
+          "file": "backend/tests/test_source_unavailable.py",
+          "count": 5
+        }
+      ],
+      "evidence": [
+        "dispatcher.py: 'WP-4: never fabricate a structure - fail loudly instead.' raise SourceUnavailable in both _acquire_rcsb and _acquire_afdb"
+      ]
+    },
+    {
+      "id": "SEC-008",
+      "severity": "medium",
+      "title": "Collision-prone 8-character audit IDs conflated record identity with content digest",
+      "paths": [
+        "backend/main.py",
+        "gpu_worker/worker/tasks.py"
+      ],
+      "first_observed": "baseline 2195a04",
+      "status": "fixed_in_pr",
+      "remediation": {
+        "wp": "WP-5",
+        "pr": 5,
+        "commit": "47bb20e"
+      },
+      "fix_summary": "Audit ID is now the full SHA-256 coordinate digest (64 hex, deterministic dedup preserved per owner default); job IDs are uuid4().hex; legacy 8-char IDs keep resolving in the filename store.",
+      "tests": [
+        {
+          "file": "backend/tests/test_ids.py",
+          "count": 7
+        }
+      ],
+      "evidence": []
+    },
+    {
+      "id": "SEC-009",
+      "severity": "high",
+      "title": "Negative-knowledge store accepted empty/unknown verdicts and zero-byte payloads; /nkg over-exposed internal fields",
+      "paths": [
+        "backend/main.py (/nkg)",
+        "tos negative-knowledge record path"
+      ],
+      "first_observed": "baseline 2195a04",
+      "status": "fixed_in_pr",
+      "remediation": {
+        "wp": "WP-6",
+        "pr": 6,
+        "commit": "3d238ab"
+      },
+      "fix_summary": "record_audit rejects empty verdicts, unknown verdict strings, empty hashes, zero-byte payloads; duplicate submissions suppressed idempotently (owner default, flagged in PR body); /nkg serves a public field whitelist (no artifact_hash, program_id, program_state, s8_tax_applied).",
+      "tests": [
+        {
+          "file": "backend/tests/test_nkg_validation.py",
+          "count": 10
+        }
+      ],
+      "evidence": []
+    },
+    {
+      "id": "SEC-010",
+      "severity": "high",
+      "title": "Dependency lock unresolvable on modern pip; PyJWT absent from lock",
+      "paths": [
+        "backend/requirements-lock.txt"
+      ],
+      "first_observed": "baseline 2195a04",
+      "status": "fixed_in_pr",
+      "remediation": {
+        "wp": "WP-7",
+        "pr": 7,
+        "commit": "33366e3"
+      },
+      "fix_summary": "Lock regenerated: conflicting gradio pins (websockets<11 vs websockets==15.0.1) and streamlit protobuf conflict removed; PyJWT added (required by tos.security.tokens). CI installs lock + requirements-dev.txt on Python 3.12.",
+      "tests": [],
+      "evidence": [
+        "06_ci/baseline_lock_resolution.txt: exit 1 ResolutionImpossible reproduced on pip 26.2.1",
+        "fresh venv install of lock+dev at final head: exit 0 (pip 26.2.1)",
+        "06_ci/final_rerun.txt: 355 passed, 5 skipped, 0 failed, 0 errors"
+      ]
+    },
+    {
+      "id": "SEC-011",
+      "severity": "medium",
+      "title": "PDF module raised call-time NameError when reportlab missing; pytest collected a sys.exit script as a test",
+      "paths": [
+        "dashboard/pdf_certificate.py (deleted)",
+        "backend/tests/test_b1_tokens.py (rewritten)"
+      ],
+      "first_observed": "baseline 2195a04",
+      "status": "fixed_in_pr",
+      "remediation": {
+        "wp": "WP-7",
+        "pr": 7,
+        "commit": "33366e3"
+      },
+      "fix_summary": "Owner-defaulted decision (flagged in PR #7 body): pdf_certificate.py and its 9 tests deleted; test_b1_tokens.py rewritten as a proper pytest module (11 tests). Product PDF export lives in backend/tos/forensic_artifacts/pdf_generator.py (fpdf2, present in lock).",
+      "tests": [
+        {
+          "file": "backend/tests/test_b1_tokens.py",
+          "count": 11
+        }
+      ],
+      "evidence": [
+        "06_ci/baseline_pytest_exact_ci_list.txt: NameError: name 'SimpleDocTemplate' is not defined; ERROR collecting test_b1_tokens.py"
+      ]
+    },
+    {
+      "id": "SEC-012",
+      "severity": "medium",
+      "title": "Governance drift: law_canon.json conflicted with station_sop LAW_CANON and glossary variants; SAAS_HANDOFF.md contained conflict markers and fictional law labels",
+      "paths": [
+        "governance/law_canon.json (removed)",
+        "backend/tos/governance/station_sop.py",
+        "backend/tos/glossary/*",
+        "SAAS_HANDOFF.md"
+      ],
+      "first_observed": "baseline 2195a04",
+      "status": "fixed_in_pr",
+      "remediation": {
+        "wp": "WP-8",
+        "pr": 8,
+        "commit": "76083e4"
+      },
+      "fix_summary": "Single structured registry (governance/law_registry.yaml) built from the pinned runtime code; 15 enforced entries copied exactly, 4 declared laws (190/210/220/230) recorded as retired; 10 glossary files rewritten; SAAS_HANDOFF.md conflicts resolved and labels corrected. Runtime contract (station_sop.LAW_CANON) unchanged and parity-tested.",
+      "tests": [
+        {
+          "file": "backend/tests/test_law_registry.py",
+          "count": 43
+        }
+      ],
+      "evidence": [
+        "07_law_registry_validation.md",
+        "registry sha256 pinned in governance/law_registry.sha256 and matched at final head"
+      ]
+    },
+    {
+      "id": "SEC-013",
+      "severity": "low",
+      "title": "Three byte-identical credits modules drifted across import paths",
+      "paths": [
+        "backend/worker/credits.py (deleted)",
+        "gpu_worker/worker/credits.py (deleted)",
+        "backend/tos_credits/credits.py (canonical)"
+      ],
+      "first_observed": "baseline 2195a04",
+      "status": "fixed_in_pr",
+      "remediation": {
+        "wp": "WP-9",
+        "pr": 9,
+        "commit": "027a37a"
+      },
+      "fix_summary": "All importers repointed to backend/tos_credits/credits.py.",
+      "tests": [
+        {
+          "file": "backend/tests/test_credit_bridge.py",
+          "count": null
+        }
+      ],
+      "evidence": [
+        "git grep credits imports at final head: single module"
+      ]
+    },
+    {
+      "id": "SEC-014",
+      "severity": "low",
+      "title": "Research corpus (363 entries files, results, archives) and junk files inside the product repository",
+      "paths": [
+        "entries/ (removed)",
+        "results/ (removed)",
+        "archives/ (removed)",
+        "11 junk files (removed)",
+        "32 root scripts moved to scripts/research/",
+        ".dockerignore (added)"
+      ],
+      "first_observed": "baseline 2195a04",
+      "status": "fixed_in_pr",
+      "remediation": {
+        "wp": "WP-10",
+        "pr": 10,
+        "commit": "014b155"
+      },
+      "fix_summary": "Research corpus archived outside the repo at /home/z/my-project/control-atlas-research-archive for owner transfer to the read-only research archive (scope rule prevented pushing there); product README rewritten; Docker build contexts exclude research/log content.",
+      "tests": [],
+      "evidence": [
+        "08_product_scope_matrix.md"
+      ]
+    },
+    {
+      "id": "SEC-015",
+      "severity": "high",
+      "title": "JWT secret falls back to a hardcoded, publicly-known development value; no startup gate and no test for TOSCANINI_JWT_SECRET",
+      "paths": [
+        "backend/tos/security/tokens.py (SECRET_KEY default 'toscanini-phase-b1-secret-SETMEINENV', value redacted here)"
+      ],
+      "first_observed": "baseline 2195a04; still present at final head",
+      "status": "open",
+      "remediation": null,
+      "fix_summary": "NOT ADDRESSED BY WP-1..WP-10. Brief Phase 1B requires that the application must not start in production with a known development JWT secret. Required follow-up commit: refuse startup (or disable token-minting routes) when TOSCANINI_JWT_SECRET is unset/weak in non-OPEN_MODE deployments, plus configuration tests.",
+      "tests": [],
+      "evidence": [
+        "Compensating control at final head: the only JWT-validating route, POST /refinement/callback, is token-gated (ROUTE_MATRIX: 422 without token); the B2 worker path uses the separately-gated HMAC /refinement/internal-callback. The known JWT secret alone therefore does not reach the internal-callback surface, but tokens remain forgeable against /refinement/callback."
+      ]
+    },
+    {
+      "id": "SEC-016",
+      "severity": "medium",
+      "title": "[CORRECTED - false positive on root cause] PR checks absent on stacked PRs (originally misattributed to malformed 'branches: ain]' string)",
+      "paths": [
+        ".github/workflows/toscanini-gate.yml"
+      ],
+      "first_observed": "baseline 2195a04 (pre-existing); unchanged by WP-1/WP-7",
+      "status": "corrected_false_positive",
+      "remediation": null,
+      "fix_summary": "NOT ADDRESSED BY WP-1..WP-10. YAML parses the value as the scalar string 'ain]', which matches no branch; the gate only fires on push to '*'. One-line fix: branches: [main]. Requires a commit (not permitted in this evidence-only task).",
+      "tests": [],
+      "evidence": [
+        "git show 2195a04:.github/workflows/toscanini-gate.yml line 7 identical at final head"
+      ],
+      "correction": {
+        "date": "2026-10-19",
+        "reason": "Byte-level re-inspection disproves the 'malformed trigger string' claim: line 7 of toscanini-gate.yml is and was the valid 'branches: [main]' (hex 202020206272616e636865733a205b6d61696e5d at the working tree; od dump of git show 014b155 identical). The 'ain]' string seen in the prior session was a terminal-rendering artifact.",
+        "symptom_is_real": true,
+        "superseded_by": "SEC-022",
+        "behavior_note": "PRs #2-#10 really did run zero checks - real root cause is the branch-filter glob semantics recorded in SEC-022, not string corruption."
+      }
+    },
+    {
+      "id": "SEC-017",
+      "severity": "medium",
+      "title": "gpu_worker test suites are script-style, break pytest collection, and are not wired into CI",
+      "paths": [
+        "gpu_worker/tests/test_credits.py",
+        "gpu_worker/tests/test_week12.py",
+        "gpu_worker/tests/test_execution_engine.py",
+        "gpu_worker/tests/test_worker.py"
+      ],
+      "first_observed": "pre-existing at baseline; not in scope of WP-1..WP-10 (WP-7 fixed the backend b1 script only)",
+      "status": "open",
+      "remediation": null,
+      "fix_summary": "NOT ADDRESSED BY WP-1..WP-10. Module-level script execution (banner prints, sys.exit) causes pytest INTERNALERROR (exit 3). In designed script mode with TOSCANINI_DATA_DIR set: test_credits.py 6/10 and test_week12.py 9/14 checks pass at final head (11 checks failing). CI runs only backend/tests.",
+      "tests": [],
+      "evidence": [
+        "script-mode runs recorded 2026-10-19 in sandbox; TOSCANINI_DATA_DIR required (import-time mkdir of /app/data)"
+      ]
+    },
+    {
+      "id": "SEC-018",
+      "severity": "high",
+      "title": "Git history retains 2 Google API key exposures; provider-side revocation outstanding",
+      "paths": [
+        "probe_models.py (history, file absent at final head)",
+        "system_diagnosis.py (history; key removed at WP-1, file moved to scripts/research/)"
+      ],
+      "first_observed": "commit b66f0e3bc8b5e86f5810ff52b598d917420ac7a3 (2026-02-12, pre-baseline)",
+      "status": "pending_provider",
+      "remediation": {
+        "wp": "WP-1",
+        "pr": 1,
+        "commit": "ab5bc32"
+      },
+      "fix_summary": "Code-side: key removed from working tree at WP-1. History rewrite is prohibited by operating rules (no force-push, no history rewrite). The exposed key must be treated as compromised: revoke/rotate at the provider (Google AI Studio / Cloud console) and verify revocation provider-side. Per rule 7 no rotation is claimed here.",
+      "tests": [],
+      "evidence": [
+        "gitleaks v8.30.1 full-history scan (--redact): 2 findings, RuleID gcp-api-key, both in commit b66f0e3",
+        "gitleaks scan of remediation chain 2195a04..014b155: no leaks",
+        "tracked-tree scan at final head: no leaks"
+      ]
+    },
+    {
+      "id": "SEC-019",
+      "severity": "low",
+      "title": "CI gate executes backend tests only; gpu_worker and dashboard test suites are outside the enforced gate",
+      "paths": [
+        ".github/workflows/toscanini-gate.yml (unit-tests job: 'cd backend && python -m pytest tests')"
+      ],
+      "first_observed": "baseline 2195a04; install source corrected at WP-7 but job scope unchanged",
+      "status": "open",
+      "remediation": null,
+      "fix_summary": "Related to SEC-017. Backend suite is green and enforced (355 passed at final head); extending the gate to gpu_worker requires the SEC-017 fix first.",
+      "tests": [],
+      "evidence": []
+    },
+    {
+      "id": "SEC-020",
+      "severity": "info",
+      "title": "Docker image builds not executed in sandbox; build-context validation is static only",
+      "paths": [
+        "backend/Dockerfile",
+        "dashboard/Dockerfile",
+        "gpu_worker/Dockerfile",
+        ".dockerignore"
+      ],
+      "first_observed": "n/a",
+      "status": "unverified",
+      "remediation": null,
+      "fix_summary": "Docker is unavailable in this sandbox (docker CLI absent). Validation performed statically: .dockerignore excludes .git, .venv, __pycache__, scripts/research/, archives/, results/, entries/, logs; gradio's only importer (scripts/research/app.py) is outside image contexts; reportlab has no importer at final head (module deleted at WP-7).",
+      "tests": [],
+      "evidence": [
+        "Dockerfile build/untested-claim: none made; image builds remain to be executed by the owner in an environment with Docker"
+      ]
+    },
+    {
+      "id": "SEC-021",
+      "severity": "medium",
+      "title": "Test suite is non-hermetic: fixed-path data-dir hijack plus import-time credit-ledger capture make CI green/red depend on machine state",
+      "paths": [
+        "backend/tests/test_history_endpoints.py (line 15: os.environ['TOSCANINI_DATA_DIR'] = '/tmp/tos_b3_history_test', unconditional, module level)",
+        "backend/tos_credits/credits.py (CREDITS_DIR computed and mkdir'd once at module import — violates the codebase's own B.6 lazy-path pattern)",
+        "backend/tests/test_ids.py (fixture email draws the shared ledger)"
+      ],
+      "first_observed": "Latent since before baseline (credits semantics + history test both pre-date the WPs); surfaced by repeated evidence runs on 2026-10-19",
+      "status": "open",
+      "remediation": null,
+      "fix_summary": "NOT ADDRESSED BY WP-1..WP-10 and discovered during evidence generation. Chain: the history test unconditionally hijacks TOSCANINI_DATA_DIR to a FIXED path at import; tos_credits captures CREDITS_DIR (and mkdirs it) at first module import; every full-suite run therefore draws exactly 1 credit from one persistent per-machine ledger. The deny rule is remaining >= cost(5) and each run decrements remaining by 1, so on any machine where the fixed path survives, the suite turns red from the 7th run onward (402 'No GPU credits remaining') and never self-heals. Reproduced both regimes at 014b155: fresh-runner conditions 355 passed / exit 0; depleted-ledger conditions 354 passed / 1 failed / exit 1. Not a product-logic regression — the 402 path is intended behavior.",
+      "tests": [],
+      "evidence": [
+        "06_ci/final_rerun.txt (both regimes, root cause, ledger evidence)",
+        "bisection: green with tests/test_ids.py alone; green on fresh ledger; red with tests/test_credit_bridge.py+tests/test_history_endpoints.py+tests/test_ids.py on depleted ledger"
+      ]
+    },
+    {
+      "id": "SEC-022",
+      "severity": "high",
+      "title": "CI branch-filter globs excluded stacked PRs and all slashed branches; 9/10 open PRs had zero checks on their merge candidates",
+      "paths": [
+        ".github/workflows/toscanini-gate.yml (push.branches, pull_request.branches)"
+      ],
+      "first_observed": "2026-10-18 audit; push-event silence traceable back to 2026-03-02 (last push run on main)",
+      "status": "fixed_in_pr",
+      "remediation": {
+        "wp": "WP-12",
+        "pr": 12,
+        "commit": "fd59206"
+      },
+      "fix_summary": "Glob semantics: '*' does not match '/', so push:[\"*\"] never matched hardening/* or policy/* branches and pull_request:[main] never matched stacked PR bases. Both filters changed to [\"**\"]; deploy.yml (main-only) intentionally untouched.",
+      "tests": [
+        "Behavior-level: push of fd59206 produced run 39155133102 (first slashed-branch push run) - Unit Tests + Hash Lock: success; Secret Scan: success",
+        "PR #12 head fd59206 carries 4 check-runs incl. green Unit Tests + Hash Lock on the pull_request group - first merge candidate in the chain with passing checks (Constitution 7.2)"
+      ],
+      "evidence": [
+        "Byte-level: worktree line7 hex 202020206272616e636865733a205b6d61696e5d = 'branches: [main]' (disproves SEC-016 root cause)",
+        "API audit 2026-10-18T18:36Z: 120 runs; only 2026 runs are pull_request events with base=main (PR#1, PR#11); check-runs on 014b155/47bb20e/33366e3 all = 0",
+        "Full evidence chain: 11_constitution_compliance/ci_delivery_investigation.json"
+      ]
+    }
+  ],
+  "counts": {
+    "total": 22,
+    "fixed_in_pr": 15,
+    "open": 4,
+    "corrected_false_positive": 1,
+    "pending_provider": 1,
+    "unverified": 1
+  }
+}

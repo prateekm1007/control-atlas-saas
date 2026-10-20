@@ -1,37 +1,48 @@
-name: Deploy Toscanini to EC2
+name: Deploy Toscanini (manual dispatch only)
+
+# Round-17 auditor direction 2a (2026-10-20), superseding A-10:
+#
+# This workflow is INERT BY DESIGN. It replaces the previous deploy
+# workflow that ran on every gate completion for main (workflow_run
+# trigger) and referenced deployment hosts and credentials.
+#
+# Properties (verifiable from this file):
+#   - TRIGGERS: `workflow_dispatch` ONLY. No `push` trigger. No
+#     `workflow_run` trigger. Nothing that happens in this repository —
+#     no push, no pull request, no gate completion — can start this
+#     workflow. Only an authenticated user with write access, acting
+#     manually in the Actions UI, can dispatch it.
+#   - DEPLOYMENT: none. This job checks out nothing, connects to no
+#     host, reads no secrets, and deploys nothing. It exists so the
+#     file name, history, and this explanation are preserved, and so
+#     that any future automated deploy must be an explicit, reviewed
+#     change to this file rather than a trigger away.
+#
+# Constitution (EC 7): deployment MUST depend on successful tests and
+# validation for the same source SHA, and an independent push-triggered
+# deployment MUST NOT bypass a failed quality gate. Until a gated
+# deployment pipeline is deliberately re-introduced and reviewed, the
+# only safe deployment control is: no automated deployment at all.
+#
+# Fail-closed posture (EC 3): there is no deployment code here to fail
+# open. The job exits successfully after stating that it is inert;
+# a non-zero exit would misrepresent an attempted deployment as failed.
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
+    name: Manual deployment — intentionally inert (no deploy logic)
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            set -e
-            cd ~/deployments/toscanini-demo/control-atlas-saas
-            
-            echo "🧼 Enforcing clean Git state"
-            git fetch origin
-            git clean -fd
-            git reset --hard origin/main
-
-            echo "🔨 Rebuilding v9.5 Ledger (No Cache)"
-            docker compose down
-            docker compose build --no-cache
-            docker compose up -d
-            
-            echo "🧹 Cleaning up unused layers"
-            docker image prune -f
+      - name: State the inert posture (no checkout, no secrets, no host, no deploy)
+        run: |
+          echo "This workflow is dispatch-only and intentionally performs NO deployment."
+          echo "It contains no deployment logic, references no hosts or secrets, and"
+          echo "cannot be triggered by any push, pull request, or gate completion."
+          echo "Re-introducing automated deployment requires an explicit reviewed"
+          echo "change to this file (Constitution EC 7: gated on the exact SHA)."

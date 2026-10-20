@@ -25,7 +25,7 @@ DEFINITIONS = {
         ("PIL-VOX-08: Voxelized Physics", "O(N) spatial-grid reasoning for multimer clash audits."),
         ("PIL-BBK-09: Backbone Continuity", "LAW-160 monitor for generative backbone tears."),
         ("PIL-INS-10: Forensic Inspection", "Zoom-to-coordinate failure marker autopsy."),
-        ("PIL-NAR-11: PhD Narrative Engine", "16-tier Gemini hierarchy failure recovery and expert synthesis."),
+        ("PIL-NAR-11: PhD Narrative Engine", "Narrative layer removed (H-1): deterministic dossier only; no advisory narrative is generated."),
         ("PIL-MTH-12: Strategic Success Math", "Bayesian success probability math (S6 x S8)."),
         ("PIL-ARC-13: Architecture Lab", "9 geometry-derived classification categories (Warheads)."),
         ("PIL-PAR-14: Unified Parity", "UI and PDF scores must be bit-equivalent."),

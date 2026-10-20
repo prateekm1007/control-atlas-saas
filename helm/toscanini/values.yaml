@@ -26,7 +26,6 @@ brain:
     BRAIN_URL: "http://brain:8000"
   secrets:
     TOSCANINI_API_KEY: ""     # set via --set brain.secrets.TOSCANINI_API_KEY=...
-    GEMINI_API_KEY: ""
 
 # ── Face (Streamlit dashboard) ────────────────────────────────────────────────
 face:

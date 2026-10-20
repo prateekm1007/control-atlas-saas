@@ -1412,10 +1412,20 @@ with tab_refine:
                 try:
                     # ── B5: Credit check before generation ───────────────
                     # byoc_credit_check
+                    # WP-9: single credits module (backend/tos_credits/credits.py);
+                    # the duplicate worker.credits copies were removed.
                     import sys as _nbsys
-                    _nbsys.path.insert(0, "/app/gpu_worker")
+                    from pathlib import Path as _nbPath
+                    _backend_dir = str(_nbPath(__file__).resolve().parent.parent / "backend")
+                    if _backend_dir not in _nbsys.path:
+                        _nbsys.path.insert(0, _backend_dir)
                     try:
-                        from worker.credits import check_credits, deduct_credits
+                        from tos_credits.credits import check_credits, deduct_credits
+                    except ImportError:
+                        # Credits module not available in this environment — allow
+                        check_credits = None
+                        deduct_credits = None
+                    if check_credits is not None:
                         _nb_identifier = (
                             st.session_state.get("b1_email") or
                             st.session_state.get("b2_email") or
@@ -1429,10 +1439,9 @@ with tab_refine:
                                 f"Credits remaining: {_nb_credit_check['credits_remaining']}"
                             )
                             st.stop()
-                    except ImportError:
-                        # Credits module not available in this environment — allow
-                        _nb_identifier  = "anonymous"
-                        _nb_credit_check = {"allowed": True}
+                    else:
+                        _nb_identifier = "anonymous"
+                        _nb_credit_check = {"allowed": True, "credits_remaining": 0}
 
                     from notebook_generator import generate_notebook_bytes, get_platform_redirect_url
                     _nb_bytes = generate_notebook_bytes(
@@ -1602,27 +1611,15 @@ with tab_refine:
                         st.error("⚠️ Regressions: " + ", ".join(_cmp["regressions"]))
 
                     # ── B.6: Refinement Resolution Certificate ────────────────
-                    try:
-                        from pdf_certificate import build_certificate
-                        import time as _ptime
-                        _pdf_meta = {
-                            "structure_name":  st.session_state.get("uploaded_file_name", "structure.pdb"),
-                            "api_key_masked":  (API_KEY[:4] + "****" + API_KEY[-4:]) if len(API_KEY) >= 8 else "tos_****",
-                            "tier":            "pro",
-                            "engine":          st.session_state.get("byoc_protocol", "openmm"),
-                            "issued_at":       int(_ptime.time()),
-                        }
-                        _cert_bytes = build_certificate(_cmp, _pdf_meta)
-                        _cert_name  = f"toscanini_certificate_{_base_id}.pdf"
-                        st.download_button(
-                            label="📄 Download Refinement Resolution Certificate",
-                            data=_cert_bytes,
-                            file_name=_cert_name,
-                            mime="application/pdf",
-                            help="Tamper-evident PDF summarising your structural improvements.",
-                        )
-                    except Exception as _cert_err:
-                        st.caption(f"Certificate unavailable: {_cert_err}")
+                    # WP-7: dashboard/pdf_certificate.py was removed — the
+                    # product PDF path is tos.forensic_artifacts.pdf_generator
+                    # (generate_v21_dossier), embedded as pdf_b64 in every
+                    # audit response. The old certificate module depended on
+                    # reportlab (never declared) and was untested here.
+                    st.caption(
+                        "📄 The full PDF dossier for each audit (baseline and "
+                        "refined) is embedded in the audit response as pdf_b64."
+                    )
 
                     # Law-by-law breakdown
                     _changes = _cmp.get("law_changes", [])
@@ -1844,30 +1841,21 @@ with tab_history:
     _hist_col1, _hist_col2 = st.columns([3, 1])
     with _hist_col1:
         _hist_identifier = st.text_input(
-            "Email or IP",
+            "Email",
             key="hist_identifier",
-            placeholder="you@institution.edu  or  your IP address",
-            help="Use the same email you provided when submitting refinement jobs"
+            placeholder="you@institution.edu",
+            help="Use the same email you provided when submitting refinement jobs. History is scoped to your API key (WP-2)."
         )
-    with _hist_col2:
-        st.write("")
-        st.write("")
-        _hist_use_ip = st.checkbox("Use my IP", key="hist_use_ip",
-                                   help="Look up history by IP address instead of email")
 
     if st.button("🔍 Load History", key="hist_load_btn", type="primary"):
-        if not _hist_identifier and not _hist_use_ip:
-            st.warning("Enter an email address or check 'Use my IP'")
+        if not _hist_identifier:
+            st.warning("Enter an email address")
         else:
             with st.spinner("Loading refinement history..."):
                 try:
-                    if _hist_use_ip:
-                        # Get client IP via a simple echo endpoint or use placeholder
-                        _hist_resp = api("GET", "/history/ip/client")
-                    else:
-                        import urllib.parse
-                        _encoded = urllib.parse.quote(_hist_identifier, safe="")
-                        _hist_resp = api("GET", f"/history/{_encoded}")
+                    import urllib.parse
+                    _encoded = urllib.parse.quote(_hist_identifier, safe="")
+                    _hist_resp = api("GET", f"/history/{_encoded}")
 
                     if _hist_resp and _hist_resp.get("status") == "success":
                         st.session_state["history_data"] = _hist_resp

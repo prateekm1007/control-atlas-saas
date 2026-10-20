@@ -12,10 +12,32 @@ NOTE: CB positions use z=-1.0 to produce negative N-CA-C-CB improper
 dihedrals, consistent with L-amino acid chirality (LAW-145).
 Verified: dihedral_deg(N, CA, C, CB) < 0 for both residues.
 """
+import os
+import tempfile
+
+# WP-7: give every test a writable data dir BEFORE any test module imports
+# storage/token modules (their defaults point at the Docker path /app/data,
+# which is unwritable on CI runners). Individual tests may still override
+# TOSCANINI_DATA_DIR via monkeypatch/tmp_path for isolation.
+os.environ.setdefault(
+    "TOSCANINI_DATA_DIR",
+    os.path.join(tempfile.gettempdir(), "toscanini-test-data"),
+)
+
+# WP-13 (SEC-015): the JWT signing secret has NO default anymore — token
+# modules fail closed without it. Tests inject this EXPLICIT, test-only
+# secret here, before any test module imports tos.security.tokens.
+# It is deliberately not a valid production value and must never be used
+# outside the test environment. The fail-closed gate itself is exercised by
+# test_wp13_jwt_secret_gate.py via monkeypatch (delete/shorten the variable).
+os.environ.setdefault(
+    "TOSCANINI_JWT_SECRET",
+    "test-only-wp13-secret-0123456789abcdef0123456789abcdef-NOT-FOR-PRODUCTION",
+)
+
 import pytest
 import numpy as np
 import sys
-import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 

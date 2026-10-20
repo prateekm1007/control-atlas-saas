@@ -126,9 +126,10 @@ def test_history_endpoint_registered():
     src = open(os.path.join(os.path.dirname(__file__), "../main.py")).read()
     assert '"/history/{user_email:path}"' in src
 
-def test_history_ip_endpoint_registered():
+def test_history_ip_endpoint_removed():
+    """WP-2: /history/ip/{client_ip} was removed (unreachable + exposes IPs)."""
     src = open(os.path.join(os.path.dirname(__file__), "../main.py")).read()
-    assert '"/history/ip/{client_ip}"' in src
+    assert '"/history/ip/{client_ip}"' not in src
 
 def test_no_hardcoded_data_path_in_health():
     src = open(os.path.join(os.path.dirname(__file__), "../main.py")).read()
@@ -139,6 +140,9 @@ def test_verdict_enrichment_present():
     assert "refined_verdict"  in src
     assert "original_verdict" in src
 
-def test_list_user_comparisons_imported_in_history():
+def test_history_is_key_scoped():
+    """WP-2: /history is key-scoped — main.py must use list_comparisons_by_key
+    (created_by_key_hash filter), not the email-only lookup."""
     src = open(os.path.join(os.path.dirname(__file__), "../main.py")).read()
-    assert "list_user_comparisons" in src
+    assert "list_comparisons_by_key" in src
+    assert "created_by_key_hash" in src

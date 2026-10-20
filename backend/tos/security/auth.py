@@ -19,10 +19,20 @@ if _multi_keys:
 elif _single_key:
     ALLOWED_KEYS = {_single_key}
 
-OPEN_MODE = len(ALLOWED_KEYS) == 0
+# WP-2: open mode is never implicit. It requires BOTH that no keys are
+# configured AND that the operator set TOSCANINI_ALLOW_OPEN_MODE=1.
+# Without keys and without that flag the deployment is fail-closed:
+# protected routes return 503 until keys are configured.
+_open_mode_flag = os.getenv("TOSCANINI_ALLOW_OPEN_MODE", "") == "1"
+OPEN_MODE = not ALLOWED_KEYS and _open_mode_flag
 
 if OPEN_MODE:
-    logger.warning("No API keys configured — running in OPEN MODE (dev only)")
+    logger.warning("OPEN MODE explicitly enabled via TOSCANINI_ALLOW_OPEN_MODE=1 (dev only) — no auth on protected routes")
+elif not ALLOWED_KEYS:
+    logger.error(
+        "No API keys configured (TOSCANINI_API_KEYS / TOSCANINI_API_KEY) and "
+        "TOSCANINI_ALLOW_OPEN_MODE != 1 — protected routes return 503 (fail-closed)."
+    )
 else:
     logger.info(f"API key guard active: {len(ALLOWED_KEYS)} key(s) configured")
 
@@ -33,19 +43,28 @@ BATCH_ALLOWED_EXTENSIONS = {".zip"}
 
 def verify_api_key(x_api_key: str = Header(None, alias="X-API-Key")):
     """FastAPI dependency for API key verification with quota enforcement."""
-    # Legacy OPEN_MODE (dev only)
+    # Explicit dev OPEN_MODE (requires TOSCANINI_ALLOW_OPEN_MODE=1 and no keys)
     if OPEN_MODE:
         return True
-    
+
     # Check against static keys first (backward compat)
     if x_api_key and x_api_key in ALLOWED_KEYS:
         return True
-    
-    # DB-backed multi-tenant key validation
+
+    # Fail-closed: no static keys configured and open mode is off.
+    # A missing key on an unconfigured deployment is a server problem -> 503.
+    # A present key still goes through DB-backed validation below -> 401.
     if not x_api_key:
+        if not ALLOWED_KEYS:
+            logger.error("Rejected request: no auth backend configured (503, fail-closed)")
+            raise HTTPException(
+                status_code=503,
+                detail="Service authentication is not configured. Contact the operator.",
+            )
         logger.warning("Missing API key")
         raise HTTPException(status_code=401, detail="Missing API key")
-    
+
+    # DB-backed multi-tenant key validation (works with or without static keys)
     key_hash_val = hash_key(x_api_key)
     key = get_key(key_hash_val)
     

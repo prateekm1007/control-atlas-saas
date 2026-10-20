@@ -1,10 +1,11 @@
-import sys, os, base64, json, traceback, logging, asyncio, hashlib
+import sys, os, base64, json, traceback, logging, asyncio, hashlib, time, hmac
 from pathlib import Path
 from functools import partial
 from datetime import datetime, timezone
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, field_validator, ValidationError
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -17,8 +18,7 @@ from tos.governance.station_sop import (
     LAW_METHOD_CLASSIFICATIONS, SCORE_DEFINITIONS,
     ARCHITECTURE_WEIGHTS, BAYESIAN_FORMULA
 )
-from tos.generation.dispatcher import GenerationDispatcher
-from tos.enrichment.gemini_compiler import get_compiler
+from tos.generation.dispatcher import GenerationDispatcher, SourceUnavailable
 from tos.utils.type_guards import force_bytes
 from tos.nkg.manager import get_nkg
 from tos.governance.modality_matrix import resolve_method, compute_matrix_hash, get_matrix_meta
@@ -97,7 +97,13 @@ def _emit_telemetry(event: str, data: dict) -> None:
 
 
 app = FastAPI(title="Toscanini OS", version=STATION_METADATA["version"])
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# WP-2: CORS origins come from ALLOWED_ORIGINS (comma-separated).
+# An empty/missing value allows NO cross-origin browser access (fail-closed).
+_ALLOWED_ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+if not _ALLOWED_ORIGINS:
+    logger.warning("ALLOWED_ORIGINS not set — cross-origin browser access is disabled (fail-closed)")
+app.add_middleware(CORSMiddleware, allow_origins=_ALLOWED_ORIGINS, allow_methods=["*"], allow_headers=["*"])
 
 def _sanitize_for_json(obj):
     import numpy as _np
@@ -168,7 +174,10 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
             "coverage_pct": round(coverage, 2), "suppression_reason": suppression
         },
         "governance": {
-            "audit_id": str(hashlib.md5(coord_hash.encode()).hexdigest()[:8]).upper(),
+            # WP-5: full SHA-256 of the canonical coordinate hash (64 hex chars).
+            # Deterministic — structurally identical submissions share an ID
+            # (owner decision: dedup kept). Replaces collision-prone md5[:8].
+            "audit_id": hashlib.sha256(coord_hash.encode()).hexdigest(),
             "station_version": STATION_METADATA["version"],
             "timestamp_utc": datetime.now(timezone.utc).isoformat(),
             "governance_fingerprint": {
@@ -188,10 +197,11 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
         "strategic_math": {
             "s6": s6_final, "w_arch": w_arch, "m_s8": m_s8, "architecture": t3_category
         },
-        "witness_reports": get_compiler().synthesize_dossier_content({
-            "v": verdict, "s": det_score, "c": coverage, "arch": t3_category, "killer_laws": failing_det
-        }),
-        "ai_model_used": get_compiler().model_used,
+        # H-1 (accepted ruling, ported Round 17): the external narrative
+        # provider was removed; the dossier generator never read these
+        # fields and the dashboard renders its built-in pending state.
+        "witness_reports": {},
+        "ai_model_used": None,
         "pdb_b64": base64.b64encode(content_bytes).decode(),
     })
 
@@ -274,7 +284,22 @@ async def ingest(mode: str = Form(...), candidate_id: str = Form(...), t3_catego
         validate_upload(file)
         content = await file.read()
         await enforce_size_limit(content)
-    else: content, _, _ = GenerationDispatcher.acquire(candidate_id, None)
+    else:
+        # WP-4: unknown/unreachable candidate -> 503 naming the sources tried.
+        # No verdict is produced, nothing is written to the NKG or comparisons.
+        try:
+            content, _, _ = GenerationDispatcher.acquire(candidate_id, None)
+        except SourceUnavailable as e:
+            logger.warning(f"Ingest refused (source unavailable): {e}")
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "source_unavailable",
+                    "candidate_id": e.candidate_id,
+                    "sources_tried": e.sources,
+                    "message": "No structure source could provide this candidate. Nothing was scored or recorded.",
+                },
+            )
     return await asyncio.get_event_loop().run_in_executor(None, partial(_run_physics_sync, content, candidate_id, mode, t3_category))
 
 
@@ -335,26 +360,39 @@ async def batch_ingest(
 
     return BatchResponse(results=response_results, summary=summary)
 
-@app.get("/health")
-def health(): return {"status": "operational", "version": STATION_METADATA["version"]}
-
 @app.get("/laws")
 def get_laws(): return {"laws": LAW_CANON, "total_laws": TOTAL_LAWS, "deterministic_count": DETERMINISTIC_COUNT}
 
+# ── WP-6: public NKG field whitelist ─────────────────────────────────────────
+# Only customer-relevant fields leave the service: no internal hashes
+# (artifact_hash), no internal governance identifiers (program_id,
+# program_state), no internal policy internals (s8_tax_applied).
+PUBLIC_NKG_FIELDS = (
+    "timestamp", "outcome_category", "failure_class", "physical_score",
+    "confidence_score", "epi_index", "architecture", "description",
+)
+
+
+def _public_nkg_record(rec: dict) -> dict:
+    return {k: rec[k] for k in PUBLIC_NKG_FIELDS if k in rec}
+
+
 @app.get("/nkg")
-def get_nkg_records():
+def get_nkg_records(_auth=Depends(verify_api_key)):
     try:
         nkg = get_nkg()
         records = nkg.read_records(limit=50)
-        return {"vetoes": records.get("vetoes", []), "successes": records.get("successes", []), 
-                "total_vetoes": len(records.get("vetoes", [])), "total_successes": len(records.get("successes", []))}
+        return {"vetoes": [_public_nkg_record(r) for r in records.get("vetoes", [])],
+                "successes": [_public_nkg_record(r) for r in records.get("successes", [])],
+                "total_vetoes": len(records.get("vetoes", [])),
+                "total_successes": len(records.get("successes", []))}
     except: return {"vetoes": [], "successes": []}
 
 @app.get("/definitions")
 def get_definitions(): return SCORE_DEFINITIONS
 
 @app.post("/search")
-async def search(query: str = Form(...)):
+async def search(query: str = Form(...), _auth=Depends(verify_api_key)):
     from tos.discovery.resolver import DiscoveryResolver
     results = DiscoveryResolver.resolve(query)
     return {"results": results, "count": len(results)}
@@ -378,15 +416,29 @@ async def get_original_pdb(audit_id: str, _auth=Depends(verify_api_key)):
 
 @app.post("/refinement/token")
 async def generate_refinement_token(
+    request: Request,
     audit_id: str = Form(...),
     user_email: str = Form(""),
     _auth=Depends(verify_api_key)
 ):
-    """Generate a single-use refinement callback token for a given audit_id."""
-    from tos.security.tokens import create_refinement_token
+    """Generate a single-use refinement callback token for a given audit_id.
+
+    WP-2: the caller's key hash is embedded in the token claims so the
+    resulting comparison record is key-scoped for /history lookups.
+    """
+    from tos.security.tokens import (
+        create_refinement_token,
+        TokenSecretConfigurationError,
+    )
     try:
-        token = create_refinement_token(audit_id, user_email)
+        _caller_key = request.headers.get("X-API-Key", "")
+        extra = {"created_by_key_hash": hash_key(_caller_key)} if _caller_key else {}
+        token = create_refinement_token(audit_id, user_email, extra_claims=extra)
         return {"token": token, "audit_id": audit_id}
+    except TokenSecretConfigurationError as e:
+        # WP-13 (SEC-015): missing/weak signing secret is a service
+        # configuration failure -> 503 fail-closed, not a client error.
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -444,6 +496,7 @@ async def refinement_callback(
             "refined_audit_id": refined_audit_id,
             "uploaded_at": datetime.now(timezone.utc).isoformat(),
             "user_email": user_email,
+            "created_by_key_hash": payload.get("created_by_key_hash"),  # WP-2 key-scoped history
             "filename": file.filename,
             "file_size_bytes": len(content_bytes),
             "refinement_method": "external",  # Phase B1: user-executed
@@ -493,7 +546,7 @@ async def refinement_callback(
 
 
 @app.get("/comparison/{original_id}/{refined_id}")
-async def get_comparison(original_id: str, refined_id: str):
+async def get_comparison(original_id: str, refined_id: str, _auth=Depends(verify_api_key)):
     """
     Retrieve stored comparison metadata and regenerate comparison analysis.
     
@@ -527,7 +580,7 @@ async def get_comparison(original_id: str, refined_id: str):
         return {"status": "error", "message": str(e)}, 500
 
 @app.get("/comparisons/by-original/{original_id}")
-async def list_comparisons_for_original(original_id: str):
+async def list_comparisons_for_original(original_id: str, _auth=Depends(verify_api_key)):
     """
     List all refined audits derived from a given original audit.
     
@@ -607,6 +660,7 @@ async def refinement_submit(
     user_email: str = Form(None),
     file: UploadFile = File(...),
     request: Request = None,
+    _auth=Depends(verify_api_key),
 ):
     """
     Phase B2: Submit structure for managed GPU refinement.
@@ -662,8 +716,9 @@ async def refinement_submit(
         if protocol not in ("openmm", "rosetta"):
             raise HTTPException(status_code=400, detail="Invalid protocol. Use openmm or rosetta.")
 
-        # Generate job ID
-        job_id = str(uuid.uuid4())[:8].upper()
+        # Generate job ID — WP-5: full uuid4().hex (128 bits), not an 8-char
+        # prefix that collides and silently overwrites stored results.
+        job_id = uuid.uuid4().hex
 
         # Convert to hex for Celery serialization
         pdb_hex = content_bytes.hex()
@@ -692,7 +747,8 @@ async def refinement_submit(
                 original_audit_id=audit_id,
                 failing_laws=failing_laws,
                 user_email=user_email,
-                protocol_override=protocol if protocol != "auto" else None
+                protocol_override=protocol if protocol != "auto" else None,
+                api_key_hash=_key_hash or None,  # WP-2/3: key-scoped history
             )
 
             job_id         = dispatch_result["job_id"]
@@ -740,7 +796,7 @@ async def refinement_submit(
 
 
 @app.get("/refinement/status/{job_id}")
-async def refinement_status(job_id: str):
+async def refinement_status(job_id: str, _auth=Depends(verify_api_key)):
     """Poll job state from Redis state manager."""
     try:
         import redis as redis_lib, json, os
@@ -771,7 +827,7 @@ async def refinement_status(job_id: str):
                 "message": "Redis not available (B2 GPU worker not deployed)"}
 
 @app.get("/refinement/jobs/{original_audit_id}")
-async def list_jobs_for_audit(original_audit_id: str):
+async def list_jobs_for_audit(original_audit_id: str, _auth=Depends(verify_api_key)):
     """List all refinement jobs for a given original audit."""
     try:
         import redis as redis_lib, json, os
@@ -794,51 +850,162 @@ async def list_jobs_for_audit(original_audit_id: str):
         return {"original_audit_id": original_audit_id, "error": str(e)}
 
 
-@app.post("/refinement/internal-callback")
-async def internal_callback(payload: dict):
-    """
-    Internal endpoint: called by GPU worker after execution completes.
-    Triggers re-audit and stores comparison.
-    """
-    try:
-        original_audit_id = payload["original_audit_id"]
-        refined_pdb_hex = payload["refined_pdb_hex"]
-        job_id = payload.get("job_id", "UNKNOWN")
-        user_email = payload.get("user_email")
-        protocol = payload.get("protocol", "unknown")
+# ── WP-3: internal callback security ──────────────────────────────────────────
+INTERNAL_CALLBACK_MAX_SKEW_SECONDS = 300  # reject signatures older than 5 min
 
-        # Re-audit refined structure
-        refined_bytes = bytes.fromhex(refined_pdb_hex)
-        refined_audit = _run_physics_sync(refined_bytes, f"refined_{job_id}.pdb", "experimental", "NONE")
+
+class InternalCallbackPayload(BaseModel):
+    """Body schema for /refinement/internal-callback (WP-3)."""
+    original_audit_id: str
+    refined_pdb_hex: str
+    job_id: str
+    protocol: str = "unknown"
+    user_email: str = None
+
+    @field_validator("refined_pdb_hex")
+    @classmethod
+    def _hex_must_parse_and_contain_atoms(cls, v: str) -> str:
+        try:
+            raw = bytes.fromhex(v)
+        except ValueError:
+            raise ValueError("refined_pdb_hex is not valid hexadecimal")
+        if not any(
+            line.startswith(("ATOM  ", "HETATM"))
+            for line in raw.decode("utf-8", errors="replace").splitlines()
+        ):
+            raise ValueError("refined structure contains no ATOM/HETATM records")
+        return v
+
+
+def _verify_internal_signature(raw_body: bytes, x_timestamp: str, x_signature: str) -> None:
+    """HMAC-SHA256 over 'timestamp.raw_body' with INTERNAL_CALLBACK_SECRET.
+    Raises HTTPException 401 on any failure (hmac.compare_digest)."""
+    secret = os.environ.get("INTERNAL_CALLBACK_SECRET", "")
+    if not secret:
+        logger.error("INTERNAL_CALLBACK_SECRET not set — internal callback unavailable (fail-closed)")
+        raise HTTPException(status_code=503, detail="Internal callback is not configured.")
+    if not x_timestamp or not x_signature:
+        raise HTTPException(status_code=401, detail="Missing X-Timestamp / X-Signature.")
+    try:
+        ts = int(x_timestamp)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Malformed X-Timestamp.")
+    if abs(time.time() - ts) > INTERNAL_CALLBACK_MAX_SKEW_SECONDS:
+        raise HTTPException(status_code=401, detail="Stale callback timestamp.")
+    expected = hmac.new(
+        secret.encode("utf-8"), x_timestamp.encode("utf-8") + b"." + raw_body, hashlib.sha256
+    ).hexdigest()
+    if not hmac.compare_digest(expected, x_signature):
+        raise HTTPException(status_code=401, detail="Invalid callback signature.")
+
+
+def _get_job_record(job_id: str):
+    """Fetch a job record from the Redis job store.
+    Returns the dict, or None when the job is unknown.
+    Raises RuntimeError when the store itself is unreachable."""
+    import redis as redis_lib
+    try:
+        r = redis_lib.from_url(
+            os.environ.get("REDIS_URL", "redis://redis:6379/0"), decode_responses=True
+        )
+        raw = r.get(f"job:{job_id}")
+    except Exception as e:
+        raise RuntimeError(f"job store unavailable: {e}")
+    return json.loads(raw) if raw else None
+
+
+@app.post("/refinement/internal-callback")
+async def internal_callback(request: Request):
+    """
+    Internal endpoint: called by the GPU worker after execution completes.
+    Triggers re-audit and stores comparison.
+
+    WP-3 hardening (order matters):
+      1. HMAC-SHA256 signature over '<X-Timestamp>.<raw body>' using
+         INTERNAL_CALLBACK_SECRET — 401 on missing/stale/mismatched.
+      2. Pydantic body validation (valid hex containing ATOM records) — 422.
+      3. original_audit_id must exist in the audit store — 422.
+      4. job_id must exist in the job store — 422 (503 if store unreachable).
+      5. Re-audit, store comparison (stamped with the submitter's key hash
+         when the job record carries it), return refined audit id.
+    """
+    raw_body = await request.body()
+
+    # 1. Signature first — never parse or process untrusted input.
+    _verify_internal_signature(
+        raw_body,
+        request.headers.get("X-Timestamp", ""),
+        request.headers.get("X-Signature", ""),
+    )
+
+    # 2. Body validation.
+    try:
+        payload = InternalCallbackPayload.model_validate_json(raw_body)
+    except ValidationError as e:
+        # Sanitize: error dicts may embed non-serializable exception objects.
+        detail = [
+            {"loc": [str(x) for x in err.get("loc", [])],
+             "msg": err.get("msg", ""), "type": err.get("type", "")}
+            for err in e.errors()
+        ]
+        raise HTTPException(status_code=422, detail=detail)
+
+    # 3. Original audit must exist.
+    original = get_audit_result(payload.original_audit_id)
+    if not original:
+        raise HTTPException(
+            status_code=422,
+            detail=f"original_audit_id {payload.original_audit_id} not found in audit store",
+        )
+
+    # 4. Job must exist in the job store.
+    try:
+        job = _get_job_record(payload.job_id)
+    except RuntimeError as e:
+        logger.error(f"Internal callback job-store failure: {e}")
+        raise HTTPException(status_code=503, detail="Job store unavailable.")
+    if job is None:
+        raise HTTPException(
+            status_code=422,
+            detail=f"job_id {payload.job_id} not found in job store",
+        )
+
+    # 5. Re-audit refined structure and store the comparison.
+    try:
+        refined_bytes = bytes.fromhex(payload.refined_pdb_hex)
+        refined_audit = _run_physics_sync(
+            refined_bytes, f"refined_{payload.job_id}.pdb", "experimental", "NONE"
+        )
         refined_audit_id = refined_audit["governance"]["audit_id"]
 
-        # Store comparison
         comparison_data = {
-            "original_audit_id": original_audit_id,
+            "original_audit_id": payload.original_audit_id,
             "refined_audit_id": refined_audit_id,
-            "job_id": job_id,
-            "protocol": protocol,
+            "job_id": payload.job_id,
+            "protocol": payload.protocol,
             "refinement_method": "managed_gpu",
-            "user_email": user_email,
+            "user_email": payload.user_email,
+            "created_by_key_hash": job.get("created_by_key_hash"),  # WP-2 key-scoped history
             "status": "complete"
         }
 
-        store_comparison(original_audit_id, refined_audit_id, comparison_data)
+        store_comparison(payload.original_audit_id, refined_audit_id, comparison_data)
 
         return {
             "status": "success",
-            "original_audit_id": original_audit_id,
+            "original_audit_id": payload.original_audit_id,
             "refined_audit_id": refined_audit_id,
-            "comparison_url": f"/compare?baseline={original_audit_id}&refined={refined_audit_id}"
+            "comparison_url": f"/compare?baseline={payload.original_audit_id}&refined={refined_audit_id}"
         }
-
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Internal callback error: {str(e)}")
         return {"status": "error", "message": str(e)}, 500
 
 
 @app.get("/audit/{audit_id}")
-async def get_stored_audit(audit_id: str):
+async def get_stored_audit(audit_id: str, _auth=Depends(verify_api_key)):
     """Retrieve a previously stored audit result by ID."""
     result = get_audit_result(audit_id)
     if result:
@@ -847,22 +1014,26 @@ async def get_stored_audit(audit_id: str):
 
 
 @app.get("/history/{user_email:path}")
-async def get_user_history(user_email: str):
+async def get_user_history(
+    request: Request,
+    user_email: str,
+    _auth=Depends(verify_api_key),
+):
     """
-    Retrieve full refinement history for a registered user (by email).
+    Retrieve refinement history for the CALLING API KEY (key-scoped, WP-2).
 
-    Returns all comparisons submitted by this email, sorted newest first.
-    Each entry includes original_audit_id, refined_audit_id, protocol,
-    verdict change, and timestamps.
-
-    Args:
-        user_email: URL-encoded email address
+    Access model (owner decision: key-scoped): a valid key returns only
+    comparisons created with that same key. The {user_email} path segment
+    is accepted for backward compatibility but does not widen the result
+    set. Comparisons created without a key association (legacy records,
+    anonymous submissions) are NOT returned.
     """
     try:
-        from tos.storage.comparisons import list_user_comparisons
+        from tos.storage.comparisons import list_comparisons_by_key
         from urllib.parse import unquote
         email = unquote(user_email)
-        comparisons = list_user_comparisons(email)
+        caller_key_hash = hash_key(request.headers.get("X-API-Key", ""))
+        comparisons = list_comparisons_by_key(caller_key_hash)
 
         # Enrich each comparison with verdict summary if audit is stored
         enriched = []
@@ -898,33 +1069,15 @@ async def get_user_history(user_email: str):
         return {"status": "error", "message": str(e)}
 
 
-@app.get("/history/ip/{client_ip}")
-async def get_ip_history(client_ip: str):
-    """
-    Retrieve refinement history for an anonymous user (by IP).
-
-    Same structure as /history/{user_email} but keyed on IP address.
-    Used by the dashboard when no email was provided at submission.
-    """
-    try:
-        from tos.storage.comparisons import list_user_comparisons
-        # list_user_comparisons filters by user_email field —
-        # anonymous submissions store the IP in that field
-        comparisons = list_user_comparisons(client_ip)
-
-        return {
-            "status":           "success",
-            "client_ip":        client_ip,
-            "refinement_count": len(comparisons),
-            "comparisons":      comparisons,
-        }
-
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+# WP-2: /history/ip/{client_ip} was REMOVED. It was unreachable (declared
+# after /history/{user_email:path}, which captured every path) and it
+# exposed client IP addresses. The owner approved removal in the WP-2 PR
+# (brief §3 WP-2: 'The recommended option is removal, because it exposes
+# IP addresses'). Nothing re-registers it.
 
 
 @app.post("/compare")
-async def compare_audits_endpoint(baseline_id: str = Form(...), refined_id: str = Form(...)):
+async def compare_audits_endpoint(baseline_id: str = Form(...), refined_id: str = Form(...), _auth=Depends(verify_api_key)):
     """Compare two stored audits and return delta analysis."""
     baseline = get_audit_result(baseline_id)
     refined  = get_audit_result(refined_id)
@@ -949,7 +1102,7 @@ async def compare_audits_endpoint(baseline_id: str = Form(...), refined_id: str 
 # ── B.6: Usage instrumentation endpoint ───────────────────────────────────────
 
 @app.get("/usage")
-async def get_usage(request: Request):
+async def get_usage(request: Request, _auth=Depends(verify_api_key)):
     """
     Return credit and quota status for the calling API key.
     Called by the dashboard sidebar widget (cached 30s client-side).

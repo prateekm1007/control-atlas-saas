@@ -1,0 +1,994 @@
+{
+  "artifact": "constitution_compliance_matrix",
+  "constitution": "SaaS Engineering Constitution",
+  "constitution_version": "1.0.0",
+  "audited_subject": "prateekm1007/control-atlas-saas P0 hardening chain (PRs #1-#10, baseline 2195a04 -> head 014b155) plus WP-11 (PR #11) and WP-12 (PR #12)",
+  "audit_date": "2026-10-19",
+  "auditor": "main agent (Z.ai) - same session as remediation; retrospective self-audit, evidence-linked",
+  "status_vocabulary": {
+    "satisfied": "Requirement met with verifiable evidence for the audited scope.",
+    "partial": "Requirement met for part of the surface or with compensating controls; named gaps remain.",
+    "not_satisfied": "Requirement not met; named gap with priority and owner.",
+    "not_applicable": "Requirement's object does not exist in this product; justification recorded.",
+    "not_verified": "Could not be verified in this cycle; NO claim is made either way."
+  },
+  "counts": {
+    "total": 71,
+    "satisfied": 36,
+    "partial": 23,
+    "not_satisfied": 7,
+    "not_applicable": 2,
+    "not_verified": 3,
+    "open_gaps_by_priority": {
+      "P2": 13,
+      "P1": 16,
+      "P0": 8
+    }
+  },
+  "protected_hashes_verified": {
+    "canon": "6a9cd4b4349b81de",
+    "matrix": "ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4",
+    "verified_at": [
+      "2195a04 (baseline)",
+      "014b155 (WP-10 head)",
+      "4993cb3 (PR #11 head)"
+    ]
+  },
+  "requirements": [
+    {
+      "id": "E-2.1",
+      "constitution_ref": "2 item 1",
+      "requirement": "Confirm repo, branch, working tree, exact base SHA before editing",
+      "status": "satisfied",
+      "evidence": [
+        "Baseline 2195a04 recorded and verified equal to remote main at build time (worklog Task 1-2; 09_baseline_manifest.json)",
+        "Remote main re-verified via API at 2026-10-19 before WP-11 push; never assumed static"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-2.2",
+      "constitution_ref": "2 item 2",
+      "requirement": "Read both constitutions; record paths/versions/hashes",
+      "status": "partial",
+      "evidence": [
+        "Domain constitution.md present since baseline; SHA cfdd5ba3... verified identical at baseline and final head (worklog Task 14)",
+        "This Engineering Constitution did not exist during the P0 chain; applies retrospectively from PR #11"
+      ],
+      "gaps": [
+        {
+          "gap": "Engineering Constitution v1.0.0 was authored after the P0 work; WP-1..WP-10 could not have pre-read it. Retrospective audit (this matrix) is the compensating control.",
+          "priority": "P2",
+          "owner": "accepted"
+        }
+      ]
+    },
+    {
+      "id": "E-2.3",
+      "constitution_ref": "2 item 3",
+      "requirement": "Read implementation, contracts, tests, deps, deploy files, callers before change",
+      "status": "satisfied",
+      "evidence": [
+        "WP-9: byte-identity + importer analysis before credits dedup (PR #9)",
+        "WP-7: dependency/lock surface analyzed before lock regeneration (PR #7)",
+        "WP-10: grep/docker-context checks before deletions (PR #10)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-2.4",
+      "constitution_ref": "2 item 4",
+      "requirement": "Map change across inputs, trust boundaries, authz, persistence, jobs, contracts, observability",
+      "status": "satisfied",
+      "evidence": [
+        "Route authorization matrix built by live probing, not by reading code alone (04_route_authorization_matrix.md; 39 route tests)",
+        "21 security findings registered across trust boundaries (03_security_findings.json)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-2.5",
+      "constitution_ref": "2 item 5",
+      "requirement": "Record expected behavior, risks, files, regressions, rollback in a machine-readable preflight artifact",
+      "status": "partial",
+      "evidence": [
+        "Worklog + PR bodies recorded expected behavior, risks and rollback per WP at execution time",
+        "Machine-readable preflight for WP-11/WP-12 delivered in this directory (preflight_wp11.json)"
+      ],
+      "gaps": [
+        {
+          "gap": "WP-1..WP-10 preflights were narrative (PR body/worklog), not machine-readable artifacts at execution time.",
+          "priority": "P2",
+          "owner": "agent-process"
+        }
+      ]
+    },
+    {
+      "id": "E-2.6",
+      "constitution_ref": "2 item 6",
+      "requirement": "Record conflicts; fail closed on ambiguity affecting security/verdicts",
+      "status": "satisfied",
+      "evidence": [
+        "LAW-120 conflict kept explicit and listed as pending owner review - not silently resolved (PR #8; 07_law_registry_validation.md)",
+        "SAAS_HANDOFF.md conflict markers resolved with corrections recorded; 10 drifted glossary files rewritten registry-first (PR #8)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-3.1",
+      "constitution_ref": "3 Fail closed",
+      "requirement": "No default-open authn, dev secrets, permissive CORS, disabled validation in production",
+      "status": "satisfied",
+      "evidence": [
+        "Unconfigured deployments serve 503 on protected routes; OPEN_MODE requires explicit TOSCANINI_ALLOW_OPEN_MODE=1 (PR #2, 1425e15)",
+        "Callback 503 when INTERNAL_CALLBACK_SECRET unset (PR #3)",
+        "CORS from ALLOWED_ORIGINS allowlist (PR #2, SEC-005 fixed)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-3.2",
+      "constitution_ref": "3 Deny by default",
+      "requirement": "Every route has an explicit, tested access policy; only classified-public routes open",
+      "status": "satisfied",
+      "evidence": [
+        "26-route parametrized matrix + drift guard (PR #2); 39 authz tests at final head (test_api_key_guard.py)",
+        "/health sole public route; /history/ip removed (SEC-003/004 fixed)",
+        "Callbacks signature-first, never trust caller JSON/user IDs/network location (PR #3, SEC-006 fixed)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-3.3",
+      "constitution_ref": "3 Authorize objects",
+      "requirement": "Objects scoped to authorized tenant/owner; cross-tenant access tested and denied",
+      "status": "partial",
+      "evidence": [
+        "History records scoped by created_by_key_hash embedded in signed B1 tokens (PR #2)",
+        "Audit/job existence checks on callback targets (PR #3)"
+      ],
+      "gaps": [
+        {
+          "gap": "Authorization model is per-API-key, not multi-tenant; dedicated cross-tenant denial tests are limited to the key-scoping that exists. Depth of object-isolation tests does not yet match the Constitution's phrasing.",
+          "priority": "P1",
+          "owner": "owner+agent"
+        }
+      ]
+    },
+    {
+      "id": "E-3.4",
+      "constitution_ref": "3 Secrets",
+      "requirement": "No live credentials in source/fixtures/images/reports/logs; history-exposed credentials treated as compromised until issuer confirms revocation",
+      "status": "partial",
+      "evidence": [
+        "Hardcoded Gemini key removed; env lookup with clear failure (PR #1, SEC-001 fixed)",
+        "gitleaks v8.30.1 CI job; tracked tree, remediation chain clean; full-history scan executed with 2 pre-baseline exposures registered redacted (SEC-018)",
+        "No rotation claimed anywhere; values redacted in all artifacts (secret_handling notice in register)"
+      ],
+      "gaps": [
+        {
+          "gap": "SEC-018: 2 Google API key exposures remain in Git history (commit b66f0e3, pre-baseline). Deleting text does not revoke; issuer confirmation of revocation is pending and MUST be treated as compromised until then.",
+          "priority": "P0",
+          "owner": "provider-side"
+        },
+        {
+          "gap": "SEC-015: JWT SECRET_KEY falls back to a publicly-known dev value with no startup gate/test.",
+          "priority": "P0",
+          "owner": "owner+agent"
+        }
+      ]
+    },
+    {
+      "id": "E-3.5",
+      "constitution_ref": "3 Validate inputs",
+      "requirement": "Validate type/size/format/encoding/content before expensive work; archive traversal hardening; rate limits, quotas, concurrency bounds, timeouts",
+      "status": "partial",
+      "evidence": [
+        "pydantic hex + ATOM-record validation on callback bodies (PR #3)",
+        "NKG store rejects empty/unknown-verdict/empty-hash/zero-byte payloads; idempotent dedup (PR #6, SEC-009 fixed)",
+        "Ingest returns 503 naming sources tried on acquisition failure (PR #4)"
+      ],
+      "gaps": [
+        {
+          "gap": "No rate limits, quotas, concurrency bounds, or request timeouts on costly endpoints.",
+          "priority": "P1",
+          "owner": "owner+agent"
+        },
+        {
+          "gap": "Archive-traversal hardening: not applicable today - the product has no compressed-archive ingestion surface (PDB/CIF text formats only).",
+          "priority": "N/A",
+          "owner": "n/a"
+        }
+      ]
+    },
+    {
+      "id": "E-3.6",
+      "constitution_ref": "3 Callbacks/state",
+      "requirement": "Signature/expiry/replay protection/authorization/idempotency on state transitions; safe under retries",
+      "status": "satisfied",
+      "evidence": [
+        "HMAC-SHA256 (X-Timestamp/X-Signature), 300s window, compare_digest, unsigned sends refused by worker (PR #3)",
+        "NKG idempotent duplicate suppression (PR #6); job IDs uuid4().hex (PR #5)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-3.7",
+      "constitution_ref": "3 Sensitive data",
+      "requirement": "Minimize exposure; retention/deletion policies; encrypt transport and supported storage; keep payloads out of logs/public errors",
+      "status": "partial",
+      "evidence": [
+        "CORS allowlist; /nkg public-field whitelist removes artifact_hash/program_id/program_state/s8_tax_applied (PR #6)",
+        "History per-key isolation; pydantic error details sanitized before 500s (PR #2/#3)"
+      ],
+      "gaps": [
+        {
+          "gap": "No retention/deletion policy and no at-rest encryption for stored coordinates/audits.",
+          "priority": "P1",
+          "owner": "owner"
+        }
+      ]
+    },
+    {
+      "id": "E-3.8",
+      "constitution_ref": "3 ASVS",
+      "requirement": "Map requirements to an explicit OWASP ASVS level with control evidence",
+      "status": "not_satisfied",
+      "evidence": [],
+      "gaps": [
+        {
+          "gap": "No ASVS level chosen, no control-evidence mapping. Recommended target: L2 for a paid SaaS handling proprietary research data.",
+          "priority": "P2",
+          "owner": "owner+agent"
+        }
+      ]
+    },
+    {
+      "id": "E-4.1",
+      "constitution_ref": "4 Provenance",
+      "requirement": "Authoritative results carry provenance binding input digest, engine/version, registry version/hash, measurements, config, run status",
+      "status": "satisfied",
+      "evidence": [
+        "Audit ID = full SHA-256 of coordinate digest (PR #5); deterministic dedup preserved",
+        "Law-registry content hash pinned (d53a2a50...) and validated by 43 registry tests incl. CI hash-lock step (PR #8)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-4.2",
+      "constitution_ref": "4 Non-success states",
+      "requirement": "Acquisition/invalid/empty/timeout/persistence failures are explicit non-success; never converted to PASS/VETO/zero/score",
+      "status": "satisfied",
+      "evidence": [
+        "SourceUnavailable -> /ingest 503 listing sources tried; no verdict, no NKG write (PR #4, SEC-007 fixed); _mock deleted",
+        "Phase 2D verified fail-closed: tasks.py STATE_FAILED on every exception; auto_callback skips non-success states (worklog Task 14)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-4.3",
+      "constitution_ref": "4 Synthetic test-only",
+      "requirement": "Mock/synthetic data never receives production verdicts nor enters the negative-knowledge store",
+      "status": "satisfied",
+      "evidence": [
+        "_mock removed (PR #4); real 1CRN fixture added for tests (PR #3); NKG write path requires validated real payloads (PR #6)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-4.4",
+      "constitution_ref": "4 not measured",
+      "requirement": "Distinguish not measured from measured-passed/measured-failed/measurement-failed; absent measurement not silently zero",
+      "status": "satisfied",
+      "evidence": [
+        "LAW-190/210/220/230 explicitly retired/unmeasured in the registry - visibly distinguished from enforced (PR #8)",
+        "All 5 skipped tests carry reason strings (06_ci evidence)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-4.5",
+      "constitution_ref": "4 Deterministic vs heuristic; narrative advisory",
+      "requirement": "Distinguish deterministic checks, heuristics, advisory signals, ML estimates, user claims; LLM narrative must not override engine verdict",
+      "status": "partial",
+      "evidence": [
+        "Registry separates enforced/retired classes; deterministic engine remains authoritative for verdicts",
+        "constitution.md scientific policy preserved byte-identical (SHA cfdd5ba3...)"
+      ],
+      "gaps": [
+        {
+          "gap": "The narrative/LLM output path (Gemini-generated explanations) was not audited this cycle for override behavior or evidence invention.",
+          "priority": "P1",
+          "owner": "agent (next cycle)"
+        }
+      ]
+    },
+    {
+      "id": "E-4.6",
+      "constitution_ref": "4 Refinement separation",
+      "requirement": "Pre/post-refinement measurements stored separately; failed simulation must not reuse pre-run result",
+      "status": "satisfied",
+      "evidence": [
+        "Refinement path verified fail-closed end-to-end (worklog Task 14 Phase 2D): failures produce STATE_FAILED, pre-run metrics never republished as post-run"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-4.7",
+      "constitution_ref": "4 Law registry",
+      "requirement": "Registry declares ID/title/principle/class/status/threshold/operator/unit/scope/metric/implementation/tests/citations/provenance/conflicts; non-enforced visibly distinguished",
+      "status": "satisfied",
+      "evidence": [
+        "governance/law_registry.yaml: 15 enforced + 4 retired entries, values copied exactly from canon (PR #8)",
+        "43 registry tests incl. content-hash pinning; law_canon.json removed (single source of truth)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-4.8",
+      "constitution_ref": "4 Law ID stability",
+      "requirement": "Law IDs not renumbered/redefined; conflicts stay explicit; semantic hash covers meanings and thresholds",
+      "status": "satisfied",
+      "evidence": [
+        "Canon 6a9cd4b4349b81de and matrix ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4 verified unchanged after every WP, at final head, and at 4993cb3 (PR #11 branch)",
+        "LAW-120 conflict preserved as data + pending-review entry (PR #8)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-5.1",
+      "constitution_ref": "5 Supported workflow",
+      "requirement": "Documented minimal supported customer workflow prioritized",
+      "status": "satisfied",
+      "evidence": [
+        "README rewritten for the product (PR #10); scope matrix 08_product_scope_matrix.md defines the vertical slice incl. what is frozen/removed"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-5.2",
+      "constitution_ref": "5 Component contracts",
+      "requirement": "Defined responsibility/contract; no circular imports, duplicated rules, unowned background work, competing truth sources",
+      "status": "satisfied",
+      "evidence": [
+        "Three byte-identical credits modules deduplicated to tos_credits with importers repointed (PR #9, SEC-013)",
+        "law_canon.json + 10 drifted glossary files consolidated onto registry-driven glossary (PR #8, SEC-012)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-5.3",
+      "constitution_ref": "5 Dependency analysis before deletion",
+      "requirement": "Automated import-graph/entrypoint/docker/workflow inspection before delete/move/merge",
+      "status": "satisfied",
+      "evidence": [
+        "WP-9: byte-identity proof + importer grep before deletion",
+        "WP-10: junk-file grep verification, .dockerignore added, research corpus moved out with import-path fixes (PR #10)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-5.4",
+      "constitution_ref": "5 API contracts",
+      "requirement": "Schema/record/event/response changes versioned or backward compatible, or deliberately migrated with tested updates",
+      "status": "partial",
+      "evidence": [
+        "Breaking removals deliberate and documented (/history/ip, OPEN_MODE semantics, PDF module deletion)",
+        "Legacy 8-char audit IDs remain resolvable after SHA-256 upgrade (PR #5) - read-compatibility kept"
+      ],
+      "gaps": [
+        {
+          "gap": "No systematic API versioning/deprecation policy.",
+          "priority": "P2",
+          "owner": "owner+agent"
+        }
+      ]
+    },
+    {
+      "id": "E-5.5",
+      "constitution_ref": "5 Configuration",
+      "requirement": "Centralized, startup-validated, documented, safely defaulted; no CWD-dependent behavior",
+      "status": "partial",
+      "evidence": [
+        "OPEN_MODE dual-switch, ALLOWED_ORIGINS, INTERNAL_CALLBACK_SECRET, TOSCANINI_DATA_DIR/NKG_PATH overrides documented (PRs #2/#3/#6; docs/DEPLOY.md)",
+        "Test-time CWD/path variance neutralized via conftest (PR #7)"
+      ],
+      "gaps": [
+        {
+          "gap": "SEC-015: SECRET_KEY default dev value has no startup validation gate - unsafe default persists.",
+          "priority": "P0",
+          "owner": "owner+agent"
+        }
+      ]
+    },
+    {
+      "id": "E-5.6",
+      "constitution_ref": "5 Dependencies",
+      "requirement": "Justified, pinned to reproducibility policy, vulnerability-scanned, installed from correct manifest",
+      "status": "partial",
+      "evidence": [
+        "Lock regenerated and resolvable (websockets/protobuf conflicts + missing PyJWT fixed, PR #7, SEC-010); requirements-dev.txt separates dev deps; CI installs from lock",
+        "Backend/dashboard dependency confusion addressed (PR #7)"
+      ],
+      "gaps": [
+        {
+          "gap": "No automated dependency-vulnerability scanning in CI (e.g. pip-audit).",
+          "priority": "P1",
+          "owner": "owner+agent"
+        }
+      ]
+    },
+    {
+      "id": "E-5.7",
+      "constitution_ref": "5 Schema migrations",
+      "requirement": "Migrations tested with rollback/forward-recovery; no destructive incidental deletion",
+      "status": "not_applicable",
+      "evidence": [
+        "No database schema in the product; file-based persistence; no schema changes occurred in the chain"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-5.8",
+      "constitution_ref": "5 Smallest complete change",
+      "requirement": "Smallest change solving a verified problem; scope expansion separately justified",
+      "status": "satisfied",
+      "evidence": [
+        "10 atomic work packages, each one PR with scoped manifest (09_baseline_manifest.json: 462 entries)",
+        "Every defaulted owner decision explicitly flagged in PR bodies for override"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-6.1",
+      "constitution_ref": "6 Regression first",
+      "requirement": "Reproduce bugs with failing tests before fixing, when feasible",
+      "status": "satisfied",
+      "evidence": [
+        "Baseline reproduced and archived: 244P/9F/5S/1E with redacted tracebacks (06_ci)",
+        "Each WP's fix paired with regression coverage; suite grew 244->355"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-6.2",
+      "constitution_ref": "6 Coverage breadth",
+      "requirement": "Unit, integration, contracts, authz/tenant isolation, hostile inputs, concurrency/replay, dependency failure, timeouts, persistence failure, production error paths",
+      "status": "partial",
+      "evidence": [
+        "Route authz matrix, hostile-input NKG/callback validation, dependency-failure 503 paths, persistence no-write-on-failure all covered",
+        "Replay covered for callbacks (timestamp window) and NKG dedup"
+      ],
+      "gaps": [
+        {
+          "gap": "Concurrency (parallel job submission, race on ledger writes) remains lightly tested.",
+          "priority": "P2",
+          "owner": "agent (next cycle)"
+        }
+      ]
+    },
+    {
+      "id": "E-6.3",
+      "constitution_ref": "6 Hermetic tests",
+      "requirement": "Tests deterministic, isolated, CI-repeatable, no live credentials, no production mutation",
+      "status": "partial",
+      "evidence": [
+        "External services replaced by controlled doubles; fixtures real-but-public (1CRN); no production credentials in tests",
+        "conftest pins writable data dir (PR #7)"
+      ],
+      "gaps": [
+        {
+          "gap": "SEC-021: suite is non-hermetic - fixed /tmp data-dir hijack (test_history_endpoints.py) + import-time CREDITS_DIR capture make full-suite runs consume a persistent credit ledger; depleted-ledger regime reproduced at 014b155 (354P/1F exit 1 vs fresh-runner 355P exit 0).",
+          "priority": "P1",
+          "owner": "owner+agent"
+        }
+      ]
+    },
+    {
+      "id": "E-6.4",
+      "constitution_ref": "6 No gate-weakening",
+      "requirement": "No weaken/delete/skip/xfail merely to obtain green; skips need reason+owner",
+      "status": "satisfied",
+      "evidence": [
+        "PDF module's 9 tests deleted together with the module under a defaulted owner decision recorded in PR #7 - not test-hiding; module itself was call-time-broken (SEC-011)",
+        "test_b1_tokens.py rewritten as a real pytest (was a script with sys.exit at import) (PR #7)",
+        "5 remaining skips all carry reasons (06_ci/final_rerun.txt)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-6.5",
+      "constitution_ref": "6 Exact claimed results",
+      "requirement": "Claimed results include command, SHA, versions where material, exact counts; never invent counts",
+      "status": "satisfied",
+      "evidence": [
+        "06_ci/: exact commands, SHA 014b155, Python 3.12.15, pip 26.2.1, per-file counts",
+        "SEC-021 regimes reported separately (fresh-runner vs depleted-ledger) - no condition laundering"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-6.6",
+      "constitution_ref": "6 Tests not sufficient",
+      "requirement": "Security boundaries, scientific validity, migration safety, production behavior reviewed separately",
+      "status": "satisfied",
+      "evidence": [
+        "Route matrix probed live against running app; Phase 2D refinement path traced end-to-end; gitleaks history scan; registry hash-lock CI step",
+        "21-finding register is the security review artifact"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-7.1",
+      "constitution_ref": "7 Branch+PR flow",
+      "requirement": "Feature branches + PR review; direct pushes to main disabled for normal development",
+      "status": "satisfied",
+      "evidence": [
+        "12 PRs (10 hardening + constitution policy + CI fix); main untouched at 2195a04; no force-push; no history rewrite"
+      ],
+      "gaps": [
+        {
+          "gap": "Branch protection / 'require PR' is an owner-side GitHub setting, not yet configured (API body documented in operator checklist).",
+          "priority": "P0",
+          "owner": "owner"
+        }
+      ]
+    },
+    {
+      "id": "E-7.2",
+      "constitution_ref": "7 Checks on merge candidate",
+      "requirement": "Required checks run on the exact proposed merge candidate and pass before merge",
+      "status": "not_satisfied",
+      "evidence": [],
+      "gaps": [
+        {
+          "gap": "SEC-022 (root-caused, fixed_in_pr #12): glob defect meant PRs #2-#10 ran zero checks; fix fd59206 makes slashed branches + stacked bases trigger (behavior-verified: run 39155133102 green; PR #12 head carries 4 passing check-runs). Remaining: owner must set checks as required and merge in order #1->#10 then #12 (or #12 first for CI on the chain's tip).",
+          "priority": "P0",
+          "owner": "owner"
+        }
+      ]
+    },
+    {
+      "id": "E-7.3",
+      "constitution_ref": "7 Deployment gating",
+      "requirement": "Deployment depends on passing tests/build for the same SHA; push-triggered deploy must not bypass failed gates",
+      "status": "not_satisfied",
+      "evidence": [],
+      "gaps": [
+        {
+          "gap": "deploy.yml is an independent push-triggered deployment to EC2 on main; it does not consume gate results (workflow_run/needs wiring absent). Owner decision on gating mechanism required (recommend workflow_run on Toscanini Stability Gate success).",
+          "priority": "P0",
+          "owner": "owner"
+        }
+      ]
+    },
+    {
+      "id": "E-7.4",
+      "constitution_ref": "7 CI content",
+      "requirement": "CI includes unit/integration/contract/security regressions, lint/format, secret detection, dependency-vuln checks, container/build checks, registry drift checks",
+      "status": "partial",
+      "evidence": [
+        "Secret detection: gitleaks job (WP-1)",
+        "Registry drift: hash-lock step asserts canon/matrix (gate.yml)",
+        "Unit suite: green in CI at fd59206 (run 39155133102)"
+      ],
+      "gaps": [
+        {
+          "gap": "No dependency-vulnerability check (pip-audit/osv-scanner).",
+          "priority": "P1",
+          "owner": "owner+agent"
+        },
+        {
+          "gap": "No container build check; Docker builds never executed (SEC-020, no docker in sandbox - static context review only).",
+          "priority": "P1",
+          "owner": "owner"
+        },
+        {
+          "gap": "No lint/format/type gate.",
+          "priority": "P2",
+          "owner": "agent (next cycle)"
+        }
+      ]
+    },
+    {
+      "id": "E-7.5",
+      "constitution_ref": "7 SLSA",
+      "requirement": "Incremental SLSA provenance; no unverified level claims",
+      "status": "not_satisfied",
+      "evidence": [],
+      "gaps": [
+        {
+          "gap": "Not adopted. No claim made. Source/build traceability currently via commit SHAs + git-archive zip hash (02_zip).",
+          "priority": "P2",
+          "owner": "owner"
+        }
+      ]
+    },
+    {
+      "id": "E-7.6",
+      "constitution_ref": "7 Pinned actions",
+      "requirement": "Third-party CI actions pinned to immutable versions/SHAs; minimized PR-job credentials",
+      "status": "partial",
+      "evidence": [
+        "actions/checkout@v4, setup-python@v5 (tag-level); gitleaks v8.30.1 (version-level)"
+      ],
+      "gaps": [
+        {
+          "gap": "No SHA-pinning of third-party actions.",
+          "priority": "P2",
+          "owner": "agent (next cycle)"
+        }
+      ]
+    },
+    {
+      "id": "E-7.7",
+      "constitution_ref": "7 Health/rollback",
+      "requirement": "Tested health/readiness, failure signal, documented rollback/recovery for releases",
+      "status": "partial",
+      "evidence": [
+        "/health deduplicated and public-by-design (PR #2); docs/DEPLOY.md documents deployment + proxy deny recipes (PR #3)"
+      ],
+      "gaps": [
+        {
+          "gap": "No readiness/dependency-health distinction; rollback is document-level, not exercised.",
+          "priority": "P1",
+          "owner": "owner+agent"
+        }
+      ]
+    },
+    {
+      "id": "E-8.1",
+      "constitution_ref": "8 SLI/SLO",
+      "requirement": "Define SLIs/SLOs for the supported workflow; measure before reliability claims",
+      "status": "not_satisfied",
+      "evidence": [],
+      "gaps": [
+        {
+          "gap": "No SLI/SLO definitions; no reliability claims made anywhere in deliverables.",
+          "priority": "P2",
+          "owner": "owner"
+        }
+      ]
+    },
+    {
+      "id": "E-8.2",
+      "constitution_ref": "8 Timeouts/retries/limits",
+      "requirement": "Bounded timeouts, controlled retries with backoff, idempotency keys, concurrency/resource limits, cancellation",
+      "status": "partial",
+      "evidence": [
+        "Callback expiry window (300s) + NKG idempotent dedup + uuid job IDs (PRs #3/#5/#6)"
+      ],
+      "gaps": [
+        {
+          "gap": "Job-level timeout/retry bounds and cancellation for expensive runs not audited/implemented.",
+          "priority": "P1",
+          "owner": "agent (next cycle)"
+        }
+      ]
+    },
+    {
+      "id": "E-8.3",
+      "constitution_ref": "8 Health signal separation",
+      "requirement": "Health vs readiness vs dependency health vs liveness vs business success distinguished",
+      "status": "partial",
+      "evidence": [
+        "/health no longer duplicated; semantic split not implemented"
+      ],
+      "gaps": [
+        {
+          "gap": "Single /health endpoint does not separate liveness/readiness/dependency/business signals.",
+          "priority": "P1",
+          "owner": "agent (next cycle)"
+        }
+      ]
+    },
+    {
+      "id": "E-8.4",
+      "constitution_ref": "8 Logs/metrics/traces",
+      "requirement": "Structured logs, metrics, traces with stable correlation IDs; no secrets/PII in logs",
+      "status": "partial",
+      "evidence": [
+        "Full-length audit IDs (PR #5) are stable correlation IDs; log redaction discipline observed in evidence generation (gitleaks --redact)"
+      ],
+      "gaps": [
+        {
+          "gap": "No structured logging/metrics/tracing stack.",
+          "priority": "P2",
+          "owner": "owner"
+        }
+      ]
+    },
+    {
+      "id": "E-8.5",
+      "constitution_ref": "8 Transactional persistence",
+      "requirement": "Required persistence failure must not be reported as completed durable audit",
+      "status": "satisfied",
+      "evidence": [
+        "Acquisition failure writes no verdict/NKG (PR #4); refinement failure -> STATE_FAILED, callback suppressed (Phase 2D verification)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-8.6",
+      "constitution_ref": "8 Alerts+runbook",
+      "requirement": "Actionable alerts and runbook for failure, rollback, credential rotation, restore, incident comms",
+      "status": "partial",
+      "evidence": [
+        "docs/DEPLOY.md is a runbook seed (deployment + callback proxy deny recipes); operator checklist enumerates credential-rotation pending items (10_operator_checklist.md)"
+      ],
+      "gaps": [
+        {
+          "gap": "No alerting wired; runbook lacks failure/rollback/incident-communication sections.",
+          "priority": "P1",
+          "owner": "owner+agent"
+        }
+      ]
+    },
+    {
+      "id": "E-8.7",
+      "constitution_ref": "8 Restore exercises",
+      "requirement": "Recovery claims supported by tested exercises, not backup existence",
+      "status": "not_satisfied",
+      "evidence": [],
+      "gaps": [
+        {
+          "gap": "No backups/exercises exist to evaluate; no recovery claims made.",
+          "priority": "P2",
+          "owner": "owner"
+        }
+      ]
+    },
+    {
+      "id": "E-9.1",
+      "constitution_ref": "9 Honest UX",
+      "requirement": "Communicate progress, constraints, errors, limitations, provenance; never fabricate for smoother UI",
+      "status": "partial",
+      "evidence": [
+        "503 on acquisition failure names sources tried (PR #4); verdict provenance via registry references + audit IDs",
+        "Dashboard UX not fully audited for error-path communication"
+      ],
+      "gaps": [
+        {
+          "gap": "Dashboard error/progress surface review pending.",
+          "priority": "P2",
+          "owner": "agent (next cycle)"
+        }
+      ]
+    },
+    {
+      "id": "E-9.2",
+      "constitution_ref": "9 Accessibility",
+      "requirement": "Accessibility, keyboard, responsive, comprehensible errors, data-retention/privacy statements",
+      "status": "not_verified",
+      "evidence": [],
+      "gaps": [
+        {
+          "gap": "Not audited in this cycle; no claims made.",
+          "priority": "P2",
+          "owner": "agent (next cycle)"
+        }
+      ]
+    },
+    {
+      "id": "E-9.3",
+      "constitution_ref": "9 Cost control",
+      "requirement": "Explicit resource budgets, quotas, per-tenant limits, cancellation, timeout behavior on costly features",
+      "status": "not_satisfied",
+      "evidence": [],
+      "gaps": [
+        {
+          "gap": "No abuse controls on compute-costly endpoints (audit/refinement).",
+          "priority": "P1",
+          "owner": "owner+agent"
+        }
+      ]
+    },
+    {
+      "id": "E-9.4",
+      "constitution_ref": "9 Core journey first",
+      "requirement": "Secure dependable core journey prioritized; non-core surfaces feature-gated or disabled",
+      "status": "satisfied",
+      "evidence": [
+        "Vertical slice defined (08_product_scope_matrix.md); research corpus and junk surfaces moved out of the product repo (PR #10); PDF export honestly removed rather than half-shipped (PR #7)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-10.1",
+      "constitution_ref": "10 Narrative advisory",
+      "requirement": "Authoritative result + evidence + provenance independently available when model unavailable/malformed",
+      "status": "not_verified",
+      "evidence": [],
+      "gaps": [
+        {
+          "gap": "Gemini narrative path not fault-injected this cycle; no claims made.",
+          "priority": "P1",
+          "owner": "agent (next cycle)"
+        }
+      ]
+    },
+    {
+      "id": "E-10.2",
+      "constitution_ref": "10 Untrusted external input",
+      "requirement": "Validate schemas; constrain privileges; prevent prompt-injection crossing authz/execution boundaries",
+      "status": "partial",
+      "evidence": [
+        "Callback/NKG payloads schema-validated (PRs #3/#6); uploaded coordinates format-checked at ingest"
+      ],
+      "gaps": [
+        {
+          "gap": "Prompt-injection containment from uploaded documents/narrative output not audited.",
+          "priority": "P1",
+          "owner": "agent (next cycle)"
+        }
+      ]
+    },
+    {
+      "id": "E-10.3",
+      "constitution_ref": "10 Minimum data to providers",
+      "requirement": "Send minimum data under approved data-handling policy; no proprietary structures/secrets without disclosed basis",
+      "status": "not_verified",
+      "evidence": [],
+      "gaps": [
+        {
+          "gap": "Payload scope of Gemini narrative calls not audited; requires an approved data-handling policy first.",
+          "priority": "P1",
+          "owner": "owner"
+        }
+      ]
+    },
+    {
+      "id": "E-10.4",
+      "constitution_ref": "10 Honest degradation",
+      "requirement": "Provider unavailability yields honest degraded state; no fabricated upstream evidence",
+      "status": "satisfied",
+      "evidence": [
+        "Missing GEMINI_API_KEY exits with clear error (PR #1); acquisition provider exhaustion -> 503 (PR #4); no mock fallback remains"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-11.1",
+      "constitution_ref": "11 Change discipline",
+      "requirement": "Problem statement, acceptance criteria, risk assessment, tests, docs, rollback proportionate to impact",
+      "status": "satisfied",
+      "evidence": [
+        "Every PR body carries problem/approach/evidence/rollback; high-risk surfaces (authz, registry semantics, callbacks) got focused regression tests (route matrix, hash locks, signature tests)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-11.2",
+      "constitution_ref": "11 Incident discipline",
+      "requirement": "Containment, evidence preservation, RCA, remediation, regression prevention; never erase evidence instead of revoking",
+      "status": "not_applicable",
+      "evidence": [
+        "No incident occurred. Applicable principle honored: history-exposed keys handled via revocation-pending registration (SEC-018), history was NOT rewritten"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-12.1",
+      "constitution_ref": "12 cond 1",
+      "requirement": "Addresses verified requirement; no silent scope broadening",
+      "status": "satisfied",
+      "evidence": [
+        "P0 brief items mapped 1:1 to WP-1..WP-10; scope additions (research-corpus move) were explicit owner-defaulted decisions flagged in PR bodies"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-12.2",
+      "constitution_ref": "12 cond 2",
+      "requirement": "Exact base/proposed SHAs recorded; working tree and changed-file manifest known",
+      "status": "satisfied",
+      "evidence": [
+        "09_baseline_manifest.json: chain of 10 commits + 462-entry name-status manifest; mbox chain reproduces tree b2019910... == 014b155 exactly"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-12.3",
+      "constitution_ref": "12 cond 3",
+      "requirement": "Security/ownership/integrity/compat/failure reviewed for affected paths",
+      "status": "satisfied",
+      "evidence": [
+        "21-finding register + route matrix + Phase 2D verification + registry hash-lock reviews"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-12.4",
+      "constitution_ref": "12 cond 4",
+      "requirement": "Regression, negative-path, contract tests appropriate to risk",
+      "status": "satisfied",
+      "evidence": [
+        "Suite 244 -> 355 tests; hostile-input, authz-matrix, signature, registry-validation coverage added"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-12.5",
+      "constitution_ref": "12 cond 5",
+      "requirement": "All required tests/CI pass on proposed commit, exact results saved",
+      "status": "partial",
+      "evidence": [
+        "Fresh-venv CI simulation at 014b155: 355P/5S/0F/0E exit 0 (06_ci); WP-12 push run green at fd59206 (39155133102)"
+      ],
+      "gaps": [
+        {
+          "gap": "Branch-level CI on PRs #2-#10 was absent at execution time (SEC-022, now fixed); owner merge sequence still pending. SEC-021 hermeticity conditions disclosed.",
+          "priority": "P0",
+          "owner": "owner"
+        }
+      ]
+    },
+    {
+      "id": "E-12.6",
+      "constitution_ref": "12 cond 6",
+      "requirement": "Docs, registry artifacts, config examples, runbooks updated",
+      "status": "satisfied",
+      "evidence": [
+        "README rewritten; docs/DEPLOY.md added; SAAS_HANDOFF corrected; registry + glossaries made registry-driven; ALLOWED_ORIGINS/OPEN_MODE/secret env docs"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-12.7",
+      "constitution_ref": "12 cond 7",
+      "requirement": "Deployment prerequisites, monitoring, rollback verified for production-impacting changes",
+      "status": "partial",
+      "evidence": [
+        "Deployment prerequisites documented (env vars, merge order, required checks - 10_operator_checklist.md)"
+      ],
+      "gaps": [
+        {
+          "gap": "Deployment has not occurred; monitoring absent; rollback not exercised. 'Not run' is not claimed as 'passed'.",
+          "priority": "P0",
+          "owner": "owner"
+        }
+      ]
+    },
+    {
+      "id": "E-12.8",
+      "constitution_ref": "12 cond 8",
+      "requirement": "Final report lists changes, evidence, unresolved risks, blocked checks, unverified items",
+      "status": "satisfied",
+      "evidence": [
+        "Evidence package 00_README.md + 10_operator_checklist.md + this matrix; unverified items named precisely (Docker, ASVS, SLOs, LLM paths, accessibility)"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-12.9",
+      "constitution_ref": "12 cond 9",
+      "requirement": "No secrets exposed; no unapproved scientific changes; no unverified features advertised production-ready",
+      "status": "satisfied",
+      "evidence": [
+        "All artifacts redacted (register secret_handling notice); canon/matrix hashes unchanged at every step; PDF export reported as removed, not working; no rotation claimed"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-13.1",
+      "constitution_ref": "13 Prohibited shortcuts",
+      "requirement": "None of the listed shortcuts used",
+      "status": "satisfied",
+      "evidence": [
+        "No coding before protocol; no unevidenced claims (rotation explicitly NOT claimed; branch protection NOT claimed configured); no gate bypass (SEC-016 correction was evidence-driven, not gate-weakening); no secrets in artifacts (redaction passes + fingerprints only); no mock-as-evidence; no error-to-verdict conversion (opposite: fail-closed added); no law semantics changed (hashes pinned); dependency analysis preceded every deletion; nothing merged/deployed; unrun checks prominently listed"
+      ],
+      "gaps": []
+    },
+    {
+      "id": "E-14.1",
+      "constitution_ref": "14 Task artifacts",
+      "requirement": "Preflight+SHA, scope/call-site map, machine-readable results bound to commit, manifest+patch hash, impact note, migration/rollback plan, final checklist; repeatable, redacted",
+      "status": "satisfied",
+      "evidence": [
+        "Evidence package dirs 01-10 (patches+SHA256SUMS, zip+hash, findings register, route matrix, regression report, CI artifacts, registry validation, scope matrix, manifest, operator checklist)",
+        "This directory adds preflight_wp11.json, ci_delivery_investigation.json, constitution_compliance_matrix.json, constitution_compliance_report.md"
+      ],
+      "gaps": []
+    }
+  ]
+}
