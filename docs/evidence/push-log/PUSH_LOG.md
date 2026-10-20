@@ -357,3 +357,13 @@
   is affected; the no-force-push rule for published/merged history is untouched (this is
   the D-4 documented-rebuild pattern applied to a never-merged activation candidate,
   with force-with-lease bound to the exact prior tip).
+
+## 2026-10-20T15:06:36Z | P-034-CONFIRM | push-confirm | branch=activation/ec16-ec20-consolidated remote_sha=705967d30f7ce45660a8c4b4718e8d08e115f28f credential=OWNER-PAT-1 evidence="commits API: 705967d30f7ce45660a8c4b4718e8d08e115f28f retrievable (HTTP 200 verified at CONFIRM write time); observed as the post-rebuild-1 tip"
+
+- CONFIRM of the P-034-INTENT (rebuild 1): the push executed with --force-with-lease bound
+  to ef13c4c2a739... and landed 705967d30f7ce45660a8c4b4718e8d08e115f28f (verified
+  retrievable on the remote at CONFIRM write time). The tip left the current lineage
+  through rebuilds 2 and 3 (P-044-INTENT); classified SUPERSEDED-BY-DOCUMENTED-REBUILD in
+  the reconciliation record. This completes every intent/confirm pair on this branch:
+  P-020 (confirmed), P-028 (confirmed), P-034 (this entry), P-044 (final — CONFIRMED-LIVE
+  via the carrying-tip proof in CI).

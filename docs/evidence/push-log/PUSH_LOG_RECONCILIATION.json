@@ -72,6 +72,14 @@
       "class": "SUPERSEDED-BY-DOCUMENTED-REBUILD",
       "pointer": "the push was observed and its CI recorded; the tip left the current lineage through the disclosed rebuilds (P-034-INTENT rebuild 1, P-044-INTENT rebuild 3); object verified still retrievable via the commits API at reconciliation time",
       "recorded_at_utc": "2026-10-20T15:01:27Z"
+    },
+    {
+      "entry_id": "P-034-CONFIRM",
+      "branch": "activation/ec16-ec20-consolidated",
+      "sha": "705967d30f7ce45660a8c4b4718e8d08e115f28f",
+      "class": "SUPERSEDED-BY-DOCUMENTED-REBUILD",
+      "pointer": "rebuild-1 tip (P-034-INTENT -> P-034-CONFIRM); left the current lineage through rebuilds 2 and 3 (P-044-INTENT); retrievable on the remote (commits API 200) at reconciliation time",
+      "recorded_at_utc": "2026-10-20T15:20:00Z"
     }
   ]
 }
