@@ -1,3 +1,8 @@
+# Activation copy (Direction 6, branch activation/ec26) — verbatim from proposals/ci/
+# reading-note-map-check.yml with ONE addition: the cross-branch ref fetch that the
+# proposal's own LOCAL_TEST_LOG.md documents as the checker's prerequisite
+# ('suite green after fetching the cross-branch refs the checker pins'). No check
+# logic was changed.
 # INERT DRAFT — activates only on owner approval (EC-26), see move-map in proposals/ci/README.md
 name: EC26 reading note maps rules
 on:
@@ -11,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Fetch the cross-branch refs the checker pins (documented prerequisite)
+        run: git fetch --no-tags origin "+refs/heads/*:refs/remotes/origin/*"
       - name: Derive required rule set from the canonical index (never from the PR body)
         run: |
           # Fail closed if the machine-readable inventory is missing:
