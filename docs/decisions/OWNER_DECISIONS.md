@@ -1,23 +1,37 @@
-# OWNER_DECISIONS — Consolidated Decision Register (rev 5)
+# OWNER_DECISIONS — Consolidated Decision Register (rev 6)
 
-**Provenance.** This is the single consolidated decision register, rev 5.
-It supersedes rev 4 (delivered on `evidence/round9-r2-2026-10-20` @
-`7e3a3395…`, `outputs/OWNER_DECISIONS.md`), which remains a sealed
-historical record and is not amended. Per the Round-13 direction 5, this
-branch (`docs/owner-decisions`) is the **canonical location** of the
-register at path `docs/decisions/OWNER_DECISIONS.md`. Internal `D-xx`
-labels remain retired from user-facing text (see `INTERNAL_CROSSWALK.md`
-in the r2 evidence archive). No OD number is ever reused.
+**Provenance.** This is the single consolidated decision register, rev 6.
+It supersedes rev 5 (drafted in Round 13, never published before this
+branch) on this same canonical path; rev 4 (delivered on
+`evidence/round9-r2-2026-10-20` @ `7e3a3395…`, `outputs/OWNER_DECISIONS.md`)
+remains a sealed historical record and is not amended. Per the Round-13
+direction 5, this branch (`docs/owner-decisions`) is the **canonical
+location** of the register at path `docs/decisions/OWNER_DECISIONS.md`.
+Internal `D-xx` labels remain retired from user-facing text (see
+`INTERNAL_CROSSWALK.md` in the r2 evidence archive). No OD number is ever
+reused.
 
-**How rev 5 was produced.** The Round-12 direction recorded the
-OD-01…OD-21 rulings as `AUDITOR-DECIDED` under the delegated authority
-in the audit conversation, dated 2026-10-20. The Round-13 audit message
-then corrected one ruling (OD-07: reversed from UUID-based IDs to the
-deterministic SHA-256 scheme) and one action record (A-01: rotation is an
-accepted-risk recommendation, not a precondition). Rev 5 records the
-**current** controlling text for every item and notes each supersession
-explicitly. No owner signature exists or is claimed for any entry; the
-owner may supersede any decision in writing at any time (Part 5).
+**How rev 6 was produced.** Rev 5 recorded the OD-01…OD-21 rulings as
+`AUDITOR-DECIDED` under the delegated authority in the audit
+conversation, with the Round-13 corrections (OD-07 deterministic
+SHA-256 scheme; A-01 accepted-risk). Rev 6 adds the Round-14 records:
+the OD-07 reaffirmation (canonical serialization binding coordinate,
+canon, and matrix hashes; read-only legacy lookup; explicit migration
+script) and the deviation found on the pushed commit `08a9403`; the
+binding H-1 decision (P0-stack base; compiler deletion with the
+dossier-independence evidence); the parallel-writer incident; and the
+A-09 owner action. No owner signature exists or is claimed for any
+entry; the owner may supersede any decision in writing at any time
+(Part 5).
+
+**Register divergence recorded.** A divergent register text ("rev 6,
+45 rows, AUTHORITATIVE reconciled set", claiming Round-12 authority)
+was pushed to this branch's history by the parallel writer
+(`0dcc5a1`, 2026-10-20 05:26 UTC). It is preserved as a merge parent
+and superseded by this file per the Round-14 directions; the divergence
+and the incident are recorded in `evidence/incident-push-2/` (on the
+H-1 and OD-07 branches). A second, earlier remediation register also
+exists on `evidence/round11-fix-2026-10-20` @ `8301c53`.
 
 **Status discipline (binding).**
 
@@ -50,7 +64,7 @@ supersede in writing.
 | OD-04 | Apply the OD-03 decision to disordered proteins. Do not invent a disorder threshold or let low-confidence/missing measurements create a favorable result. Record unmeasurable mandatory evidence truthfully and propagate the appropriate `NOT_MEASURED`/`INDETERMINATE` state. | AUDITOR-DECIDED 2026-10-20 | NOT started (follows OD-03 implementation). |
 | OD-05 | Retire LAW-190/210/220/230 from the enforced active set until each has a reviewed scientific definition, scope, implementation, threshold/operator definition, and tests. Retain their IDs for traceability, explicitly marked retired/not enforced. No implicit PASS placeholders. | AUDITOR-DECIDED 2026-10-20 | NOT started. Registry change with law-semantic-hash implications; requires its own reviewed patch. |
 | OD-06 | Keep the PDF certificate capability and its PDF library as a pinned, tested dependency. Generate a favorable certificate only for an authoritative `PASS`. For every other state, allow only a non-favorable audit record that cannot resemble certification of success. | AUDITOR-DECIDED 2026-10-20 | Partial and unverified: the dossier/certificate path exists (`pdf_b64` via fpdf2 on the current branches); the PASS-only favorable-certificate gating is not independently verified this round. The Round-12 ruling text named `reportlab`; the tracked implementation uses `fpdf2` — the pin-and-test intent applies to the library actually in use, and the discrepancy is recorded here rather than silently resolved. |
-| OD-07 | **Audit ID = the full 64-hex SHA-256 of the canonical input, combined with the canon hash and matrix hash; identical input shares an ID** (deterministic; the WP-5 dedup behavior is kept, not superseded). `structure_digest` is kept only as a separate informational field, never as an identifier. A legacy lookup maps 8-character IDs to their full IDs. Key scope is enforced on lookup (OD-08). The internal 8-character `uuid4` (formerly at `processor.py:113` on `main`) must not appear in any API response. **Supersedes** the Round-12 UUID formulation ("server-generated, unique 32-character hexadecimal UUID; identical structures do not share an audit-run ID"), which is withdrawn and must not be implemented. | AUDITOR-DECIDED 2026-10-20 (Round-13 reversal of the Round-12 text) | Implemented this round on `feature/od07-audit-id` (base `science/p0-correctness-2026-10-19` @ `ebc1fd79`): deterministic SHA-256 over the canonical input digest combined with canon hash and matrix hash; `structure_digest` informational; parse-time UUID audit IDs removed from the processor; legacy 8-char → full-ID lookup with OD-08 key scope; `test_ids.py` asserts the ruling. Unmerged. |
+| OD-07 | **Audit ID = the full 64-hex SHA-256 of one canonical serialization that includes the structure's coordinate hash, the canon hash, and the matrix hash; identical input shares an ID** (WP-5 dedup kept). Same coordinates under a different canon or matrix produce a DIFFERENT ID. `structure_digest` is kept only as a separate informational field, never as an identifier. The legacy 8-character lookup is READ-ONLY (no writes on GET); stored-record rewrites happen only via the explicit migration script (`scripts/migrate_audit_ids_od07.py`). Key scope is enforced on lookup (OD-08). The internal 8-character `uuid4` must never appear in any API response. **Supersedes** the Round-12 UUID formulation (withdrawn). **Reaffirmed Round 14** with the read-only-lookup and migration-script clarifications. | AUDITOR-DECIDED 2026-10-20 (Round-13 ruling; Round-14 reaffirmation) | **Deviation recorded:** the pushed commit `08a9403` (parallel writer, ~05:07 UTC — see incident-push-2) implemented `audit_id = sha256(coord_hash)` with canon/matrix in a separate `audit_identity` object, leaving the same ID across law-semantics changes — the opposite of the ruling. **Fixed** in `c02f774` on the same branch (fast-forward, no force): `compute_audit_id` binds all three hashes; ruling tests added (same coords + different canon/matrix → different ID, unit and integration); superseded assertions rewritten; read-only lookup preserved; migration script added. Stability Gate on `c02f774`: SUCCESS (run 39376279686). Unmerged. |
 | OD-08 | Use authenticated tenant-scoped history access. Default deny. Users may access only their own authorized tenant's records; admin access must be explicitly authorized. Add cross-tenant, missing-auth, authorization-bypass, and enumeration tests. | AUDITOR-DECIDED 2026-10-20 | Partial: `/history/{email}` is key-scoped (WP-2, existing). This round's `feature/od07-audit-id` extends scoping to audit-record lookup (owner sidecar, deny-by-default, foreign records indistinguishable from missing) and adds the four required test classes. Unmerged. |
 | OD-09 | Keep v1 focused on reliable ingestion, versioned scientific audit results, truthful status/verdicts, provenance, tenant-scoped history, and PASS-only certificates. Exclude calibration/threshold tuning, editable cohort construction, held-out evaluation, golden-artifact regeneration, unsupported law enforcement, and unapproved changes to measurement semantics. | AUDITOR-DECIDED 2026-10-20 | Enforced procedurally this round: no excluded activity ran. No code change required. |
 | OD-10 | Do not authorize fixed resolution, R-free, completeness, sample-size, or split-fraction thresholds from the contaminated historical cohort. Derive them only after row-level metadata correction and eligibility review; prespecify feasibility, uncertainty, and family/sequence-disjoint evaluation splits first. | AUDITOR-DECIDED 2026-10-20 | Maintained: no threshold work performed or authorized this round. |
@@ -155,11 +169,12 @@ golden-artifact changes.
 | ID | Action | Status |
 |---|---|---|
 | A-01 | PAT exposure (credential present in transcript history) | **ACCEPTED RISK** (Round-13 ruling). The PAT stays unrevoked at the owner's discretion. Rotation is **recommended** in this record but is **not a precondition** for any authorized work and does not block pushes or other items. Operational note (recorded, not a ruling): the Round-11 PAT value was observed rejected by the GitHub API (`401 Bad credentials`) on 2026-10-20; token validity is an operational matter separate from this accepted-risk record. |
-| A-02 | Provider API key rotation (key formerly at `main` HEAD `system_diagnosis.py`) | Tree removal implemented this round (`hygiene/h1-remove-gemini`: literal and every provider reference removed; acceptance grep clean). **Issuer-side revocation remains unverified** (confirmed in chat only, not in the provider console). Removal from the tree does not revoke the key. |
+| A-02 | Provider API key rotation (key formerly at `main` HEAD `system_diagnosis.py`) | Tree removal implemented on the **P0 stack** (Round-14 binding H-1 decision): `hygiene/h1-remove-gemini` tip `5149435` = science @ `ebc1fd79` + H-1 (19-file sweep; narrative compiler DELETED per the ruling — `generate_v21_dossier` provably never reads `witness_reports`; call-path evidence committed); acceptance grep clean; Stability Gate SUCCESS (run 39376518935). The parallel writer's main-based replacement-compiler branch (`66ffcbcb`) is preserved as a merge parent and superseded. **Issuer-side revocation remains unverified** (confirmed in chat only, not in the provider console). Removal from the tree does not revoke the key. |
 | A-03 | Set EC2 production secrets | open — owner-executed. Required set after H-1: `TOSCANINI_API_KEYS`, `INTERNAL_CALLBACK_SECRET`, `ALLOWED_ORIGINS`. The former `GEMINI_API_KEY` requirement is removed with the provider removal (no code path reads it). Fail-closed behavior verified for missing API keys (WP-2). |
 | A-04 | Branch protection on `main` (Stability Gate required, direct pushes disabled) | open — owner-executed. GitHub reports `main` protected; the exact required-check configuration could not be read through the audit connection (rulesets endpoint returned none). |
 | A-05 | Merge the canonical governance patch (OD-01) | open — owner-gated. Patch prepared (`governance/canonical-docs`); merge only after exact-source checks and the standing hard-stop requirements pass. |
 | A-06 | Keep-or-delete `fix/c2-api-key-enforcement` | Ancestry and containment **verified** (0 ahead / 68 behind `main`); disposition decision remains the owner's. |
+| A-09 | Parallel-writer pushes under this session's git identity (incident-push-2): owner reviews the token history for the 05:07 UTC and subsequent pushes; issues and scopes the push credential policy (the owner provided the repository PAT in-chat on 2026-10-20 and directed its use — recorded; rotation remains a recommendation under A-01, never a precondition) | open — owner-executed; incident recorded on the H-1 and OD-07 branches (`evidence/incident-push-2/`) |
 
 ## Part 5 — Closure and supersession protocol
 
