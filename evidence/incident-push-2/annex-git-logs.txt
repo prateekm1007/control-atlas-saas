@@ -1,0 +1,272 @@
+# Annex — git logs (machine-readable, gathered 2026-10-20T05:34:39Z)
+
+## Pushed branches (fresh fetch this session)
+
+### origin/feature/od07-audit-id
+commit 08a9403a7dd376da08831d14f1fa4fa26b15430e
+Author:     Z User <z@container>
+AuthorDate: Tue Oct 20 05:07:10 2026 +0000
+Commit:     Z User <z@container>
+CommitDate: Tue Oct 20 05:07:21 2026 +0000
+
+    OD-07: 64-hex canonical SHA-256 audit identity, legacy 8-char lookup, key-scoped audit store
+    
+    Implements the OD-07 ruling (auditor, delegated by owner, 2026-10-20):
+    
+    - backend/main.py:182 CONFIRMED already computing the deterministic
+      full SHA-256 of the canonical coordinate hash (kept; NOT a UUID).
+    - governance.audit_identity added: the 64-hex canonical SHA-256
+      combined with the canon hash and matrix hash in force (identity
+      triple); identical input shares the identity (tested).
+    - Legacy lookup for 8-character IDs: tos/storage/audit_store.py
+      gains compute_legacy_audit_id() (deterministic pre-WP-5
+      md5(coord_hash)[:8].upper()) and resolve_audit_ref() resolving
+      canonical 64-hex refs, pre-WP-5 legacy-filename records, and
+      governance.legacy_audit_id of post-WP-5 records.
+    - Key scope applies, fail-closed: records carry created_by_key_hash
+      (/ingest, /v1/batch, refinement callbacks inherit from token claims
+      / job record); /audit lookups return only records created by the
+      calling key; unattributed records are invisible to any key (same
+      convention as WP-2 comparisons). Cross-key denial is tested.
+    - uuid4()[:8] removed from the ingestion layer (processor.py): the
+      parser no longer generates any identifier (Structure.audit_id set
+      to "" — empty); import uuid dropped. No identifier can masquerade as an
+      audit ID at ingestion.
+    - structure_digest: no such field exists at this base (verified);
+      clause satisfied vacuously, provenance.hash documented as
+      provenance-only.
+    - Response schema: additive optional AuditIdentity + legacy_audit_id
+      (backward compatible).
+    - Tests: 13 new (test_od07_audit_identity.py). Full suite on this
+      branch: 514 passed / 9 failed / 5 skipped; clean base ebc1fd7:
+      497 passed / 9 failed / 5 skipped with the IDENTICAL failure set
+      (4 gemmi-sandbox, 4 b6 widget, 1 runner hardening) — zero new
+      failures. Evidence: docs/audit-evidence/round12/.
+
+commit 0c970948290a95d5c40752c7fb321b42c7f187cc
+Author:     Z User <z@container>
+AuthorDate: Tue Oct 20 05:07:10 2026 +0000
+Commit:     Z User <z@container>
+CommitDate: Tue Oct 20 05:07:10 2026 +0000
+
+    Round-12 Direction 1: constitution reading note (EC/OBS/CRIT IDs) + OD-07 preflight
+    
+    - ENGINEERING_CONSTITUTION.md blob b6bb35e8 and constitution.md blob
+      211ad2c5 read in full before any code edit; every EC section and
+      OBS-153/CRIT-154 ID enforced (or explicitly out-of-scope) is cited
+      with its application.
+    - EC 2/14 preflight for the OD-07 change with baseline SHA, change map,
+      risks, test evidence and rollback plan.
+
+commit ebc1fd79f20b9a6b6a262a70ce6942ba069d19e9
+Author:     Z User <z@container>
+AuthorDate: Mon Oct 19 12:01:10 2026 +0000
+Commit:     Z User <z@container>
+CommitDate: Mon Oct 19 12:01:10 2026 +0000
+
+    P0 item 16 (prep only): cohort v25 proposal — all numeric criteria owner-gated
+    
+    Verified and recorded: 1I0T is Z-DNA mislabeled as ferredoxin (backbone
+    laws NOT_MEASURED, LAW-170 VETO in the v24 record) AND its resolution
+    is inconsistent between dataset_v23.py (0.89 A) and the v24 run record
+    (0.6 A) — removed from the v25 proposal with both grounds. AF-P0DTC2-F1
+    disposition (migrated entity AF-0000000365840314) and AF-P62988-F1
+    removal (UniProt Inactive) recorded as owner decisions. PISCES-style
+    filter drafted with every number marked [owner]. Held-out split NOT
+    written — only after owner approval, before any threshold work.
+    
+    docs/P0_STATUS.md updated: items 17+18 ticked (hygiene branch), item
+    16 marked owner-gated with the proposal linked.
+
+### origin/feature/n8-altlocs-per-residue
+commit b5afd6ca01a345432852d5865a79999e464636b4
+Author:     Z User <z@container>
+AuthorDate: Tue Oct 20 05:14:45 2026 +0000
+Commit:     Z User <z@container>
+CommitDate: Tue Oct 20 05:14:45 2026 +0000
+
+    N8 Direction 3 evidence: pinned-cohort runs before/after the altloc-default flip + recorded verdict diff
+    
+    Direction 3 (Round-12): 'Run the pinned cohort before and after and
+    record the verdict diff.'
+    
+    - BEFORE run: code_sha 08a9403 (feature/od07-audit-id tip; per-atom
+      behavior, N8 not yet applied) -> runs/n8-altloc-before-2026-10-20/
+    - AFTER run: code_sha eb7e565 (this branch tip; per-residue DEFAULT,
+      per_atom explicit opt-in) -> runs/n8-altloc-after-2026-10-20/;
+      after-run verified coordinate digests against the before-run
+      manifest (--verify-digests-from).
+    - Input identity: 48/50 targets SHA-256-identical coordinate bytes in
+      both runs; 0 digest mismatches; the 2 remaining targets failed
+      acquisition in BOTH runs (recorded, not counted as measured).
+    - Verdict diff: EMPTY — 0 verdict changes, 0 law-status changes.
+      Recorded as a result of these two runs over these pinned inputs
+      (not a general-equivalence claim); JSON + markdown diff committed
+      alongside the raw run artifacts (N8_VERDICT_DIFF_2026-10-20.md,
+      n8_verdict_diff_2026-10-20.json).
+    - Aggregate verdicts identical: PASS 34 / VETO 5 / INDETERMINATE 1 /
+      MEASUREMENT_FAILED 8 / NOT_MEASURED 2 (diagnostic run, no threshold
+      change — OD-14 discipline; runner is diagnostic-only by design).
+    - The default flip itself is CODE (previous commit), not a patch:
+      ALTLOC_POLICY = ALTLOC_POLICY_PER_RESIDUE is the module default;
+      per_atom remains an explicit opt-in.
+
+commit eb7e56523f248cb4ee9658c2d1d8b59f99140230
+Author:     Z User <z@container>
+AuthorDate: Tue Oct 20 04:11:14 2026 +0000
+Commit:     Z User <z@container>
+CommitDate: Tue Oct 20 05:08:17 2026 +0000
+
+    N8 v2 (Round-11 audit correction): per-residue altloc selection is the DEFAULT
+    
+    Audit finding (Round-11, failure 3): the N8 directive required a
+    per-residue DEFAULT; v1 shipped per_residue as opt-in with per_atom as
+    the engine default. v2 flips the module default
+    (ALTLOC_POLICY = ALTLOC_POLICY_PER_RESIDUE) exactly as directed.
+    
+    - per_residue (DEFAULT): one altloc ID per residue by TOTAL occupancy,
+      first-seen ID on ties; blank-altloc shared atoms always kept.
+    - per_atom (explicit opt-in): the original P0 item 6 rule, kept for
+      byte-level comparison with pre-N8 deliveries (altloc_policy=
+      ALTLOC_POLICY_PER_ATOM).
+    - The flip is an audit-directed semantic change, recorded in the
+      delivery register; no threshold, law ID, or law meaning is altered.
+    - Selection logic is unchanged from v1; only the default and the
+      tests/documentation change. 3ERD ASP A 321 (0.50/0.50 tie) still
+      resolves to conformer A: per-residue totals tie -> first-seen ID.
+    
+    Tests: tests/test_altloc_selection.py (8) + tests/test_altloc_per_residue.py
+    (14) = 22; 19 passed / 3 failed in the delivery sandbox, all 3 failures
+    being the mmCIF tests with ModuleNotFoundError: gemmi (PyPI unreachable
+    in this sandbox; the identical 2 CIF tests also error under v1 here).
+    The CIF path shares the same _select_conformers selector as PDB; the
+    prior-session v1 run reported all 20 tests passing with gemmi present.
+    Base: science/p0-correctness-2026-10-19 @ ebc1fd79.
+
+commit 08a9403a7dd376da08831d14f1fa4fa26b15430e
+Author:     Z User <z@container>
+AuthorDate: Tue Oct 20 05:07:10 2026 +0000
+Commit:     Z User <z@container>
+CommitDate: Tue Oct 20 05:07:21 2026 +0000
+
+    OD-07: 64-hex canonical SHA-256 audit identity, legacy 8-char lookup, key-scoped audit store
+    
+    Implements the OD-07 ruling (auditor, delegated by owner, 2026-10-20):
+    
+    - backend/main.py:182 CONFIRMED already computing the deterministic
+      full SHA-256 of the canonical coordinate hash (kept; NOT a UUID).
+    - governance.audit_identity added: the 64-hex canonical SHA-256
+      combined with the canon hash and matrix hash in force (identity
+      triple); identical input shares the identity (tested).
+    - Legacy lookup for 8-character IDs: tos/storage/audit_store.py
+      gains compute_legacy_audit_id() (deterministic pre-WP-5
+      md5(coord_hash)[:8].upper()) and resolve_audit_ref() resolving
+      canonical 64-hex refs, pre-WP-5 legacy-filename records, and
+      governance.legacy_audit_id of post-WP-5 records.
+    - Key scope applies, fail-closed: records carry created_by_key_hash
+      (/ingest, /v1/batch, refinement callbacks inherit from token claims
+      / job record); /audit lookups return only records created by the
+      calling key; unattributed records are invisible to any key (same
+      convention as WP-2 comparisons). Cross-key denial is tested.
+    - uuid4()[:8] removed from the ingestion layer (processor.py): the
+      parser no longer generates any identifier (Structure.audit_id set
+      to "" — empty); import uuid dropped. No identifier can masquerade as an
+      audit ID at ingestion.
+    - structure_digest: no such field exists at this base (verified);
+      clause satisfied vacuously, provenance.hash documented as
+      provenance-only.
+    - Response schema: additive optional AuditIdentity + legacy_audit_id
+      (backward compatible).
+    - Tests: 13 new (test_od07_audit_identity.py). Full suite on this
+      branch: 514 passed / 9 failed / 5 skipped; clean base ebc1fd7:
+      497 passed / 9 failed / 5 skipped with the IDENTICAL failure set
+      (4 gemmi-sandbox, 4 b6 widget, 1 runner hardening) — zero new
+      failures. Evidence: docs/audit-evidence/round12/.
+
+### origin/evidence/round11-fix-2026-10-20
+commit 8301c5387a78754ceac9cc9b2d5b7c6ac3356d4e
+Author:     Z User <z@container>
+AuthorDate: Tue Oct 20 04:21:10 2026 +0000
+Commit:     Z User <z@container>
+CommitDate: Tue Oct 20 04:21:10 2026 +0000
+
+    Round-11 audit remediation: canonical register rev 5, written retraction, N8 v2 per-residue default
+    
+    Addresses the Round-11 audit verdict (NOT ACCEPTED, four failures):
+    
+    - Failure 1 (structural part): the register now exists at its canonical
+      repository home docs/decisions/OWNER_DECISIONS.md (rev 5) — rev 4's
+      Parts 1-5 carried forward, plus Part 6 with the audit reconciliation,
+      SUPERSEDED ROWS (register revs 1/3/4, D-xx labels, the 20-of-40
+      bound, N8 v1, the clean-scan claim) and the fail-closed reconstruction-
+      gap register for C2, the G-series rows, H-9..H-13, A-07/A-08, and the
+      OD-04 amendment (their defining text — the Round-11 directive — is not
+      present in this environment; nothing invented, EC §1/§13).
+    - Failure 2: written retraction of the delivery README's clean-scan
+      claim (outputs/round11-fix/RETRACTION_SECRETS_SCAN_CLAIM.md); the
+      revoked Gemini literal at system_diagnosis.py:8 is inherited from
+      main's tree and is now disclosed (value redacted in all artifacts).
+    - Failure 3: N8 v2 patch series flips ALTLOC_POLICY to per_residue as
+      the engine default exactly as directed; per_atom kept as explicit
+      opt-in (P0 item 6 semantics byte-for-byte); selection logic unchanged.
+      Evidence: 19/22 altloc tests pass here (3 CIF failures are
+      ModuleNotFoundError: gemmi — PyPI unreachable in this sandbox, same
+      failures occur under v1 here); full-suite failure-list diff vs base
+      ebc1fd79 shows zero new failures (508/12/5/1 vs 497/9/5/1).
+    - Failure 4 and C2 remain OPEN reconstruction gaps pending re-issue of
+      the Round-11 directive/audit text.
+    
+    No existing branch, tag, or ref moved; nothing merged; PR #16
+    untouched. Hard stop in force; all 21 ODs OPEN.
+
+commit 7e3a3395be2d0719facf5c61ac532a0d347a49d3
+Author:     Z User <z@container>
+AuthorDate: Mon Oct 19 22:08:28 2026 +0000
+Commit:     Z User <z@container>
+CommitDate: Mon Oct 19 22:08:28 2026 +0000
+
+    evidence: Round-11 (U1-U9) outputs delivery
+    
+    Durable evidence route per the Round-11 directions: the r2 evidence
+    archive (byte-identical, SHA-256 5ac52b93...), verifier.sh, the
+    consolidated owner-decision register rev 4 (OD-01..OD-21, all OPEN),
+    the session-3 constitution reading note (blob citations + every
+    EC/OBS/CRIT ID), the U3 TIPS-array closure evidence (cat -A, od -c,
+    six-key test, passing runs on both sealed archives), the U5 register
+    grep audit, the MODRES census documentation, and the two U9 patch
+    series (runner provenance with demonstration manifest; per-residue
+    altlocs, fresh implementation) with SHA256SUMS covering all files.
+    
+    Evidence delivery only: no product code path changes, no existing ref
+    moved, nothing merged or deployed. r1 archive stays sealed at
+    42d8e881... Base: origin/main @ 2195a048.
+
+commit 2195a048e87dcec4aa63e8dc7981b3bb6d237ca0
+Author:     prateekm1007 <prateekm1@gmail.com>
+AuthorDate: Tue Mar 3 03:34:51 2026 +0530
+Commit:     prateekm1007 <prateekm1@gmail.com>
+CommitDate: Tue Mar 3 03:34:51 2026 +0530
+
+    Fix refinement/submit tuple returns + BYOC loop complete
+    
+    - Fix FastAPI tuple return bug in refinement/submit (was serializing as JSON array)
+    - /refinement/token: JWT generation via API
+    - /refinement/pdb/{audit_id}: serve persisted PDB
+    - Dashboard: session state fallback via brain API
+    - WP-02/03: VETO clarity + ingest persistence
+
+## Local reflog (this session's Round-13 branches — the remote commits above appear in NONE of these)
+
+### hygiene/h1-remove-gemini
+ebc1fd7 hygiene/h1-remove-gemini@{2026-10-20 05:31:19 +0000}: branch: Reset to origin/science/p0-correctness-2026-10-19
+a761d72 hygiene/h1-remove-gemini@{2026-10-20 04:24:13 +0000}: commit (amend): H-1: remove external narrative provider credential and all references
+f70b51e hygiene/h1-remove-gemini@{2026-10-20 04:23:54 +0000}: commit: H-1: remove external narrative provider credential and all references
+2195a04 hygiene/h1-remove-gemini@{2026-10-20 04:18:47 +0000}: branch: Created from origin/main
+
+### feature/od07-audit-id
+73ef84c feature/od07-audit-id@{2026-10-20 04:40:07 +0000}: commit: OD-07: deterministic SHA-256 audit IDs per the auditor ruling (Round 13)
+ebc1fd7 feature/od07-audit-id@{2026-10-20 04:32:38 +0000}: branch: Created from origin/science/p0-correctness-2026-10-19
+
+### feature/n8-altlocs-per-residue
+af2c164 feature/n8-altlocs-per-residue@{2026-10-20 04:49:45 +0000}: commit: N8 / R-4: per-residue altloc policy as the engine default, verdict diff stated
+73ef84c feature/n8-altlocs-per-residue@{2026-10-20 04:40:38 +0000}: branch: Created from feature/od07-audit-id
