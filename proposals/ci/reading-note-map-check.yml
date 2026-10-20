@@ -1,0 +1,16 @@
+# INERT DRAFT — activates only on owner approval (EC-26), see move-map in proposals/ci/README.md
+name: EC26 reading note maps rules
+on:
+  pull_request:
+    paths: ['docs/evidence/**/READING_NOTE*', 'docs/directives/INDEX.md']
+jobs:
+  map:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          # In-force rule IDs and pinned blobs are read from the directive index / PR body:
+          python3 scripts/ci/reading_note_map_check.py \
+            --note docs/evidence/reading-note/READING_NOTE_LATEST.md \
+            --blobs b6bb35e8,211ad2c5 \
+            --rules-file <(grep -oE 'EC-[0-9]+' /tmp/pr_body.md | sort -u)

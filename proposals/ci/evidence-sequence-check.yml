@@ -1,0 +1,19 @@
+# INERT DRAFT — activates only on owner approval (EC-18), see move-map in proposals/ci/README.md
+name: EC18 evidence sequence
+on:
+  pull_request:
+  push:
+    branches: ["**"]
+jobs:
+  sequence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: |
+          FAIL=0
+          for LOG in $(git ls-files 'docs/evidence/**/*.md' | grep -E 'RECEIPT|PUSH_LOG|SEQUENCE|LOG' || true); do
+            CT=$(git log -1 --format=%cI -- "$LOG")
+            python3 scripts/ci/evidence_sequence_check.py "$LOG" --commit-time "$CT" || FAIL=1
+          done
+          exit $FAIL

@@ -1,0 +1,12 @@
+# INERT DRAFT — activates only on owner approval (EC-22), see move-map in proposals/ci/README.md
+name: EC22 status vocabulary
+on:
+  pull_request:
+jobs:
+  vocabulary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          FILES=$(git ls-files 'docs/evidence/*.md' 'docs/audit-evidence/**/*.md' 'outputs/*.md' '*STATUS*.md' 2>/dev/null || true)
+          python3 scripts/ci/status_vocabulary_lint.py $FILES

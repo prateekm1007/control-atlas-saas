@@ -1,0 +1,42 @@
+# INERT DRAFT — activates only on owner approval (EC-16/19/20), see move-map in proposals/ci/README.md
+name: EC16-19-20 claim verification
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+jobs:
+  claimed-shas:
+    name: EC-16 claimed SHAs exist on remote
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s' "$PR_BODY" > /tmp/pr_body.md
+          python3 scripts/ci/verify_claimed_shas.py \
+            --body /tmp/pr_body.md --repo "${{ github.repository }}"
+  pr-fields:
+    name: EC-19 directive ID present
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s' "$PR_BODY" > /tmp/pr_body.md
+          python3 scripts/ci/verify_claimed_shas.py --body /tmp/pr_body.md --require-directive-id-only
+  acceptance-tests-in-diff:
+    name: EC-20 acceptance tests present in diff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s' "$PR_BODY" > /tmp/pr_body.md
+          git diff --name-only "${{ github.event.pull_request.base.sha }}..HEAD" > /tmp/pr_diff.txt
+          python3 scripts/ci/verify_claimed_shas.py --body /tmp/pr_body.md \
+            --check-tests-in-diff /tmp/pr_diff.txt

@@ -1,0 +1,18 @@
+# INERT DRAFT — activates only on owner approval (EC-21), see move-map in proposals/ci/README.md
+name: EC21 declared base
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+jobs:
+  declared-base:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s' "$PR_BODY" > /tmp/pr_body.md
+          BASE=$(grep -E '^Base-SHA:[[:space:]]*[0-9a-f]{40}' /tmp/pr_body.md | head -1 | grep -oE '[0-9a-f]{40}')
+          if [ -z "$BASE" ]; then echo "Base-SHA: missing or not a full 40-hex SHA"; exit 1; fi
+          python3 scripts/ci/check_declared_base.py --base "$BASE" --head HEAD

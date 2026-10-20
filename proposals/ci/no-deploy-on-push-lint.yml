@@ -1,0 +1,14 @@
+# INERT DRAFT — activates only on owner approval (EC-25), see move-map in proposals/ci/README.md
+name: EC25 no deploy on push
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: python3 scripts/ci/workflow_deploy_trigger_lint.py .github/workflows/

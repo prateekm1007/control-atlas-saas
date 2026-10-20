@@ -1,0 +1,8 @@
+# EC-25 deploy-trigger lint against main @ 2195a048e87dcec4aa63e8dc7981b3bb6d237ca0 (report-only)
+# command: python3 scripts/ci/workflow_deploy_trigger_lint.py .github/workflows/ --report-only
+# executed: 2026-10-20T06:03:29Z (inert script; executed manually as evidence, no CI activation)
+
+# scanned 2 workflow file(s) under .github/workflows/
+FAIL: deploy.yml: job 'deploy' matches deploy regex and workflow triggers on ['push']
+
+# exit code (report-only): 0

@@ -1,0 +1,18 @@
+# INERT DRAFT — activates only on owner approval (EC-23), see move-map in proposals/ci/README.md
+name: EC23 full-tree secret scan
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  schedule:
+    - cron: "0 5 * * 1"   # weekly Monday 05:00 UTC full-history scan of main
+  workflow_dispatch:
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
