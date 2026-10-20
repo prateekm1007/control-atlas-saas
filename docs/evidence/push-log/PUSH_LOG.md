@@ -218,3 +218,10 @@
   the next globally unused ID (P-026).
 - Single-writer guard: remote tip expected exactly 3271fb1dbb1cb7687889c4e71002aa45ff37c340;
   push ABORTED on deviation.
+
+## 2026-10-20T14:20:10Z | P-025-INTENT | push-intent | branch=activation/ec26-r18 head_at_intent=DEFERRED base=a3d1b5633d46a0cd99842332440986a296412cbb expected_remote_tip_before_push=ABSENT (new ref name; rebuild of activation/ec26 — the original branch is preserved untouched, no force-push) credential=OWNER-PAT-1 authorized_by="auditor Round-18 direction 6 (EC-26 not accepted yet: negative tests for ACTIVE rules mapped only to inert proposals/ci files, verify the actual active workflow trigger/job, separate normative policy status from enforcement status in the index)"
+
+- Content (disclosed pre-push): .github/workflows/reading-note-map-check.yml — activates
+  the STRENGTHENED checker (landed on the fix-forward base: computed Enforcement column,
+  ACTIVE-inert negative, live trigger/job verification, AT-17/AT-18); the self-test step
+  (--include-proposed) passes on this exact tree; push-log append; manifest refresh.

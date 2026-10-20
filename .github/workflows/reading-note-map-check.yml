@@ -1,0 +1,54 @@
+# ACTIVATION CANDIDATE (Round-18 rebuild of activation/ec26) — EC-26 rules map to
+# acceptance with ENFORCEMENT-status semantics.
+#
+# Auditor Round-18 direction 6 (EC-26 — not accepted yet; strengthen semantics). The
+# modified run 39418218748 passed after adding the documented cross-branch fetch, but
+# that only repaired the environment: the checker validated that referenced files/jobs
+# EXIST — not that an ACTIVE rule is genuinely enforced by a live workflow.
+#
+# This candidate activates the STRENGTHENED checker (landed on the Round-18 fix-forward
+# base, PR #23):
+#   - the rule inventory carries a computed Enforcement column (LIVE / PROCEDURAL /
+#     INERT / NONE), SEPARATE from the normative policy Status column — an ACTIVE policy
+#     status can no longer be misread as proof that automation is running;
+#   - an ACTIVE rule mapped ONLY to inert drafts under proposals/ci/ FAILS (negative
+#     tests AT-17/AT-18 cover this);
+#   - LIVE is verified, not claimed: the referenced workflow must live under
+#     .github/workflows/ with a non-empty trigger and the named job present, or the
+#     script must be invoked by such a live workflow; a lying label fails closed.
+# Never merged until the auditor records activation (D-5 discipline).
+
+name: EC26 reading note maps rules (policy status vs enforcement status)
+
+on:
+  pull_request:
+    paths: ['docs/evidence/reading-note/**', 'docs/directives/INDEX.md', 'scripts/ci/**']
+  push:
+    branches: ["**"]
+
+permissions:
+  contents: read
+
+jobs:
+  map:
+    name: "EC-26 inventory + reading note with computed enforcement classes"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the cross-branch refs the checker may pin (documented prerequisite)
+        run: git fetch --no-tags origin "+refs/heads/*:refs/remotes/origin/*"
+      - name: Derive required rule set from the canonical index (never from the PR body)
+        run: |
+          # Fail closed if the machine-readable inventory is missing:
+          grep -q "BEGIN RULE INVENTORY" docs/directives/INDEX.md || {
+            echo "FAIL: rule inventory block missing from docs/directives/INDEX.md"; exit 1; }
+          python3 scripts/ci/reading_note_map_check.py \
+            --index docs/directives/INDEX.md \
+            --repo-root .
+      - name: Self-test mode (PROPOSED rows must map too when included)
+        run: |
+          python3 scripts/ci/reading_note_map_check.py \
+            --index docs/directives/INDEX.md \
+            --repo-root . \
+            --include-proposed \
+            --require-strings "SERIES-2026-10-20-EC"
