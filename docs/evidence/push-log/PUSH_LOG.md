@@ -249,3 +249,36 @@
 - Push 6 content (disclosed pre-push): this append (P-026-CONFIRM, P-027-CONFIRM, this
   INTENT) and the manifest refresh. No content changes beyond evidence. Single-writer
   guard: remote tip expected exactly 4f7c28bb7a23189e55660f24e7d567454c6ea8f9; push ABORTED on deviation.
+
+## 2026-10-20T14:47:05Z | P-035-CONFIRM | push-confirm | branch=fix/mainline-r18 remote_sha=a3d1b5653d9d8fda24c2d704fec19719c56c0977 credential=OWNER-PAT-1 evidence="git rev-parse a3d1b56 + git ls-remote origin refs/heads/fix/mainline-r18 (the push-4 tip is an ancestor of the current tip; SHA captured programmatically)"
+
+- CORRECTION of P-026-CONFIRM (which is preserved unchanged above, per the append-only
+  rule): P-026-CONFIRM recorded remote_sha=a3d1b5633d46a0cd99842332440986a296412cbb — a
+  WRONGLY TRANSCRIBED tail (the entry was hand-typed instead of captured from command
+  output). The actual push-4 tip is a3d1b5653d9d8fda24c2d704fec19719c56c0977. This entry is the authoritative confirmation of
+  the push-4 intent (P-026); the wrong-tail entry must not be used as evidence. The
+  transcription defect and the discipline fix (SHAs are captured programmatically, never
+  typed) are recorded in the round report; the checker's remote verification is what
+  exposes this class of error, exactly as designed.
+
+## 2026-10-20T14:47:05Z | P-036-INTENT | push-intent | branch=fix/mainline-r18 head_at_intent=DEFERRED base=2efbbb7854e27d818d314691b55488f0d31cb74f expected_remote_tip_before_push=2efbbb7854e27d818d314691b55488f0d31cb74f credential=OWNER-PAT-1 authorized_by="Round-18 direction 4 continuation: SHA-transcription corrections recorded append-only; two-phase protocol completed with programmatic SHA capture"
+
+- Push 7 content (disclosed pre-push): this append — P-035-CONFIRM (correction of
+  P-026-CONFIRM) and the record of the other affected entries below; manifest refresh.
+- CORRECTION REGISTER for wrong base= transcriptions in INTENT entries (all preserved
+  unchanged above; none affects protocol checks — base= is informational — but the
+  correct values are recorded here): P-019-INTENT base=5ab3a46ed8fa6182efb07f23a5c60c42dac3e998
+  was correct; WRONG (hand-typed a3d1b5633d46a0cd99842332440986a296412cbb instead of
+  a3d1b5653d9d8fda24c2d704fec19719c56c0977): P-022-INTENT (branch activation/ec21-r18), P-023-INTENT (branch
+  activation/ec23-r18), P-024-INTENT (branch activation/ec24-r18), P-025-INTENT (branch
+  activation/ec26-r18), P-027-INTENT (branch fix/mainline-r18, base field). The correct
+  value for every one of them is a3d1b5653d9d8fda24c2d704fec19719c56c0977. P-021-INTENT and P-020-INTENT (base
+  3271fb1dbb1cb7687889c4e71002aa45ff37c340) and P-028-INTENT (base
+  d384f0616ff072271befb37101f739a8ee45ffc6) were verified correct. On branch
+  activation/ec21-r18, P-029-CONFIRM and P-032-INTENT carry a wrong 98af2ef… tail
+  (98af2ef5b73ba54e2a10b4a3325c2b1b34a02d07f); the correct tip is
+  98af2ef2baf88f02723944c97036c3d1b7a95263 — corrected on that branch by its own
+  correction entry (P-037). The corrected values above were captured programmatically
+  from git rev-parse.
+- Single-writer guard: remote tip expected exactly 2efbbb7854e27d818d314691b55488f0d31cb74f;
+  push ABORTED on deviation.
