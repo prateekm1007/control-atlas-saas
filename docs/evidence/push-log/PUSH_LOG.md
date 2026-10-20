@@ -328,3 +328,10 @@
   append; manifest refresh. No checker or workflow changes. Single-writer guard: remote
   tip expected exactly 5539b01a42839bb0cc2ea7a75de44492f0462a44; push ABORTED on
   deviation.
+
+## 2026-10-20T15:15:39Z | P-047-INTENT | push-intent | branch=fix/mainline-r18 head_at_intent=DEFERRED base=b3f399d expected_remote_tip_before_push=b3f399d credential=OWNER-PAT-1 authorized_by="Round-18 final pass 2: INDEX SERIES-R18 row completed with the verified round outcomes"
+
+- Push 11 content (disclosed pre-push): INDEX.md SERIES-2026-10-20-R18 row completed
+  (final outcomes + the disclosed-defect register); this append; manifest refresh.
+  Single-writer guard: remote tip expected exactly b3f399d… (full value in the commit);
+  push ABORTED on deviation.
