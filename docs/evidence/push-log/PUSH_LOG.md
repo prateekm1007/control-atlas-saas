@@ -141,3 +141,9 @@
   eb6d6a9fc42681558e55f085b804f9cc2334c924 exactly as expected (ls-remote 11:26:52Z).
 - CI: gate expected on this push (main's trigger list is branches: ["**"]); run ID to be
   recorded in the round report once observed via the Actions API.
+
+## 2026-10-20T11:45:50Z | P-INTENT-ec20 | push-intent | branch=activation/ec20 base=f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd expected_remote_tip_before_push=ABSENT (new branch) credential=OWNER-PAT-1
+
+- Direction 6 activation branch for EC20: verify-claimed-shas.yml activated verbatim from proposals/ci/
+  (EC-24: derived workflow as documented in the file header) on a feature branch; never
+  merged until D-5 allows. Expected remote tip before push: ABSENT (new ref name).
