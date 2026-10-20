@@ -1,0 +1,80 @@
+# ACTIVATION CANDIDATE (Round-18 consolidation of PRs #18, #19, #20) — EC-16 + EC-19 + EC-20.
+#
+# One candidate, one workflow, all three required checks (auditor Round-18 direction 5):
+# the three earlier candidates each added the SAME workflow and all failed in the shared
+# EC-20 job (named test IDs not collectable — root-level pytest collection hits
+# gpu_worker/tests/test_credits.py, which raises SystemExit at import time and aborts
+# collection with INTERNALERROR; proven from run 39417492355 and reproduced locally).
+# This candidate carries the fixed checker (suite-scoped collection, fail-closed) and is
+# the ONLY activation candidate for EC-16/EC-19/EC-20. PRs #18/#19/#20 are marked
+# superseded once this exact candidate is green; their branches stay as historical
+# evidence (no deletion, no force-push).
+#
+# Never merged until the auditor records activation (D-5 discipline).
+
+name: EC16-19-20 claim verification
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  claimed-shas:
+    name: "EC-16 claimed SHAs exist on remote (strict, fail-closed)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # PR body is user-controlled: written to a step file via env (no eval, no
+          # interpolation into shell commands); the checker never prints credentials.
+          printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr_body.md"
+          GIT_TERMINAL_PROMPT=0 python3 scripts/ci/verify_claimed_shas.py \
+            --body "$RUNNER_TEMP/pr_body.md" --repo "${{ github.repository }}"
+  pr-fields:
+    name: "EC-19 directive ID present"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr_body.md"
+          python3 scripts/ci/verify_claimed_shas.py --body "$RUNNER_TEMP/pr_body.md" \
+            --require-directive-id-only
+  acceptance-tests-executed:
+    name: "EC-20 named acceptance tests EXECUTED on this candidate"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install pytest pyyaml
+      - env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr_body.md"
+          # Round-18 fix: collection is SCOPED to the intended acceptance-test suite
+          # (scripts/ci/tests). The collection command, its exit status, the suite dir,
+          # the executed argv, counts, and exit status are captured into the evidence
+          # JSON; any collection error or out-of-suite node fails closed.
+          python3 scripts/ci/verify_claimed_shas.py --body "$RUNNER_TEMP/pr_body.md" \
+            --check-tests --suite-dir scripts/ci/tests \
+            --evidence-out "$RUNNER_TEMP/ec20_evidence.json"
+      - name: Upload EC-20 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ec20-acceptance-test-evidence
+          path: ${{ runner.temp }}/ec20_evidence.json

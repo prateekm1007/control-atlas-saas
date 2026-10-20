@@ -312,3 +312,48 @@
   CI run on aa510f7, exactly the fail-closed behavior working); this append completes
   the P-036/P-039 pairs; manifest refresh. Single-writer guard: remote tip expected
   exactly aa510f7533d5d4fd63db9b8bf8d027219c16d500; push ABORTED on deviation.
+
+
+## 2026-10-20T15:01:27Z | P-020-INTENT | push-intent | branch=activation/ec16-ec20-consolidated head_at_intent=DEFERRED base=3271fb1dbb1cb7687889c4e71002aa45ff37c340 expected_remote_tip_before_push=ABSENT (new ref name; first push of this branch) credential=OWNER-PAT-1 authorized_by="auditor Round-18 direction 5 (consolidate the duplicate EC-16/19/20 activation workflow into ONE candidate; fix the shared EC-20 failure; old PRs #18-#20 kept as historical evidence and marked superseded once this exact candidate is green)"
+
+- Content: .github/workflows/verify-claimed-shas.yml — the ONE activation workflow for
+  EC-16 + EC-19 + EC-20 (acceptance-tests-executed with --suite-dir scripts/ci/tests, the
+  proven fix for run 39417492355); push-log append; manifest refresh. Stacked on the
+  Round-18 fix-forward; NOT merged anywhere until the auditor records activation.
+- Timestamp note: re-appended at rebuild 3 (see P-044-INTENT); the timestamp is the
+  truthful write time of THIS log version; the original pre-rebase write was
+  2026-10-20T14:05:55Z.
+
+## 2026-10-20T15:01:27Z | P-020-CONFIRM | push-confirm | branch=activation/ec16-ec20-consolidated remote_sha=d384f0616ff072271befb37101f739a8ee45ffc6 credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/activation/ec16-ec20-consolidated (observed post-push-1, pre-rebase lineage)"
+
+- Push 1 accepted as a new ref (guard held). CI on d384f06: ALL THREE activation jobs
+  PASSED (EC-16, EC-19, EC-20 with suite-scoped collection). The tip is no longer on the
+  current lineage after the disclosed rebuilds (P-034/P-044); classified
+  SUPERSEDED-BY-DOCUMENTED-REBUILD in PUSH_LOG_RECONCILIATION.json.
+
+## 2026-10-20T15:01:27Z | P-028-CONFIRM | push-confirm | branch=activation/ec16-ec20-consolidated remote_sha=ef13c4c2a73961138794e151919275359378e50f credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/activation/ec16-ec20-consolidated -> ef13c4c2a73961138794e151919275359378e50f (observed post-push-2, pre-rebuild-2 lineage)"
+
+- Push 2 accepted as a fast-forward d384f06 -> ef13c4c (guard held). CI on ef13c4c: the
+  three activation jobs again SUCCESS. The tip is no longer on the current lineage after
+  the disclosed rebuilds; classified SUPERSEDED-BY-DOCUMENTED-REBUILD.
+
+## 2026-10-20T15:01:27Z | P-034-INTENT | push-intent | branch=activation/ec16-ec20-consolidated head_at_intent=DEFERRED base=2efbbb7854e27d818d314691b55488f0d31cb74f expected_remote_tip_before_push=ef13c4c2a73961138794e151919275359378e50f (non-fast-forward rebuild 1, executed with --force-with-lease bound to ef13c4c2a739…) credential=OWNER-PAT-1 authorized_by="Round-18 direction 5 continuation: rebuild 1 onto the then-current fix-forward base 2efbbb7 (disclosed; D-4 pattern; never-merged activation candidate)"
+
+- Rebuild 1: the branch was rebased onto 2efbbb7 and pushed with --force-with-lease bound
+  to ef13c4c2a739... (the guard initially ABORTED the push because the intent carried a
+  hand-typed wrong tail — corrected in place BEFORE first publication; disclosed).
+  Result tip: 705967d30f7ce45660a8c4b4718e8d08e115f28f.
+- Timestamp note: re-appended at rebuild 3; original write 2026-10-20T14:44:01Z.
+
+## 2026-10-20T15:01:27Z | P-044-INTENT | push-intent | branch=activation/ec16-ec20-consolidated head_at_intent=DEFERRED base=5539b01 expected_remote_tip_before_push=c2c2a6ffe15eac641b817e266fbc77a6da70e731 (non-fast-forward rebuild 3, executed with --force-with-lease bound to the full SHA of c2c2a6ffe15eac641b817e266fbc77a6da70e731 — the ACTUAL prior tip (rebuild 2); an earlier draft of this entry cited the rebuild-1 tip by mistake and was corrected in place BEFORE first publication, disclosed here) credential=OWNER-PAT-1 authorized_by="Round-18 direction 5 continuation: rebuild 3 repairs a rebase-resolution defect — the published tip 705967d carried DUPLICATE P-020-CONFIRM/P-028-CONFIRM entries (both rebase conflict resolutions appended the block; the duplicate is a sequence-check violation the gate caught). The log is rebuilt with exactly one copy of each entry; the duplicates never enter the rebuilt lineage"
+
+- Rebuild 3 (this push): single-commit rebuild of the branch onto 5539b01 with the log
+  containing exactly one copy of each consolidated entry, re-timestamped to this log
+  version's truthful write time (originals noted inline); reconciliation entries added
+  for the two pre-rebuild-lineage confirm tips (SUPERSEDED-BY-DOCUMENTED-REBUILD, both
+  verified still retrievable on the remote); this INTENT; manifest refresh. The
+  pre-rebuild tip c2c2a6ffe15eac641b817e266fbc77a6da70e731 remains recoverable and is
+  cited in the PR comment disclosing this rebuild. No merged branch and no mainline ref
+  is affected; the no-force-push rule for published/merged history is untouched (this is
+  the D-4 documented-rebuild pattern applied to a never-merged activation candidate,
+  with force-with-lease bound to the exact prior tip).

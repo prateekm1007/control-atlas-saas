@@ -56,6 +56,22 @@
       "class": "SUPERSEDED-BY-CORRECTION-ENTRY",
       "pointer": "P-035-CONFIRM is the authoritative confirmation of the P-026 intent; P-026-CONFIRM's remote_sha carried a hand-typed wrong tail (a3d1b5633d46\u2026) and is superseded, not deleted (append-only)",
       "recorded_at_utc": "2026-10-20T14:52:00Z"
+    },
+    {
+      "entry_id": "P-020-CONFIRM",
+      "branch": "activation/ec16-ec20-consolidated",
+      "sha": "d384f0616ff072271befb37101f739a8ee45ffc6",
+      "class": "SUPERSEDED-BY-DOCUMENTED-REBUILD",
+      "pointer": "the push was observed and its CI recorded; the tip left the current lineage through the disclosed rebuilds (P-034-INTENT rebuild 1, P-044-INTENT rebuild 3); object verified still retrievable via the commits API at reconciliation time",
+      "recorded_at_utc": "2026-10-20T15:01:27Z"
+    },
+    {
+      "entry_id": "P-028-CONFIRM",
+      "branch": "activation/ec16-ec20-consolidated",
+      "sha": "ef13c4c2a73961138794e151919275359378e50f",
+      "class": "SUPERSEDED-BY-DOCUMENTED-REBUILD",
+      "pointer": "the push was observed and its CI recorded; the tip left the current lineage through the disclosed rebuilds (P-034-INTENT rebuild 1, P-044-INTENT rebuild 3); object verified still retrievable via the commits API at reconciliation time",
+      "recorded_at_utc": "2026-10-20T15:01:27Z"
     }
   ]
 }
