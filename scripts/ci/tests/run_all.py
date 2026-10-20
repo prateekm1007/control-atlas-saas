@@ -22,7 +22,10 @@ def main() -> int:
     if (r := subprocess.run([sys.executable, "-m", "pytest", SRC, "-q", "--no-header"],
                             capture_output=True, text=True)).returncode == 0:
         print(r.stdout.strip().splitlines()[-1] if r.stdout.strip() else "pytest: ok")
-        print("ALL ACCEPTANCE TESTS PASS (AT-01..AT-16, pytest runner)")
+        import json as _json
+        n = len(_json.load(open(os.path.join(HERE, "ACCEPTANCE_TESTS.json")))
+                 ["tests"])
+        print(f"ALL ACCEPTANCE TESTS PASS (AT-01..AT-{n:02d}, pytest runner)")
         return 0
     if "No module named pytest" not in r.stderr:
         print(r.stdout)
