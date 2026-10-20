@@ -173,3 +173,10 @@
   INCIDENT-2026-10-20-P015-COLLISION.md). head_at_intent is DEFERRED per the
   two-phase schema; the CONFIRM records the remote-verified tip after the
   push returns.
+
+## 2026-10-20T14:53:38Z | P-022-CONFIRM | push-confirm | branch=activation/ec18-r19 remote_sha=2847202298f2d745caed823a572a88277e8e35a7 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/activation/ec18-r19 -> 2847202298f2d745caed823a572a88277e8e35a7 (re-verified 2026-10-20T14:53:38Z immediately before this follow-up push; first push evidenced by gate run 39438603045 created 2026-10-20T14:22:19Z on this exact head)"
+
+- First push of this ref completed as declared by P-022-INTENT (new branch; expected_remote_tip_before_push=ABSENT). PR #34 opened from this branch with the template-compliant body (Status-summary NOT_RUN at open time).
+- CI on the exact pushed tip 2847202: Toscanini Stability Gate SUCCESS (push run 39438603045; pull_request run 39438825947). Governance Acceptance failed (push run 39438602977; PR run 39438826040) on two workflow defects root-caused from the job logs and fixed by the commit carrying this entry: the EC-23 positive control seeded Amazon's documented example key, which gitleaks 8.30.1 allowlists (aws-access-token rule allowlist regex '.+EXAMPLE$'; job 118681317783), and the claim-verification lint step lacked its GH_TOKEN env (job 118682808091). Re-runs on this branch's new tip are the completing evidence (run IDs recorded in the round report).
+- This PR additionally shows declared-base STACK_MISMATCH (Base-SHA 2dcbbd7 not yet reachable from origin/main): expected by the checker's serial-merge design until the repair branch (PR #30) merges; the declaration is kept truthful, no body change made.
+- This follow-up push appends this entry and carries the two workflow fixes; ordinary push, no force; remote tip verified at 2847202 immediately before.
