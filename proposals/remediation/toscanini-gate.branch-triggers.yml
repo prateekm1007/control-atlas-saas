@@ -1,0 +1,55 @@
+# PROPOSED branch-trigger fix for .github/workflows/toscanini-gate.yml
+#
+# INERT: not a workflow; applied only through the approved merge path.
+#
+# Defects it remediates (verified from main @ 2195a048, toscanini-gate.yml blob b86274ef):
+#   line 5:  push.branches: ["*"]   -- does NOT match nested branch names such as
+#            proposal/ec16-ec26-enforcement, so pushes to feature/proposal branches run NO gate;
+#   line 7:  pull_request.branches: ain]  -- malformed YAML fragment (the documented
+#            "[ain]" typo; blob-level evidence in EC25_LINT_ON_MAIN.txt correction, 2026-10-20).
+# Note: the proposal package's earlier text misattributed the "ain]" fragment to deploy.yml;
+# the correction records the exact location (toscanini-gate.yml line 7).
+# Only the on: block changes; job bodies are byte-identical to main's.
+
+name: Toscanini Stability Gate
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit-tests:
+    name: Unit Tests + Hash Lock
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          pip install fpdf2 numpy fastapi uvicorn python-multipart scipy requests google-generativeai
+
+      - name: Run unit tests
+        run: cd backend && python -m pytest tests/ -v --tb=short
+
+      - name: Verify hash integrity
+        run: |
+          cd backend
+          python -c "
+          import sys; sys.path.insert(0, '.')
+          from tos.governance.station_sop import compute_canon_hash
+          from tos.governance.modality_matrix import compute_matrix_hash
+          c = compute_canon_hash()
+          m = compute_matrix_hash()
+          assert c == '6a9cd4b4349b81de', f'Canon drifted: {c}'
+          assert m == 'ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4', f'Matrix drifted: {m}'
+          print(f'Canon:  {c}')
+          print(f'Matrix: {m[:16]}...')
+          print('All hashes verified.')
+          "

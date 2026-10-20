@@ -1,0 +1,42 @@
+name: Toscanini Stability Gate
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit-tests:
+    name: Unit Tests + Hash Lock
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          pip install fpdf2 numpy fastapi uvicorn python-multipart scipy requests google-generativeai
+
+      - name: Run unit tests
+        run: cd backend && python -m pytest tests/ -v --tb=short
+
+      - name: Verify hash integrity
+        run: |
+          cd backend
+          python -c "
+          import sys; sys.path.insert(0, '.')
+          from tos.governance.station_sop import compute_canon_hash
+          from tos.governance.modality_matrix import compute_matrix_hash
+          c = compute_canon_hash()
+          m = compute_matrix_hash()
+          assert c == '6a9cd4b4349b81de', f'Canon drifted: {c}'
+          assert m == 'ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4', f'Matrix drifted: {m}'
+          print(f'Canon:  {c}')
+          print(f'Matrix: {m[:16]}...')
+          print('All hashes verified.')
+          "

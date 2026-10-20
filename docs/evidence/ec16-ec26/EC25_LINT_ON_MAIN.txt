@@ -6,3 +6,17 @@
 FAIL: deploy.yml: job 'deploy' matches deploy regex and workflow triggers on ['push']
 
 # exit code (report-only): 0
+
+# ---------------------------------------------------------------- CORRECTION (2026-10-20, auditor item 3.7)
+# The finding above (deploy job on push trigger) stands. However, the parenthetical the
+# proposal package later added in prose ("deploy job on push: branches: ain]") misattributed
+# the malformed fragment. Exact tracked-file evidence:
+#   - .github/workflows/deploy.yml        blob 838627b460a374b2c789f73cdbcad3c8c38abc4d
+#     push trigger: branches: [main]      (line 5)  -- NO typo; the EC-25 violation is the
+#     push-triggered ungated deploy itself.
+#   - .github/workflows/toscanini-gate.yml blob b86274ef3bd29f4eb4c534e71327a5d4a72fb812
+#     line 5: push.branches: ["*"]        -- does not match nested branch names
+#     line 7: pull_request.branches: ain] -- the malformed "[ain]" fragment IS present at
+#     this exact path/blob/line (re-verified by byte-level read this session; the contrary
+#     observation in the audit checklist could not be reproduced against the tracked object).
+# The original text above is preserved unchanged (append-only).
