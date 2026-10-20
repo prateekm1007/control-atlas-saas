@@ -1,0 +1,21 @@
+# Activation workflow for EC-24 (push log) — auditor Direction 6, 2026-10-20.
+# Derived from docs/evidence/push-log/PUSH_LOG_SCHEMA.md and the pushlog-schema step of
+# proposals/ci/evidence-sequence-check.yml (the EC-24 enforcement point is procedural:
+# every push records branch, full SHA, time, credential name; CONFIRM entries carry real
+# 40-hex SHAs). Runs the same checker in schema mode against the real push log.
+# Feature-branch only: never merged until D-5 allows.
+name: EC24 push log schema
+on:
+  push:
+    branches: ["**"]
+permissions:
+  contents: read
+jobs:
+  pushlog-schema:
+    name: EC-24 every push recorded (branch, SHA, time, credential name)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: |
+          python3 scripts/ci/evidence_sequence_check.py docs/evidence/push-log/PUSH_LOG.md --pushlog-schema
