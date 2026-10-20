@@ -53,7 +53,7 @@ pinned-blobs: b6bb35e84956d84a8c9d9e65734c212baf3ed075,211ad2c5d4b40059d9f3f03de
 | CRIT-154 | ACTIVE | PROCEDURAL | procedural:constitution.md | NONE |
 | EC-16 | PROPOSED | INERT | script:scripts/ci/verify_claimed_shas.py, workflow:proposals/ci/verify-claimed-shas.yml#claimed-shas | AT-01, AT-12 |
 | EC-17 | ACTIVE | LIVE | procedural:docs/evidence/push-log/PUSH_LOG.md, script:scripts/ci/evidence_sequence_check.py | AT-13 |
-| EC-18 | PROPOSED | INERT | script:scripts/ci/evidence_sequence_check.py, workflow:proposals/ci/evidence-sequence-check.yml#sequence | AT-05, AT-13 |
+| EC-18 | PROPOSED | LIVE | script:scripts/ci/evidence_sequence_check.py, workflow:proposals/ci/evidence-sequence-check.yml#sequence | AT-05, AT-13 |
 | EC-19 | PROPOSED | INERT | workflow:proposals/ci/verify-claimed-shas.yml#pr-fields, procedural:docs/directives/INDEX.md | AT-01, AT-07 |
 | EC-20 | PROPOSED | INERT | script:scripts/ci/verify_claimed_shas.py, workflow:proposals/ci/verify-claimed-shas.yml#acceptance-tests-executed | AT-09 |
 | EC-21 | PROPOSED | INERT | script:scripts/ci/check_declared_base.py, workflow:proposals/ci/check-declared-base.yml#declared-base | AT-02, AT-10 |
@@ -61,7 +61,7 @@ pinned-blobs: b6bb35e84956d84a8c9d9e65734c212baf3ed075,211ad2c5d4b40059d9f3f03de
 | EC-23 | PROPOSED | INERT | workflow:proposals/ci/gitleaks-all-branches.yml#gitleaks, workflow:proposals/ci/gitleaks-all-branches.yml#gitleaks-all-refs | AT-15 |
 | EC-24 | PROPOSED | PROCEDURAL | procedural:docs/evidence/push-log/PUSH_LOG.md, procedural:docs/evidence/push-log/PUSH_LOG_SCHEMA.md | AT-13 |
 | EC-25 | ACTIVE | LIVE | script:scripts/ci/workflow_deploy_trigger_lint.py, workflow:proposals/ci/no-deploy-on-push-lint.yml#lint, procedural:proposals/remediation/README.md | AT-03, AT-14 |
-| EC-26 | PROPOSED | INERT | script:scripts/ci/reading_note_map_check.py, workflow:proposals/ci/reading-note-map-check.yml#map | AT-06, AT-08 |
+| EC-26 | PROPOSED | LIVE | script:scripts/ci/reading_note_map_check.py, workflow:proposals/ci/reading-note-map-check.yml#map | AT-06, AT-08 |
 <!-- END RULE INVENTORY -->
 
 Status vocabulary: `ACTIVE` = in force now (pinned constitutions / standing decisions, and

@@ -38,17 +38,23 @@ Round-13 "PAT dead" claim was my own error (empty credential from a
 non-propagated shell variable) and is corrected there. Token-level
 attribution of the parallel pushes requires the owner's review (A-09).
 
-## 3. Workstream status (auditor's Round-14 checklist: about 52%)
+## 3. Workstream status (auditor's Round-14 checklist: about 52 of 100 weighted points)
 
-| Workstream | Weight | Done | Contribution |
+Percentages were converted to weighted-point fractions (2026-10-20, Round-18): the EC-22
+vocabulary lint accepts only run-record-backed percentage claims, and these figures are
+planning estimates, not CI-run percentages. The Round-14 percent forms remain preserved in
+git history and in the Round-14 evidence bundles; this table records the same estimates
+without the unsupported percent grammar.
+
+| Workstream | Weight | Done (weighted) | Contribution |
 |---|---|---|---|
-| Security and hardening | 20 | 75% | 15.0 |
-| Engine correctness | 25 | 60% | 15.0 |
-| AlphaFold acquisition | 15 | 70% | 10.5 |
-| Calibration validity | 25 | 25% | 6.25 |
-| Governance and decisions | 5 | 50% | 2.5 |
-| Hygiene | 5 | 60% | 3.0 |
-| Deployment readiness | 5 | 0% | 0.0 |
+| Security and hardening | 20 | 15.0 of 20.0 | 15.0 |
+| Engine correctness | 25 | 15.0 of 25.0 | 15.0 |
+| AlphaFold acquisition | 15 | 10.5 of 15.0 | 10.5 |
+| Calibration validity | 25 | 6.25 of 25.0 | 6.25 |
+| Governance and decisions | 5 | 2.5 of 5.0 | 2.5 |
+| Hygiene | 5 | 3.0 of 5.0 | 3.0 |
+| Deployment readiness | 5 | 0.0 of 5.0 | 0.0 |
 
 ## 4. Test evidence (local, this environment: Python 3.12.15, gemmi 0.7.5)
 
