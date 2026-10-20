@@ -271,3 +271,10 @@
   INTENT) and the manifest refresh; no other content changes. Single-writer guard:
   remote tip expected exactly f9d28f0479888ba0720b08fb068e02f1c49d9d5c; push ABORTED on
   deviation.
+
+## 2026-10-20T14:50:10Z | P-040-INTENT | push-intent | branch=activation/ec21-r18 head_at_intent=DEFERRED base=6fdabbfd681793c8a9c04e8c861bfb9cb3446bfa expected_remote_tip_before_push=6fdabbfd681793c8a9c04e8c861bfb9cb3446bfa credential=OWNER-PAT-1 authorized_by="Round-18 direction 6 (EC-21) continuation: reconciliation entry suppresses the transcription-defective P-029-CONFIRM's remote verification (P-037-CONFIRM is authoritative)"
+
+- Push 5 content (disclosed pre-push): PUSH_LOG_RECONCILIATION.json gains the
+  P-029-CONFIRM suppression entry (class CONFIRMED-BY-LATER-EVIDENCE on this branch's
+  checker version; pointer P-037-CONFIRM); this INTENT; manifest refresh. Single-writer
+  guard: remote tip expected exactly 6fdabbfd681793c8a9c04e8c861bfb9cb3446bfa; push ABORTED on deviation.

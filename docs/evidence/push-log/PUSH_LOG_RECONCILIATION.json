@@ -56,6 +56,14 @@
       "class": "CONFIRMED-BY-LATER-EVIDENCE",
       "pointer": "the intent's push was observed: branch tip 7f5d50c\u2026 verified by git ls-remote (auditor Round-18 table: rule-specific check passed on this SHA, run 39417494195, both ordinary gate jobs passed). Original branch preserved untouched (no force-push). This rebuild (activation/ec21-r18) continues per the auditor's binding direction: rebase after the mainline repair, reconcile push evidence, rerun the full gate; remains PROPOSED.",
       "recorded_at_utc": "2026-10-20T14:22:00Z"
+    },
+    {
+      "entry_id": "P-029-CONFIRM",
+      "branch": "activation/ec21-r18",
+      "sha": null,
+      "class": "CONFIRMED-BY-LATER-EVIDENCE",
+      "pointer": "superseded by the correction entry P-037-CONFIRM (authoritative): P-029-CONFIRM's remote_sha carried a hand-typed wrong tail (98af2ef5b73\u2026); the actual push-2 tip is 98af2ef2baf88f02723944c97036c3d1b7a95263; append-only preserved, never deleted",
+      "recorded_at_utc": "2026-10-20T14:54:00Z"
     }
   ]
 }
