@@ -56,6 +56,9 @@ objects: {"entry_id": str, "branch": str, "sha": 40-hex or null, "class": str,
                                      because the branch was rebuilt/advanced through a
                                      documented, no-force-push-replacement event)
   CONFIRMED-BY-LATER-EVIDENCE       (intent confirmed by evidence outside the log)
+  SUPERSEDED-BY-CORRECTION-ENTRY    (a later correction entry supersedes this record's
+                                     remote_sha — e.g. a hand-typed SHA tail captured
+                                     wrongly; the correction entry is authoritative)
 
 Offline test mode: --fixture FILE supplies canned API responses:
   {"refs": {"<branch>": "<sha>"}, "commits": {"<sha>": 200}, "compare": {"<base>...<head>": "ahead"}}
@@ -75,7 +78,8 @@ LINE = re.compile(r"^## (\S+) \| ([^|]+) \| ([^|]+) \| ([^|]+?)(?:\s\|\s*RECONST
 PLACEHOLDER_SHAS = {"self-referential-tip", "TBD", "PENDING", "<sha>", "sha", "RECORDED-BELOW"}
 FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
 KV = re.compile(r"(\b[a-z][a-z0-9_-]*)=(\S+)")
-RECON_CLASSES = {"SUPERSEDED-BY-DOCUMENTED-REBUILD", "CONFIRMED-BY-LATER-EVIDENCE"}
+RECON_CLASSES = {"SUPERSEDED-BY-DOCUMENTED-REBUILD", "CONFIRMED-BY-LATER-EVIDENCE",
+                 "SUPERSEDED-BY-CORRECTION-ENTRY"}
 
 
 def parse_ts(s: str):

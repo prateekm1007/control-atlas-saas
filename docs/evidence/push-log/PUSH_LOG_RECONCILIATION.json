@@ -48,6 +48,14 @@
       "class": "SUPERSEDED-BY-DOCUMENTED-REBUILD",
       "pointer": "docs/directives/INDEX.md SERIES-2026-10-20-R17 row (docs-only rebase d51ad7c merged as b851e01)",
       "recorded_at_utc": "2026-10-20T13:32:54Z"
+    },
+    {
+      "entry_id": "P-026-CONFIRM",
+      "branch": "fix/mainline-r18",
+      "sha": null,
+      "class": "SUPERSEDED-BY-CORRECTION-ENTRY",
+      "pointer": "P-035-CONFIRM is the authoritative confirmation of the P-026 intent; P-026-CONFIRM's remote_sha carried a hand-typed wrong tail (a3d1b5633d46\u2026) and is superseded, not deleted (append-only)",
+      "recorded_at_utc": "2026-10-20T14:52:00Z"
     }
   ]
 }

@@ -282,3 +282,13 @@
   from git rev-parse.
 - Single-writer guard: remote tip expected exactly 2efbbb7854e27d818d314691b55488f0d31cb74f;
   push ABORTED on deviation.
+
+## 2026-10-20T14:49:21Z | P-039-INTENT | push-intent | branch=fix/mainline-r18 head_at_intent=DEFERRED base=b3c763480c615b2a2f6c54c3bfa2a2a016a08cb4 expected_remote_tip_before_push=b3c763480c615b2a2f6c54c3bfa2a2a016a08cb4 credential=OWNER-PAT-1 authorized_by="Round-18 direction 4 continuation: reconciliation class SUPERSEDED-BY-CORRECTION-ENTRY added so a correction entry (P-035-CONFIRM) authoritatively supersedes a transcription-defective CONFIRM's remote verification"
+
+- Push 8 content (disclosed pre-push): evidence_sequence_check.py gains the
+  SUPERSEDED-BY-CORRECTION-ENTRY reconciliation class (a later correction entry
+  authoritatively supersedes a defective CONFIRM's remote_sha verification; the defective
+  entry stays in the log, append-only); PUSH_LOG_RECONCILIATION.json gains the
+  P-026-CONFIRM suppression entry (pointer: P-035-CONFIRM); this INTENT; manifest
+  refresh. Single-writer guard: remote tip expected exactly b3c7634... (full value
+  captured programmatically below); push ABORTED on deviation.
