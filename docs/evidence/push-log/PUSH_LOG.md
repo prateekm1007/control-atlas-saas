@@ -141,3 +141,19 @@
   eb6d6a9fc42681558e55f085b804f9cc2334c924 exactly as expected (ls-remote 11:26:52Z).
 - CI: gate expected on this push (main's trigger list is branches: ["**"]); run ID to be
   recorded in the round report once observed via the Actions API.
+
+## 2026-10-20T13:14:30Z | P-017-INTENT | push-intent | branch=repair/round19-mainline-acceptance head_at_intent=DEFERRED base=f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd expected_remote_tip_before_push=ABSENT (new branch; first push of this ref name) credential=OWNER-PAT-1 authorized_by="auditor Round-19 directions 2-4 (fix-forward repair PR from exact current main; no direct push to main; no force-push)"
+
+- Round-19 mainline repair: narrowly scoped fix-forward branch created from the
+  EXACT current main SHA f535a71 (verified by fresh ls-remote before branching).
+  Carries: D3a provider-token removals (reviewed content from c4a0fcc, content-only,
+  no history merge, no push-log copy), D3b remediation-README correction to the
+  current live state, D3c scoped+regenerated package manifest, D4 this incident
+  record + hardened push-log schema validation, D5/D6 EC-20 collection fix +
+  EC-26 ACTIVE-liveness fix, D7 live governance-acceptance workflow.
+- head_at_intent is DEFERRED per the two-phase schema (a pre-push entry cannot
+  know its own commit's hash); P-017-CONFIRM records the remote-verified tip
+  after the push returns.
+- ID selection: P-017 is globally unused across all published branch logs
+  (census recorded in INCIDENT-2026-10-20-P015-COLLISION.md section 4.4; the
+  c4a0fcc history reached P-016-INTENT, unconfirmed).
