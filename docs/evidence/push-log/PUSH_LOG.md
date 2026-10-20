@@ -218,3 +218,13 @@
   the next globally unused ID (P-026).
 - Single-writer guard: remote tip expected exactly 3271fb1dbb1cb7687889c4e71002aa45ff37c340;
   push ABORTED on deviation.
+
+## 2026-10-20T14:28:42Z | P-027-INTENT | push-intent | branch=fix/mainline-r18 head_at_intent=DEFERRED base=a3d1b5633d46a0cd99842332440986a296412cbb expected_remote_tip_before_push=a3d1b5633d46a0cd99842332440986a296412cbb credential=OWNER-PAT-1 authorized_by="Round-18 direction 3C continuation: manifest parser defect found by the EC-23 candidate's CI (the old lstrip(\"./\") mangled .gitleaksignore); fix + manifest regen"
+
+- Push 5 content (disclosed pre-push): manifest_check.py — the path parser stripped a
+  leading DOT (lstrip(\"./\") also eats the \".\" of \".gitleaksignore\"), producing the
+  CI finding \"listed but MISSING from the tree: gitleaksignore\"; the parser now strips
+  only a literal \"./\" prefix, previously-mangled entries are reported as findings
+  instead of silently renamed, and the manifest is regenerated. Push-log append; manifest
+  refresh. Single-writer guard: remote tip expected exactly
+  a3d1b5633d46a0cd99842332440986a296412cbb; push ABORTED on deviation.
