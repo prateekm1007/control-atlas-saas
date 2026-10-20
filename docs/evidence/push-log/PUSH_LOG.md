@@ -416,3 +416,26 @@
 - ID selection: P-066..P-069 verified unused across the published branch logs.
 - head_at_intent is DEFERRED per the two-phase schema; if this branch is pushed
   again, P-069-CONFIRM records the remote-verified tip after that push returns.
+
+
+## 2026-10-20T19:06:00Z | P-069-CONFIRM | push-confirm | branch=repair/round19-mainline-acceptance remote_sha=75f6a8bc950204bdb1b375dbeda697a1bc549026 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/repair/round19-mainline-acceptance -> 75f6a8bc950204bdb1b375dbeda697a1bc549026 (re-verified 2026-10-20T19:01:20Z after the push returned; the push was an ordinary fast-forward ab63821..75f6a8b, single-writer pre-checked, main verified untouched at f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd immediately before and after); push-event checks on this exact head: Toscanini Stability Gate run 39479847942 conclusion=success, Governance Acceptance run 39479847948 conclusion=FAILURE; PR-event checks on this exact head: gate run 39479856971 success, governance-acceptance run 39479856955 FAILURE"
+
+- Two-phase completion for the push declared by P-069-INTENT. The push carried
+  P-066-CONFIRM, the P-061 void (P-067), the merge-intent redeclaration
+  (P-068), this INTENT, the corrected 46-file manifest, and the regenerated
+  evidence table.
+- The Governance Acceptance failure on this head is recorded HONESTLY: exactly
+  one finding — "digest mismatch: docs/evidence/ec16-ec26/R21_EVIDENCE_TABLE.md"
+  — caused by a SEQUENCING error in the prior cycle (SHA256SUMS was regenerated
+  BEFORE the final evidence-table regeneration, so the manifest pinned the
+  earlier table revision). The repair is in the push declared below; no
+  content, source, or workflow change is involved.
+
+## 2026-10-20T19:06:30Z | P-070-INTENT | push-intent | branch=repair/round19-mainline-acceptance head_at_intent=DEFERRED expected_remote_tip_before_push=75f6a8bc950204bdb1b375dbeda697a1bc549026 credential=OWNER-PAT-1 authorized_by="auditor Round-19 direction 7 and Round-21 direction 8 (continuation): repair the single remaining manifest digest mismatch on the exact final candidate; no direct push to main; no force-push; merges only through the reviewed PR path"
+
+- This push carries: P-069-CONFIRM, this INTENT, the evidence table regenerated
+  AFTER the log append (correct order this time), and the manifest regenerated
+  over the final table bytes. ID selection: P-069/P-070 verified unused across
+  the published branch logs. head_at_intent is DEFERRED per the two-phase
+  schema; if this branch is pushed again, P-070-CONFIRM records the
+  remote-verified tip after that push returns.
