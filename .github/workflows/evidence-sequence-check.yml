@@ -1,0 +1,69 @@
+# ACTIVATION CANDIDATE (Round-18 rebuild of activation/ec18) — EC-18 evidence sequence +
+# append-only + event-time provenance.
+#
+# Auditor Round-18 direction 6 (EC-18 — not accepted; fix and rerun). The prior run
+# (39417275781) failed because:
+#   1. FILE SELECTION: the glob `git ls-files 'docs/evidence/**/*.md' | grep -E
+#      'RECEIPT|PUSH_LOG|SEQUENCE|LOG'` swept in files that are NOT logs —
+#      `PUSH_LOG_SCHEMA.md` (the schema document, whose EXAMPLE entries matched) and
+#      `LOCAL_TEST_LOG.md` (a test REPORT with headings). The checker then flagged their
+#      headings/examples as malformed log entries.
+#   2. EVENT-TIME VALIDATION: a single `git log -1 --format=%cI -- "$LOG"` (the LATEST
+#      commit touching the file) was compared against EVERY entry, so preserved historical
+#      entries "drifted" from a commit committed hours later.
+# Fixes in this candidate:
+#   - file selection is an explicit allowlist of genuine append-only evidence logs
+#     (PUSH_LOG.md, RECEIPT.md). PUSH_LOG_SCHEMA.md and LOCAL_TEST_LOG.md are deliberately
+#     NOT checked here — they are documentation, and no entry is rewritten to satisfy the
+#     checker (append-only preserved).
+#   - event-time validation is per-entry: `--event-time-provenance` compares each
+#     non-RECONSTRUCTED entry against the commit that INTRODUCED it (git log --reverse
+#     -S<entry-id> -- <path>), not against the latest carrying commit; RECONSTRUCTED
+#     entries are exempt and remain labeled as reconstruction (never rewritten).
+# Never merged until the auditor records activation (D-5 discipline).
+
+name: EC18 evidence sequence + append-only + event-time provenance
+
+on:
+  pull_request:
+  push:
+    branches: ["**"]
+
+permissions:
+  contents: read
+
+jobs:
+  sequence:
+    name: "EC-18 genuine-log sequence + parent-prefix + per-entry event-time provenance"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: |
+          set -u
+          FAIL=0
+          # EC-18 fix 1 — GENUINE log files only (explicit allowlist, no grep-over-match):
+          for LOG in docs/evidence/push-log/PUSH_LOG.md docs/evidence/ec16-ec26/RECEIPT.md; do
+            if [ ! -f "$LOG" ]; then
+              echo "FAIL: genuine evidence log missing from the tree: $LOG"; FAIL=1; continue
+            fi
+            # Sequence checks (monotonic timestamps, unique IDs):
+            python3 scripts/ci/evidence_sequence_check.py "$LOG" || FAIL=1
+            # EC-18 fix 2 — per-entry event-time provenance (introducing-commit based):
+            python3 scripts/ci/evidence_sequence_check.py "$LOG" --event-time-provenance || FAIL=1
+            # Append-only integrity: the previous commit's version must be a byte-prefix of
+            # the current one (prior entries may never be edited or deleted):
+            if git cat-file -e "HEAD~1:$LOG" 2>/dev/null; then
+              git show "HEAD~1:$LOG" > "$RUNNER_TEMP/older_log.md"
+              python3 scripts/ci/evidence_sequence_check.py "$LOG" \
+                --parent-prefix "$RUNNER_TEMP/older_log.md" || FAIL=1
+            fi
+          done
+          # Push-log truthfulness + protocol (two-phase pairing, remote verification):
+          if [ -f docs/evidence/push-log/PUSH_LOG.md ]; then
+            HEAD_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+            python3 scripts/ci/evidence_sequence_check.py docs/evidence/push-log/PUSH_LOG.md \
+              --pushlog-schema --remote-slug "${{ github.repository }}" \
+              --head-sha "$HEAD_SHA" || FAIL=1
+          fi
+          exit $FAIL

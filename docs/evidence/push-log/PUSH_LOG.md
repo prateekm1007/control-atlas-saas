@@ -218,3 +218,17 @@
   the next globally unused ID (P-026).
 - Single-writer guard: remote tip expected exactly 3271fb1dbb1cb7687889c4e71002aa45ff37c340;
   push ABORTED on deviation.
+
+
+## 2026-10-20T14:13:22Z | P-021-INTENT | push-intent | branch=activation/ec18-r18 head_at_intent=DEFERRED base=3271fb1dbb1cb7687889c4e71002aa45ff37c340 expected_remote_tip_before_push=ABSENT (new ref name; rebuild of activation/ec18 — the original branch is preserved untouched, no force-push) credential=OWNER-PAT-1 authorized_by="auditor Round-18 direction 6 (EC-18 not accepted: fix file selection + event-time validation, rerun; keep old branch as historical evidence)"
+
+- Content (disclosed pre-push): .github/workflows/evidence-sequence-check.yml — explicit
+  GENUINE-log allowlist (PUSH_LOG.md, RECEIPT.md; PUSH_LOG_SCHEMA.md and
+  LOCAL_TEST_LOG.md excluded as documentation, not logs — the run-39417275781 defect);
+  per-entry --event-time-provenance mode in scripts/ci/evidence_sequence_check.py
+  (validates each non-RECONSTRUCTED entry against the commit that INTRODUCED it, replacing
+  the file-wide carrying-commit comparison that flagged preserved historical records);
+  push-log append; manifest refresh. No prior entry rewritten; append-only preserved.
+- Timestamp note: this entry was first drafted on the pre-rebase EC-18 commit and is
+  re-appended here after the branch was rebuilt onto the advanced fix-forward base
+  (a3d1b56); the timestamp is the truthful write time of THIS log version.

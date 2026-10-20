@@ -381,6 +381,63 @@ def check_pushlog_schema(path: str, slug: str | None = None, token: str | None =
     return findings + pending + notes, status
 
 
+def check_event_time_provenance(path: str, max_drift: int, repo: str = ".",
+                                fixture: dict | None = None) -> list[str]:
+    """EC-18 Round-18 fix: validate each entry's event time against the commit that
+    INTRODUCED the record (not the latest commit touching the file — the Round-18 audit
+    identified the file-wide carrying-commit comparison as the defect that flagged
+    otherwise-preserved historical records, run 39417275781).
+
+    For every grammar-compliant entry that is NOT labeled RECONSTRUCTED:
+      - the first commit whose diff for THIS file changed the entry-ID occurrence count
+        is the introducing commit (git log --reverse -S<entry-id> -- <path>);
+      - the entry's claimed timestamp must not be LATER than the introducing commit's
+        committer time + max_drift (an entry cannot truthfully predate its commit by
+        more than the allowed clock/drafting drift);
+      - an entry with no introducing commit FAILS (the record was never committed).
+    RECONSTRUCTED entries are exempt: they are backfilled by definition, and the label
+    distinguishes reconstruction from contemporaneous evidence (append-only prefix is
+    enforced separately by --parent-prefix).
+    """
+    import subprocess
+    findings: list[str] = []
+    for n, raw in enumerate(open(path, encoding="utf-8"), 1):
+        line = raw.rstrip("\n")
+        if not line.startswith("## "):
+            continue
+        m = LINE.match(line)
+        if not m:
+            continue
+        if "RECONSTRUCTED" in line:
+            continue
+        ts_s, eid = m.group(1), m.group(2).strip()
+        try:
+            ts = parse_ts(ts_s)
+        except ValueError:
+            continue  # malformed timestamps are reported by check_sequence
+        if fixture is not None:
+            first = fixture.get("introducing", {}).get(f"{path}:{eid}")
+        else:
+            r = subprocess.run(
+                ["git", "log", "--reverse", "-S", eid, "--format=%cI", "--", path],
+                capture_output=True, text=True, cwd=repo)
+            first = r.stdout.strip().splitlines()[0] if r.stdout.strip() else None
+        if not first:
+            findings.append(f"FAIL: {path}:{n}: entry {eid} has no introducing commit "
+                            f"(the record is not provenance-verifiable; fail closed)")
+            continue
+        try:
+            ct = parse_ts(first)
+        except ValueError:
+            findings.append(f"FAIL: {path}:{n}: introducing-commit time unparseable: {first}")
+            continue
+        if ts > ct and (ts - ct).total_seconds() > max_drift:
+            findings.append(f"FAIL: {path}:{n}: entry {eid} claims {ts_s} but the commit "
+                            f"introducing it is dated {first} (drift >{max_drift}s; "
+                            f"event-time provenance violated)")
+    return findings
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("logfile")
@@ -400,10 +457,19 @@ def main() -> int:
                     default="docs/evidence/push-log/PUSH_LOG_RECONCILIATION.json",
                     help="machine-readable reconciliation record for superseded SHAs/intents")
     ap.add_argument("--fixture", help="offline test mode: canned GitHub API responses (JSON)")
+    ap.add_argument("--event-time-provenance", action="store_true",
+                    help="EC-18 (Round-18): validate each non-RECONSTRUCTED entry's time "
+                         "against the commit that INTRODUCED it (requires full history)")
+    ap.add_argument("--event-drift", type=int, default=300,
+                    help="seconds of allowed entry-vs-introducing-commit drift (default 300)")
     a = ap.parse_args()
     findings = check_sequence(a.logfile, a.commit_time, a.max_drift)
     if a.parent_prefix:
         findings += check_parent_prefix(a.logfile, a.parent_prefix)
+    if a.event_time_provenance:
+        fixture = json.load(open(a.fixture, encoding="utf-8")) if a.fixture else None
+        findings += check_event_time_provenance(a.logfile, a.event_drift, repo=os.getcwd(),
+                                                fixture=fixture)
     if a.pushlog_schema:
         fixture = json.load(open(a.fixture, encoding="utf-8")) if a.fixture else None
         token = None
