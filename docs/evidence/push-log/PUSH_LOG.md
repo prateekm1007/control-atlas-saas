@@ -157,3 +157,19 @@
 - ID selection: P-017 is globally unused across all published branch logs
   (census recorded in INCIDENT-2026-10-20-P015-COLLISION.md section 4.4; the
   c4a0fcc history reached P-016-INTENT, unconfirmed).
+
+
+## 2026-10-20T13:23:58Z | P-018-INTENT | push-intent | branch=activation/ec16-ec19-ec20-r19 head_at_intent=DEFERRED base=2dcbbd781a2c14a13844db439c88d73f61332e76 expected_remote_tip_before_push=ABSENT (new branch; first push of this ref name) credential=OWNER-PAT-1 authorized_by="auditor Round-19 direction 6 (activation candidate; merge only after the complete gate is green on the exact candidate and the auditor records the activation in the register)"
+
+- consolidated activation record for EC-16/EC-19/EC-20 (supersedes PRs #18/#19/#20). This branch carries only its activation record (INDEX row(s) to
+  live enforcement points, reading-note status update, this INTENT entry);
+  the checks themselves already run live via .github/workflows/
+  governance-acceptance.yml landed by the Round-19 repair. The duplicate
+  workflow additions previously carried by activation/ec16, activation/ec19
+  and activation/ec20 (PRs #18/#19/#20) are NOT carried here: those branches
+  and PRs are preserved as historical evidence and marked superseded by the
+  consolidated candidate (auditor direction 5). Existing push-log entries are
+  preserved unchanged; P-018 is globally unused (census in
+  INCIDENT-2026-10-20-P015-COLLISION.md). head_at_intent is DEFERRED per the
+  two-phase schema; the CONFIRM records the remote-verified tip after the
+  push returns.
