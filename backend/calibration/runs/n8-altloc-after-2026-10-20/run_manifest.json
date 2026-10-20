@@ -1,0 +1,34 @@
+{
+  "runner_version": "v25-runner/1.0.0",
+  "run_type": "diagnostic",
+  "purpose": "Document corrected-metric distributions. NOT a threshold validation: thresholds may only be re-validated via backend/calibration/protocol/evaluation_protocol_v1.md.",
+  "run_timestamp_utc": "2026-10-20T05:11:27.616091+00:00",
+  "code_sha": "eb7e56523f248cb4ee9658c2d1d8b59f99140230",
+  "code_sha_source": "git rev-parse HEAD of the repository containing the IMPORTED tos engine package",
+  "working_tree_clean": true,
+  "tree_status": [],
+  "backend_version": "22.5.3",
+  "policy_binding": {
+    "canon_hash": "6a9cd4b4349b81de",
+    "law_semantic_hash": "3f49a7b5605e17dcf26bcd114713ad651cdc2279d684f1c681943eefa0f4379a",
+    "modality_matrix_sha256": "ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4",
+    "law_registry_sha256": "24e0761169990f16bddf73a84edf0f6092b496f60e80e7973e9685351d00ba15"
+  },
+  "environment": {
+    "python": "3.12.15",
+    "platform": "Linux-5.10.134-013.15.kangaroo.al8.x86_64-x86_64-with-glibc2.41"
+  },
+  "dataset_definition_sha256": "1acb32d260f97edbea824c719a8f500d3408ac83f30cd9b20f02793cea4337ec",
+  "config": {
+    "ingest_modes": {
+      "rcsb": "experimental",
+      "alphafold": "predicted"
+    },
+    "network_sources": {
+      "rcsb": "https://files.rcsb.org/download/{pdb_id}.pdb",
+      "alphafold": "metadata-first: https://alphafold.ebi.ac.uk/api/prediction/{uniprot} -> select by modelEntityId + latestVersion -> cifUrl"
+    },
+    "http_timeout_s": 60
+  },
+  "expected_target_count": 50
+}

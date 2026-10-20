@@ -1,0 +1,573 @@
+{
+  "after": {
+    "code_sha": "eb7e56523f248cb4ee9658c2d1d8b59f99140230",
+    "run_dir": "/home/z/my-project/r12_n8_wt/backend/calibration/runs/n8-altloc-after-2026-10-20",
+    "run_timestamp_utc": "2026-10-20T05:11:27.616091+00:00"
+  },
+  "before": {
+    "code_sha": "08a9403a7dd376da08831d14f1fa4fa26b15430e",
+    "run_dir": "/home/z/my-project/r12_od07_wt/backend/calibration/runs/n8-altloc-before-2026-10-20",
+    "run_timestamp_utc": "2026-10-20T05:09:30.748291+00:00"
+  },
+  "input_identity": {
+    "digest_mismatches": [],
+    "targets_with_matching_digest": 48
+  },
+  "law_status_changes": [],
+  "per_target": [
+    {
+      "atoms_after": 3312,
+      "atoms_before": 3312,
+      "category": "xray_medium",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1AKE",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 58674,
+      "atoms_before": 58674,
+      "category": "xray_low",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1AON",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 454,
+      "atoms_before": 454,
+      "category": "xray_ultrahigh",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1BPI",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 4638,
+      "atoms_before": 4638,
+      "category": "xray_low",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1BRS",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 602,
+      "atoms_before": 602,
+      "category": "nmr",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1D3Z",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 4307,
+      "atoms_before": 4307,
+      "category": "xray_low",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1DDL",
+      "verdict_after": "VETO",
+      "verdict_before": "VETO"
+    },
+    {
+      "atoms_after": 327,
+      "atoms_before": 330,
+      "category": "xray_ultrahigh",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1EJG",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 8998,
+      "atoms_before": 8998,
+      "category": "xray_low",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1FIN",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 436,
+      "atoms_before": 436,
+      "category": "nmr",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1GB1",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 1880,
+      "atoms_before": 1880,
+      "category": "xray_ultrahigh",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1GCI",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 3650,
+      "atoms_before": 3650,
+      "category": "xray_medium",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1GFL",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 2192,
+      "atoms_before": 2192,
+      "category": "xray_medium",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1HHO",
+      "verdict_after": "VETO",
+      "verdict_before": "VETO"
+    },
+    {
+      "atoms_after": 240,
+      "atoms_before": 240,
+      "category": "xray_ultrahigh",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1I0T",
+      "verdict_after": "VETO",
+      "verdict_before": "VETO"
+    },
+    {
+      "atoms_after": 154,
+      "atoms_before": 154,
+      "category": "nmr",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1L2Y",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 1217,
+      "atoms_before": 1217,
+      "category": "xray_medium",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1MBO",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 8297,
+      "atoms_before": 8297,
+      "category": "xray_low",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1NEK",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 1851,
+      "atoms_before": 1851,
+      "category": "xray_medium",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1PPE",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 85,
+      "atoms_before": 85,
+      "category": "nmr",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1RVS",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 698,
+      "atoms_before": 698,
+      "category": "xray_medium",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "1TEN",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 4143,
+      "atoms_before": 4143,
+      "category": "xray_ultrahigh",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "2ACE",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 2059,
+      "atoms_before": 2059,
+      "category": "xray_medium",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "2CBA",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 8760,
+      "atoms_before": 8760,
+      "category": "xray_low",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "2HBS",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 148,
+      "atoms_before": 148,
+      "category": "nmr",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "2JOF",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 602,
+      "atoms_before": 602,
+      "category": "nmr",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "2KOX",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 1001,
+      "atoms_before": 1001,
+      "category": "xray_medium",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "2LYZ",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 602,
+      "atoms_before": 602,
+      "category": "nmr",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "2MJB",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 10130,
+      "atoms_before": 10130,
+      "category": "nmr",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "2N0A",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 807,
+      "atoms_before": 807,
+      "category": "xray_ultrahigh",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "2OV0",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 1001,
+      "atoms_before": 1001,
+      "category": "xray_ultrahigh",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "2VB1",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 46228,
+      "atoms_before": 46228,
+      "category": "cryo_em",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "3J9I",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 1309,
+      "atoms_before": 1309,
+      "category": "xray_medium",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "3LZM",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 327,
+      "atoms_before": 330,
+      "category": "xray_ultrahigh",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "3NIR",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 3145,
+      "atoms_before": 3145,
+      "category": "xray_medium",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "3PGK",
+      "verdict_after": "VETO",
+      "verdict_before": "VETO"
+    },
+    {
+      "atoms_after": 9646,
+      "atoms_before": 9646,
+      "category": "cryo_em",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "5A63",
+      "verdict_after": "VETO",
+      "verdict_before": "VETO"
+    },
+    {
+      "atoms_after": 23448,
+      "atoms_before": 23448,
+      "category": "cryo_em",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "5T4O",
+      "verdict_after": "INDETERMINATE",
+      "verdict_before": "INDETERMINATE"
+    },
+    {
+      "atoms_after": 3548,
+      "atoms_before": 3548,
+      "category": "cryo_em",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "6J6J",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 23865,
+      "atoms_before": 23865,
+      "category": "cryo_em",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "6NB6",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 5498,
+      "atoms_before": 5498,
+      "category": "cryo_em",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "6WLC",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 1622,
+      "atoms_before": 1622,
+      "category": "cryo_em",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "7JTL",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": 1190,
+      "atoms_before": 1190,
+      "category": "cryo_em",
+      "measurement_status_after": "measured",
+      "measurement_status_before": "measured",
+      "target": "7K3G",
+      "verdict_after": "PASS",
+      "verdict_before": "PASS"
+    },
+    {
+      "atoms_after": null,
+      "atoms_before": null,
+      "category": "predicted",
+      "measurement_status_after": "MEASUREMENT_FAILED",
+      "measurement_status_before": "MEASUREMENT_FAILED",
+      "target": "AF-O15111-F1",
+      "verdict_after": null,
+      "verdict_before": null
+    },
+    {
+      "atoms_after": null,
+      "atoms_before": null,
+      "category": "predicted",
+      "measurement_status_after": "MEASUREMENT_FAILED",
+      "measurement_status_before": "MEASUREMENT_FAILED",
+      "target": "AF-P00533-F1",
+      "verdict_after": null,
+      "verdict_before": null
+    },
+    {
+      "atoms_after": null,
+      "atoms_before": null,
+      "category": "predicted",
+      "measurement_status_after": "MEASUREMENT_FAILED",
+      "measurement_status_before": "MEASUREMENT_FAILED",
+      "target": "AF-P02768-F1",
+      "verdict_after": null,
+      "verdict_before": null
+    },
+    {
+      "atoms_after": null,
+      "atoms_before": null,
+      "category": "predicted",
+      "measurement_status_after": "MEASUREMENT_FAILED",
+      "measurement_status_before": "MEASUREMENT_FAILED",
+      "target": "AF-P04637-F1",
+      "verdict_after": null,
+      "verdict_before": null
+    },
+    {
+      "atoms_after": null,
+      "atoms_before": null,
+      "category": "predicted",
+      "measurement_status_after": "NOT_MEASURED",
+      "measurement_status_before": "NOT_MEASURED",
+      "target": "AF-P0DTC2-F1",
+      "verdict_after": null,
+      "verdict_before": null
+    },
+    {
+      "atoms_after": null,
+      "atoms_before": null,
+      "category": "predicted",
+      "measurement_status_after": "MEASUREMENT_FAILED",
+      "measurement_status_before": "MEASUREMENT_FAILED",
+      "target": "AF-P10636-F1",
+      "verdict_after": null,
+      "verdict_before": null
+    },
+    {
+      "atoms_after": null,
+      "atoms_before": null,
+      "category": "predicted",
+      "measurement_status_after": "MEASUREMENT_FAILED",
+      "measurement_status_before": "MEASUREMENT_FAILED",
+      "target": "AF-P21802-F1",
+      "verdict_after": null,
+      "verdict_before": null
+    },
+    {
+      "atoms_after": null,
+      "atoms_before": null,
+      "category": "predicted",
+      "measurement_status_after": "NOT_MEASURED",
+      "measurement_status_before": "NOT_MEASURED",
+      "target": "AF-P62988-F1",
+      "verdict_after": null,
+      "verdict_before": null
+    },
+    {
+      "atoms_after": null,
+      "atoms_before": null,
+      "category": "predicted",
+      "measurement_status_after": "MEASUREMENT_FAILED",
+      "measurement_status_before": "MEASUREMENT_FAILED",
+      "target": "AF-P68871-F1",
+      "verdict_after": null,
+      "verdict_before": null
+    },
+    {
+      "atoms_after": null,
+      "atoms_before": null,
+      "category": "predicted",
+      "measurement_status_after": "MEASUREMENT_FAILED",
+      "measurement_status_before": "MEASUREMENT_FAILED",
+      "target": "AF-Q9Y6K9-F1",
+      "verdict_after": null,
+      "verdict_before": null
+    }
+  ],
+  "purpose": "Round-12 Direction 3: verdict diff of the pinned v23 cohort across the N8 altloc-default flip (per_atom default -> per_residue default). Diagnostic only; no threshold change (OD-14).",
+  "summary_after": {
+    "acquired": 48,
+    "acquisition_failures": 10,
+    "expected_targets": 50,
+    "failures": [
+      "AF-P04637-F1: measurement failed (No module named 'gemmi')",
+      "AF-P68871-F1: measurement failed (No module named 'gemmi')",
+      "AF-P0DTC2-F1: acquisition failed (AFDBUnavailable: AlphaFold DB acquisition failed for P0DTC2: requested entity AF-P0DTC2-F1 not served (API returned: ['AF-0000000365840314']))",
+      "AF-Q9Y6K9-F1: measurement failed (No module named 'gemmi')",
+      "AF-P21802-F1: measurement failed (No module named 'gemmi')",
+      "AF-O15111-F1: measurement failed (No module named 'gemmi')",
+      "AF-P62988-F1: acquisition failed (AFDBUnavailable: AlphaFold DB acquisition failed for P62988: metadata HTTP 404)",
+      "AF-P02768-F1: measurement failed (No module named 'gemmi')",
+      "AF-P10636-F1: measurement failed (No module named 'gemmi')",
+      "AF-P00533-F1: measurement failed (No module named 'gemmi')"
+    ],
+    "measured": 40,
+    "run_status": "incomplete",
+    "verdicts": {
+      "INDETERMINATE": 1,
+      "PASS": 34,
+      "VETO": 5,
+      "not:MEASUREMENT_FAILED": 8,
+      "not:NOT_MEASURED": 2
+    }
+  },
+  "summary_before": {
+    "acquired": 48,
+    "acquisition_failures": 10,
+    "expected_targets": 50,
+    "failures": [
+      "AF-P04637-F1: measurement failed (No module named 'gemmi')",
+      "AF-P68871-F1: measurement failed (No module named 'gemmi')",
+      "AF-P0DTC2-F1: acquisition failed (AFDBUnavailable: AlphaFold DB acquisition failed for P0DTC2: requested entity AF-P0DTC2-F1 not served (API returned: ['AF-0000000365840314']))",
+      "AF-Q9Y6K9-F1: measurement failed (No module named 'gemmi')",
+      "AF-P21802-F1: measurement failed (No module named 'gemmi')",
+      "AF-O15111-F1: measurement failed (No module named 'gemmi')",
+      "AF-P62988-F1: acquisition failed (AFDBUnavailable: AlphaFold DB acquisition failed for P62988: metadata HTTP 404)",
+      "AF-P02768-F1: measurement failed (No module named 'gemmi')",
+      "AF-P10636-F1: measurement failed (No module named 'gemmi')",
+      "AF-P00533-F1: measurement failed (No module named 'gemmi')"
+    ],
+    "measured": 40,
+    "run_status": "incomplete",
+    "verdicts": {
+      "INDETERMINATE": 1,
+      "PASS": 34,
+      "VETO": 5,
+      "not:MEASUREMENT_FAILED": 8,
+      "not:NOT_MEASURED": 2
+    }
+  },
+  "verdict_changes": []
+}
