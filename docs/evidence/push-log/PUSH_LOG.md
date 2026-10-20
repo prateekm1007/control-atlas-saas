@@ -197,3 +197,24 @@
   grammar), and the manifest refresh over the final tree. Single-writer guard: the remote
   tip is expected to be exactly 5ab3a46ed8fa6182efb07f23a5c60c42dac3e998; the push is
   ABORTED on any deviation.
+
+## 2026-10-20T14:12:02Z | P-019-CONFIRM | push-confirm | branch=fix/mainline-r18 remote_sha=3271fb1dbb1cb7687889c4e71002aa45ff37c340 credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/fix/mainline-r18 -> 3271fb1dbb1cb7687889c4e71002aa45ff37c340 (post-push observation; check-runs API for the same SHA queried at CONFIRM write time)"
+
+- Push 3 accepted as a fast-forward 5ab3a46 -> 3271fb1 (no force-push), single-writer guard
+  held (expected_remote_tip_before_push=5ab3a46 observed).
+- CI observed on 3271fb1 (both events green): Round-18 acceptance gate run 39435833504
+  (push) and 39435841738 (pull_request) SUCCESS; Toscanini Stability Gate run 39435833741
+  (push) and 39435841759 (pull_request) SUCCESS.
+
+## 2026-10-20T14:12:02Z | P-026-INTENT | push-intent | branch=fix/mainline-r18 head_at_intent=DEFERRED base=3271fb1dbb1cb7687889c4e71002aa45ff37c340 expected_remote_tip_before_push=3271fb1dbb1cb7687889c4e71002aa45ff37c340 credential=OWNER-PAT-1 authorized_by="Round-18 direction 3/4 continuation: CONFIRMED-LIVE semantics for stacked trees (final intents of OTHER branches validate via their introducing commit) + P0_STATUS RUN_PASS rows for the green candidate"
+
+- Push 4 content (disclosed pre-push): evidence_sequence_check.py CONFIRMED-LIVE extension
+  (proof (b): the remote tip of the intent's branch must be at-or-after the commit that
+  INTRODUCED the intent entry — lets a stacked activation tree validate the base branch's
+  final intent against the actual remote ref); this append; P0_STATUS section 8 updated
+  with the observed green runs (EC-22 grammar, manifest-backed); manifest refresh.
+- ID note: P-020..P-025 are allocated to the Round-18 activation rebuild branches
+  (consolidated EC-16/19/20, EC-18, EC-21, EC-23, EC-24, EC-26); this push therefore uses
+  the next globally unused ID (P-026).
+- Single-writer guard: remote tip expected exactly 3271fb1dbb1cb7687889c4e71002aa45ff37c340;
+  push ABORTED on deviation.

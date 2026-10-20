@@ -289,19 +289,47 @@ def check_pushlog_schema(path: str, slug: str | None = None, token: str | None =
             continue
         is_final = not any(o["line"] > e["line"] for o in intents if o["id"] != e["id"]
                            and _kv(o["subject"]).get("branch", "") == branch)
-        if is_final and slug and head_sha and FULL_SHA.match(head_sha or ""):
+        if is_final and slug:
             tip = _remote_tip(slug, branch, token, fixture)
-            if tip == head_sha:
-                notes.append(f"OK: {path}:{e['line']}: final intent {e['id']} for {branch} "
-                             f"CONFIRMED-LIVE (remote tip == carrying commit {head_sha[:12]}…)")
-                continue
             if tip is None:
                 findings.append(f"FAIL: {path}:{e['line']}: cannot read remote tip for {branch} "
                                 f"(fail closed); final intent {e['id']} not confirmable live")
                 continue
-        pending.append(f"PENDING: {path}:{e['line']}: push-intent {e['id']} for branch "
-                       f"{branch or '<unknown>'} has no matching push-confirm (a schema pass "
-                       f"while a push remains unconfirmed reports PENDING, not complete)")
+            # CONFIRMED-LIVE, two admissible proofs:
+            #  (a) the remote tip equals --head-sha (the carrying push itself);
+            #  (b) the remote tip is AT OR AFTER the commit that INTRODUCED this intent
+            #      entry (the push that carried the intent is verifiably on the remote —
+            #      covers a stacked tree validating another branch's final intent).
+            carrying = None
+            if fixture is None:
+                import subprocess as _sp
+                _r = _sp.run(["git", "log", "--reverse", "-S", e["id"], "--format=%H",
+                              "--", path], capture_output=True, text=True, cwd=os.getcwd())
+                if _r.stdout.strip():
+                    carrying = _r.stdout.strip().splitlines()[0]
+            if head_sha and FULL_SHA.match(head_sha or "") and tip == head_sha:
+                notes.append(f"OK: {path}:{e['line']}: final intent {e['id']} for {branch} "
+                             f"CONFIRMED-LIVE (remote tip == carrying commit {head_sha[:12]}…)")
+                continue
+            if carrying:
+                la = _local_ancestor(carrying, tip)
+                if la is True or (la is None and
+                                  _remote_ancestor(slug, carrying, tip, token, fixture)):
+                    notes.append(f"OK: {path}:{e['line']}: final intent {e['id']} for {branch} "
+                                 f"CONFIRMED-LIVE (remote tip is at-or-after the intent's "
+                                 f"carrying commit {carrying[:12]}…)")
+                    continue
+            pending.append(f"PENDING: {path}:{e['line']}: push-intent {e['id']} for branch "
+                           f"{branch or '<unknown>'} has no matching push-confirm (a schema pass "
+                           f"while a push remains unconfirmed reports PENDING, not complete)")
+        elif is_final and not slug:
+            pending.append(f"PENDING: {path}:{e['line']}: push-intent {e['id']} for branch "
+                           f"{branch or '<unknown>'} has no matching push-confirm (offline run; "
+                           f"live confirmation was not requested — PENDING, not complete)")
+        elif not is_final:
+            pending.append(f"PENDING: {path}:{e['line']}: push-intent {e['id']} for branch "
+                           f"{branch or '<unknown>'} has no matching push-confirm (a schema pass "
+                           f"while a push remains unconfirmed reports PENDING, not complete)")
 
     # 3. remote verification of every recorded push SHA (needs --remote-slug)
     if slug:
