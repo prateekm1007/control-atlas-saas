@@ -1,4 +1,4 @@
-# OWNER_DECISIONS — Consolidated Decision Register (rev 13)
+# OWNER_DECISIONS — Consolidated Decision Register (rev 14)
 
 **Provenance.** This is the single consolidated decision register, rev 9
 (Round-20, 2026-10-20). Rev 8 — the Round-19 records (the P-015-CONFIRM
@@ -1209,3 +1209,104 @@ remains outstanding and is NOT delegable. The scientific hard stop (OD-16) is pr
 full: no production deployment, no v25 calibration, no held-out evaluation, no threshold or
 cohort changes, no law-semantic changes, no golden-artifact regeneration without their
 approved gates. A-01 (PAT rotation) and A-09 (token-history review) remain owner actions.
+
+## Part 17 - Round-27 records (AUDITOR-ADJUDICATED, 2026-10-21; register rev 14)
+
+### 17.1 The ruling and the decisions
+
+The Round-25 verification round was ACCEPTED with one open decision, which the
+auditor has now made (D-W1..D-W6): **one recovery line** - PR #37 is the only
+recovery pull request and its head is the single source of truth; **port, do
+not merge** - the bundle generator, its tests and the R23-bypass incident note
+move from `781175d18f94b65ee09635f2e4f38bf67d545b45` into the recovery head
+as new commits, and that side's push-log entries are not imported (their facts
+go into the incident note instead, which avoids duplicate identifiers);
+**close PR #38 after the port** (tag its head, then delete its branch); **the
+approval targets the final head** (O-1 approves the head the port produces,
+not the head before it); **the sequence is unchanged** (merge, then prune, both
+only after O-1); the PAT stays in-shell only.
+
+The auditor also corrected one coder claim: the push-log identifier format.
+The entry headings are `## <UTC> | <ENTRY-ID> | <verb> | <subject>`, so the
+identifier is the SECOND field and a search for `## P-08x` finds nothing. The
+SUBSTANCE of the claim was right - the two sides do share identifiers
+(`P-080`, `P-081-INTENT`, `P-082-INTENT`, `P-082-CONFIRM`, `P-083-INTENT`,
+`P-085`) for DIFFERENT branches, and the same collision existed in the
+acceptance-test registry (AT-35/AT-36) - and the note now states the format,
+the exact identifier sets and the overlap explicitly
+(`docs/evidence/push-log/INCIDENT-2026-10-21-R25-PR-IDENTITY.md`).
+
+### 17.2 What this round did
+
+**The port is in place and byte-identical.** The published Round-26 fold
+already carried the ported bundle generator
+(`scripts/ci/generate_preservation_bundle.py`, blob
+`49ffda1fb5a715dd691bbd24719a6b7dd3a975bf`, identical to the `781175d`
+version), the pre-merge tests RENUMBERED to AT-39/AT-40, and the incident note.
+The prescribed verification is published in `evidence/r27/port-verify.txt`: the
+`git diff 781175d <head> -- scripts/ci/generate_preservation_bundle.py` output
+is EMPTY and both sides carry the same blob.
+
+**The reconciliation this round had to perform.** The parallel session pushed
+several further commits to this branch while the Round-27 port commits were
+being prepared, so three Round-27 pushes were correctly rejected as
+non-fast-forwards. No force-push was used or attempted. The two superseded
+Round-27 port commits were prepared on the pre-fold base and are superseded by
+the published fold, which carries the byte-identical generator and the
+identical renumbered tests; they were reconciled into ONE forward commit
+instead of duplicating the content.
+
+**The incident note is present ONCE, under the new identifier**
+`INCIDENT-2026-10-21-R27-GOVERNANCE-BYPASS` (the identifier the auditor
+required, unused anywhere else in the tree); the duplicate copy the fold had
+added under the original identifier - the one the archived branch and its tag
+carry - is removed. Its section 5 records the IMPORT STATUS TRUTHFULLY: the
+fold DID import the other side's push-log entries, RENUMBERED
+(`P-082-INTENT`/`P-082-CONFIRM` became `P-090-INTENT`/`P-090-CONFIRM`, with
+the record bodies saying so). That is a disclosed DEVIATION from D-W2's "do not
+import": no earlier entry was edited and no duplicate ENTRY-ID exists, so the
+append-only rule and the schema check hold - but the deviation is recorded
+rather than hidden.
+
+**The push-log chain continues from the published head:** `P-100` reconciles
+the head's own push, `P-101-INTENT` is the terminal intent with the true
+pre-push tip, `P-102` voids the stale merge-intent `P-099` and `P-103`
+redeclares it on the exact final candidate.
+
+### 17.3 An observation on the CI API pressure (not a gate weakening)
+
+On the published head two jobs were red - the push-log integrity job and the
+status-vocabulary job - both because the authenticated API reads were denied
+with HTTP 403 in the same run whose preservation-bundle job was making its
+~120 API reads (38 pull requests x detail + reviews, plus the events feed).
+The acceptance suite and the package manifest were green on that head, and
+the two denied jobs are re-run rather than weakened: the canary's fail-closed
+behaviour is correct, and the honest reading of the two failures is API rate
+pressure from the bundle job, not a defect in the checks. The observation is
+recorded so that the next reader does not mistake a rate-limit denial for a
+gate failure.
+
+### 17.4 What is deliberately NOT done
+
+- **No merge.** The owner action O-1 (an independent reviewer's approval on
+  the exact head) has not happened; PR #37 carries NO reviews at all. The
+  restored pre-merge gate is red for exactly that reason and is not to be
+  worked around. The auditor's sequence (merge, then prune) is not started.
+- **No force-push, no branch deletion without an archive tag, no self-approval,
+  no direct push to `main`, no new recovery branch, no product or verdict work,
+  no C3..C11.**
+- **The stale pull requests and branches are not pruned** in this commit: the
+  auditor's sequence puts the pruning after the merge, and the merge waits for
+  O-1.
+
+### 17.5 Standing items
+
+A-01 remains ACCEPTED RISK (no rotation reminder, no rotation initiation, no
+credential operations; the PAT stays in-shell only). The mainline governance
+issue (the unverified PR #30 merge) stays OPEN - the incident record is
+preserved, the code is not reverted, and no gate was weakened. The
+independent r2 archive verification, the portable 40-row cohort metadata
+table, A-02 issuer-side revocation and the EC2 deployment secrets remain
+OPEN. PRs #31-#36 revalidate serially against the resulting `main` (EC-21 is
+not waived) and PRs #23-#29 close only on proven unique-content coverage. The
+scientific hard stop is preserved in full.

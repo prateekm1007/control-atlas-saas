@@ -78,10 +78,39 @@ Only in the R25 head:
   fresh-checkout digest verification, and the adversarial tests AT-36, AT-37 and
   AT-38.
 
-**Consequence:** the two push logs are MUTUALLY EXCLUSIVE. Both branches use the
-P-082..P-086 identifier space for DIFFERENT branches, so the two logs cannot be
-merged: the published log would carry duplicate ENTRY-IDs and the schema check
-would fail. Exactly one of the two heads can become the recovery line, which
+**Consequence:** the two push logs are MUTUALLY EXCLUSIVE. The entry headings
+have the grammar `## <UTC timestamp> | <ENTRY-ID> | <verb> | <subject>` - the
+identifier is the SECOND field, so a search for `## P-08x` finds nothing; the
+identifiers are found with `^## \S+ \| (P-\S+) \|`. With that pattern the
+P-08x identifiers present on the two sides are:
+
+- on the `781175d` side: `P-080`, `P-081-INTENT`, `P-082-INTENT`,
+  `P-082-CONFIRM`, `P-083-INTENT`, `P-084`, `P-085`, `P-086`;
+- on this side: `P-080`, `P-081-INTENT`, `P-081-CONFIRM`, `P-082-INTENT`,
+  `P-082-CONFIRM`, `P-083-INTENT`, `P-083-CONFIRM`, `P-084-INTENT`,
+  `P-084-CONFIRM`, `P-085`, `P-086-INTENT`, `P-086-CONFIRM`, `P-087`,
+  `P-088`, `P-089-INTENT`, `P-089-CONFIRM`, `P-090-INTENT`, `P-090-CONFIRM`,
+  `P-091`, `P-092`, `P-093-INTENT`, `P-093-CONFIRM`, `P-094-INTENT`, `P-095`;
+- the IDENTIFIERS COMMON TO BOTH SIDES: `P-080`, `P-081-INTENT`,
+  `P-082-INTENT`, `P-082-CONFIRM`, `P-083-INTENT`, `P-085` - and they denote
+  DIFFERENT branches on the two sides (`P-082-INTENT` is the first push of
+  `repair/r23-governance-recovery` there and of
+  `repair/round24-claim-head-binding` here).
+
+So the two logs cannot be merged: the published log would carry duplicate
+ENTRY-IDs and the schema check would fail. Exactly one of the two heads can
+become the recovery line, which is consistent with the auditor's D-U1 (one
+recovery PR). (The same collision existed in the acceptance-test registry:
+AT-35/AT-36 meant the pre-merge-gate tests on the `781175d` side and the
+exact-head/live-body tests here.)
+
+**RESOLUTION (Round-27).** The published Round-26 fold (`3d0b5ab`) moved that
+content into this branch under RENUMBERED identifiers: the `781175d` entries
+`P-082-INTENT`/`P-082-CONFIRM` are present here as `P-090-INTENT`/
+`P-090-CONFIRM`, the pre-merge tests are `AT-39`/`AT-40`, and the incident
+note is under the new identifier `INCIDENT-2026-10-21-R27-GOVERNANCE-BYPASS`.
+The deviation from D-W2's "do not import" is recorded in that note's section
+5 rather than hidden. Exactly one of the two heads can become the recovery line, which
 is consistent with the auditor's D-U1 (one recovery PR) - but D-U1's
 precondition ("its content is confirmed contained in the R25 head") is NOT yet
 satisfied, because PR #38's bundle generator and its R23-bypass incident note

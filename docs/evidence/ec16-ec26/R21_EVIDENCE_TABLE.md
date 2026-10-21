@@ -1,6 +1,6 @@
 # Round-22 evidence table (GENERATED FROM LIVE EVIDENCE)
 
-- **Generated:** 2026-10-21T03:15:52Z by `scripts/ci/generate_evidence_table.py` (committed; re-runnable).
+- **Generated:** 2026-10-21T11:01:09Z by `scripts/ci/generate_evidence_table.py` (committed; re-runnable).
 - **Sources:** anonymous `git ls-remote` against `https://github.com/prateekm1007/control-atlas-saas.git` at the generation timestamp; the GitHub Actions API (`/repos/prateekm1007/control-atlas-saas`) for every run citation found in the push log; the push log itself for the entry inventory. Nothing in this table is hand-copied.
 - **Round-22 classification semantics:** commit existence, branch-push provenance, and CI success are DISTINCT claims. An off-lineage confirmation is PUSH-PROVEN-BY-RUN only via a cited run with event=push, matching head_branch, and the exact head_sha; PUSH-PROVEN-BY-EVENT via an adjudicated push_event citation; NOT-PROVEN via an explicit push-not-proven reclassification; anything else is COMMIT-EXISTS-ONLY (fail-closed in the live gate; a commits-API 200 or a rebuild narrative is not push proof). Failed run conclusions are disclosed separately and never count as successful gate evidence.
 
@@ -97,6 +97,28 @@
 | `P-084-CONFIRM` | push-confirm | `repair/round24-claim-head-binding` | `7ffe4714319d`… | `-`… | COMMIT-EXISTS-ONLY (no branch-push proof established by this table; the live gate classifies fail-closed) |
 | `P-085` | merge-intent | `main` | `-`… | `63da0e347002`… | MERGE-INTENT (pre-declared; verifies on the post-merge main push) |
 | `P-086-INTENT` | push-intent | `repair/round24-claim-head-binding` | `-`… | `-`… | INTENT (terminal pending disclosed by the checker) |
+| `P-086-CONFIRM` | push-confirm | `repair/round24-claim-head-binding` | `bc6fdb5d92a2`… | `-`… | COMMIT-EXISTS-ONLY (no branch-push proof established by this table; the live gate classifies fail-closed) |
+| `P-087` | intent-reconcile | `repair/round24-claim-head-binding` | `-`… | `-`… | INTENT-RECONCILE (voids a named intent) |
+| `P-088` | merge-intent | `main` | `-`… | `63da0e347002`… | MERGE-INTENT (pre-declared; verifies on the post-merge main push) |
+| `P-089-INTENT` | push-intent | `repair/round24-claim-head-binding` | `-`… | `-`… | INTENT (terminal pending disclosed by the checker) |
+| `P-090-INTENT` | push-intent | `repair/r23-governance-recovery` | `-`… | `-`… | INTENT (terminal pending disclosed by the checker) |
+| `P-090-CONFIRM` | push-confirm | `repair/r23-governance-recovery` | `781175d18f94`… | `-`… | COMMIT-EXISTS-ONLY (no branch-push proof established by this table; the live gate classifies fail-closed) |
+| `P-091` | intent-reconcile | `repair/round24-claim-head-binding` | `-`… | `-`… | INTENT-RECONCILE (voids a named intent) |
+| `P-092` | merge-intent | `main` | `-`… | `63da0e347002`… | MERGE-INTENT (pre-declared; verifies on the post-merge main push) |
+| `P-093-INTENT` | push-intent | `repair/round24-claim-head-binding` | `-`… | `-`… | INTENT (terminal pending disclosed by the checker) |
+| `P-089-CONFIRM` | push-confirm | `repair/round24-claim-head-binding` | `f00e3be9f040`… | `-`… | COMMIT-EXISTS-ONLY (no branch-push proof established by this table; the live gate classifies fail-closed) |
+| `P-093-CONFIRM` | push-confirm | `repair/round24-claim-head-binding` | `3d0b5ab5056b`… | `-`… | COMMIT-EXISTS-ONLY (no branch-push proof established by this table; the live gate classifies fail-closed) |
+| `P-094-INTENT` | push-intent | `repair/round24-claim-head-binding` | `-`… | `-`… | INTENT (terminal pending disclosed by the checker) |
+| `P-095` | merge-intent | `main` | `-`… | `63da0e347002`… | MERGE-INTENT (pre-declared; verifies on the post-merge main push) |
+| `P-096` | push-reconcile | `repair/round24-claim-head-binding` | `7cb888c80d04`… | `-`… | COMMIT-EXISTS-ONLY (no branch-push proof established by this table; the live gate classifies fail-closed) |
+| `P-097` | intent-reconcile | `repair/round24-claim-head-binding` | `-`… | `-`… | INTENT-RECONCILE (voids a named intent) |
+| `P-098-INTENT` | push-intent | `repair/round24-claim-head-binding` | `-`… | `-`… | INTENT (terminal pending disclosed by the checker) |
+| `P-099` | merge-intent | `main` | `-`… | `63da0e347002`… | MERGE-INTENT (pre-declared; verifies on the post-merge main push) |
+| `P-100` | push-reconcile | `repair/round24-claim-head-binding` | `5010ca7ed21e`… | `-`… | COMMIT-EXISTS-ONLY (no branch-push proof established by this table; the live gate classifies fail-closed) |
+| `P-101-INTENT` | push-intent | `repair/round24-claim-head-binding` | `-`… | `-`… | INTENT (terminal pending disclosed by the checker) |
+| `P-102` | intent-reconcile | `repair/round24-claim-head-binding` | `-`… | `-`… | INTENT-RECONCILE (voids a named intent) |
+| `P-103` | intent-reconcile | `repair/round24-claim-head-binding` | `-`… | `-`… | INTENT-RECONCILE (voids a named intent) |
+| `P-104` | merge-intent | `main` | `-`… | `63da0e347002`… | MERGE-INTENT (pre-declared; verifies on the post-merge main push) |
 
 ## 3. Cited Actions runs (GitHub API at generation time)
 
@@ -159,10 +181,22 @@
 | 39517257149 | Governance Acceptance | push | repair/round24-claim-head-binding | `2ce77e571947…` | success |
 | 39517477257 | Governance Acceptance | pull_request | repair/round24-claim-head-binding | `2ce77e571947…` | success |
 | 39517477268 | Toscanini Stability Gate | pull_request | repair/round24-claim-head-binding | `2ce77e571947…` | success |
+| 39532002077 | Governance Acceptance | push | repair/r23-governance-recovery | `781175d18f94…` | success |
+| 39532002306 | Toscanini Stability Gate | push | repair/r23-governance-recovery | `781175d18f94…` | success |
 | 39536540652 | Toscanini Stability Gate | push | repair/round24-claim-head-binding | `7ffe4714319d…` | success |
 | 39536541798 | Governance Acceptance | push | repair/round24-claim-head-binding | `7ffe4714319d…` | success |
 | 39536545010 | Governance Acceptance | pull_request | repair/round24-claim-head-binding | `7ffe4714319d…` | failure |
 | 39536545067 | Toscanini Stability Gate | pull_request | repair/round24-claim-head-binding | `7ffe4714319d…` | success |
+| 39537733237 | Toscanini Stability Gate | push | repair/round24-claim-head-binding | `bc6fdb5d92a2…` | success |
+| 39537733259 | Governance Acceptance | push | repair/round24-claim-head-binding | `bc6fdb5d92a2…` | success |
+| 39537737581 | Governance Acceptance | pull_request | repair/round24-claim-head-binding | `bc6fdb5d92a2…` | failure |
+| 39537737592 | Toscanini Stability Gate | pull_request | repair/round24-claim-head-binding | `bc6fdb5d92a2…` | success |
+| 39581458777 | Toscanini Stability Gate | push | repair/round24-claim-head-binding | `f00e3be9f040…` | success |
+| 39581458823 | Governance Acceptance | push | repair/round24-claim-head-binding | `f00e3be9f040…` | success |
+| 39583630909 | Toscanini Stability Gate | push | repair/round24-claim-head-binding | `3d0b5ab5056b…` | success |
+| 39583630921 | Governance Acceptance | push | repair/round24-claim-head-binding | `3d0b5ab5056b…` | failure |
+| 39586742835 | Toscanini Stability Gate | push | repair/round24-claim-head-binding | `7cb888c80d04…` | success |
+| 39586742893 | Governance Acceptance | push | repair/round24-claim-head-binding | `7cb888c80d04…` | failure |
 
 ## 4. Remaining pending state (disclosed, never smoothed over)
 
