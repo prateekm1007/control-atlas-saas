@@ -408,3 +408,15 @@ scientific result. No further LAW-160 item is outstanding. The next work
 items, each on its own branch, are LAW-130 (fail-open clash measurement and the
 `<` vs the canonical `<=` at the 20.0 boundary) and then the calibration
 runner's authentication and atomic publication.
+
+### 8.6 A bookkeeping error in this branch's own push log (disclosed and repaired)
+
+The confirmation of the `1831bdf` push was written with the wrong identifier
+base (`P-084-CONFIRM` instead of `P-083-CONFIRM`), so the identifier-pairing
+rule rejected it and the governance acceptance suite (AT-20/AT-24) went red on
+this branch. The repair is appended, not rewritten: `P-084-INTENT` re-establishes
+the P-084 pair for the SAME push and declares no new push, `P-086` discharges
+the orphaned `P-083-INTENT`, and the published entries are untouched (the
+append-only parent-prefix check passes). The records are ASCII on purpose: the
+governance tests print the log, and a non-ASCII marker breaks the Windows
+console encoding.
