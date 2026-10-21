@@ -234,7 +234,15 @@ class Tier1Measurements:
         clash = 0
         clash_pairs = []  # Phase A.5: inline residue-pair capture
         all_coords = np.array([a.pos for a in structure.atoms])
-        if len(all_coords) > 1:
+        # A calculation that cannot be performed is NOT a zero-valued
+        # measurement. The previous `except Exception: pass` left `clash` at
+        # zero and reported a PASS: a failed calculation therefore looked like
+        # a completed, clean measurement. The failure is now explicit: the law
+        # is reported as NOT_MEASURED (no observation, no sample), which the
+        # adjudicator treats as INDETERMINATE rather than as a pass or a
+        # scientific failure.
+        clash_measured = len(all_coords) > 1
+        if clash_measured:
             try:
                 from scipy.spatial import cKDTree
                 tree = cKDTree(all_coords)
@@ -251,18 +259,34 @@ class Tier1Measurements:
                     r2 = f"{aj.chain_id}:{aj.res_seq}"
                     pair = tuple(sorted([r1, r2], key=lambda x: (x.split(":")[0], int(x.split(":")[1]))))
                     clash_pairs.append(pair)
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001 - the failure is reported, not swallowed
+                clash_measured = False
+                clash_error = exc
         # Deduplicate and sort pairs
         unique_pairs = sorted(set(clash_pairs), key=lambda p: (p[0].split(":")[0], int(p[0].split(":")[1]), p[1].split(":")[0], int(p[1].split(":")[1])))
-        clash_score = (clash / len(all_coords)) * 1000 if len(all_coords) > 0 else 0.0
-        results["LAW-130"] = {
-            "observed": round(clash_score, 2),
-            "status": "PASS" if clash_score < LAW_CANON["LAW-130"]["threshold"] else "VETO",
-            "sample": len(all_coords),
-            "granularity": GRANULARITY_RESIDUE_PAIR,
-            "failing_residue_pairs": unique_pairs
-        }
+        if not clash_measured:
+            results["LAW-130"] = {
+                "observed": None,
+                "deviation": None,
+                "measured": False,
+                "status": "NOT_MEASURED",
+                "sample": 0,
+                "granularity": GRANULARITY_RESIDUE_PAIR,
+                "failing_residue_pairs": []
+            }
+        else:
+            clash_score = (clash / len(all_coords)) * 1000
+            results["LAW-130"] = {
+                "observed": round(clash_score, 2),
+                # The canon declares the inclusive operator "<=" at 20.0
+                # (station_sop.py). The strict "<" vetoed exactly 20.0, which
+                # contradicts the declared operator. The threshold itself is
+                # unchanged.
+                "status": "PASS" if clash_score <= LAW_CANON["LAW-130"]["threshold"] else "VETO",
+                "sample": len(all_coords),
+                "granularity": GRANULARITY_RESIDUE_PAIR,
+                "failing_residue_pairs": unique_pairs
+            }
 
         # ═══════════════════════════════════════════════════════════
         # LAW-170: Residue Identity

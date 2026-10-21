@@ -1,0 +1,9 @@
+LAW-130 regression tests against the CORRECTED implementation
+branch: fix/law-130-clash-boundary (base main @ 63da0e347002ed9b77071ff1ed0cefda7c0ce88a)
+command: cd backend && python -m pytest tests/test_law_130.py -q --tb=line
+recorded: 2026-10-21T18:49:27Z
+exit status: 0
+
+......                                                                   [100%]
+6 passed in 0.16s
+

@@ -115,13 +115,17 @@ class TestLaw130:
 
     def test_residue_pair_reporting_is_deterministic(self, monkeypatch):
         """The failing residue pairs are reported in a deterministic order."""
-        atoms = (_chain(2, chain="A") + _chain(2, chain="B", spacing=10.0, offset=0.5))
-        _install_fake_scipy(monkeypatch, pairs=[(0, 2), (1, 3)])
+        atoms = (_chain(1, chain="A") + _chain(1, chain="B", spacing=10.0, offset=0.5))
+        _install_fake_scipy(monkeypatch, pairs=[(0, 1)])
         res = _run(atoms)
         pairs = res["failing_residue_pairs"]
-        assert pairs == [("A:1", "B:1"), ("A:2", "B:2")]
-        # the same input yields the same output, and the pairs are deduplicated
-        _install_fake_scipy(monkeypatch, pairs=[(0, 2), (2, 0)])
+        # the pair is reported as chain:seq, lower chain:seq first
+        assert pairs == [("A:1", "B:1")]
+        # the same clash reported in the opposite order yields the same output
+        _install_fake_scipy(monkeypatch, pairs=[(1, 0)])
+        assert _run(atoms)["failing_residue_pairs"] == pairs
+        # and a repeated pair is reported once
+        _install_fake_scipy(monkeypatch, pairs=[(0, 1), (1, 0)])
         assert _run(atoms)["failing_residue_pairs"] == pairs
 
     def test_a_single_atom_has_no_pair_to_measure(self, monkeypatch):
