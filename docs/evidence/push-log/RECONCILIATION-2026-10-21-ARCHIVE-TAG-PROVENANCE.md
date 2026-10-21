@@ -6,6 +6,9 @@ entry explicitly: `P-011-CONFIRM`, `P-012-CONFIRM`, `P-013-CONFIRM`, `P-014-CONF
 
 ## Archived-branch provenance reconciliation
 
+The reclassified entries are `P-011-CONFIRM` (branch `proposal/ec16-ec26-enforcement`), `P-012-CONFIRM` (branch `docs/owner-decisions`), `P-013-CONFIRM` (branch `proposal/ec16-ec26-enforcement`) and `P-014-CONFIRM` (branch `governance/canonical-docs`); each is reclassified `push-not-proven` with a `review_ref` to this section.
+
+
 Round-26 D-V4 pruned the repository's branches after archiving each one as an ANNOTATED tag
 `archive/<branch>` at its final tip. The push-log checker resolves those tags as remote evidence
 for a pruned branch. Two distinct situations arise, and they are dispositioned differently:

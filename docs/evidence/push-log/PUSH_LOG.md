@@ -758,7 +758,7 @@
 - The merge is NOT performed by this push. The pre-merge-verification job is expected to FAIL on
   PR #37 until a genuine non-author approval exists on the exact head.
 
-## 2026-10-21T11:19:15Z | P-111-CONFIRM | push-confirm | branch=repair/round24-claim-head-binding remote_sha=36a8921a733941044d2b9151f5f8e9e18aebd7f6 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/repair/round24-claim-head-binding -> 36a8921a733941044d2b9151f5f8e9e18aebd7f6 (re-verified immediately before this confirmation was written; the push itself was the ordinary fast-forward 599d361..36a8921a733941044d2b9151f5f8e9e18aebd7f6 declared by P-105-INTENT)"
+## 2026-10-21T11:19:15Z | P-105-CONFIRM | push-confirm | branch=repair/round24-claim-head-binding remote_sha=36a8921a733941044d2b9151f5f8e9e18aebd7f6 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/repair/round24-claim-head-binding -> 36a8921a733941044d2b9151f5f8e9e18aebd7f6 (re-verified immediately before this confirmation was written; the push itself was the ordinary fast-forward 599d361..36a8921a733941044d2b9151f5f8e9e18aebd7f6 declared by P-105-INTENT)"
 
 - Two-phase completion for the push declared by P-105-INTENT (head_at_intent was DEFERRED; the
   remote-verified tip is recorded after the push returned, never backdated).
