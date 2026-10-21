@@ -378,3 +378,46 @@ verification, the portable 40-row cohort metadata table, A-02 issuer-side
 revocation, and EC2 deployment secrets remain OPEN. The scientific hard stop
 is preserved in full; A-01 remains ACCEPTED RISK (no rotation reminder, no
 credential operations, token values never written anywhere).
+
+## 13. Round-24 governance recovery (added 2026-10-21, SERIES-2026-10-21-R24) — OPEN
+
+- **PR #30 was merged into `main` without a qualifying independent approval.** Merge commit
+  `63da0e347002ed9b77071ff1ed0cefda7c0ce88a` (first parent `f535a71b85d90ab8ff92ac8613a05b3fb77f5dfd`,
+  second parent `d81c874eaedc13c6fdbaed5102ad7e638449036d`), merged 2026-10-20T21:55:06Z by
+  `prateekm1007`. The only review recorded on PR #30 is a `COMMENTED` review by
+  `chatgpt-codex-connector[bot]`. The merge is recorded as an unapproved merge; it is NOT
+  retroactively approved and the Round-23 justification in register Part 14 is withdrawn.
+- **The required `pre-merge-verification` job is missing on `main`.** `main` carries workflow
+  blob `939261fbbfb200f0f4e83553b7840642f826aaea`, in which the job survives only as a comment
+  recording its removal. The Round-23 deletion is **superseded and non-compliant**. The gate is
+  restored on `repair/r23-governance-recovery` byte-identically to the verified pre-R23 blob
+  `44fe653ec4e526725eaea4266dc1807222d3be06` (commit `443d6063b42c40ae47b6ea0607e45d31c12239d2`),
+  keeping its `pull-requests: read` permission, authenticated API canary, exact-head review
+  verification and fail-closed behaviour. PR #30's fixes are kept; no blind revert is performed.
+- **The governance runs failed and stay visible as failures.** Governance Acceptance run
+  `39504181997` on `main` @ `63da0e3…` — FAIL (no qualifying non-author approval on the exact
+  PR #30 head). Governance Acceptance run `39507046623` on the repair-branch candidate — FAIL
+  (`P-081-INTENT` has no CONFIRM; its declared pre-merge base `f535a71…` is historical while
+  `main` is at `63da0e3…`). Stability Gate runs `39504182072` and `39507046937` concluded
+  `success` on the same candidates — necessary, not sufficient.
+- **The pruned refs and the incidentally closed PRs are restored.** All 25 branch refs exist at
+  their exact original heads (created through the git-data API, each verified by a ref read and
+  an independent `ls-remote`; GitHub recorded `head_ref_restored` for PR #30's head at
+  2026-10-20T22:17:45Z). PRs #18–#29 and #31–#36 are open again with titles, bodies, heads and
+  review history unchanged. Inventory: 36 PRs — 4 merged (#1, #15, #17, #30) and 32 open; 55
+  branch heads; 26 tag refs.
+- **Preservation evidence is produced by automation.** `scripts/ci/generate_preservation_bundle.py`
+  builds the machine-readable bundle (refs, pull requests, unique commits, branch diff matrix,
+  preservation matrix, runtime dependency map, PR evidence, commands log, SHA256SUMS) and
+  `.github/workflows/preservation-bundle.yml` publishes it as a downloadable CI artifact; its URI
+  and digest are recorded in the recovery PR body and its checksums are verified from the
+  artifact itself. The repository's own `SHA256SUMS` file is not evidence of bundle completeness.
+- **Recovery remains OPEN.** The recovery PR is blocked until a legitimate, non-author approval
+  exists on its exact head and the required checks are green there; the restored
+  `pre-merge-verification` job is expected to fail until then — that is the gate functioning.
+  The push-log reconciliation (P-085 `push-reconcile`, P-086 `intent-reconcile`) becomes live
+  only when that PR merges through the protected path.
+- **OD-16 scientific/production hard stop: IN FORCE.** No deployment, no v25 run, no held-out
+  evaluation, no threshold or cohort change, no law-semantic change, and no golden-artifact
+  modification is authorized by this recovery. A-01 remains ACCEPTED RISK (no rotation reminder,
+  no rotation initiation, no credential operations; token values are never written anywhere).
