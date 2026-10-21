@@ -233,3 +233,23 @@ run, no held-out evaluation, no threshold or cohort change, no golden-artifact r
   push-log records), then this evidence update and the push-state records.
 - The branch is feature-only. Nothing was merged into `main`, no workflow or governance file was
   modified, no branch was created or deleted for this task, and the OD-16 hard stop is intact.
+
+### 7.4 A push-log pairing defect in THIS branch's own records, found and repaired
+
+The local reproduction of the push-log job also reported two findings that were NOT inherited:
+`CONFIRM P-085-CONFIRM has no preceding unconfirmed INTENT with the identifier P-085` and
+`multiple unmatched intents for branch fix/law-160-sequence-adjacency: P-083-INTENT, P-086-INTENT`.
+Cause: the push that produced `5c913c0` was declared by `P-083-INTENT`, but its confirmation was
+published as `P-085-CONFIRM`, and the schema requires a confirmation to carry the identifier of the
+intent it consumes.
+
+Repair (append-only, no published record edited): `P-085-INTENT` re-declares that same push under
+the confirmation's identifier, with `head_at_intent` carrying the commit that actually carried it;
+`P-083-INTENT` is voided by `P-088` as the duplicate declaration of the same push; `P-086-CONFIRM`
+completes the push that `P-086-INTENT` declared; `P-089-INTENT` declares the next push on that
+exact recorded state; `P-090` redeclares PR #39's merge-intent on the exact final candidate.
+
+Verified locally before applying: with the repair committed, the checker reports **0 findings
+attributable to this branch** against the live remote; the remaining findings are the inherited
+ones of section 7.2. No push is invented, none is claimed twice, and no published record is
+edited.

@@ -634,3 +634,38 @@
   (63da0e347002ed9b77071ff1ed0cefda7c0ce88a); if main moves, this intent fails its base verification and must be redeclared. P-084
   (the previous merge-intent for PR #39) is superseded on the lineage.
 - The merge is NOT performed by this push.
+
+## 2026-10-21T12:24:13Z | P-085-INTENT | push-intent | branch=fix/law-160-sequence-adjacency head_at_intent=5c913c02946e080b21aa49144aa8a7b41f22c5d4 expected_remote_tip_before_push=8ab970f68bea315a442c5274fc4090250e4414d9 credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder direction 3: re-declaration of the push that P-085-CONFIRM confirms, under the identifier that confirmation uses"
+
+- The push that produced 5c913c0 was declared by P-083-INTENT, but the confirmation of that push
+  was published as P-085-CONFIRM, and a confirmation must carry the identifier of the intent it
+  consumes. The append-only rule forbids renaming a published confirmation, so the intent is
+  re-declared here under the confirmation's own identifier (head_at_intent carries the commit
+  that actually carried that push), and P-083-INTENT is voided by P-088 as the duplicate
+  declaration of the same push. No push is invented, none is claimed twice, and no published
+  record is edited.
+
+## 2026-10-21T12:24:13Z | P-086-CONFIRM | push-confirm | branch=fix/law-160-sequence-adjacency remote_sha=564a29249fc27eb7e096e1a0d8cf38517a47ee08 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/fix/law-160-sequence-adjacency -> 564a29249fc27eb7e096e1a0d8cf38517a47ee08 (re-verified immediately before this confirmation was written; the push itself was the ordinary fast-forward 5c913c0..564a29249fc27eb7e096e1a0d8cf38517a47ee08 declared by P-086-INTENT)"
+
+- Two-phase completion for the push declared by P-086-INTENT (head_at_intent was DEFERRED; the
+  remote-verified tip is recorded after the push returned, never backdated).
+
+## 2026-10-21T12:24:13Z | P-088 | intent-reconcile | voids=P-083-INTENT branch=fix/law-160-sequence-adjacency credential=OWNER-PAT-1 evidence="P-083-INTENT and P-085-INTENT declare the SAME push (8ab970f..5c913c0); the confirmation of that push was published as P-085-CONFIRM, whose identifier must match the intent it consumes, so the intent is re-declared as P-085-INTENT and this duplicate declaration is voided - the voided intent stays visible in the log unchanged and only its pairing obligation is discharged"
+
+- Truthful void record: the push is recorded once (P-085-CONFIRM) and proven by the live remote
+  ref; no push is invented and none is claimed twice.
+
+## 2026-10-21T12:24:13Z | P-089-INTENT | push-intent | branch=fix/law-160-sequence-adjacency head_at_intent=DEFERRED expected_remote_tip_before_push=564a29249fc27eb7e096e1a0d8cf38517a47ee08 credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder direction 3: the CI results of this branch, the repaired push-log pairing, and the push-state redeclaration for this candidate"
+
+- The declared pre-push tip is the exact tip published by the P-086-CONFIRM record above, which is
+  the live remote tip of this branch at declaration time.
+- head_at_intent is DEFERRED per the two-phase schema; the tip pushed by this INTENT is disclosed
+  as PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-21T12:24:13Z | P-090 | merge-intent | target=main pr=39 source_branch=fix/law-160-sequence-adjacency expected_pre_merge_base=63da0e347002ed9b77071ff1ed0cefda7c0ce88a expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder directions 2 and 3: the isolated LAW-160 sequence-pair adjacency correction is reviewed and merged through the protected PR path only, with the required checks green on the exact candidate head; the merge is NOT performed by this push, and it also waits for PR #37's archive-tag resolution to be on main so that the push-log job can verify the historical records of the pruned branches"
+
+- Redeclaration on the exact final candidate (expected_head=DEFERRED resolves to the commit
+  introducing this record). expected_pre_merge_base is the live main tip at declaration time
+  (63da0e347002ed9b77071ff1ed0cefda7c0ce88a); if main moves, this intent fails its base verification and must be redeclared. P-087
+  (the previous merge-intent for PR #39) is superseded on the lineage.
+- The merge is NOT performed by this push.
