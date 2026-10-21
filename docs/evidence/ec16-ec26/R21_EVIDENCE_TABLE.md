@@ -1,6 +1,6 @@
 # Round-22 evidence table (GENERATED FROM LIVE EVIDENCE)
 
-- **Generated:** 2026-10-21T02:58:58Z by `scripts/ci/generate_evidence_table.py` (committed; re-runnable).
+- **Generated:** 2026-10-21T03:15:52Z by `scripts/ci/generate_evidence_table.py` (committed; re-runnable).
 - **Sources:** anonymous `git ls-remote` against `https://github.com/prateekm1007/control-atlas-saas.git` at the generation timestamp; the GitHub Actions API (`/repos/prateekm1007/control-atlas-saas`) for every run citation found in the push log; the push log itself for the entry inventory. Nothing in this table is hand-copied.
 - **Round-22 classification semantics:** commit existence, branch-push provenance, and CI success are DISTINCT claims. An off-lineage confirmation is PUSH-PROVEN-BY-RUN only via a cited run with event=push, matching head_branch, and the exact head_sha; PUSH-PROVEN-BY-EVENT via an adjudicated push_event citation; NOT-PROVEN via an explicit push-not-proven reclassification; anything else is COMMIT-EXISTS-ONLY (fail-closed in the live gate; a commits-API 200 or a rebuild narrative is not push proof). Failed run conclusions are disclosed separately and never count as successful gate evidence.
 
@@ -94,6 +94,9 @@
 | `P-083-INTENT` | push-intent | `repair/round24-claim-head-binding` | `-`… | `-`… | INTENT (terminal pending disclosed by the checker) |
 | `P-083-CONFIRM` | push-confirm | `repair/round24-claim-head-binding` | `2ce77e571947`… | `-`… | COMMIT-EXISTS-ONLY (no branch-push proof established by this table; the live gate classifies fail-closed) |
 | `P-084-INTENT` | push-intent | `repair/round24-claim-head-binding` | `-`… | `-`… | INTENT (terminal pending disclosed by the checker) |
+| `P-084-CONFIRM` | push-confirm | `repair/round24-claim-head-binding` | `7ffe4714319d`… | `-`… | COMMIT-EXISTS-ONLY (no branch-push proof established by this table; the live gate classifies fail-closed) |
+| `P-085` | merge-intent | `main` | `-`… | `63da0e347002`… | MERGE-INTENT (pre-declared; verifies on the post-merge main push) |
+| `P-086-INTENT` | push-intent | `repair/round24-claim-head-binding` | `-`… | `-`… | INTENT (terminal pending disclosed by the checker) |
 
 ## 3. Cited Actions runs (GitHub API at generation time)
 
@@ -156,6 +159,10 @@
 | 39517257149 | Governance Acceptance | push | repair/round24-claim-head-binding | `2ce77e571947…` | success |
 | 39517477257 | Governance Acceptance | pull_request | repair/round24-claim-head-binding | `2ce77e571947…` | success |
 | 39517477268 | Toscanini Stability Gate | pull_request | repair/round24-claim-head-binding | `2ce77e571947…` | success |
+| 39536540652 | Toscanini Stability Gate | push | repair/round24-claim-head-binding | `7ffe4714319d…` | success |
+| 39536541798 | Governance Acceptance | push | repair/round24-claim-head-binding | `7ffe4714319d…` | success |
+| 39536545010 | Governance Acceptance | pull_request | repair/round24-claim-head-binding | `7ffe4714319d…` | failure |
+| 39536545067 | Toscanini Stability Gate | pull_request | repair/round24-claim-head-binding | `7ffe4714319d…` | success |
 
 ## 4. Remaining pending state (disclosed, never smoothed over)
 
