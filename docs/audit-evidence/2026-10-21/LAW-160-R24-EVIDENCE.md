@@ -497,3 +497,74 @@ published commit was amended - and the push-log records follow the truth: the in
 declared the rejected push (P-87-INTENT) is VOIDED (the push never happened), the push that
 actually produced the current tip is confirmed, and the new push is declared on the exact live
 tip (ef9e9ef4ce7c20d6a3ebdd47fcbb80a1454e8e2c) with a fresh merge-intent for PR #40.
+
+## Round-26 completion: the CURRENT candidate results (this section supersedes the earlier
+## narrative, which is retained above as history)
+
+An earlier revision of this file and of the pull request body stated that the acceptance suite
+was green. The live runs showed otherwise: the acceptance suite and the push-log validation
+failed on the candidate `9efe599080517479f9def4a92d68e20f201d2e55`. That statement was wrong and
+is corrected here. Everything above this section is retained as history and describes earlier
+candidates; the numbers below are the results of the final candidate of this round.
+
+### Results of the final candidate (this round)
+
+| Check | Command | Exit | Result |
+|---|---|---|---|
+| focused suite (LAW-160, NOT_MEASURED contract, PDF rendering, adjudicator, response schema) | `cd backend && python -m pytest tests/test_law_160.py tests/test_not_measured_contract.py tests/test_not_measured_pdf_contract.py tests/test_adjudicator.py tests/test_response_schema.py -q` | 0 | 58 passed, 5 skipped |
+| full backend suite - candidate | `cd backend && python -m pytest tests -q --tb=no --ignore=<6 modules that cannot be collected in this environment>` | 1 | 21 failed, 311 passed, 5 skipped, 23 errors |
+| full backend suite - base of this branch, same environment | same command with the changes stashed | 1 | 21 failed, 309 passed, 5 skipped, 23 errors |
+| hash locks | `compute_canon_hash()` / `compute_matrix_hash()` | 0 | canon `6a9cd4b4349b81de` and matrix `ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4` - both bit-identical to the declared values |
+| secret scan of the diff | regex scan of `git diff 63da0e3..HEAD` and the working diff | 0 | 0 credential-shaped strings |
+| acceptance identifiers named in the pull request body | `python -m pytest scripts/ci/tests/test_acceptance.py::test_at16_inventory_counts ::test_at07_pr_template ::test_at19_status_summary_grammar -q` | 0 | 3 passed (collectable in the lightweight CI environment) |
+
+The full backend suite is NOT green, and is not claimed to be: the 21 failures and 23 errors are
+identical on the base of this branch in the same environment, and the candidate adds two passing
+tests. Six modules cannot be COLLECTED in this sandbox (ImportError on optional dependencies) and
+are excluded from BOTH runs.
+
+### The two remaining PDF defects (this round)
+
+- The compliance conclusion branched only on the unmeasured laws, so a report containing a real
+  measured deterministic VETO next to an unmeasured law could still state "All MEASURED
+  deterministic coordinate measurements within thresholds" - a false statement. It now branches
+  on both: with measured violations it states how many were detected and how many laws could not
+  be evaluated; with no measured violation but unmeasured laws it qualifies the statement and
+  enumerates them; with everything measured and passing it keeps the full-compliance statement.
+  A rendering-level regression test generates a PDF with a real VETO and an unmeasured law and
+  asserts the VETO remains the cause, the unmeasured law is not called a violation, and the
+  report does not claim the measured laws are within thresholds.
+- The response-model validator could be bypassed by handing the PDF generator a raw payload: the
+  generator renders dictionaries, not models. It now validates every law row BEFORE anything is
+  drawn, outside the generator's try block, so a contradictory row raises and no report is
+  produced. Two tests assert that a contradictory raw payload cannot be rendered.
+
+### The push-log findings: this branch's own defects AND the inherited ones
+
+Both are real, and the branch is not green:
+
+- This branch's own records, corrected append-only in this round: `P-091-INTENT` is declared so
+  that the published `P-091-CONFIRM` has its intent; `P-085-CONFIRM` and `P-093-CONFIRM` are
+  appended so that the published `P-085-INTENT` and `P-093-INTENT` are consumed; `P-088-INTENT`
+  is voided (it declared a push that never happened). The new push and the merge-intent for PR
+  #40 are declared on the exact live tip.
+- Published entries that CANNOT be corrected append-only, and are therefore an EXTERNAL BLOCKER
+  for the merge: `P-088-INTENT` carries `expected_remote_tip_before_push=DEFERRED`, which the
+  schema rejects (a real 40-hex SHA or `ABSENT` is required), and `P-092` voids `P-087-INTENT` a
+  second time although `P-089` already voided it. A published log entry cannot be edited without
+  rewriting published history, which is forbidden, so the push-log gate cannot go green on this
+  branch. This is recorded as an external blocker, not bypassed.
+- The inherited findings (confirmations of `proposal/ec16-ec26-enforcement`,
+  `governance/canonical-docs`, the historical `activation/*` branches, `docs/owner-decisions-r19`
+  and `repair/round19-mainline-acceptance`) point at branches the Round-26 pruning deleted, and
+  the archive-tag resolution that would verify them lives on PR #37. It is NOT imported here and
+  no historical entry is rewritten.
+
+### Transient artifacts
+
+`msg.txt` (the commit-message scratch file) was already removed. `push_ids.txt` - which held the
+four identifiers used while drafting the push-log records and was stale with respect to the
+records that followed it - was removed in this round as a transient helper. Neither file is a
+required tracked artifact: the repository has no rule that requires them, and no evidence or
+decision record refers to them. The push-log identifiers that matter live in
+`docs/evidence/push-log/PUSH_LOG.md` itself.

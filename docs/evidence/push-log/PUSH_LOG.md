@@ -656,3 +656,29 @@
   introducing this record). expected_pre_merge_base is the live main tip at declaration time
   (63da0e347002ed9b77071ff1ed0cefda7c0ce88a); if main moves, this intent fails its base verification and must be redeclared.
 - The merge is NOT performed by this push.
+
+## 2026-10-21T18:34:03Z | P-091-INTENT | push-intent | branch=feature/law-160-sequence-adjacency head_at_intent=DEFERRED expected_remote_tip_before_push=fbc0ff9f66dc7927866895d5f3b6c562a05776c1 credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder direction 2 B (the confirmation of that push is already published; the intent it consumes is declared here, on the exact pre-push state that was re-verified against the remote)"
+
+- This intent declares the push that produced ef9e9ef4ce7c20d6a3ebdd47fcbb80a1454e8e2c. Its pre-push state is the tip that the branch carried before that push (fbc0ff9f66dc7927866895d5f3b6c562a05776c1), re-verified against the remote. The published P-091-CONFIRM consumes this intent: the identifier-pairing rule requires the confirmation to carry the identifier of the intent it consumes.
+
+## 2026-10-21T18:34:03Z | P-085-CONFIRM | push-confirm | branch=feature/law-160-sequence-adjacency remote_sha=5c913c02946e080b21aa49144aa8a7b41f22c5d4 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/feature/law-160-sequence-adjacency -> 5c913c02946e080b21aa49144aa8a7b41f22c5d4 (the tip of this branch when the push was made; the push itself was the fast-forward 8ab970f68bea315a442c5274fc4090250e4414d9..5c913c02946e080b21aa49144aa8a7b41f22c5d4, declared by P-085-INTENT)"
+
+- Two-phase completion for the push that P-085-INTENT declared. It confirms THAT push only.
+
+## 2026-10-21T18:34:03Z | P-093-CONFIRM | push-confirm | branch=feature/law-160-sequence-adjacency remote_sha=9efe599080517479f9def4a92d68e20f201d2e55 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/feature/law-160-sequence-adjacency -> 9efe599080517479f9def4a92d68e20f201d2e55 (the tip of this branch when the push was made; the push itself was the fast-forward ef9e9ef4ce7c20d6a3ebdd47fcbb80a1454e8e2c..9efe599080517479f9def4a92d68e20f201d2e55, declared by P-093-INTENT)"
+
+- Two-phase completion for the push that P-093-INTENT declared. It confirms THAT push only.
+
+## 2026-10-21T18:34:03Z | P-95 | intent-reconcile | voids=P-088-INTENT branch=feature/law-160-sequence-adjacency credential=OWNER-PAT-1 evidence="P-088-INTENT declared a push that was never made (the remote rejected it as not fast-forward) and carries an unusable expected_remote_tip_before_push value; the intent is voided so that it does not sit pending, and the pushes that were actually made are declared and confirmed separately - the entry itself is preserved unchanged and is disclosed as an external blocker for the push-log gate"
+
+- Truthful void record: the voided intent stays visible in the log unchanged; only its pairing obligation is discharged.
+
+## 2026-10-21T18:34:03Z | P-96-INTENT | push-intent | branch=feature/law-160-sequence-adjacency head_at_intent=DEFERRED expected_remote_tip_before_push=9efe599080517479f9def4a92d68e20f201d2e55 credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder direction 2 (the remaining PDF reporting defect, the rendering-level regressions, the pre-render consistency check that closes the raw-payload bypass, the push-log reconciliation of this branch's own records, the corrected pull request body and the evidence reconciliation)"
+
+- The declared pre-push tip is the live tip of this branch at declaration time, re-verified against the remote.
+- head_at_intent is DEFERRED per the two-phase schema; the tip pushed by this INTENT is disclosed as PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-21T18:34:03Z | P-97 | merge-intent | target=main pr=40 source_branch=feature/law-160-sequence-adjacency expected_pre_merge_base=63da0e347002ed9b77071ff1ed0cefda7c0ce88a expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder direction 2 and 3: the NOT_MEASURED contract, the LAW-160 adjacency correction and the PDF reporting fixes are reviewed and merged through the protected PR path only, with the required checks green on the exact candidate head and an independent approval; the merge is NOT performed by this push, and the standing scientific hard stop remains in force"
+
+- Redeclaration on the exact final candidate (expected_head=DEFERRED resolves to the commit introducing this record). expected_pre_merge_base is the live main tip at declaration time (63da0e347002ed9b77071ff1ed0cefda7c0ce88a).
+- The merge is NOT performed by this push.

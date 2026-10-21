@@ -245,3 +245,39 @@ def test_a_structure_without_unmeasured_laws_keeps_the_plain_compliance_wording(
     text = _render(laws)
     assert "All deterministic coordinate measurements within thresholds." in text
     assert "NOT MEASURED" not in text
+
+
+def test_a_real_veto_next_to_an_unmeasured_law_never_claims_full_compliance():
+    """A measured deterministic VETO and an unmeasured law can coexist.
+
+    The report must keep the real VETO as the cause, must not call the
+    unmeasured law a violation or a refinement target, and must NOT state that
+    the measured measurements are within thresholds.
+    """
+    laws = [_law("LAW-120", "Bond Angle", "VETO", "deterministic", 30.0),
+            _law("LAW-160", "Chain Integrity", "NOT_MEASURED", "deterministic", None,
+                 measured=False, deviation=None, sample_size=0)]
+    text = _render(laws, verdict_binary="VETO")
+    assert "DETERMINISTIC VETO" in text
+    assert "LAW-120" in text
+    assert "All MEASURED deterministic coordinate measurements within thresholds" not in text, \
+        "the compliance statement must not claim the measured laws are within thresholds"
+    assert "VIOLATION" in text
+    assert "could not be evaluated" in text
+    assert "LAW-160" in text, "the unmeasured law is enumerated in the report"
+
+
+def test_a_contradictory_raw_payload_cannot_be_rendered():
+    """The PDF path must fail closed on a contradictory measurement row.
+
+    The response model rejects the row; the renderer must not be able to
+    bypass that by being handed the raw payload.
+    """
+    contradictory = _law("LAW-160", "Chain Integrity", "NOT_MEASURED", "deterministic", 0.0,
+                         measured=False, deviation=None, sample_size=0)
+    with pytest.raises(ValueError):
+        generate_v21_dossier(_payload([contradictory]))
+    measured_without_observation = _law("LAW-160", "Chain Integrity", "PASS", "deterministic", None,
+                                       measured=True, deviation=None, sample_size=0)
+    with pytest.raises(ValueError):
+        generate_v21_dossier(_payload([measured_without_observation]))

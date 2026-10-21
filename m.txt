@@ -1,0 +1,32 @@
+fix(R26): close the remaining PDF reporting defect, fail closed on a contradictory payload, and reconcile this branch's push-log records
+
+Round-26 auditor direction 2 (A-D) and direction 3 on the canonical branch
+feature/law-160-sequence-adjacency (PR #40). Nothing is merged by this commit.
+
+- The compliance conclusion now branches on BOTH the measured violations and the unmeasured
+  laws: with a measured deterministic violation it states how many were detected and how many
+  laws could not be evaluated; with no measured violation but unmeasured laws it qualifies the
+  statement and enumerates them; with everything measured and passing it keeps the
+  full-compliance statement. A rendering-level regression test generates a PDF with a real
+  deterministic VETO next to an unmeasured law and asserts the VETO stays the cause, the
+  unmeasured law is not a violation, and the report does not claim the measured laws are within
+  thresholds.
+- The PDF path can no longer bypass the model-level validation: the generator validates every
+  law row BEFORE anything is drawn, outside its try block, so a contradictory raw payload
+  raises and no report is produced. Two tests assert that.
+- The pull request body names only acceptance-test identifiers that are collectable AND passing
+  in the lightweight CI environment (test_at16_inventory_counts, test_at07_pr_template,
+  test_at19_status_summary_grammar - verified 3 passed on the candidate). The backend domain
+  tests stay in the Stability Gate and in the evidence. The claim verifier is NOT weakened.
+- The branch's own push-log records are reconciled append-only: P-091-INTENT is declared so the
+  published P-091-CONFIRM has its intent, P-085-CONFIRM and P-093-CONFIRM are appended so the
+  published P-085-INTENT and P-093-INTENT are consumed, P-088-INTENT is voided (it declared a
+  push that never happened), and the next push and the merge-intent for PR #40 are declared on
+  the exact live tip. No push, SHA, confirmation or approval is invented.
+- Two published entries cannot be corrected append-only (P-088-INTENT's DEFERRED pre-push value
+  and P-092's duplicate void) and the inherited confirmations of the branches the Round-26
+  pruning deleted have no live ref: both are recorded as an EXTERNAL BLOCKER for the merge.
+  PR #37's archive-tag checker is NOT imported here and no published entry is rewritten.
+- The evidence now states the CURRENT candidate results separately from the earlier history: the
+  earlier statement that the acceptance suite was green was wrong and is corrected. The transient
+  helper files msg.txt and push_ids.txt are removed.

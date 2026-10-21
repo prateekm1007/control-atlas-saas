@@ -12,6 +12,38 @@ from ..governance.station_sop import (
 from ..governance.modality_matrix import compute_matrix_hash
 
 
+def _assert_measurement_consistent(law: dict) -> None:
+    """Reject a measurement row that contradicts itself.
+
+    The response model enforces the same invariants for the model path, but a
+    PDF is an authoritative artifact and this function is also reachable with a
+    raw payload, so the rules are enforced HERE as well - before anything is
+    rendered. A contradictory row raises and no report is produced: a PDF must
+    never state, in its own tables, that an unmeasured law was measured or that
+    a measured law has no observation.
+    """
+    if not isinstance(law, dict):
+        raise ValueError("a law row must be a mapping, got %r" % type(law))
+    status = law.get("status")
+    measured = law.get("measured", True)
+    observed = law.get("observed", "ABSENT")
+    deviation = law.get("deviation", "ABSENT")
+    sample = law.get("sample_size", law.get("sample", 0))
+    if status == "NOT_MEASURED" or measured is False:
+        if measured is not False or observed is not None or deviation is not None or sample != 0:
+            raise ValueError(
+                "contradictory measurement row for %s: an unmeasured law must carry "
+                "status=NOT_MEASURED, measured=false, observed=null, deviation=null and "
+                "sample_size=0" % law.get("law_id"))
+    elif measured is not True:
+        raise ValueError(
+            "contradictory measurement row for %s: measured must be a boolean" % law.get("law_id"))
+    elif "observed" in law and law.get("observed") is None:
+        raise ValueError(
+            "contradictory measurement row for %s: a measured law must carry a numeric "
+            "observation" % law.get("law_id"))
+
+
 def _observed_cell(law: dict) -> str:
     """The Observed column of a law row.
 
@@ -142,6 +174,12 @@ def _find_low_regions(confidences, threshold=50.0, min_length=3):
     return regions
 
 def generate_v21_dossier(payload):
+    # The PDF is an authoritative artifact: a contradictory measurement row must
+    # never reach the renderer. This check is made BEFORE the rendering try
+    # block, so a contradictory payload fails closed (an exception) instead of
+    # producing a report that states a falsehood.
+    for _law in (payload.get("tier1", {}) or {}).get("laws", []) or []:
+        _assert_measurement_consistent(_law)
     try:
         pdf = ToscaniniDossier()
         pdf.set_auto_page_break(True, margin=15)
@@ -435,7 +473,15 @@ def generate_v21_dossier(payload):
         pdf.ln(3)
         pdf.set_font("Helvetica", "I", 7)
         pdf.set_text_color(*PDF_COLORS["TEXT_SUBTLE"])
-        if not_measured:
+        if violations:
+            # A measured violation and an unmeasured law can coexist: the
+            # statement must not claim that the measured measurements are
+            # within thresholds, and the unmeasured laws are stated apart.
+            pdf.cell(w, 5, "%d MEASURED deterministic violation(s) detected (see DETECTION above); "
+                            "%d law(s) could not be evaluated and are listed under NOT MEASURED."
+                            % (len(violations), len(not_measured)),
+                    ln=True)
+        elif not_measured:
             pdf.cell(w, 5, "All MEASURED deterministic coordinate measurements within thresholds; "
                             "%d law(s) could not be evaluated and are listed under NOT MEASURED." % len(not_measured),
                     ln=True)

@@ -285,3 +285,33 @@ definition, the modality matrix, any threshold, any cohort or any calibration
 artefact; it did not reinterpret any other law's status; it did not resume the
 governance-only repairs (the push-log job is left red and is not touched
 here); it did not merge anything, and the scientific hard stop is preserved.
+
+## 13. Round-26 completion read record (2026-10-21T18:35:04Z, SERIES-2026-10-21-R26)
+
+### 13.1 Documents read in full before editing (blob hashes verified)
+
+| Document | Blob (full SHA-1) | Read (UTC) |
+|---|---|---|
+| `AGENTS.md` | `85767237399ffb30f3e45894d9dfbe6f4240584f` | 2026-10-21T18:35:04Z |
+| `constitution.md` | `211ad2c5d4b40059d9f3f03de12e0701f9235bc7` | 2026-10-21T18:35:04Z |
+| `ENGINEERING_CONSTITUTION.md` | `b6bb35e84956d84a8c9d9e65734c212baf3ed075` | 2026-10-21T18:35:04Z |
+| `docs/coder/BRIEF.md` | `052a84ca829d321dc0841a4b1c8702145dcbf6b5` | 2026-10-21T18:35:04Z |
+| `docs/decisions/OWNER_DECISIONS.md` | `ff53dbab634399dea6f1195ab18b686f13da66a3` | 2026-10-21T18:35:04Z |
+| `docs/P0_STATUS.md` | `a31517abbc046c495930ba19ef7aeaf8bb72f2d0` | 2026-10-21T18:35:04Z |
+
+Branch `feature/law-160-sequence-adjacency` at `9efe599080517479f9def4a92d68e20f201d2e55`, base `main` @ `63da0e347002ed9b77071ff1ed0cefda7c0ce88a` (freshly fetched and verified), working
+tree state recorded in the preflight
+(`docs/audit-evidence/2026-10-21/PREFLIGHT-R26-COMPLETION.md`).
+
+### 13.2 Rules enforced in this round
+
+EC-2 (constitutions first, preflight, machine-readable evidence), EC-4 (measured vs inferred:
+an unmeasured law is never a numerical zero and never a scientific failure), EC-6 (exact-SHA
+evidence, baseline reproduced in the same environment, "not run" is never "passed"), EC-7
+(feature branch, required checks on the exact candidate), EC-11 (append-only records, no
+rewriting of published history), EC-12 (the definition of done, including the disclosure of what
+remains unverified), EC-13 (no weakened gate, no invented status, no fabricated measurement),
+EC-14 (artifacts), OBS-153 and CRIT-154 (unchanged, and untouched by this work). OD-16 (the
+scientific/production hard stop) remains in force: no merge to `main`, no deployment, no v25
+calibration run, no held-out evaluation, no threshold or cohort change, no golden-artifact
+regeneration.
