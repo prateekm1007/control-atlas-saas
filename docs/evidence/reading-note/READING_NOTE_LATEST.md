@@ -440,6 +440,26 @@ blob IDs are identical at the R24 candidate, at `main` and at this head.
   only collaborator is the PR author. PR #37 therefore stays blocked; no self-approval is
   sought or given (D-V1, D-V6, EC-13).
 
+### 11.3b CI evidence for this head (Round-26, disclosed)
+
+- The fold commit 3d0b5ab failed three push-event jobs (run 39583630921: acceptance suite,
+  package manifest, push-log). Both causes were fixed in 7071b5d, and only those causes were
+  touched: (a) the fold commit staged the regenerated SHA256SUMS before the manifest itself was
+  rewritten, so the committed manifest carried stale digest rows for the two evidence files
+  edited last; the manifest is now regenerated and staged LAST, with all 51 rows verified
+  against the staged blobs before the commit; (b) the terminal push-intent P-093-INTENT had to
+  be completed (P-093-CONFIRM) rather than left pending, because the checker compares a
+  terminal intent's declared pre-push tip with the newest CONFIRM/RECONCILE recorded for the
+  branch BEFORE it in the log - P-094-INTENT then declares the next push on that exact recorded
+  state and P-095 redeclares this PR's merge-intent on the exact final candidate.
+- The acceptance suite also failed in CI only (it is green locally): the AT-41 fixture created
+  its annotated archive tag with `git tag -a` and no explicit identity, which a CI runner has no
+  global identity for. The fixture now sets one explicitly - a test-environment fix, no
+  weakening.
+- The PR-event claim-verification job reads the PR body live, and the body must declare the
+  exact head, so it is updated to this head before the push that introduces it; the recorded
+  job for a given head is evidence about the body as it stood when that job ran.
+
 ### 11.4 Rule mapping additions in this round
 
 | Rule ID | Enforcement point(s) | Acceptance test(s) |

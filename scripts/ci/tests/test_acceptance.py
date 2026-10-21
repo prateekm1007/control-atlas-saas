@@ -3423,8 +3423,10 @@ def test_at41_archive_tag_resolution():
 
     def archive_branch(name, sha):
         """Publish an ANNOTATED archive tag for <name> at <sha> and delete the branch."""
-        sp.run(["git", "-C", src, "tag", "-a", "archive/" + name, "-m",
-                "archived " + name, sha], check=True)
+        # an explicit identity: `git tag -a` needs one, and a CI runner has no
+        # global git identity (the local environment happens to have one)
+        sp.run(["git", "-C", src, "-c", "user.email=t@t", "-c", "user.name=t",
+                "tag", "-a", "archive/" + name, "-m", "archived " + name, sha], check=True)
         push("refs/tags/archive/%s:refs/tags/archive/%s" % (name, name))
 
     logrel = "PUSH_LOG.md"
