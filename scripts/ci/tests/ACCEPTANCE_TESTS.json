@@ -140,6 +140,18 @@
     "AT-35": {
       "name": "EC-16/19/20 exact-head binding: the PR body's Claimed-SHAs must contain the exact current pull-request head and the Status-summary must cite a successful run on that same head; a stale-but-real SHA or run id fails",
       "node": "scripts/ci/tests/test_acceptance.py::test_at35_claim_exact_head_binding"
+    },
+    "AT-36": {
+      "name": "EC-16/19/20 live PR-body retrieval fails closed: an unreadable API, an empty body, a malformed response, a null body and a missing body all fail; the event payload is never used as a substitute; a body edited after the event is read from the live API",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at36_live_pr_body_fails_closed"
+    },
+    "AT-37": {
+      "name": "EC-16/19/20 required-workflow identity: a successful unrelated workflow on the exact head is rejected; a failed or cancelled required workflow, a required workflow on a different SHA, an unverifiable run and a run without a workflow identity are rejected; both required workflows must be satisfied explicitly",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at37_required_workflow_identity"
+    },
+    "AT-38": {
+      "name": "Package manifest semantics: the manifest validates the COMMITTED tree; a staged tree that differs from the commit is rejected, a CRLF working tree against LF blobs still verifies, and a manifest over index bytes is not accepted for the committed tree",
+      "node": "scripts/ci/tests/test_acceptance.py::test_at38_manifest_committed_tree"
     }
   }
 }

@@ -64,7 +64,7 @@ permissions:
 
 jobs:
   acceptance-suite:
-    name: Acceptance suite (AT-01..AT-34)
+    name: Acceptance suite (AT-01..AT-38)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -117,6 +117,9 @@ jobs:
                   data = json.load(resp)
               for run in data.get("workflow_runs", []):
                   runs[str(run["id"])] = {"head_sha": run["head_sha"],
+                                          "head_branch": run.get("head_branch"),
+                                          "event": run.get("event"),
+                                          "workflow_name": run.get("name"),
                                           "conclusion": run["conclusion"]}
               if len(data.get("workflow_runs", [])) < 100:
                   break
@@ -202,6 +205,7 @@ jobs:
                   runs[str(run["id"])] = {"head_sha": run["head_sha"],
                                           "head_branch": run.get("head_branch"),
                                           "event": run.get("event"),
+                                          "workflow_name": run.get("name"),
                                           "conclusion": run["conclusion"]}
               if len(data.get("workflow_runs", [])) < 100:
                   break
@@ -285,38 +289,24 @@ jobs:
         with: { python-version: "3.12" }
       - name: Install test dependencies
         run: pip install pytest pyyaml
-      - name: Write the PR body to a file (the LIVE body, fetched from the API)
-        # Round-24: the event payload carries the body as it was at trigger
-        # time. A body edited AFTER the trigger (the normal two-phase flow:
-        # push the candidate, then declare it) would still be read stale from
-        # the payload. The live body is therefore fetched from the API; the
-        # payload is only a fallback when the API cannot be read (in which
-        # case the exact-head binding below still fails closed).
+      - name: Retrieve the LIVE PR body (fail closed; no event-payload fallback)
+        # Round-25 direction 2: the Round-24 step fell back to the EVENT
+        # PAYLOAD when the API call failed or returned an empty body. That is
+        # fail-open: a stale payload is not proof of the current live
+        # declaration. The retrieval now fails closed -- an unreadable API, a
+        # malformed response, or an absent/empty body stops the job. The
+        # expected head SHA is NEVER derived from the body being checked: it
+        # comes from the pull-request event below.
         env:
-          PR_BODY: ${{ github.event.pull_request.body }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          python3 - <<'PY'
-          import json, os, urllib.request
-          body = os.environ.get("PR_BODY", "")
-          try:
-              req = urllib.request.Request(
-                  "https://api.github.com/repos/%s/pulls/%s"
-                  % (os.environ["GITHUB_REPOSITORY"], os.environ["PR_NUMBER"]),
-                  headers={"Authorization": "Bearer %s" % os.environ["GH_TOKEN"],
-                           "Accept": "application/vnd.github+json"})
-              with urllib.request.urlopen(req, timeout=30) as r:
-                  live = json.load(r).get("body")
-              if live:
-                  body = live
-              else:
-                  print("NOTE: the live PR body is empty; using the event payload")
-          except Exception as e:  # noqa: BLE001
-              print("NOTE: the live PR body could not be fetched (%s); using the event "
-                    "payload (the exact-head binding still applies)" % type(e).__name__)
-          open(os.path.join(os.environ["RUNNER_TEMP"], "pr_body.md"), "w").write(body)
-          PY
+          set -euo pipefail
+          python3 scripts/ci/fetch_pr_body.py \
+            --repo "${{ github.repository }}" \
+            --pr "$PR_NUMBER" \
+            --out "$RUNNER_TEMP/pr_body.md" \
+            --api-token-env GH_TOKEN
       - name: Verify directive fields, claimed SHAs, and EXECUTE the named acceptance tests
         # Round-24 direction 7: the body must declare the EXACT current pull
         # request head and cite a successful run on that same head. The head
@@ -351,6 +341,9 @@ jobs:
                   data = json.load(resp)
               for run in data.get("workflow_runs", []):
                   runs[str(run["id"])] = {"head_sha": run["head_sha"],
+                                          "head_branch": run.get("head_branch"),
+                                          "event": run.get("event"),
+                                          "workflow_name": run.get("name"),
                                           "conclusion": run["conclusion"]}
               if len(data.get("workflow_runs", [])) < 100:
                   break
@@ -385,6 +378,193 @@ jobs:
           python3 scripts/ci/check_declared_base.py \
             --declaration "$RUNNER_TEMP/pr_body.md" \
             --repo-slug "${{ github.repository }}"
+
+  pre-merge-verification:
+    name: EC-24 pre-merge PR/head/review verification
+    # Round-25 direction 5: RESTORED. The Round-23 cycle removed this job
+    # and described the removal as sanctioned; that description is NOT
+    # correct and is superseded by the auditor's Round-25 ruling (register
+    # Part 16): an independent approval must remain a real requirement, and
+    # the fact that the PR author holds the credential does not make the
+    # requirement unsatisfiable -- it makes the approval UNMET. The job is
+    # restored from the verified pre-R23 workflow blob
+    # 44fe653ec4e526725eaea4266dc1807222d3be06.
+    # Round-22 direction 5: a FUNCTIONING pre-merge gate. A post-merge
+    # verifier is not a substitute for checking the CURRENT PR/head/review
+    # state BEFORE the merge executes. This job verifies on every PR event
+    # that (a) the active merge-intent binds the exact candidate and the
+    # declared base is still the live target tip, (b) the PR's head SHA and
+    # source ref match the candidate, its base matches the declared target,
+    # and (c) a FRESH approving review from a non-author reviewer applies to
+    # the EXACT head. The job is EXPECTED TO FAIL while no independent
+    # approval exists on the exact head -- that is the gate functioning, not
+    # a defect; the merge stays blocked until the approval is recorded and
+    # this check re-runs green.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: API canary - authenticated PR/review/event reads must succeed (fail closed)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, sys, urllib.request
+          repo = os.environ["GITHUB_REPOSITORY"]
+          tok = os.environ["GH_TOKEN"]
+          pr = "${{ github.event.pull_request.number }}"
+          def get(url):
+              req = urllib.request.Request(url, headers={
+                  "Authorization": "Bearer %s" % tok,
+                  "Accept": "application/vnd.github+json"})
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  return r.status, r.read()
+          checks = [
+              ("pull request detail", "https://api.github.com/repos/%s/pulls/%s" % (repo, pr)),
+              ("pull request reviews", "https://api.github.com/repos/%s/pulls/%s/reviews?per_page=1" % (repo, pr)),
+              ("repository events", "https://api.github.com/repos/%s/events?per_page=1" % repo),
+          ]
+          failed = False
+          for name, url in checks:
+              try:
+                  status, _ = get(url)
+                  print("canary OK: %s -> HTTP %d" % (name, status))
+              except Exception as e:  # noqa: BLE001
+                  print("canary FAIL: %s -> %s" % (name, type(e).__name__))
+                  failed = True
+          if failed:
+              print("FAIL: the authenticated PR/review/events reads are not available; "
+                    "the pre-merge verification cannot run (fail closed)")
+              sys.exit(1)
+          PY
+      - name: Build the runs manifest from GitHub Actions records
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          runs = {}
+          page = 1
+          while page <= 10:
+              req = urllib.request.Request(
+                  "https://api.github.com/repos/%s/actions/runs?per_page=100&page=%d"
+                  % (os.environ["GITHUB_REPOSITORY"], page),
+                  headers={"Authorization": "Bearer %s" % os.environ["GH_TOKEN"],
+                           "Accept": "application/vnd.github+json"})
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  data = json.load(resp)
+              for run in data.get("workflow_runs", []):
+                  runs[str(run["id"])] = {"head_sha": run["head_sha"],
+                                          "head_branch": run.get("head_branch"),
+                                          "event": run.get("event"),
+                                          "workflow_name": run.get("name"),
+                                          "conclusion": run["conclusion"]}
+              if len(data.get("workflow_runs", [])) < 100:
+                  break
+              page += 1
+          json.dump({"runs": runs}, open("runs_manifest.json", "w"), indent=1)
+          print("runs manifest: %d run record(s)" % len(runs))
+          PY
+      - name: Pre-merge verification of the current PR/head/review state
+        env:
+          BRANCH_UNDER_TEST: ${{ github.head_ref }}
+          EXPECTED_TIP: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if git rev-parse --verify HEAD~1 >/dev/null 2>&1 \
+             && git cat-file -e HEAD~1:docs/evidence/push-log/PUSH_LOG.md 2>/dev/null; then
+            git show HEAD~1:docs/evidence/push-log/PUSH_LOG.md > "$RUNNER_TEMP/pushlog_prev.md"
+            python3 scripts/ci/evidence_sequence_check.py \
+              docs/evidence/push-log/PUSH_LOG.md --pushlog-schema --remote-verify \
+              --branch "$BRANCH_UNDER_TEST" --expect-tip "$EXPECTED_TIP" \
+              --runs-manifest runs_manifest.json \
+              --repo "${{ github.repository }}" --api-token-env GH_TOKEN \
+              --pre-merge-verify --pr-number "$PR_NUMBER" \
+              --parent-prefix "$RUNNER_TEMP/pushlog_prev.md"
+          else
+            python3 scripts/ci/evidence_sequence_check.py \
+              docs/evidence/push-log/PUSH_LOG.md --pushlog-schema --remote-verify \
+              --branch "$BRANCH_UNDER_TEST" --expect-tip "$EXPECTED_TIP" \
+              --runs-manifest runs_manifest.json \
+              --repo "${{ github.repository }}" --api-token-env GH_TOKEN \
+              --pre-merge-verify --pr-number "$PR_NUMBER"
+          fi
+
+  preservation-bundle:
+    name: Branch/PR preservation bundle (reproducible evidence)
+    # Round-25 direction 7: the ref-level restoration and the PR reopening had
+    # been asserted but no VERIFIED preservation bundle had been supplied.
+    # This job builds it from the live repository, publishes it as a CI
+    # artifact and records the bundle digest. The verification job below
+    # re-checks that digest from a fresh checkout.
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Build the preservation bundle from the live repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/preservation_bundle.py \
+            --repo "${{ github.repository }}" \
+            --out-dir "$RUNNER_TEMP/preservation-bundle" \
+            --api-token-env GH_TOKEN
+          echo "BUNDLE_DIR=$RUNNER_TEMP/preservation-bundle" >> "$GITHUB_ENV"
+      - name: Record the bundle digest
+        run: |
+          set -euo pipefail
+          digest="$(sha256sum "$BUNDLE_DIR/SHA256SUMS" | cut -d' ' -f1)"
+          echo "bundle root digest (SHA256SUMS): $digest" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "BUNDLE_DIGEST=$digest" >> "$GITHUB_ENV"
+      - name: Upload the preservation bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: preservation-bundle-${{ github.sha }}
+          path: ${{ runner.temp }}/preservation-bundle
+          retention-days: 90
+
+  preservation-bundle-verify:
+    name: Preservation bundle verification (fresh checkout)
+    # The bundle is downloaded as a CI artifact and its digests are verified
+    # from a FRESH checkout: the recorded SHA256SUMS must match every file it
+    # pins, and the bundle must carry the nine required members.
+    needs: preservation-bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Download the preservation bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: preservation-bundle-${{ github.sha }}
+          path: bundle
+      - name: Verify the bundle from a fresh checkout
+        run: |
+          set -euo pipefail
+          for f in refs.json pull-requests.json unique-commits.json \
+                   branch-diff-matrix.json preservation-matrix.json \
+                   runtime-dependency-map.json pr-evidence.json commands.log \
+                   SHA256SUMS; do
+            if [ ! -f "bundle/$f" ]; then
+              echo "FAIL: the preservation bundle is missing $f"
+              exit 1
+            fi
+          done
+          ( cd bundle && sha256sum -c SHA256SUMS )
+          digest="$(sha256sum bundle/SHA256SUMS | cut -d' ' -f1)"
+          echo "verified preservation bundle digest: $digest" | tee -a "$GITHUB_STEP_SUMMARY"
 
   secret-scan-all-refs:
     name: EC-23 full-history secret scan with controls

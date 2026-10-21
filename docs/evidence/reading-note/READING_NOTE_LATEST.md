@@ -262,3 +262,61 @@ environment (`GH_PAT`); no credential file was created inside any Git working
 tree; no token value appears in any file, log, commit message or evidence
 artifact. A-01 remains ACCEPTED RISK (no rotation reminder, no rotation
 initiation, no credential operations).
+
+## 9. Round-25 cycle - reading record (2026-10-20/21, SERIAL 5)
+
+**Directive series:** the auditor's Round-25 decision (directions 1-8), read
+against the Round-21B directions it carries forward. Register: Part 16
+(auditor-adjudicated). Branch: `repair/round24-claim-head-binding`. **Starting commit:** `2ce77e57194702c2b292fc3f3b28cddd2cff15c9`
+(the PR #37 head; `main` = `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`).
+
+**Constitution read (BEFORE any edit of this cycle, in full, in the mandated
+order: AGENTS.md, constitution.md, ENGINEERING_CONSTITUTION.md,
+docs/coder/BRIEF.md, docs/decisions/OWNER_DECISIONS.md, docs/P0_STATUS.md,
+docs/directives/INDEX.md, docs/evidence/reading-note/READING_NOTE_LATEST.md,
+docs/evidence/push-log/PUSH_LOG.md, docs/evidence/push-log/PUSH_LOG_SCHEMA.md):**
+
+| Document | Blob SHA-1 at the starting commit | Read |
+|---|---|---|
+| `AGENTS.md` | `85767237399ffb30f3e45894d9dfbe6f4240584f` | in full (75 lines) |
+| `constitution.md` | `211ad2c5d4b40059d9f3f03de12e0701f9235bc7` | in full (11 lines; OBS-153, CRIT-154 ACTIVE) |
+| `ENGINEERING_CONSTITUTION.md` | `b6bb35e84956d84a8c9d9e65734c212baf3ed075` | in full (178 lines, EC 1-15 + Final Rule) |
+| `docs/coder/BRIEF.md` | `052a84ca829d321dc0841a4b1c8702145dcbf6b5` | in full (70 lines) |
+| `docs/decisions/OWNER_DECISIONS.md` | `12906bf5997a3e2c6b5c41e5d5c60fee14613274` | in full (Parts 1-14) plus this cycle's Part 15/16 |
+| `docs/P0_STATUS.md` | `a31517abbc046c495930ba19ef7aeaf8bb72f2d0` | in full (sections 1-12) plus this cycle's 13/14 |
+| `docs/directives/INDEX.md` | `244f76eab550951a35305350c76af6ac4ed19b92` | in full (the inventory parsed; 20 required ACTIVE rules) |
+| `docs/evidence/reading-note/READING_NOTE_LATEST.md` | current at `2ce77e57194702c2b292fc3f3b28cddd2cff15c9` | in full (the Round-23 and Round-24 records) |
+| `docs/evidence/push-log/PUSH_LOG.md` | current at `2ce77e57194702c2b292fc3f3b28cddd2cff15c9` | in full (P-001..P-083-INTENT) |
+| `docs/evidence/push-log/PUSH_LOG_SCHEMA.md` | `83aa798b7a9731e63be2a9664e502b7631a42674` | in full (schema v5) |
+
+**Rule mapping for this cycle (EC-26; the inventory in INDEX.md is
+normative):**
+
+| Rule ID | Anchor | Enforcement point(s) | Acceptance test(s) |
+|---|---|---|---|
+| EC-16 | claimed-SHA verification bound to the exact candidate and to the required workflow | script:scripts/ci/verify_claimed_shas.py; script:scripts/ci/fetch_pr_body.py; workflow:.github/workflows/governance-acceptance.yml#claim-verification~events=pull_request | AT-01, AT-12, AT-35, AT-36, AT-37 |
+| EC-19 | the PR-body declaration is read LIVE and fails closed | script:scripts/ci/fetch_pr_body.py; workflow:.github/workflows/governance-acceptance.yml#claim-verification~events=pull_request | AT-01, AT-07, AT-35, AT-36 |
+| EC-20 | the named acceptance tests are EXECUTED on the candidate | script:scripts/ci/verify_claimed_shas.py | AT-09, AT-18, AT-35, AT-36 |
+| EC-17 | push on completion; the log is append-only; the preservation bundle is machine-verifiable | script:scripts/ci/evidence_sequence_check.py; script:scripts/ci/preservation_bundle.py; workflow:.github/workflows/governance-acceptance.yml#push-log-integrity; workflow:.github/workflows/governance-acceptance.yml#preservation-bundle | AT-13, AT-20, AT-24, AT-26, AT-27, AT-28, AT-31, AT-32, AT-33 |
+| EC-24 | the merge transition is proved BEFORE the merge, on the exact head | workflow:.github/workflows/governance-acceptance.yml#pre-merge-verification~events=pull_request; script:scripts/ci/evidence_sequence_check.py | AT-28, AT-31, AT-32, AT-33 |
+| EC-A2 | the pre-coding protocol (constitutions first) | script:scripts/ci/reading_note_map_check.py; this reading record | AT-06, AT-08, AT-34 |
+| EC-A12 | definition of done ("not run" is never "passed") | script:scripts/ci/status_vocabulary_lint.py | AT-04, AT-11, AT-19 |
+| EC-A14 | required task artifacts (the machine-readable, committed artifact set) | script:scripts/ci/manifest_check.py; workflow:.github/workflows/governance-acceptance.yml#preservation-bundle-verify | AT-38 |
+
+**What this cycle changed:** `scripts/ci/fetch_pr_body.py` (new, fail-closed
+live body), `scripts/ci/verify_claimed_shas.py` (required-workflow identity),
+`scripts/ci/manifest_check.py` (committed-tree semantics), `scripts/ci/
+preservation_bundle.py` (new), `scripts/ci/tests/test_acceptance.py` (AT-36,
+AT-37, AT-38, the AT-16 count), `scripts/ci/tests/ACCEPTANCE_TESTS.json`,
+`.github/workflows/governance-acceptance.yml` (the fail-closed body step, the
+run identity in the manifest, the restored pre-merge job, the preservation
+bundle jobs, the corrected job label), `docs/directives/INDEX.md`, the push
+log, register Part 16, P0_STATUS section 14, this record, the receipt, and the
+regenerated evidence table and manifest.
+
+**Disclosed, not smoothed over:** PR #30's merge did not pass this
+repository's own merge gate (only a bot COMMENTED review; Governance
+Acceptance run 39504181997 FAILED). The recovery PR has no approval either,
+so the restored pre-merge gate is RED - the gate functioning, and the
+approval is the auditor/owner's to grant. No approval was invented and no
+gate was weakened. The mainline governance issue stays OPEN.

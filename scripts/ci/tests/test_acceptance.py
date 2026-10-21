@@ -649,8 +649,8 @@ def test_at16_inventory_counts():
         "verify-claimed-shas.yml"}, str(ymls))
     checkers = sorted(f for f in os.listdir(CI)
                       if f.endswith(".py") and os.path.isfile(os.path.join(CI, f)))
-    check("AT-16", "eleven checker scripts exist",
-          len(checkers) == 11, str(checkers))
+    check("AT-16", "thirteen checker scripts exist",
+          len(checkers) == 13, str(checkers))
     reg = json.load(open(os.path.join(HERE, "ACCEPTANCE_TESTS.json")))["tests"]
     idx = open(os.path.join(REPO, "docs", "directives", "INDEX.md")).read()
     idx_ats = set(re.findall(r"AT-\d+", idx))
@@ -662,8 +662,8 @@ def test_at16_inventory_counts():
     check("AT-16", "registry node IDs all exist in the test source",
           nodes <= fns, str(nodes - fns))
     receipt = open(os.path.join(REPO, "docs", "evidence", "ec16-ec26", "RECEIPT.md")).read()
-    check("AT-16", "receipt carries the corrected counts (7 workflows / 11 checkers)",
-          "7 workflow" in receipt and "11 checker" in receipt, "correction entry missing")
+    check("AT-16", "receipt carries the corrected counts (7 workflows / 13 checkers)",
+          "7 workflow" in receipt and "13 checker" in receipt, "correction entry missing")
 
 
 # ------------------------------------------------- AT-18 (EC-20 scoped collection, Round-19)
@@ -2934,24 +2934,34 @@ def test_at35_claim_exact_head_binding():
         args += list(extra)
         return run("verify_claimed_shas.py", *args)
 
-    man_ok = tmpfile(json.dumps({"runs": {"555555": {"head_sha": head,
-                                                     "conclusion": "success",
-                                                     "event": "push"}}}), ".json")
-    man_stale = tmpfile(json.dumps({"runs": {"666666": {"head_sha": stale,
-                                                        "conclusion": "success",
-                                                        "event": "push"}}}), ".json")
+    # The manifests carry the workflow identity as well (Round-25 direction 3:
+    # a successful run only counts when it is one of the REQUIRED workflows);
+    # the identity rules themselves are exercised by AT-37.
+    man_ok = tmpfile(json.dumps({"runs": {
+        "555555": {"head_sha": head, "conclusion": "success", "event": "push",
+                   "workflow_name": "Toscanini Stability Gate"},
+        "555556": {"head_sha": head, "conclusion": "success", "event": "push",
+                   "workflow_name": "Governance Acceptance"}}}), ".json")
+    man_stale = tmpfile(json.dumps({"runs": {
+        "666666": {"head_sha": stale, "conclusion": "success", "event": "push",
+                   "workflow_name": "Toscanini Stability Gate"},
+        "666667": {"head_sha": stale, "conclusion": "success", "event": "push",
+                   "workflow_name": "Governance Acceptance"}}}), ".json")
 
     # 1. the body declares the exact head and cites a successful run on it -> PASS
-    r = check_body(body(head, "RUN_PASS(run_id=555555, sha=%s)" % head), head, man_ok)
+    r = check_body(body(head, "RUN_PASS(run_id=555555, sha=%s)\nStatus-summary: "
+                        "RUN_PASS(run_id=555556, sha=%s)" % (head, head)), head, man_ok)
     check("AT-35", "a body that declares the exact head and cites a same-head successful run passes",
           r.returncode == 0, r.stdout + r.stderr)
     # 2. the body declares only a STALE (but real) SHA -> FAIL
-    r = check_body(body(stale, "RUN_PASS(run_id=666666, sha=%s)" % stale), head, man_stale)
+    r = check_body(body(stale, "RUN_PASS(run_id=666666, sha=%s)\nStatus-summary: "
+                        "RUN_PASS(run_id=666667, sha=%s)" % (stale, stale)), head, man_stale)
     check("AT-35", "a body that declares only a stale SHA fails (the exact head must be declared)",
           r.returncode == 1 and "does not declare the exact current pull-request head" in r.stdout,
           r.stdout)
     # 3. the body declares the head but cites a run on another commit -> FAIL
-    r = check_body(body(head, "RUN_PASS(run_id=666666, sha=%s)" % stale), head, man_stale)
+    r = check_body(body(head, "RUN_PASS(run_id=666666, sha=%s)\nStatus-summary: "
+                        "RUN_PASS(run_id=555556, sha=%s)" % (stale, head)), head, man_stale)
     check("AT-35", "a real but stale run id is not evidence for the current head",
           r.returncode == 1 and "cites no successful run on the exact current head" in r.stdout,
           r.stdout)
@@ -2961,14 +2971,18 @@ def test_at35_claim_exact_head_binding():
           r.returncode == 1 and "cites no successful run on the exact current head" in r.stdout,
           r.stdout)
     # 5. the cited run exists but did not succeed -> FAIL
-    man_fail = tmpfile(json.dumps({"runs": {"555555": {"head_sha": head,
-                                                        "conclusion": "failure",
-                                                        "event": "push"}}}), ".json")
-    r = check_body(body(head, "RUN_PASS(run_id=555555, sha=%s)" % head), head, man_fail)
+    man_fail = tmpfile(json.dumps({"runs": {
+        "555555": {"head_sha": head, "conclusion": "failure", "event": "push",
+                   "workflow_name": "Toscanini Stability Gate"},
+        "555556": {"head_sha": head, "conclusion": "success", "event": "push",
+                   "workflow_name": "Governance Acceptance"}}}), ".json")
+    r = check_body(body(head, "RUN_PASS(run_id=555555, sha=%s)\nStatus-summary: "
+                        "RUN_PASS(run_id=555556, sha=%s)" % (head, head)), head, man_fail)
     check("AT-35", "a failed run on the exact head does not satisfy the claim gate",
           r.returncode == 1 and "not success" in r.stdout, r.stdout)
     # 6. the cited run is not in the manifest -> FAIL (unverifiable)
-    r = check_body(body(head, "RUN_PASS(run_id=999999, sha=%s)" % head), head, man_ok)
+    r = check_body(body(head, "RUN_PASS(run_id=999999, sha=%s)\nStatus-summary: "
+                        "RUN_PASS(run_id=555556, sha=%s)" % (head, head)), head, man_ok)
     check("AT-35", "an unverifiable cited run fails closed",
           r.returncode == 1 and "not in the runs manifest" in r.stdout, r.stdout)
     # 7. without --expect-head-sha the gate keeps its previous behaviour (the
@@ -2978,3 +2992,276 @@ def test_at35_claim_exact_head_binding():
     r = run("verify_claimed_shas.py", "--body", p, "--local")
     check("AT-35", "without --expect-head-sha the legacy behaviour is unchanged",
           r.returncode == 0, r.stdout + r.stderr)
+
+
+# ------------------- AT-36 (live PR-body retrieval fails closed, Round-25)
+
+def test_at36_live_pr_body_fails_closed():
+    """Round-25 direction 2: the live PR body must be RETRIEVED from the
+    authenticated API and verified. The event payload is NOT a substitute: an
+    unreadable API, an empty body, a malformed response or a body changed
+    after the event must never be accepted through the payload."""
+    import subprocess as sp
+    d = tempfile.mkdtemp()
+    body_file = os.path.join(d, "pr_body.md")
+
+    def fetch(*args, env=None):
+        e = dict(os.environ)
+        e.pop("GH_TOKEN", None)
+        e.pop("GITHUB_TOKEN", None)
+        if env:
+            e.update(env)
+        return sp.run([PY, os.path.join(CI, "fetch_pr_body.py"), "--repo", "owner/name",
+                       "--pr", "37", "--out", body_file, *args],
+                      capture_output=True, text=True, env=e, shell=False)
+
+    # 1. a well-formed live body is retrieved and written
+    ok = tmpfile(json.dumps({"number": 37, "body": "Directive-ID: X\nStatus-summary: PUSHED\n"}),
+                 ".json")
+    r = fetch("--api-json", ok)
+    check("AT-36", "a well-formed live body is retrieved and written",
+          r.returncode == 0 and "live PR body retrieved" in r.stdout, r.stdout + r.stderr)
+    check("AT-36", "the retrieved body is the LIVE body",
+          "Directive-ID: X" in open(body_file, encoding="utf-8").read(), "body mismatch")
+    # 2. an unreadable API fails closed
+    r = fetch("--api-json", "null")
+    check("AT-36", "an unreadable API fails closed (no event-payload substitute)",
+          r.returncode == 1 and "could not be retrieved" in r.stdout, r.stdout)
+    check("AT-36", "the failure message never carries the token",
+          "ghp_" not in r.stdout and "GITHUB_TOKEN" not in r.stdout, r.stdout)
+    # 3. an EMPTY live body fails closed
+    empty = tmpfile(json.dumps({"number": 37, "body": ""}), ".json")
+    r = fetch("--api-json", empty)
+    check("AT-36", "an empty live body fails closed",
+          r.returncode == 1 and "empty" in r.stdout, r.stdout)
+    # 4. a MALFORMED API response fails closed
+    malformed = tmpfile(json.dumps({"number": 37, "body": {"not": "a string"}}), ".json")
+    r = fetch("--api-json", malformed)
+    check("AT-36", "a malformed live body fails closed",
+          r.returncode == 1 and "not a string" in r.stdout, r.stdout)
+    none_body = tmpfile(json.dumps({"number": 37, "body": None}), ".json")
+    r = fetch("--api-json", none_body)
+    check("AT-36", "a null live body fails closed",
+          r.returncode == 1 and "null" in r.stdout, r.stdout)
+    missing = tmpfile(json.dumps({"number": 37}), ".json")
+    r = fetch("--api-json", missing)
+    check("AT-36", "a live body that is absent from the response fails closed",
+          r.returncode == 1 and "no body field" in r.stdout, r.stdout)
+    not_object = tmpfile(json.dumps([1, 2, 3]), ".json")
+    r = fetch("--api-json", not_object)
+    check("AT-36", "a response that is not a pull-request object fails closed",
+          r.returncode == 1 and "not a pull-request object" in r.stdout, r.stdout)
+    # 5. NO token at all -> fail closed (the live body cannot be read)
+    r = fetch()
+    check("AT-36", "without a token the live body cannot be read and the gate fails closed",
+          r.returncode == 1 and "no API token" in r.stdout, r.stdout)
+    # 6. the workflow must NOT contain an event-payload fallback
+    wf = open(os.path.join(REPO, ".github", "workflows", "governance-acceptance.yml"),
+              encoding="utf-8").read()
+    body_steps = wf[wf.find("claim-verification:"):wf.find("declared-base:")]
+    check("AT-36", "the claim-verification job no longer falls back to the event payload",
+          "github.event.pull_request.body" not in body_steps
+          and "fetch_pr_body.py" in body_steps, "fallback still present")
+    # 7. a body changed after the event was created is picked up (the live body
+    #    is authoritative): the retrieval is by API, never by the payload
+    changed = tmpfile(json.dumps({"number": 37, "body": "Status-summary: EDITED-AFTER-EVENT\n"}),
+                      ".json")
+    r = fetch("--api-json", changed)
+    check("AT-36", "a body edited after the event is read from the live API",
+          r.returncode == 0 and "EDITED-AFTER-EVENT" in open(body_file, encoding="utf-8").read(),
+          r.stdout)
+
+
+# ------------------- AT-37 (required-workflow identity, Round-25)
+
+def test_at37_required_workflow_identity():
+    """Round-25 direction 3: the required-check evidence must identify the
+    REQUIRED WORKFLOW. A successful unrelated workflow on the right commit is
+    not required-check evidence; a failed/cancelled required workflow, a
+    required workflow on a different SHA, and an unverifiable run all fail
+    closed; each required workflow must be satisfied explicitly."""
+    head = rev(["rev-parse", "HEAD"])
+    other = rev(["rev-parse", "HEAD~1"])
+    d = tempfile.mkdtemp()
+
+    def body(status_line, sha_field=head):
+        return ("Directive-ID: EC-16/19/20\n"
+                "Closes-items: EC-16, EC-19, EC-20\n"
+                "Base-SHA: " + "0" * 40 + "\n"
+                "Claimed-SHAs: " + sha_field + "\n"
+                "Acceptance-Tests: scripts/ci/tests/test_acceptance.py\n"
+                "Status-summary: " + status_line + "\n")
+
+    def check_body(text, manifest, expect_head=head, extra=()):
+        p = os.path.join(d, "body.md")
+        open(p, "w", newline="").write(text)
+        return run("verify_claimed_shas.py", "--body", p, "--expect-head-sha", expect_head,
+                   "--local", "--runs-manifest", manifest, *extra)
+
+    def manifest(records):
+        return tmpfile(json.dumps({"runs": records}), ".json")
+
+    gate = "Toscanini Stability Gate"
+    gov = "Governance Acceptance"
+    both_ok = {"111111": {"head_sha": head, "head_branch": "b", "event": "push",
+                           "workflow_name": gate, "conclusion": "success"},
+               "222222": {"head_sha": head, "head_branch": "b", "event": "push",
+                          "workflow_name": gov, "conclusion": "success"}}
+    # 1. both required workflows cited and successful -> PASS
+    r = check_body(body("RUN_PASS(run_id=111111, sha=%s)\nStatus-summary: "
+                        "RUN_PASS(run_id=222222, sha=%s)" % (head, head)),
+                   manifest(both_ok))
+    check("AT-37", "both required workflows cited on the exact head pass",
+          r.returncode == 0, r.stdout + r.stderr)
+    # 2. a successful UNRELATED workflow on the right SHA is rejected
+    unrelated = dict(both_ok)
+    unrelated["333333"] = {"head_sha": head, "head_branch": "b", "event": "push",
+                           "workflow_name": "Some Other Workflow", "conclusion": "success"}
+    r = check_body(body("RUN_PASS(run_id=333333, sha=%s)" % head), manifest(unrelated))
+    check("AT-37", "a successful unrelated workflow does not satisfy the required evidence",
+          r.returncode == 1 and "not one of the required workflows" in r.stdout, r.stdout)
+    # 3. only ONE required workflow cited -> the other is missing -> FAIL
+    r = check_body(body("RUN_PASS(run_id=111111, sha=%s)" % head), manifest(both_ok))
+    check("AT-37", "a missing required workflow fails closed",
+          r.returncode == 1 and "no successful run of the required workflow" in r.stdout, r.stdout)
+    # 4. a FAILED required workflow is rejected
+    failed = {"111111": {"head_sha": head, "head_branch": "b", "event": "push",
+                         "workflow_name": gate, "conclusion": "failure"},
+              "222222": {"head_sha": head, "head_branch": "b", "event": "push",
+                         "workflow_name": gov, "conclusion": "success"}}
+    r = check_body(body("RUN_PASS(run_id=111111, sha=%s)\nStatus-summary: "
+                        "RUN_PASS(run_id=222222, sha=%s)" % (head, head)), manifest(failed))
+    check("AT-37", "a failed required workflow is rejected",
+          r.returncode == 1 and "not success" in r.stdout, r.stdout)
+    # 5. a CANCELLED required workflow is rejected
+    cancelled = {"111111": {"head_sha": head, "head_branch": "b", "event": "push",
+                            "workflow_name": gate, "conclusion": "cancelled"},
+                 "222222": {"head_sha": head, "head_branch": "b", "event": "push",
+                            "workflow_name": gov, "conclusion": "success"}}
+    r = check_body(body("RUN_PASS(run_id=111111, sha=%s)\nStatus-summary: "
+                        "RUN_PASS(run_id=222222, sha=%s)" % (head, head)),
+                   manifest(cancelled))
+    check("AT-37", "a cancelled required workflow is rejected",
+          r.returncode == 1 and "not success" in r.stdout, r.stdout)
+    # 6. a required workflow run for a DIFFERENT SHA is rejected
+    wrong_sha = {"111111": {"head_sha": other, "head_branch": "b", "event": "push",
+                            "workflow_name": gate, "conclusion": "success"},
+                 "222222": {"head_sha": head, "head_branch": "b", "event": "push",
+                            "workflow_name": gov, "conclusion": "success"}}
+    r = check_body(body("RUN_PASS(run_id=111111, sha=%s)\nStatus-summary: "
+                        "RUN_PASS(run_id=222222, sha=%s)" % (head, head)),
+                   manifest(wrong_sha))
+    check("AT-37", "a required workflow run for a different SHA is rejected",
+          r.returncode == 1 and "wrong commit" in r.stdout, r.stdout)
+    # 7. a MISSING / unverifiable run fails closed
+    r = check_body(body("RUN_PASS(run_id=999999, sha=%s)\nStatus-summary: "
+                        "RUN_PASS(run_id=222222, sha=%s)" % (head, head)), manifest(both_ok))
+    check("AT-37", "a run that cannot be verified fails closed",
+          r.returncode == 1 and "not in the runs manifest" in r.stdout, r.stdout)
+    # 8. a run record WITHOUT a workflow identity cannot be required evidence
+    anon = {"111111": {"head_sha": head, "head_branch": "b", "event": "push",
+                       "conclusion": "success"},
+            "222222": {"head_sha": head, "head_branch": "b", "event": "push",
+                       "workflow_name": gov, "conclusion": "success"}}
+    r = check_body(body("RUN_PASS(run_id=111111, sha=%s)\nStatus-summary: "
+                        "RUN_PASS(run_id=222222, sha=%s)" % (head, head)), manifest(anon))
+    check("AT-37", "a run without a workflow identity cannot be required evidence",
+          r.returncode == 1 and "workflow identity is unknown" in r.stdout, r.stdout)
+    # 9. the two required workflows are named EXPLICITLY, not inferred
+    src = open(os.path.join(CI, "verify_claimed_shas.py"), encoding="utf-8").read()
+    check("AT-37", "the required workflows are identified explicitly in the checker",
+          "Toscanini Stability Gate" in src and "Governance Acceptance" in src
+          and "DEFAULT_REQUIRED_WORKFLOWS" in src, "required workflows not named")
+
+
+# ------------------- AT-38 (manifest validates the committed tree, Round-25)
+
+def test_at38_manifest_committed_tree():
+    """Round-25 direction 4: the manifest validates the COMMITTED tree. A staged
+    tree must never be reported as the committed artifact; a checkout whose
+    line endings differ from the stored blobs must still verify."""
+    import subprocess as sp
+    d = tempfile.mkdtemp()
+    repo = os.path.join(d, "repo")
+    os.makedirs(os.path.join(repo, "scripts", "ci"), exist_ok=True)
+    os.makedirs(os.path.join(repo, "docs", "evidence", "reading-note"), exist_ok=True)
+    f1 = os.path.join(repo, "scripts", "ci", "a.py")
+    f2 = os.path.join(repo, "docs", "evidence", "reading-note", "note.md")
+    open(f1, "w", newline="").write("print('a')\n")
+    open(f2, "w", newline="").write("note\n")
+    sp.run(["git", "-C", repo, "init", "-q"], check=True)
+    sp.run(["git", "-C", repo, "config", "user.email", "t@t"], check=True)
+    sp.run(["git", "-C", repo, "config", "user.name", "t"], check=True)
+    sp.run(["git", "-C", repo, "add", "-A"], check=True)
+    sp.run(["git", "-C", repo, "commit", "-q", "-m", "base"], check=True)
+
+    def manifest_over(rev="HEAD"):
+        """A manifest over the COMMITTED bytes of `rev` (HEAD:path)."""
+        import hashlib
+        paths = ["docs/evidence/reading-note/note.md", "scripts/ci/a.py"]
+        lines = []
+        for rel in paths:
+            blob = sp.run(["git", "-C", repo, "cat-file", "blob", f"{rev}:{rel}"],
+                          capture_output=True).stdout
+            lines.append(f"{hashlib.sha256(blob).hexdigest()}  {rel}")
+        return "\n".join(lines) + "\n"
+
+    def manifest_over_index():
+        """A manifest over the INDEX bytes (git cat-file blob :path)."""
+        import hashlib
+        paths = ["docs/evidence/reading-note/note.md", "scripts/ci/a.py"]
+        lines = []
+        for rel in paths:
+            blob = sp.run(["git", "-C", repo, "cat-file", "blob", ":" + rel],
+                          capture_output=True).stdout
+            lines.append(f"{hashlib.sha256(blob).hexdigest()}  {rel}")
+        return "\n".join(lines) + "\n"
+
+    def write_manifest(text):
+        p = os.path.join(repo, "SHA256SUMS")
+        open(p, "w", newline="").write(text)
+        return p
+
+    def chk():
+        return run("manifest_check.py", "--repo-root", repo,
+                   "--manifest", os.path.join(repo, "SHA256SUMS"))
+
+    # 1. the manifest over the committed tree verifies
+    write_manifest(manifest_over())
+    r = chk()
+    check("AT-38", "a manifest over the committed tree verifies",
+          r.returncode == 0, r.stdout + r.stderr)
+    # 2. a CRLF working tree (the blob stays LF) still verifies -- the check
+    #    is about the committed artifact, not the materialised checkout
+    open(f1, "w", newline="").write("print('a')\r\n")
+    r = chk()
+    check("AT-38", "a CRLF working tree against LF blobs still verifies",
+          r.returncode == 0, r.stdout + r.stderr)
+    # 3. a STAGED change (index != HEAD) is REJECTED, even though the staged
+    #    bytes are exactly what the manifest pins
+    open(f1, "w", newline="").write("print('staged')\n")
+    sp.run(["git", "-C", repo, "add", "-A"], check=True)
+    write_manifest(manifest_over_index())
+    r = chk()
+    check("AT-38", "a staged tree that differs from the commit is rejected",
+          r.returncode == 1 and "index differs from the commit under validation" in r.stdout,
+          r.stdout)
+    # 4. after committing, the manifest over the (now committed) index bytes
+    #    verifies against the new HEAD
+    sp.run(["git", "-C", repo, "commit", "-q", "-m", "staged change"], check=True)
+    r = chk()
+    check("AT-38", "the same manifest verifies once the staged tree is committed",
+          r.returncode == 0, r.stdout + r.stderr)
+    # 5. a manifest over the PREVIOUS commit's bytes is stale for the new HEAD
+    write_manifest(manifest_over("HEAD~1"))
+    r = chk()
+    check("AT-38", "a manifest over the previous commit's bytes is rejected for the new commit",
+          r.returncode == 1 and "digest mismatch" in r.stdout, r.stdout)
+    # 6. a manifest over the index bytes of a DIFFERENT staged tree is not
+    #    accepted for the committed tree
+    open(f1, "w", newline="").write("print('again')\n")
+    sp.run(["git", "-C", repo, "add", "-A"], check=True)
+    write_manifest(manifest_over_index())
+    r = chk()
+    check("AT-38", "a manifest over the index bytes is not accepted for the committed tree",
+          r.returncode == 1, r.stdout + r.stderr)
