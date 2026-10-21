@@ -320,3 +320,59 @@ Acceptance run 39504181997 FAILED). The recovery PR has no approval either,
 so the restored pre-merge gate is RED - the gate functioning, and the
 approval is the auditor/owner's to grant. No approval was invented and no
 gate was weakened. The mainline governance issue stays OPEN.
+
+## 10. Round-25 verification round - reading record (2026-10-21T09:55:34Z)
+
+**Directive series:** the auditor's Round-25 verification round (directions
+1-9, decisions D-U1..D-U7). Register: Part 16.9. Branch: `repair/round24-claim-head-binding`.
+**Starting commit:** `bc6fdb5d92a237d421570d1a462199e4cdcabf28` (the PR #37 head); `main` = `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`.
+
+**Constitution read (in full, before any action of this round; the two
+governing files were re-opened and re-read in the order AGENTS.md,
+constitution.md, ENGINEERING_CONSTITUTION.md, ...):**
+
+| Document | Blob SHA-1 | Verified | Read window (UTC) |
+|---|---|---|---|
+| `constitution.md` | `211ad2c5d4b40059d9f3f03de12e0701f9235bc7` | re-hashed from the starting commit with `git rev-parse` | read in full (11 lines; OBS-153 contact-density standard and CRIT-154 warhead-RMSD/steric-clash veto, both ACTIVE) |
+| `ENGINEERING_CONSTITUTION.md` | `b6bb35e84956d84a8c9d9e65734c212baf3ed075` | re-hashed from the starting commit with `git rev-parse` | read in full (178 lines, EC 1-15 + Final Rule) |
+
+The rules this round enforces: EC 1 (a preflight attestation is not proof - the
+checks must enforce the invariant), EC 3 (fail closed; manage secrets
+correctly), EC 6/12 (evidence or it did not happen; "not run" is never
+"passed"), EC 7 (required checks on the exact candidate; a check on a different
+SHA is not evidence), EC 11 (incidents: contain, preserve evidence, remediate,
+prevent regression - never erase audit evidence), EC 12 (the definition of
+done), EC 13 (no gate weakening, no invented evidence, no merging a commit
+that did not pass the required checks).
+
+**What this round did (and did not do):**
+
+1. The gate diff from the verified pre-R23 blob is produced and saved
+   (`evidence/r25/gate-diff.txt`), with the per-job statement for every
+   pre-R23 job, and the D-U2 restore is applied: the file is rebuilt as the
+   pre-R23 blob with only the intended Round-24/Round-25 additions
+   (`evidence/r25/gate-diff-after-restore.txt`). The R25 report wording is
+   corrected in register 16.9.
+2. The PR facts for #37 and #38 (author login, head SHA, state) are recorded
+   in a NEW incident note
+   (`docs/evidence/push-log/INCIDENT-2026-10-21-R25-PR-IDENTITY.md`); no old
+   incident identifier is reused.
+3. The containment check was run and it FAILED: `781175d18f94b65ee09635f2e4f38bf67d545b45` is not an ancestor of
+   `bc6fdb5d92a237d421570d1a462199e4cdcabf28` (the branches are siblings from `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`), and the two push logs
+   are mutually exclusive. Per the direction, this round STOPS there: PR #38 is
+   not closed, no branch is deleted, no archive tag is created, and the merge
+   is not attempted (the owner action O-1 - an independent collaborator's
+   approval on the exact head - has not happened, and the restored pre-merge
+   gate is red for exactly that reason).
+4. The scientific/production hard stop is untouched; no product, deployment,
+   threshold, cohort or law-semantic work was started.
+
+**Rule mapping for this round (EC-26; the inventory in INDEX.md is normative):**
+
+| Rule ID | Anchor | Enforcement point(s) | Acceptance test(s) |
+|---|---|---|---|
+| EC-17 | push on completion; the log is append-only; the preservation bundle is machine-verifiable | script:scripts/ci/evidence_sequence_check.py; script:scripts/ci/preservation_bundle.py; workflow:.github/workflows/governance-acceptance.yml#push-log-integrity; workflow:.github/workflows/governance-acceptance.yml#preservation-bundle | AT-13, AT-20, AT-24, AT-26, AT-27, AT-28, AT-31, AT-32, AT-33 |
+| EC-24 | the merge transition is proved BEFORE the merge, on the exact head | workflow:.github/workflows/governance-acceptance.yml#pre-merge-verification~events=pull_request; script:scripts/ci/evidence_sequence_check.py | AT-28, AT-31, AT-32, AT-33 |
+| EC-A11 | incident discipline: contain, preserve the evidence, remediate, prevent recurrence | docs/evidence/push-log/INCIDENT-2026-10-21-R25-PR-IDENTITY.md; docs/evidence/push-log/INCIDENT-2026-10-20-P015-COLLISION.md | NONE |
+| EC-A12 | definition of done ("not run" is never "passed") | script:scripts/ci/status_vocabulary_lint.py | AT-04, AT-11, AT-19 |
+| EC-A13 | no gate weakening, no invented evidence | workflow:.github/workflows/governance-acceptance.yml#pre-merge-verification | AT-33 |

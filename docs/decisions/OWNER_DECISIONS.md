@@ -1100,3 +1100,66 @@ secrets remain OPEN. PRs #31-#36 revalidate serially against the resulting
 `main` (EC-21 is not waived) and PRs #23-#29 close only on proven
 unique-content coverage. No branch is pruned and no pull request is closed
 until the unique-content audit supports it.
+
+### 16.9 Round-25 verification round: the gate blob, the PR facts and the
+containment check that did not hold (correction to 16.2/16.4)
+
+**Correction of the wording in 16.2(4) and 16.4.** Those paragraphs said that
+the pre-merge gate was "restored from the verified pre-R23 workflow blob
+`44fe653ec4e526725eaea4266dc1807222d3be06`". That is correct for the JOB -
+the `pre-merge-verification` job body is the pre-R23 job - but it could be
+read as a claim about the FILE. The FILE on the R25 branch was blob
+`5663147e64ca05df6edbccfdd79235e9d0347091`: the pre-R23 job bodies with the
+Round-24/Round-25 additions, but carrying the Round-23-era header (the
+"the pre-merge-verification job is removed" narrative) because the file had
+been derived from the R23/R24 lineage rather than from the pre-R23 blob. The
+auditor's D-U2 requires the pre-R23 content to be restored and only the
+intended additions re-applied, so the file has been REBUILT as the pre-R23 blob
+plus the intended additions, and the exact diffs are recorded:
+
+- `evidence/r25/gate-diff.txt` - the prescribed comparison
+  (`git diff 44fe653e 5663147e -- .github/workflows/governance-acceptance.yml`)
+  with the per-job statement ("unchanged" or the exact change) for every
+  pre-R23 job;
+- `evidence/r25/gate-diff-after-restore.txt` - the same comparison against the
+  rebuilt file, with the per-job statement.
+
+Per-job result of the prescribed comparison: `reading-note-inventory`,
+`ec25-trigger-lint`, `package-integrity`, `declared-base` and
+`secret-scan-all-refs` are unchanged; `acceptance-suite` (the displayed
+label), `status-vocabulary`, `push-log-integrity`, `claim-verification` and
+`pre-merge-verification` (the runs-manifest run identity, the fail-closed live
+body retrieval, the explicit `--expect-head-sha` and the restoration comment)
+carry ONLY the intended Round-24/Round-25 additions; the two
+`preservation-bundle` jobs are ADDED; no pre-R23 job was removed.
+
+**PR facts (auditor direction 3), recorded in
+`docs/evidence/push-log/INCIDENT-2026-10-21-R25-PR-IDENTITY.md`:** PR #37 and
+PR #38 were BOTH opened by `prateekm1007` (the credential holder, and therefore
+the author of both), against `main` @ `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`; #37's head is
+`repair/round24-claim-head-binding` @ `bc6fdb5d92a237d421570d1a462199e4cdcabf28`, #38's head is `repair/r23-governance-recovery` @ `781175d18f94b65ee09635f2e4f38bf67d545b45`;
+both are OPEN and unmerged.
+
+**The containment check did NOT hold (auditor direction 4).**
+`git merge-base --is-ancestor 781175d18f94b65ee09635f2e4f38bf67d545b45 bc6fdb5d92a237d421570d1a462199e4cdcabf28` returns 1: the two recovery
+branches are SIBLINGS that diverge from the same merge base (`main` @
+`63da0e347002ed9b77071ff1ed0cefda7c0ce88a`), and neither is an ancestor of the other. The two push logs are also
+mutually exclusive - both branches use the P-082..P-086 identifier space for
+different branches, so the published log could not carry both without
+duplicate ENTRY-IDs. PR #38's side additionally carries content the R25 head
+does not (a different bundle generator with patch-id unique-commit records and
+a fail-closed API-read behaviour, the R23 governance-bypass incident note, a
+different P-081 reconciliation and a different manifest row), and the R25 head
+carries content PR #38 does not (the fail-closed live PR-body retrieval, the
+required-workflow identity, the committed-tree manifest, the bundle CI jobs
+and AT-36/AT-37/AT-38).
+
+Accordingly the direction's own condition applies: PR #38 is NOT closed, its
+branch is NOT deleted, and no archive tag is created, because the closure step
+is conditioned on the containment check passing and the archive tag belongs to
+that closure. The mainline governance issue (the unverified PR #30 merge) and
+the owner action O-1 (an independent collaborator's approval of PR #37 on the
+exact head) both remain OPEN. The auditor's decision on which of the two
+recovery heads becomes the recovery line - and therefore on whether PR #38's
+outstanding content is ported into the R25 head or is accepted as superseded -
+is recorded in the incident note and is not decided here.

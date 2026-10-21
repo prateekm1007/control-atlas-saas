@@ -541,3 +541,52 @@ waived) and PRs #23-#29 close only on proven unique-content coverage. The
 scientific hard stop is preserved in full: no production deployment, no v25
 calibration, no held-out evaluation, no threshold or cohort changes, no
 law-semantic changes, no golden-artifact regeneration.
+
+## 15. Round-25 verification round (gate diff, PR facts, the containment STOP)
+
+**Auditor ruling:** PR #37 is not approved for merge; the live-body fallback,
+the claimed-CI-evidence validation, the manifest semantics and the missing
+pre-merge gate were the blockers. Decisions: one recovery PR (D-U1), the gate
+file (D-U2), no self-approval (D-U3), close the stale PRs (D-U4), close the
+stale actions (D-U5), defer the r2 archive and the cohort table (D-U6), and
+the PAT stays in-shell only (D-U7). Owner action O-1: an independent
+collaborator must approve PR #37 on the exact head.
+
+**This round:**
+
+1. **The gate diff is published** (`evidence/r25/gate-diff.txt`, the prescribed
+   `git diff 44fe653e 5663147e -- .github/workflows/governance-acceptance.yml`)
+   with the per-job statement for every pre-R23 job: `reading-note-inventory`,
+   `ec25-trigger-lint`, `package-integrity`, `declared-base` and
+   `secret-scan-all-refs` are unchanged; `acceptance-suite`,
+   `status-vocabulary`, `push-log-integrity`, `claim-verification` and
+   `pre-merge-verification` carry ONLY the intended Round-24/Round-25
+   additions; the two `preservation-bundle` jobs are added; no pre-R23 job was
+   removed. The R25 report wording is corrected in register 16.9: the JOB came
+   from the pre-R23 blob, the FILE was `5663147e` and carried Round-23-era
+   header drift.
+2. **D-U2 applied:** the file is rebuilt as the pre-R23 blob with only the
+   intended additions (`evidence/r25/gate-diff-after-restore.txt`).
+3. **The PR facts are recorded** in a new incident note
+   (`docs/evidence/push-log/INCIDENT-2026-10-21-R25-PR-IDENTITY.md`): PR #37
+   and PR #38 were both opened by `prateekm1007` (the credential holder, hence
+   the author of both); #37's head is `bc6fdb5d92a237d421570d1a462199e4cdcabf28`, #38's head is `781175d18f94b65ee09635f2e4f38bf67d545b45`; both are
+   open against `main` @ `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`.
+4. **The containment check FAILED and this round stops there.**
+   `git merge-base --is-ancestor 781175d18f94b65ee09635f2e4f38bf67d545b45 bc6fdb5d92a237d421570d1a462199e4cdcabf28` returns 1: the two recovery
+   branches are SIBLINGS from `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`, and their push logs are mutually
+   exclusive (both use the P-082..P-086 identifier space for different
+   branches). PR #38 is therefore NOT closed, its branch is NOT deleted and no
+   archive tag is created - the closure step is conditioned on the
+   containment check passing, and the tag belongs to that closure.
+
+**Still OPEN:** the owner action O-1 (an independent collaborator's approval of
+PR #37 on the exact head; the restored pre-merge gate is red for exactly that
+reason and is not to be worked around); the mainline governance issue (the
+unverified PR #30 merge, register 16.5); the auditor's decision on which
+recovery head becomes the recovery line and whether PR #38's outstanding
+content is ported or accepted as superseded; the stale PR/branch pruning
+(direction 8, sequenced after the merge); the r2 archive verification, the
+cohort table, A-02 issuer-side revocation and the EC2 deployment secrets.
+The scientific hard stop is preserved in full and no product, deployment,
+threshold, cohort or law-semantic work was started.
