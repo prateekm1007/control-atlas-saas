@@ -182,3 +182,37 @@ available to reviewers and to any future maintainer with review authority.)
   table, the independent archive verification, A-02 issuer-side revocation, and the EC2
   deployment secrets remain OPEN. A-04 (branch-protection required-check configuration)
   was verified live on 2026-10-20 and stays as recorded in register Part 14.
+
+## 12. Round-26 task read record - LAW-160 sequence-pair adjacency (2026-10-21T11:50:02Z)
+
+### 12.1 Sources read (verified by blob ID before reading; this task)
+
+| Document | Pinned blob (full SHA-1) | Verified | Source commit at read time | Read window (UTC) |
+|---|---|---|---|---|
+| `AGENTS.md` | `85767237399ffb30f3e45894d9dfbe6f4240584f` | YES - `git ls-tree` at `63da0e347002ed9b77071ff1ed0cefda7c0ce88a` | `main` @ `63da0e347002ed9b77071ff1ed0cefda7c0ce88a` | 2026-10-21T11:50:02Z, read in full (75 lines; mandatory entry point, read order, hard stop, change procedure) |
+| `constitution.md` | `211ad2c5d4b40059d9f3f03de12e0701f9235bc7` | YES - same method, identical ID | same tree | 2026-10-21T11:50:02Z, read in full (11 lines; OBS-153 and CRIT-154 both ACTIVE) |
+| `ENGINEERING_CONSTITUTION.md` | `b6bb35e84956d84a8c9d9e65734c212baf3ed075` | YES - same method, identical ID | same tree | 2026-10-21T11:50:02Z, read in full (178 lines: EC section 1-15 + Final Rule) |
+| `docs/coder/BRIEF.md` | `052a84ca829d321dc0841a4b1c8702145dcbf6b5` | YES - same method, identical ID | same tree | 2026-10-21T11:50:02Z, read in full (70 lines: preflight, working rules, verification duties, delivery) |
+| `docs/decisions/OWNER_DECISIONS.md` | `12906bf5997a3e2c6b5c41e5d5c60fee14613274` | YES - same method, identical ID | same tree | 2026-10-21T11:50:02Z, read (register Parts 1-16, including the standing scientific hard stop OD-16 and the law-semantics freeze OD-02/03/05) |
+| `docs/P0_STATUS.md` | `a31517abbc046c495930ba19ef7aeaf8bb72f2d0` | YES - same method, identical ID | same tree | 2026-10-21T11:50:02Z, read (sections 1-12, incl. the P0 status and the open blockers) |
+| `backend/tos/engine/tier1_measurements.py` | `df46b0947d542a559276ca1eec809da09cbd95bc` | YES - same method, identical ID | same tree | 2026-10-21T11:50:02Z, read in full (the LAW-160 block and the `_is_sequential` adjacency rules) |
+| `backend/tos/engine/coord_math.py` | (read, not modified) | YES | same tree | 2026-10-21T11:50:02Z, read in full (`get_sequential_residues`, `get_atom_pos`, `distance`) |
+| `backend/tos/engine/adjudicator.py` | (read, not modified) | YES | same tree | 2026-10-21T11:50:02Z, read in full (the absent-measurement representation and the deterministic FAIL/VETO mapping) |
+| `backend/tos/ingestion/processor.py` | (read, not modified) | YES | same tree | 2026-10-21T11:50:02Z, read (Atom/Structure/ConfidenceProfile contracts used by the fixtures) |
+
+### 12.2 Rules enforced in this task
+
+EC section 2 (constitutions first, pre-coding protocol - the preflight is attached in
+`docs/audit-evidence/2026-10-21/PREFLIGHT-LAW-160.md`), EC section 4 (measured vs inferred: an
+absent measurement is never a normal result), EC section 6 (regression tests, exact-SHA evidence,
+deterministic runs), EC section 12 (definition of done, "not run" is never "passed"), EC section 13
+(no threshold/operator/law-ID changes, no invented verdicts, no weakened tests), EC section 14
+(artifacts), plus OD-16 (the scientific/production hard stop: no calibration run, no held-out
+evaluation, no threshold or cohort change, no golden-artifact regeneration, no deploy) and the
+AGENTS.md rules (feature branch only, no merge without authorization, hash locks bit-identical).
+
+### 12.3 Scope discipline
+
+Only the LAW-160 correction and its regression tests are implemented. The LAW-130 fail-open and
+threshold-boundary defect and the calibration-runner authentication/partial-output defects are
+verified but deliberately NOT touched here; they are queued as separate isolated patches.

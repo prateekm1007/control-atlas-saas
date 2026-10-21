@@ -414,14 +414,31 @@ class Tier1Measurements:
         # LAW-160: Chain Integrity (uses coord_math.distance/get_atom_pos)
         # Measures maximum sequential Cα-Cα distance across all chains.
         # Threshold: 4.5Å from station_sop.py
+        #
+        # Only GENUINELY CONSECUTIVE residues form a sequential pair. The
+        # adjacency rules (sequence numbers AND insertion codes) are the ones
+        # the other Tier-1 laws already use (Tier1Measurements._is_sequential);
+        # get_sequential_residues() only sorts and de-duplicates, it does not
+        # establish adjacency. Measuring a pair whose sequence numbers are not
+        # adjacent (residues missing in between) would report the long
+        # Cα-Cα distance of a sequence GAP as a chain break.
         # ═══════════════════════════════════════════════════════════
         max_gap = 0.0
         ca_pairs_checked = 0
+        residue_by_key = {(r["_chain"], r["_seq"], r["_icode"]): r for r in residues}
         for chain_id in get_chains(structure.atoms):
             chain_residues = get_sequential_residues(structure.atoms, chain_id)
             for i in range(len(chain_residues) - 1):
                 curr_res = chain_residues[i]
                 next_res = chain_residues[i + 1]
+                r1 = residue_by_key.get((chain_id, curr_res[0], curr_res[1]))
+                r2 = residue_by_key.get((chain_id, next_res[0], next_res[1]))
+                if r1 is None or r2 is None:
+                    continue
+                if not Tier1Measurements._is_sequential(r1, r2):
+                    # not consecutive in the sequence: not a sequential pair,
+                    # so it is not a chain-integrity measurement at all
+                    continue
                 p1 = get_atom_pos(structure.atoms, chain_id, curr_res[0], "CA", curr_res[1])
                 p2 = get_atom_pos(structure.atoms, chain_id, next_res[0], "CA", next_res[1])
                 if p1 is not None and p2 is not None:
@@ -430,9 +447,22 @@ class Tier1Measurements:
                     if d > max_gap:
                         max_gap = d
 
+        if ca_pairs_checked == 0:
+            # No eligible Cα pair was measured: the metric is ABSENT, not
+            # "a maximum distance of 0 Å". The adjudicator's existing
+            # absent-measurement representation is status "FAIL" with
+            # observed/sample 0 (backend/tos/engine/adjudicator.py), and a
+            # deterministic FAIL is a VETO. Reporting PASS here would claim a
+            # normal measurement that was never made.
+            law160_status = "FAIL"
+        elif max_gap <= LAW_CANON["LAW-160"]["threshold"]:
+            law160_status = "PASS"
+        else:
+            law160_status = "VETO"
+
         results["LAW-160"] = {
             "observed": round(max_gap, 2),
-            "status": "PASS" if max_gap <= LAW_CANON["LAW-160"]["threshold"] else "VETO",
+            "status": law160_status,
             "sample": ca_pairs_checked
         }
 

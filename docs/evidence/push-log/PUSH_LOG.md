@@ -583,3 +583,15 @@
   pushed again, P-081-CONFIRM records the remote-verified tip after that
   push returns. Until then the tip pushed by this INTENT is disclosed as
   PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-21T11:50:02Z | P-082-INTENT | push-intent | branch=fix/law-160-sequence-adjacency head_at_intent=DEFERRED expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder directions 2 and 3: the isolated LAW-160 sequence-pair adjacency correction with its regression tests, the reading note, the preflight and the verification evidence on a fresh feature branch cut from the verified main tip 63da0e347002ed9b77071ff1ed0cefda7c0ce88a; no merge into main, no threshold, cohort, dataset or golden-artifact change, no calibration run, no deployment"
+
+- This push carries only the LAW-160 correction: the adjacency filter in the LAW-160 block of
+  backend/tos/engine/tier1_measurements.py, the regressions in backend/tests/test_law_160.py, the
+  reading-note read record, the preflight and the verification evidence under
+  docs/audit-evidence/2026-10-21/. No other law, threshold, operator, law ID, canon, matrix,
+  calibration input or artifact is touched.
+- ID selection: P-082 verified unused across the published log at the time of writing (the highest
+  previously used identifier on `main` is P-081).
+- head_at_intent is DEFERRED per the two-phase schema; the tip pushed by this INTENT is disclosed
+  as PENDING by the evidence-sequence checker - the designed, truthful state.
