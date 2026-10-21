@@ -595,3 +595,22 @@
   previously used identifier on `main` is P-081).
 - head_at_intent is DEFERRED per the two-phase schema; the tip pushed by this INTENT is disclosed
   as PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-21T11:51:45Z | P-082-CONFIRM | push-confirm | branch=fix/law-160-sequence-adjacency remote_sha=8ab970f68bea315a442c5274fc4090250e4414d9 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/fix/law-160-sequence-adjacency -> 8ab970f68bea315a442c5274fc4090250e4414d9 (re-verified immediately before this confirmation was written; the push itself was the ordinary new-branch push 8ab970f68bea315a442c5274fc4090250e4414d9 declared by P-082-INTENT)"
+
+- Two-phase completion for the push declared by P-082-INTENT (head_at_intent was DEFERRED; the
+  remote-verified tip is recorded after the push returned, never backdated).
+
+## 2026-10-21T11:51:45Z | P-083-INTENT | push-intent | branch=fix/law-160-sequence-adjacency head_at_intent=DEFERRED expected_remote_tip_before_push=8ab970f68bea315a442c5274fc4090250e4414d9 credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder directions 2 and 3: the LAW-160 verification evidence naming the tested code candidate, and the merge-intent for PR #39; no merge into main, no threshold, cohort, dataset or golden-artifact change, no calibration run, no deployment"
+
+- The declared pre-push tip is the exact tip published by the P-082-CONFIRM record above, which is
+  the live remote tip of this branch at declaration time.
+- head_at_intent is DEFERRED per the two-phase schema; the tip pushed by this INTENT is disclosed
+  as PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-21T11:51:45Z | P-084 | merge-intent | target=main pr=39 source_branch=fix/law-160-sequence-adjacency expected_pre_merge_base=63da0e347002ed9b77071ff1ed0cefda7c0ce88a expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder directions 2 and 3: the LAW-160 correction is reviewed and merged through the protected PR path only, with the required checks green on the exact candidate head; no merge is performed by this push and no product, calibration or deployment work is authorized"
+
+- Redeclaration on the exact final candidate (expected_head=DEFERRED resolves to the commit
+  introducing this record). expected_pre_merge_base is the live main tip at declaration time
+  (63da0e347002ed9b77071ff1ed0cefda7c0ce88a); if main moves, this intent fails its base verification and must be redeclared.
+- The merge is NOT performed by this push.

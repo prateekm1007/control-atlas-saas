@@ -4,8 +4,8 @@
 - Repository: `prateekm1007/control-atlas-saas`
 - Base (freshly fetched, verified before the branch was cut): `main` @ `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`
 - Branch: `fix/law-160-sequence-adjacency`
-- Tested code candidate: the commit that adds `backend/tos/engine/tier1_measurements.py` and
-  `backend/tests/test_law_160.py` on this branch (recorded in the commit that adds this file).
+- Tested code candidate: `8ab970f68bea315a442c5274fc4090250e4414d9` (the commit that adds the LAW-160 correction and its
+  regressions).
   The later commit on the branch adds ONLY this evidence file and the push-log records; the
   tracked code is byte-identical between the two commits.
 - Runtime: Python 3.12.7, numpy 2.1.3, pytest 9.1.1, Windows 10
