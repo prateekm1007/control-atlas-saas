@@ -1,0 +1,87 @@
+name: Preservation Bundle
+
+# Round-24 governance recovery (auditor directions 4 and 5): produce the
+# machine-readable branch/PR preservation bundle as an automation-produced,
+# downloadable CI artifact, and record its digest. The bundle is generated
+# from the live refs and the live PR inventory, so the artifact of the FINAL
+# candidate is the authoritative one; its URI and digest are recorded in the
+# recovery PR body (not in the tree, so the record cannot chase its own head).
+# This workflow is read-only with respect to the repository: it fetches refs,
+# reads the API, writes files under bundle/ and uploads them as an artifact.
+# It performs no deployment, no ref mutation and no scientific work.
+
+on:
+  push:
+    branches:
+      - "repair/r23-governance-recovery"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+
+concurrency:
+  group: preservation-bundle-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preservation-bundle:
+    name: Generate branch/PR preservation bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch every branch head and pull-request head
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --prune origin \
+            '+refs/heads/*:refs/remotes/origin/*' \
+            '+refs/pull/*/head:refs/pull/*/head'
+          echo "branch heads: $(git for-each-ref --count=200 --format='%(refname)' refs/remotes/origin/ | wc -l)"
+          echo "pull heads:    $(git for-each-ref --format='%(refname)' refs/pull/ | wc -l)"
+
+      - name: Generate the preservation bundle
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          BUNDLE_OUT: bundle
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/generate_preservation_bundle.py --repo . --out "$BUNDLE_OUT" \
+            | tee "$RUNNER_TEMP/bundle_digest.txt"
+          echo "--- bundle contents ---"
+          ls -l "$BUNDLE_OUT"
+          echo "--- SHA256SUMS ---"
+          cat "$BUNDLE_OUT/SHA256SUMS"
+
+      - name: Verify the generated checksums from the produced files
+        run: |
+          set -euo pipefail
+          cd bundle
+          sha256sum -c SHA256SUMS
+          echo "checksum verification: PASS"
+
+      - name: Upload the bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: preservation-bundle-${{ github.sha }}
+          path: bundle/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Record the bundle digest in the job summary
+        run: |
+          set -euo pipefail
+          digest="$(sed -n 's/^bundle_sha256sums_digest=//p' "$RUNNER_TEMP/bundle_digest.txt" | head -n1)"
+          {
+            echo "### Preservation bundle"
+            echo
+            echo "- artifact: \`preservation-bundle-${{ github.sha }}\`"
+            echo "- SHA256SUMS digest: \`$digest\`"
+            echo "- run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "- candidate: \`${{ github.sha }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "bundle_sha256sums_digest=$digest"

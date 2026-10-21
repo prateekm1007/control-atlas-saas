@@ -1,0 +1,241 @@
+# Round-25 gate diff AFTER the D-U2 restore
+
+Rebuilt file blob: `358dea6e4828f8ff77cce4dfdfcf0705d7dba13d`
+
+The file is the verified pre-R23 blob (44fe653e...) with ONLY the intended Round-24/Round-25 additions re-applied: the pre-R23 header restored (with the Round-25 supersession note appended), the fail-closed live PR-body retrieval, the explicit `--expect-head-sha`, the run identity in the four runs manifests, the acceptance-suite label, the two preservation-bundle jobs and the restoration comment on the pre-merge job. The pre-merge job's steps, conditions, canary and verification call are the pre-R23 ones byte-exact.
+
+## 1. The exact command and its raw output
+
+```
+git diff 44fe653ec4e526725eaea4266dc1807222d3be06 358dea6e4828f8ff77cce4dfdfcf0705d7dba13d -- .github/workflows/governance-acceptance.yml
+```
+
+--- a/44fe653ec4e526725eaea4266dc1807222d3be06
++++ b/358dea6e4828f8ff77cce4dfdfcf0705d7dba13d
+@@ -53,6 +53,18 @@
+ # Round-22 direction 5: the merge/pre-merge verification calls the pull
+ # request and pull-request-review APIs with the job token; the narrowly
+ # scoped pull-requests: read permission is REQUIRED for token-based access
++#
++# Round-25 (register Part 16): the Round-23 cycle removed the
++# pre-merge-verification job and recorded the removal as sanctioned. That
++# record is SUPERSEDED: the job is present again below, and the fact that the
++# PR author holds the credential does not make an independent approval
++# unsatisfiable -- it makes the approval UNMET, which is what the gate is
++# for. The pre-R23 job bodies are restored byte-exact; the only differences
++# from the pre-R23 blob are the intended Round-24/Round-25 additions (the
++# fail-closed live PR-body retrieval, the run identity in the runs manifest,
++# the acceptance-suite label, the preservation-bundle jobs and the restoration
++# comment). The exact diff is recorded in evidence/r25/gate-diff.txt and
++# evidence/r25/gate-diff-after-restore.txt.
+ # (contents: read alone is insufficient). Least privilege: read-only, nothing
+ # else is granted.
+ permissions:
+@@ -61,7 +73,7 @@
+ 
+ jobs:
+   acceptance-suite:
+-    name: Acceptance suite (AT-01..AT-34)
++    name: Acceptance suite (AT-01..AT-38)
+     runs-on: ubuntu-latest
+     timeout-minutes: 20
+     steps:
+@@ -114,6 +126,9 @@
+                   data = json.load(resp)
+               for run in data.get("workflow_runs", []):
+                   runs[str(run["id"])] = {"head_sha": run["head_sha"],
++                                          "head_branch": run.get("head_branch"),
++                                          "event": run.get("event"),
++                                          "workflow_name": run.get("name"),
+                                           "conclusion": run["conclusion"]}
+               if len(data.get("workflow_runs", [])) < 100:
+                   break
+@@ -199,6 +214,7 @@
+                   runs[str(run["id"])] = {"head_sha": run["head_sha"],
+                                           "head_branch": run.get("head_branch"),
+                                           "event": run.get("event"),
++                                          "workflow_name": run.get("name"),
+                                           "conclusion": run["conclusion"]}
+               if len(data.get("workflow_runs", [])) < 100:
+                   break
+@@ -282,17 +298,37 @@
+         with: { python-version: "3.12" }
+       - name: Install test dependencies
+         run: pip install pytest pyyaml
+-      - name: Write the PR body to a file (no shell interpolation)
+-        env:
+-          PR_BODY: ${{ github.event.pull_request.body }}
+-        run: printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr_body.md"
++      - name: Retrieve the LIVE PR body (fail closed; no event-payload fallback)
++        # Round-25 direction 2: the Round-24 step fell back to the EVENT
++        # PAYLOAD when the API call failed or returned an empty body. That is
++        # fail-open: a stale payload is not proof of the current live
++        # declaration. The retrieval now fails closed -- an unreadable API, a
++        # malformed response, or an absent/empty body stops the job. The
++        # expected head SHA is NEVER derived from the body being checked: it
++        # comes from the pull-request event below.
++        env:
++          PR_NUMBER: ${{ github.event.pull_request.number }}
++          GH_TOKEN: ${{ github.token }}
++        run: |
++          set -euo pipefail
++          python3 scripts/ci/fetch_pr_body.py \
++            --repo "${{ github.repository }}" \
++            --pr "$PR_NUMBER" \
++            --out "$RUNNER_TEMP/pr_body.md" \
++            --api-token-env GH_TOKEN
+       - name: Verify directive fields, claimed SHAs, and EXECUTE the named acceptance tests
++        # Round-24 direction 7: the body must declare the EXACT current pull
++        # request head and cite a successful run on that same head. The head
++        # SHA is passed as an explicit input (never inferred from the body's
++        # own claim list), so a body that describes a stale -- but real --
++        # candidate FAILS.
+         env:
+           GH_TOKEN: ${{ github.token }}
+         run: |
+           python3 scripts/ci/verify_claimed_shas.py \
+             --body "$RUNNER_TEMP/pr_body.md" \
+             --repo "${{ github.repository }}" \
++            --expect-head-sha "${{ github.event.pull_request.head.sha }}" \
+             --check-tests \
+             --evidence-out "$RUNNER_TEMP/ec20_evidence.json"
+       - name: Lint the PR body's Status-summary vocabulary
+@@ -314,6 +350,9 @@
+                   data = json.load(resp)
+               for run in data.get("workflow_runs", []):
+                   runs[str(run["id"])] = {"head_sha": run["head_sha"],
++                                          "head_branch": run.get("head_branch"),
++                                          "event": run.get("event"),
++                                          "workflow_name": run.get("name"),
+                                           "conclusion": run["conclusion"]}
+               if len(data.get("workflow_runs", [])) < 100:
+                   break
+@@ -351,6 +390,12 @@
+ 
+   pre-merge-verification:
+     name: EC-24 pre-merge PR/head/review verification
++    # Round-25 direction 5: RESTORED. The Round-23 cycle removed this job and
++    # described the removal as sanctioned; that description is NOT correct and
++    # is superseded by the auditor's Round-25 ruling (register Part 16). The
++    # job body below is the pre-R23 job (blob 44fe653ec4e526725eaea4266dc1807222d3be06);
++    # the only additions are the run identity in the runs manifest and this
++    # comment.
+     # Round-22 direction 5: a FUNCTIONING pre-merge gate. A post-merge
+     # verifier is not a substitute for checking the CURRENT PR/head/review
+     # state BEFORE the merge executes. This job verifies on every PR event
+@@ -422,6 +467,7 @@
+                   runs[str(run["id"])] = {"head_sha": run["head_sha"],
+                                           "head_branch": run.get("head_branch"),
+                                           "event": run.get("event"),
++                                          "workflow_name": run.get("name"),
+                                           "conclusion": run["conclusion"]}
+               if len(data.get("workflow_runs", [])) < 100:
+                   break
+@@ -455,6 +501,77 @@
+               --repo "${{ github.repository }}" --api-token-env GH_TOKEN \
+               --pre-merge-verify --pr-number "$PR_NUMBER"
+           fi
++
++  preservation-bundle:
++    name: Branch/PR preservation bundle (reproducible evidence)
++    # Round-25 direction 7: the ref-level restoration and the PR reopening had
++    # been asserted but no VERIFIED preservation bundle had been supplied.
++    # This job builds it from the live repository, publishes it as a CI
++    # artifact and records the bundle digest. The verification job below
++    # re-checks that digest from a fresh checkout.
++    runs-on: ubuntu-latest
++    timeout-minutes: 25
++    steps:
++      - uses: actions/checkout@v4
++        with: { fetch-depth: 0 }
++      - uses: actions/setup-python@v5
++        with: { python-version: "3.12" }
++      - name: Build the preservation bundle from the live repository
++        env:
++          GH_TOKEN: ${{ github.token }}
++        run: |
++          set -euo pipefail
++          python3 scripts/ci/preservation_bundle.py \
++            --repo "${{ github.repository }}" \
++            --out-dir "$RUNNER_TEMP/preservation-bundle" \
++            --api-token-env GH_TOKEN
++          echo "BUNDLE_DIR=$RUNNER_TEMP/preservation-bundle" >> "$GITHUB_ENV"
++      - name: Record the bundle digest
++        run: |
++          set -euo pipefail
++          digest="$(sha256sum "$BUNDLE_DIR/SHA256SUMS" | cut -d' ' -f1)"
++          echo "bundle root digest (SHA256SUMS): $digest" | tee -a "$GITHUB_STEP_SUMMARY"
++          echo "BUNDLE_DIGEST=$digest" >> "$GITHUB_ENV"
++      - name: Upload the preservation bundle
++        uses: actions/upload-artifact@v4
++        with:
++          name: preservation-bundle-${{ github.sha }}
++          path: ${{ runner.temp }}/preservation-bundle
++          retention-days: 90
++
++  preservation-bundle-verify:
++    name: Preservation bundle verification (fresh checkout)
++    # The bundle is downloaded as a CI artifact and its digests are verified
++    # from a FRESH checkout: the recorded SHA256SUMS must match every file it
++    # pins, and the bundle must carry the nine required members.
++    needs: preservation-bundle
++    runs-on: ubuntu-latest
++    timeout-minutes: 10
++    steps:
++      - uses: actions/checkout@v4
++        with: { fetch-depth: 0 }
++      - uses: actions/setup-python@v5
++        with: { python-version: "3.12" }
++      - name: Download the preservation bundle
++        uses: actions/download-artifact@v4
++        with:
++          name: preservation-bundle-${{ github.sha }}
++          path: bundle
++      - name: Verify the bundle from a fresh checkout
++        run: |
++          set -euo pipefail
++          for f in refs.json pull-requests.json unique-commits.json \
++                   branch-diff-matrix.json preservation-matrix.json \
++                   runtime-dependency-map.json pr-evidence.json commands.log \
++                   SHA256SUMS; do
++            if [ ! -f "bundle/$f" ]; then
++              echo "FAIL: the preservation bundle is missing $f"
++              exit 1
++            fi
++          done
++          ( cd bundle && sha256sum -c SHA256SUMS )
++          digest="$(sha256sum bundle/SHA256SUMS | cut -d' ' -f1)"
++          echo "verified preservation bundle digest: $digest" | tee -a "$GITHUB_STEP_SUMMARY"
+ 
+   secret-scan-all-refs:
+     name: EC-23 full-history secret scan with controls
+
+
+## 2. Per-job statement (pre-R23 blob 44fe653e vs the restored file)
+
+- `acceptance-suite`: CHANGED
+- `reading-note-inventory`: unchanged
+- `status-vocabulary`: CHANGED
+- `push-log-integrity`: CHANGED
+- `ec25-trigger-lint`: unchanged
+- `package-integrity`: unchanged
+- `claim-verification`: CHANGED
+- `declared-base`: unchanged
+- `pre-merge-verification`: CHANGED
+- `secret-scan-all-refs`: unchanged
+- `preservation-bundle`: ADDED in the compared file
+- `preservation-bundle-verify`: ADDED in the compared file
+
+### The exact change in each CHANGED job
+
+- `acceptance-suite`: the displayed label `(AT-01..AT-34)` -> `(AT-01..AT-38)` (Round-25 direction 3).
+
+- `status-vocabulary`, `push-log-integrity`, `claim-verification`, `pre-merge-verification`: the runs manifest gained the run identity `workflow_name` (and, where it was missing, `head_branch`/`event`) (Round-25 direction 3). The pre-merge job additionally carries the Round-25 restoration comment; its steps, conditions and verification call are the pre-R23 ones.
+
+- `claim-verification`: the PR-body retrieval is the fail-closed `scripts/ci/fetch_pr_body.py` call (no event-payload fallback) and `--expect-head-sha` is passed explicitly (Round-25 direction 2 / Round-24 direction 7).
+
+
+## 3. Unchanged pre-R23 jobs
+
+`reading-note-inventory`, `ec25-trigger-lint`, `package-integrity`, `declared-base` and `secret-scan-all-refs` are byte-identical to the pre-R23 blob. The two `preservation-bundle` jobs are ADDED (Round-25 direction 7); no pre-R23 job was removed.
+

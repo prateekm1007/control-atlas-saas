@@ -23,6 +23,19 @@ Auditor revisions 2026-10-20 implemented here:
       ARRAY elements (subprocess without shell). The command argv, candidate SHA, environment,
       run IDs, counts, and exit status are captured into an evidence JSON (--evidence-out).
 
+Round-24 hardening (auditor direction 7 -- the gate passed while the PR body
+  still described a DIFFERENT candidate):
+    * --expect-head-sha: the EXACT current pull-request head SHA, passed as an
+      explicit input by the workflow (never inferred from the body's own claim
+      list). The body's Claimed-SHAs MUST contain it. A body that declares only
+      stale -- but real -- SHAs FAILS.
+    * The body's Status-summary MUST cite a run that (a) is real, (b) succeeded
+      and (c) ran on that SAME exact head SHA. A real historical run id that
+      describes another commit is REJECTED: "real but stale" is not evidence for
+      the current candidate.
+    * The cited run is verified through the Actions API (or --runs-manifest for
+      offline tests); an unverifiable citation FAILS (fail closed).
+
 Other modes:
   --local                     offline claimed-SHA verification against the local object store (tests).
   --require-directive-id-only EC-19 check only (Directive-ID / Closes-items / Status-summary present).
@@ -45,6 +58,11 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
 FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
+# The required checks of this repository. A Status-summary claim is only
+# evidence when it cites a successful run of one of THESE workflows on the
+# exact candidate head; a successful unrelated workflow on the same commit is
+# not required-check evidence (Round-25 direction 3).
+DEFAULT_REQUIRED_WORKFLOWS = ("Toscanini Stability Gate", "Governance Acceptance")
 FIELDS = ("Directive-ID", "Closes-items", "Base-SHA", "Stack-parent",
           "Claimed-SHAs", "Acceptance-Tests", "Waiver", "Status-summary")
 
@@ -70,6 +88,36 @@ def field_values(body: str, field: str) -> list[str]:
 
 
 # ---------------------------------------------------------------- EC-16 ----
+
+STATUS_LINE = re.compile(r"^\s*Status-summary:\s*(.+?)\s*$")
+RUNPASS = re.compile(r"RUN_PASS\s*\(\s*run_id=(\d+)\s*,\s*sha=([0-9a-f]{40})\s*\)")
+
+
+def api_run(repo: str, rid: str, token: str | None):
+    """Verify one Actions run. Returns (status, detail) with status in
+    {"present", "absent", "error"}; "present" carries the run record."""
+    url = f"https://api.github.com/repos/{repo}/actions/runs/{rid}"
+    req = urllib.request.Request(url, method="GET",
+                                 headers={"Accept": "application/vnd.github+json",
+                                          "X-GitHub-Api-Version": "2022-11-28"})
+    if token:
+        req.add_header("Authorization", f"token {token}")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            body = json.loads(resp.read().decode("utf-8"))
+            if body.get("id") is None:
+                return ("error", "the Actions API returned no run record")
+            return ("present", body)
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return ("absent", f"HTTP 404: run {rid} not found on {repo}")
+        return ("error", f"HTTP {e.code}: remote verification failure (fail closed)")
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        return ("error", f"network failure during remote verification (fail closed): "
+                         f"{type(e).__name__}")
+    except ValueError:
+        return ("error", "unparseable API response (fail closed)")
+
 
 def parse_claimed_shas(entries: list[str]):
     """Strict per-entry parse. Returns (shas, errors).
@@ -269,7 +317,25 @@ def main() -> int:
                     help="EC-20: execute the named Acceptance-Tests on this candidate")
     ap.add_argument("--evidence-out", metavar="FILE", help="write the EC-20 evidence JSON here")
     ap.add_argument("--api-json", help="offline fixture: canned GitHub API response (tests)")
+    ap.add_argument("--expect-head-sha", default="", metavar="SHA",
+                    help="the EXACT current pull-request head SHA (passed explicitly by "
+                         "the workflow). The PR body's Claimed-SHAs must contain it and "
+                         "its Status-summary must cite a successful run on it.")
+    ap.add_argument("--runs-manifest", default=None, metavar="FILE",
+                    help="JSON {\"runs\": {\"<id>\": {head_sha, conclusion, event, "
+                         "workflow_name}}} used to verify the cited Status-summary run "
+                         "offline (tests)")
+    ap.add_argument("--required-workflow", action="append", default=[],
+                    metavar="NAME",
+                    help="a workflow whose successful run on the exact head is REQUIRED "
+                         "evidence (repeatable). Default: the two required checks of this "
+                         "repository, the Toscanini Stability Gate and the Governance "
+                         "Acceptance. A successful run of any other workflow is not "
+                         "required-check evidence.")
+    ap.set_defaults(required_workflow=[])
     args = ap.parse_args()
+    if not args.required_workflow:
+        args.required_workflow = list(DEFAULT_REQUIRED_WORKFLOWS)
 
     if not os.path.exists(args.body):
         print("FAIL: PR body file missing (fail closed)")
@@ -336,6 +402,123 @@ def main() -> int:
         elif not shas_field:
             findings.append("EC-16 Claimed-SHAs: field missing (fail closed; use the literal "
                             "value 'none' to declare explicitly that a PR claims no results)")
+
+    # ---- Round-24 direction 7 / Round-25 direction 3: bind the body to the
+    #      EXACT current head AND to the REQUIRED WORKFLOW evidence.
+    if args.expect_head_sha and not directive_only:
+        head = args.expect_head_sha.strip()
+        required = [w.strip() for w in args.required_workflow if w.strip()]
+        if not FULL_SHA.match(head):
+            findings.append("EC-16 --expect-head-sha must be a full 40-character lowercase "
+                            "hex commit SHA (fail closed)")
+        else:
+            claimed = {t for v in field_values(body, "Claimed-SHAs")
+                       for t in v.replace(",", " ").split()}
+            if head not in claimed:
+                findings.append(
+                    f"EC-16 Claimed-SHAs does not declare the exact current pull-request "
+                    f"head {head} (declared: {sorted(claimed) if claimed else 'none'}) -- "
+                    f"the PR body must describe the candidate it is proposing (fail "
+                    f"closed; a stale-but-real SHA is not evidence for this head)")
+            cited = []
+            for line in body.splitlines():
+                m = STATUS_LINE.match(line)
+                if not m:
+                    continue
+                for rid, sha in RUNPASS.findall(m.group(1)):
+                    cited.append((rid, sha))
+            token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+            manifest = None
+            if args.runs_manifest:
+                try:
+                    manifest = json.load(open(args.runs_manifest, encoding="utf-8"))
+                except (OSError, ValueError) as e:
+                    print(f"FAIL: runs manifest unusable ({e}); fail closed")
+                    return 1
+            good = []
+            satisfied = set()
+            for rid, sha in cited:
+                if sha != head:
+                    # a citation for another commit is a STALE citation: it can
+                    # never be evidence for this candidate
+                    findings.append(
+                        f"EC-22 Status-summary cites run_id={rid} for {sha[:12]}..., which "
+                        f"is not the exact current head {head[:12]}... (a real but STALE "
+                        f"run is not evidence for the current head)")
+                    continue
+                if manifest is not None:
+                    rec = (manifest.get("runs") or {}).get(rid)
+                    if rec is None:
+                        findings.append(
+                            f"EC-22 Status-summary cites run_id={rid}, which is not in the "
+                            f"runs manifest (unverifiable -- fail closed)")
+                        continue
+                    if rec.get("head_sha") != head:
+                        findings.append(
+                            f"EC-22 Status-summary cites run_id={rid} for {sha[:12]}... but "
+                            f"that run's head_sha is {str(rec.get('head_sha'))[:12]}... "
+                            f"(wrong commit)")
+                        continue
+                    if rec.get("conclusion") != "success":
+                        findings.append(
+                            f"EC-22 Status-summary cites run_id={rid} whose conclusion is "
+                            f"{rec.get('conclusion')!r}, not success")
+                        continue
+                    name = rec.get("workflow_name") or rec.get("name")
+                else:
+                    if not args.repo:
+                        findings.append("EC-22 no --repo/GITHUB_REPOSITORY given to verify the "
+                                        "cited Status-summary run (fail closed)")
+                        break
+                    status, rec = api_run(args.repo, rid, token)
+                    if status != "present":
+                        findings.append(f"EC-22 Status-summary cites run_id={rid}, which "
+                                        f"could not be verified ({rec}) -- fail closed")
+                        continue
+                    if rec.get("head_sha") != head:
+                        findings.append(
+                            f"EC-22 Status-summary cites run_id={rid} for {sha[:12]}... but "
+                            f"that run's head_sha is {str(rec.get('head_sha'))[:12]}... "
+                            f"(a real but STALE run is not evidence for the current head)")
+                        continue
+                    if rec.get("conclusion") != "success":
+                        findings.append(
+                            f"EC-22 Status-summary cites run_id={rid} whose conclusion is "
+                            f"{rec.get('conclusion')!r}, not success")
+                        continue
+                    name = rec.get("name")
+                if not name:
+                    findings.append(
+                        f"EC-22 Status-summary cites run_id={rid}, whose workflow identity is "
+                        f"unknown (the run record carries no workflow name) -- the run's "
+                        f"identity cannot be established, so it cannot be required-check "
+                        f"evidence (fail closed)")
+                    continue
+                if required and name not in required:
+                    findings.append(
+                        f"EC-22 Status-summary cites run_id={rid} of workflow {name!r}, which "
+                        f"is not one of the required workflows {required} -- a successful "
+                        f"unrelated workflow on the right commit is not required-check "
+                        f"evidence")
+                    continue
+                good.append(rid)
+                satisfied.add(name)
+            if not good:
+                findings.append(
+                    f"EC-22 Status-summary cites no successful run on the exact current head "
+                    f"{head} (cited RUN_PASS lines: {cited or 'none'}) -- a stale but real "
+                    f"historical run id is not evidence for this candidate (fail closed)")
+            for wf in required:
+                if wf not in satisfied:
+                    findings.append(
+                        f"EC-22 Status-summary cites no successful run of the required "
+                        f"workflow {wf!r} on the exact current head {head} -- the required "
+                        f"check evidence must be identified explicitly, not inferred from a "
+                        f"generic successful run (fail closed)")
+            if good:
+                print(f"OK  : Status-summary cites successful run(s) {sorted(set(good))} of "
+                      f"the required workflow(s) {sorted(satisfied)} on the exact current head "
+                      f"{head}")
 
     print("\n".join(findings) if findings else "")
     if not findings:

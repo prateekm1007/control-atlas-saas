@@ -378,3 +378,242 @@ verification, the portable 40-row cohort metadata table, A-02 issuer-side
 revocation, and EC2 deployment secrets remain OPEN. The scientific hard stop
 is preserved in full; A-01 remains ACCEPTED RISK (no rotation reminder, no
 credential operations, token values never written anywhere).
+
+## 13. Round-24 cycle (audit of the merged R22/R23 state; EC-16/19/20 exact-head binding; push-log portability)
+
+**Context (verified live, not assumed):** while the Round-21B repair was in
+progress, a parallel session completed the Round-22 repair (`443d606`) and the
+Round-23 cycle (`d81c874`), and PR #30 was MERGED into `main` as merge commit
+`63da0e347002ed9b77071ff1ed0cefda7c0ce88a` (first parent `f535a71b`, second parent `d81c874eaedc13c6fdbaed5102ad7e638449036d`). This
+cycle therefore re-established the baseline on the merged `main`, audited the
+merged implementation against the auditor's defect list, and repaired the
+defects that are still open there.
+
+**Audit result (live, not inherited):** the merged implementation closes
+EC-23 (per-row type validation, count-only diagnostics, fixed messages, broad
+exception safety -- AT-30), EC-24 (commit existence vs branch-push provenance
+vs CI success separated; event/head_branch validation; NOT-PROVEN
+reclassification of P-011; PUSH-PROVEN adjudication of P-013 through the
+events feed; reconciliation invariants; global unmatched-intent invariant --
+AT-31/AT-32/AT-33), and EC-26 (conservative witness-based glob coverage with
+ordered negative patterns, empty/malformed filter rejection -- AT-34). The
+live push-log verification against the real remote confirms the re-adjudication:
+P-011 is classified NOT-PROVEN, P-012/P-013/P-014 are PUSH-PROVEN with the
+CI-success claim explicitly separated.
+
+**Still open in the merged state, repaired by this cycle:**
+
+1. **EC-16/19/20 (auditor direction 7) -- the PR-body claim gate did not bind
+   the body to the exact current head.** `scripts/ci/verify_claimed_shas.py`
+   verified that each claimed SHA exists, but never required the body to
+   DECLARE the current pull-request head and never required the
+   `Status-summary` to cite a successful run ON THAT HEAD; a stale-but-real
+   body passed. The checker now takes the expected head as an explicit input
+   (`--expect-head-sha`, supplied by the workflow from
+   `github.event.pull_request.head.sha`, never inferred from the body's own
+   claim list), requires `Claimed-SHAs` to contain that exact SHA, and requires
+   a `RUN_PASS(run_id=..., sha=<that head>)` citation whose run is real,
+   successful and on that same head. The workflow also reads the LIVE pull
+   request body (the event payload is stale once the body is edited after the
+   trigger). AT-35 is the adversarial test; it FAILS on the prior
+   implementation.
+2. **Push-log gate portability (found by running the suite locally, not in
+   CI).** The introducing-commit lookup built its git pathspec from the OS path
+   string; where the two spellings of the same directory differ (on Windows the
+   8.3 short form of a temporary directory versus the long form git reports)
+   the pathspec fell OUTSIDE the repository, every lookup failed, and the gate
+   failed closed on a valid log -- eight acceptance groups could not run on that
+   platform at all. The lookup now runs git from the log's own directory with
+   the file name as the pathspec, which is spelling-independent.
+3. **AT-13 harness portability.** The append-only self-comparison wrote its
+   copy in text mode, so the line endings were translated a second time on
+   Windows and the checker compared two different byte strings (a false
+   "SHRUNK" failure). The copy is now written in binary mode.
+
+**Open auditor decision (NOT papered over):** the merge transition of PR #30
+is NOT verified by this repository's own gate. The pull request carries no
+independent approval (only a bot `COMMENTED` review), and the declared
+pre-merge base `f535a71b` is no longer the live tip of `main` after the merge.
+Consequently `main`'s Governance Acceptance run `39504181997` is RED on the
+push-log-integrity job, and the repair branch's last push (`d81c874`, run
+`39507046623`) is RED for the same reason. No approval was invented, no gate
+was weakened, and no log entry claims a merge that the evidence does not
+support. How the merged state is to be recorded (and whether a later merge
+may be declared through a reviewed pull request at all) is the auditor's
+decision, not the coder's.
+
+**Credential handling (verified, never narrated):** the PAT was supplied only
+through the process environment (`GH_PAT`); no credential file was created in
+any Git working tree, the working copy used by this cycle
+(`E:\atlas-work\control-atlas-saas`) lies outside the operator's home Git
+repository, and no token value appears in any file, log, commit message or
+evidence artifact. A-01 remains ACCEPTED RISK; no rotation was initiated or
+reminded.
+
+**Standing items (unchanged):** A-04 branch-protection verification, the
+independent r2 evidence-archive verification, the portable 40-row cohort
+metadata table, A-02 issuer-side revocation and the EC2 deployment secrets
+remain OPEN; PRs #31-#36 revalidate serially against the resulting `main`
+(EC-21 not waived) and PRs #23-#29 close only on proven unique-content
+coverage. The scientific hard stop is preserved in full: no production
+deployment, no v25 calibration, no held-out evaluation, no threshold or cohort
+changes, no law-semantic changes, no golden-artifact regeneration.
+
+**Package-manifest platform defect (found by the first push of this cycle,
+disclosed):** the manifest had been regenerated over the WORKING-TREE bytes
+of a CRLF checkout while the repository stores LF blobs, so all 46 digests
+mismatched on the Linux runner and the package-integrity job failed on the
+first push of this branch (run `39515766450`). The repair: the manifest is
+regenerated over the COMMITTED bytes and `manifest_check.py` hashes the
+committed artifact (the index entry) instead of the materialised checkout, so
+the check no longer depends on the line endings a platform produces. The
+failed run is disclosed in `P-082-CONFIRM` and is not smoothed over.
+
+## 14. Round-25 cycle (fail-closed claim gate, required-workflow identity,
+committed-tree manifest, restored pre-merge gate, PR #30 incident, preservation
+bundle, A-04)
+
+**Ruling:** PR #37 is not approved for merge. Four defects remained after the
+Round-24 repairs: the live PR-body fallback, the insufficient validation of
+the claimed CI evidence, the manifest semantics and the missing executable
+pre-merge approval gate. PR #37 stays open; the recovery proceeds forward in
+a controlled PR on the same branch.
+
+**Repaired in this cycle (all on the exact candidate):**
+
+1. **Live PR-body retrieval fails closed.** `scripts/ci/fetch_pr_body.py`
+   reads the body from the authenticated API and fails when the API cannot be
+   read, the response is malformed, or the body is absent, null, empty or not
+   a string. The event-payload fallback is removed: the Round-24 step fell
+   back to the payload, which is not proof of the current live declaration.
+   The expected head stays an explicit input and is never inferred from the
+   body under test. AT-36.
+2. **The claimed CI evidence identifies the REQUIRED workflow.** The runs
+   manifest carries the workflow name, branch, event, head SHA and conclusion;
+   the claim gate rejects an unrelated workflow, a failed or cancelled required
+   workflow, a required workflow on a different SHA, an unverifiable run and
+   a run without a workflow identity, and requires BOTH `Toscanini Stability
+   Gate` and `Governance Acceptance` to be satisfied explicitly. AT-37. The
+   acceptance-suite job label is corrected to `AT-01..AT-38`.
+3. **The manifest validates the COMMITTED tree.** The scope and the digests
+   come from the HEAD tree, and an index carrying staged changes is rejected:
+   a staged tree is a different artifact and must never be reported as the
+   committed one. The CRLF/LF objective is preserved. AT-38. All 46 entries
+   remain covered; no file was dropped and no digest was fabricated.
+4. **The executable pre-merge gate is RESTORED** from the verified pre-R23
+   workflow blob `44fe653ec4e526725eaea4266dc1807222d3be06`, keeping the
+   `pull-requests: read` scope, the authenticated API canary, the
+   exact-current-head checks and the fail-closed behaviour. The Round-24
+   register text that described the Round-23 removal as sanctioned is
+   SUPERSEDED (register 16.4): holding the credential does not make an
+   independent approval unsatisfiable, it makes the approval UNMET.
+5. **The PR #30 merge incident is recorded, not rewritten** (register 16.5):
+   `main` is `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`, PR #30 merged as `63da0e347002ed9b77071ff1ed0cefda7c0ce88a` with only a bot `COMMENTED`
+   review on record, Governance Acceptance run `39504181997` FAILED and
+   Stability Gate run `39504182072` succeeded. The merge did not pass this
+   repository's own gate. PR #30's code is NOT reverted (it is useful and is
+   re-verified here), no review was invented, no retroactive confirmation was
+   written, and the mainline governance issue stays OPEN.
+6. **The preservation bundle is generated by automation**
+   (`scripts/ci/preservation_bundle.py`): refs, pull requests, unique commits,
+   branch diffs, the preservation matrix, the runtime dependency map, the PR
+   CI evidence, the command log and SHA256SUMS, published as the CI artifact
+   `preservation-bundle-<sha>` and re-verified from a fresh checkout. No
+   branch is pruned and no pull request is closed on the strength of it.
+7. **A-04 is VERIFIED through an authorized route** (register 16.7): the
+   effective `main` protection requires the two Stability Gate checks
+   (strict), ONE approving review (stale reviews not dismissed, no
+   last-push-approval waiver), ENFORCES ADMINS (no bypass), and forbids
+   force-pushes and deletions; the repository rulesets list is empty, so this
+   protection IS the effective configuration. The merge path is therefore the
+   protected pull request with a merge commit, one genuine non-author
+   approval and the two required checks green on the exact candidate.
+
+**Still OPEN (not closed by this cycle):** PR #37 has no approval on record
+and the restored pre-merge gate is therefore RED - that is the gate
+functioning, and the approval is the auditor/owner's to grant, not the
+coder's to manufacture. The mainline governance issue (the unverified PR #30
+merge) stays open until the recovery path is independently reviewed. The
+independent r2 archive verification, the portable 40-row cohort metadata
+table, A-02 issuer-side revocation and the EC2 deployment secrets remain
+OPEN. PRs #31-#36 revalidate serially against the resulting `main` (EC-21 not
+waived) and PRs #23-#29 close only on proven unique-content coverage. The
+scientific hard stop is preserved in full: no production deployment, no v25
+calibration, no held-out evaluation, no threshold or cohort changes, no
+law-semantic changes, no golden-artifact regeneration.
+
+## 15. Round-25 verification round (gate diff, PR facts, the containment STOP)
+
+**Auditor ruling:** PR #37 is not approved for merge; the live-body fallback,
+the claimed-CI-evidence validation, the manifest semantics and the missing
+pre-merge gate were the blockers. Decisions: one recovery PR (D-U1), the gate
+file (D-U2), no self-approval (D-U3), close the stale PRs (D-U4), close the
+stale actions (D-U5), defer the r2 archive and the cohort table (D-U6), and
+the PAT stays in-shell only (D-U7). Owner action O-1: an independent
+collaborator must approve PR #37 on the exact head.
+
+**This round:**
+
+1. **The gate diff is published** (`evidence/r25/gate-diff.txt`, the prescribed
+   `git diff 44fe653e 5663147e -- .github/workflows/governance-acceptance.yml`)
+   with the per-job statement for every pre-R23 job: `reading-note-inventory`,
+   `ec25-trigger-lint`, `package-integrity`, `declared-base` and
+   `secret-scan-all-refs` are unchanged; `acceptance-suite`,
+   `status-vocabulary`, `push-log-integrity`, `claim-verification` and
+   `pre-merge-verification` carry ONLY the intended Round-24/Round-25
+   additions; the two `preservation-bundle` jobs are added; no pre-R23 job was
+   removed. The R25 report wording is corrected in register 16.9: the JOB came
+   from the pre-R23 blob, the FILE was `5663147e` and carried Round-23-era
+   header drift.
+2. **D-U2 applied:** the file is rebuilt as the pre-R23 blob with only the
+   intended additions (`evidence/r25/gate-diff-after-restore.txt`).
+3. **The PR facts are recorded** in a new incident note
+   (`docs/evidence/push-log/INCIDENT-2026-10-21-R25-PR-IDENTITY.md`): PR #37
+   and PR #38 were both opened by `prateekm1007` (the credential holder, hence
+   the author of both); #37's head is `bc6fdb5d92a237d421570d1a462199e4cdcabf28`, #38's head is `781175d18f94b65ee09635f2e4f38bf67d545b45`; both are
+   open against `main` @ `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`.
+4. **The containment check FAILED and this round stops there.**
+   `git merge-base --is-ancestor 781175d18f94b65ee09635f2e4f38bf67d545b45 bc6fdb5d92a237d421570d1a462199e4cdcabf28` returns 1: the two recovery
+   branches are SIBLINGS from `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`, and their push logs are mutually
+   exclusive (both use the P-082..P-086 identifier space for different
+   branches). PR #38 is therefore NOT closed, its branch is NOT deleted and no
+   archive tag is created - the closure step is conditioned on the
+   containment check passing, and the tag belongs to that closure.
+
+**Still OPEN:** the owner action O-1 (an independent collaborator's approval of
+PR #37 on the exact head; the restored pre-merge gate is red for exactly that
+reason and is not to be worked around); the mainline governance issue (the
+unverified PR #30 merge, register 16.5); the auditor's decision on which
+recovery head becomes the recovery line and whether PR #38's outstanding
+content is ported or accepted as superseded; the stale PR/branch pruning
+(direction 8, sequenced after the merge); the r2 archive verification, the
+cohort table, A-02 issuer-side revocation and the EC2 deployment secrets.
+The scientific hard stop is preserved in full and no product, deployment,
+threshold, cohort or law-semantic work was started.
+
+## 16. Round-26 fold and archive-before-delete cycle (added 2026-10-21T10:11:06Z, SERIES-2026-10-21-R26)
+
+- The R24 recovery content of PR #38 is folded into this head (PR #37, branch
+  `repair/round24-claim-head-binding`): the preservation-bundle generator and its workflow, the
+  R23 governance-bypass incident record, the gate regression coverage (AT-39/AT-40), the R24
+  status/register/index rows and the R24 push-log records (renumbered to avoid the IDs this
+  head already used; nothing rewritten). The diff artifacts are `evidence/r26/fold-diff.txt`
+  (against the head the auditor named) and `evidence/r26/fold-diff-current-head.txt` (against
+  the head the fold actually built on).
+- New control: the push-log checker resolves `refs/tags/archive/<branch>` (and the hyphen
+  spelling) as remote evidence for a pruned branch, using the peeled commit of an ANNOTATED
+  tag; a tag at a different SHA, or a tag without a peeled commit, does not preserve the
+  record and fails closed (AT-41).
+- Archive before delete (D-V3/D-V4): every pruned branch gets an annotated tag
+  `archive/<branch>` at its recorded SHA, verified with `git ls-remote --tags` against the
+  branch SHA, before the branch is deleted. No branch is deleted without its tag.
+- Prune set: everything except the D-V5 keep set (11 branches). This includes the 20
+  `activation/*` and 2 `proposal/*` branches restored in Round 24, the 18 heads that were
+  already merged into `main`, and the 4 unmerged evidence heads
+  (`chore/hygiene-2026-10-19`, `docs/owner-decisions-r19`, `evidence/round11-fix-2026-10-20`,
+  `evidence/round9-r2-2026-10-20`), whose content is preserved by their tags.
+- **Recovery remains OPEN.** O-1 (an independent collaborator with write access) is
+  outstanding, so PR #37 stays blocked until that reviewer approves the exact head; the
+  pre-merge-verification job is red until then by design. OD-16 scientific/production hard
+  stop preserved: no deployment, no v25 run, no held-out evaluation, no threshold or cohort
+  change, no law-semantic change, no golden-artifact modification.

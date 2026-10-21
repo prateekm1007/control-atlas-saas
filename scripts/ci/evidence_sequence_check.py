@@ -605,6 +605,54 @@ def ls_remote_tip(remote: str, branch: str) -> tuple[str | None, str | None]:
     return None, f"remote ref {ref} not found on {remote} (missing remote verification)"
 
 
+def ls_remote_archive(remote: str, branch: str) -> tuple[str | None, str | None, str | None]:
+    """Return (commit_sha, tag_ref, error): the commit an archive tag preserves
+    for a PRUNED branch.
+
+    D-V3/D-V4 (auditor, Round-26): a branch that is pruned is first preserved
+    as an ANNOTATED tag at its recorded SHA, and the push-log checker must
+    resolve that tag as remote evidence. Two spellings are accepted:
+    refs/tags/archive/<branch> (the D-V4 policy spelling) and
+    refs/tags/archive/<branch-with-slashes-as-hyphens> (the spelling the
+    auditor named for repair/r23-governance-recovery). The peeled commit of
+    the annotated tag is authoritative; a lightweight tag resolves to its
+    commit directly.
+    """
+    candidates = [f"refs/tags/archive/{branch}",
+                  f"refs/tags/archive/{branch.replace('/', '-')}"]
+    try:
+        # A glob over the archive namespace is required: the peeled
+        # ("^{}") line of an annotated tag only appears when the pattern
+        # matches it too, and the peeled commit -- not the tag object -- is
+        # the SHA the branch pointed at.
+        r = subprocess.run(["git", "ls-remote", "--tags", remote, "refs/tags/archive/*"],
+                           capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return None, None, f"ls-remote failed for the archive tag of {branch!r} ({e})"
+    if r.returncode != 0:
+        return None, None, (f"ls-remote exited {r.returncode} for the archive tag of "
+                            f"{branch!r}: {r.stderr.strip()[:120]}")
+    direct: dict[str, str] = {}
+    peeled: dict[str, str] = {}
+    for line in r.stdout.splitlines():
+        parts = line.split()
+        if len(parts) != 2 or not re.fullmatch(r"[0-9a-f]{40}", parts[0]):
+            continue
+        sha, ref = parts
+        if ref.endswith("^{}"):
+            peeled[ref[:-3]] = sha
+        else:
+            direct[ref] = sha
+    for ref in candidates:
+        if ref in peeled:
+            return peeled[ref], ref, None
+        if ref in direct:
+            return None, ref, (f"the archive tag {ref} carries no peeled commit "
+                                f"(an archive tag must be ANNOTATED, so the preserved "
+                                f"commit is provable)")
+    return None, None, f"no archive tag for {branch!r} on {remote}"
+
+
 class LogRepo:
     """The git repository containing the push log (for ancestry, object and
     introducing-commit queries). A log outside any repository is legal for
@@ -614,19 +662,42 @@ class LogRepo:
         self.ok = False
         self.toplevel = None
         self.rel = None
+        self.log_dir = os.path.dirname(os.path.abspath(log_path))
+        self.log_name = os.path.basename(log_path)
         try:
-            r = subprocess.run(["git", "-C", os.path.dirname(os.path.abspath(log_path)),
+            r = subprocess.run(["git", "-C", self.log_dir,
                                 "rev-parse", "--show-toplevel"],
                                capture_output=True, text=True, timeout=30)
             if r.returncode == 0 and r.stdout.strip():
                 self.toplevel = r.stdout.strip()
-                self.rel = os.path.relpath(os.path.abspath(log_path), self.toplevel)
+                try:
+                    self.rel = os.path.relpath(
+                        os.path.realpath(log_path),
+                        os.path.realpath(self.toplevel)).replace("\\", "/")
+                except (OSError, ValueError):
+                    self.rel = self.log_name
                 self.ok = True
         except (OSError, subprocess.TimeoutExpired):
             pass
 
     def _git(self, *args):
         return subprocess.run(["git", "-C", self.toplevel, *args],
+                              capture_output=True, text=True, timeout=60)
+
+    def _git_in_log_dir(self, *args):
+        """Run git FROM the log's own directory.
+
+        The pickaxe query needs a pathspec. A path computed from the OS path
+        string breaks whenever the two spellings of the same directory differ
+        -- on Windows the 8.3 short form of a temp directory (C:\\Users\\ADMINI~1\\...)
+        versus the long form git reports (C:/Users/Administrator/...) -- which
+        produced a pathspec OUTSIDE the repository, made every
+        introducing-commit lookup fail closed on a perfectly valid log, and
+        turned the whole push-log gate red on that platform. Running git from
+        the log's directory with the file name as the pathspec is
+        spelling-independent.
+        """
+        return subprocess.run(["git", *args], cwd=self.log_dir,
                               capture_output=True, text=True, timeout=60)
 
     def object_exists(self, sha: str) -> bool:
@@ -652,7 +723,7 @@ class LogRepo:
         if not self.ok:
             return None
         needle = f"{eid} | {verb}"
-        r = self._git("log", "-S", needle, "--format=%H", "--", self.rel)
+        r = self._git_in_log_dir("log", "-S", needle, "--format=%H", "--", self.log_name)
         if r.returncode != 0:
             return None
         lines = [l for l in r.stdout.splitlines() if l.strip()]
@@ -778,6 +849,27 @@ class RunVerifier:
             return None
 
     # ------------------------- Events API (Round-22 direction 4)
+
+
+    def api_is_ancestor(self, base: str, head: str) -> bool | None:
+        """Is <base> an ancestor of <head> per the GitHub compare API?
+
+        Used for a PRUNED branch whose archive tag holds the branch's final
+        tip: an earlier confirmation of that branch is proven by ancestry
+        inside the archived history. Fail-closed: any doubt is None.
+        """
+        if not self.token or not self.repo:
+            return None
+        try:
+            req = urllib.request.Request(
+                f"{API}/repos/{self.repo}/compare/{base}...{head}",
+                headers={"Accept": "application/vnd.github+json",
+                         **({"Authorization": "Bearer " + self.token} if self.token else {})})
+            with urllib.request.urlopen(req, timeout=30) as r:
+                d = json.loads(r.read() or b"{}")
+                return str(d.get("status")) in ("ahead", "identical")
+        except (urllib.error.URLError, urllib.error.HTTPError, OSError, ValueError):
+            return None
 
     def events_available(self) -> bool:
         return self.events_fixture is not None or self.has_api
@@ -1067,6 +1159,13 @@ def check_remote_verification(path: str, state: dict, remote: str,
             live_cache[branch] = ls_remote_tip(remote, branch)
         return live_cache[branch]
 
+    archive_cache: dict[str, tuple[str | None, str | None, str | None]] = {}
+
+    def archive(branch: str):
+        if branch not in archive_cache:
+            archive_cache[branch] = ls_remote_archive(remote, branch)
+        return archive_cache[branch]
+
     def entry_runs(e) -> tuple[str, list[str]]:
         evm = re.search(r'evidence="([^"]*)"', e["subject"])
         text = (evm.group(1) if evm else "") + "\n" + "\n".join(e["body"])
@@ -1152,8 +1251,57 @@ def check_remote_verification(path: str, state: dict, remote: str,
         # 4. live-ref comparison
         tip, err = live(branch)
         if err:
-            findings.append(f"FAIL: {path}:{e['n']}: {eid} could not be verified against the "
-                            f"live remote ref: {err} (fail closed)")
+            # A reviewed `push-not-proven` reclassification is disclosed, never
+            # counted as evidence: the branch push is NOT PROVEN (the commit
+            # may still exist). This is the same treatment the off-lineage
+            # HISTORICAL path gives, applied when the branch ref itself is
+            # gone and the archive tag cannot preserve the record.
+            if eid in state.get("reclassified", set()):
+                rc_eid = next((rc["eid"] for rc in entries
+                               if rc["m"] and rc["verb"] == "push-not-proven"
+                               and field(rc["subject"], "reclassifies") == eid), eid)
+                info.append(f"NOT-PROVEN: {eid} confirmed {branch} @ {sha[:12]}… is "
+                            f"RECLASSIFIED by {rc_eid}: the branch push is NOT PROVEN "
+                            f"(commit existence may be proven; push provenance is not) -- "
+                            f"the branch ref is gone and its archive tag cannot preserve this "
+                            f"record; disclosed, never counted as evidence for any declaration")
+                continue
+            # D-V3/D-V4: a pruned branch keeps its content in an ANNOTATED
+            # archive tag at the recorded SHA; that tag is remote evidence.
+            # An archive tag at a DIFFERENT SHA does not preserve the
+            # confirmation -- both paths stay fail-closed.
+            archived, tag_ref, aerr = archive(branch)
+            if archived is None:
+                findings.append(f"FAIL: {path}:{e['n']}: {eid} could not be verified against the "
+                                f"live remote ref: {err} (fail closed)")
+                continue
+            if archived == sha:
+                info.append(f"ARCHIVED: {eid} confirmed {branch} @ {sha[:12]}…; the branch ref "
+                            f"was pruned and its content is preserved by {tag_ref} at the "
+                            f"identical SHA (the archive tag is the remote evidence; the ref is "
+                            f"gone, the commit is not); CI-success support: {len(supporting)} "
+                            f"verified successful run(s)")
+                continue
+            # The archive tag holds the branch's FINAL tip. An older
+            # confirmation describes an earlier push of that branch, so it is
+            # proven by ANCESTRY inside the archived history - the same rule
+            # the live-ref path uses, applied to the archive tag.
+            anc = logrepo.is_ancestor(sha, archived)
+            if anc is not True and runs is not None:
+                anc = runs.api_is_ancestor(sha, archived)
+            if anc is True:
+                info.append(f"ARCHIVED-HISTORICAL: {eid} confirmed {branch} @ {sha[:12]}…; the "
+                            f"branch ref was pruned and its content is preserved by {tag_ref} at "
+                            f"{archived[:12]}…; the recorded SHA is an ancestor of the archived "
+                            f"commit (the confirmation stays valid for the push it describes and "
+                            f"does NOT confirm the archived tip); CI-success support: "
+                            f"{len(supporting)} verified successful run(s)")
+                continue
+            findings.append(
+                f"FAIL: {path}:{e['n']}: {eid} could not be verified against the live remote "
+                f"ref: {err}; the archive tag {tag_ref} points at {archived[:12]}…, which is not "
+                f"the recorded {sha[:12]}… and does not contain it in its history (an archive tag "
+                f"at another SHA does not preserve this confirmation -- fail closed)")
             continue
         if tip == sha:
             current_for[branch] = sha
