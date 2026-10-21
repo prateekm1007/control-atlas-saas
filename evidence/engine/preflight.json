@@ -1,0 +1,74 @@
+{
+  "task": "OD-03/04/05/20 core pLDDT scope, atom-coverage gate, retired-ID retention, and LAW-182 advisory reporting",
+  "base_sha": "c78ef15f696a2b1e2658e7ac7b54461f70c6e040",
+  "branch": "engine/od-scope-v25",
+  "origin_main_at_start": "63da0e347002ed9b77071ff1ed0cefda7c0ce88a",
+  "owner_clarification": "evidence/engine/owner-clarification-od-03-04-20.md",
+  "expected_behavior": [
+    "Predicted structures measure LAW-100/105/110/120/125/130/135/145/150/155/200 on the pLDDT>=70 core; experimental structures retain all atoms.",
+    "LAW-110 core filtering preserves original residue-file order so insertion-code adjacency is not re-paired.",
+    "LAW-130/155/200 use core atoms for predicted structures and core residues as the LAW-155/200 denominator.",
+    "The global confidence gate uses atom coverage and returns INDETERMINATE below 70 percent; LAW-105 keeps its residue-coverage meaning and reports the atom basis explicitly.",
+    "LAW-155/182/200 report heuristic failure as advisory and cannot independently change the verdict to VETO; LAW-130 remains deterministic.",
+    "LAW-190/210/220/230 remain retired and non-enforced.",
+    "The tracked nested control-atlas-saas directory is absent and no duplicate law implementation remains.",
+    "No pLDDT 50 boundary remains in confidence reporting or visualization."
+  ],
+  "risks": [
+    "Changing LAW-130/155/200 scopes changes scientific meaning and requires an intentional law-semantic hash re-pin.",
+    "Changing the global coverage basis from residues to atoms changes C5 verdicts and must be reported separately from threshold tuning.",
+    "LAW-110 filtering could alter residue-pair adjacency if file order is not preserved.",
+    "Deleting the nested tree is a broad deletion; import/build references must be checked first.",
+    "The canonical OD-03/04/20 text conflicts with the owner brief; the conflict must remain explicit and unmerged."
+  ],
+  "files_expected_to_change": [
+    "backend/tos/engine/tier1_measurements.py",
+    "backend/tos/engine/adjudicator.py",
+    "backend/tos/governance/station_sop.py",
+    "governance/law_registry.yaml",
+    "governance/law_registry.sha256",
+    "governance/law_semantic.sha256",
+    "backend/tos/forensic_artifacts/pdf_generator.py",
+    "backend/tos/forensic_artifacts/confidence_viz.py",
+    "backend/tos/forensic_artifacts/structure_viz.py",
+    "backend/tests/test_plddt_scope_pin.py",
+    "backend/tests/test_law_155.py",
+    "backend/tests/test_law_182.py",
+    "backend/tests/test_law_200.py",
+    "backend/tests/test_law_registry.py",
+    "backend/tests/test_law_definition_uniqueness.py",
+    "control-atlas-saas/"
+  ],
+  "regression_tests": [
+    "core pLDDT selects 10 of 16 residues and 40 of 64 atoms in the pinned synthetic fixture",
+    "LAW-110 reports 9 core adjacent pairs, not 15 all-residue pairs",
+    "LAW-130/155/200 report 40 core atoms for predicted and 64 all atoms for experimental",
+    "uneven atom counts produce <70 atom coverage while residue coverage is >=70, and adjudication returns INDETERMINATE",
+    "LAW-155/182/200 failures report FAIL (Advisory) and a heuristic raw VETO cannot change the verdict",
+    "LAW-190/210/220/230 remain retired and are not emitted",
+    "nested duplicate law implementation is absent from the repository scan",
+    "no pLDDT 50 boundary remains in PDF/confidence presentation code"
+  ],
+  "acceptance_criteria": [
+    "Targeted failing tests are captured in evidence/engine/tests-before.txt before implementation.",
+    "Targeted tests pass after implementation on the exact candidate.",
+    "Full backend suite passes after implementation, or exact pre-existing failures are recorded.",
+    "Registry, law-semantic, and canon hash locks are verified; intentional re-pins are documented.",
+    "C5 verdict-change table is generated from the pinned v24 bytes through the old and new engines.",
+    "No merge, deploy, calibration run, threshold/cohort change, or golden regeneration occurs."
+  ],
+  "rollback": "Revert the OD-scope commits on engine/od-scope-v25 to c78ef15; the old engine and v24 artifacts are unchanged on main.",
+  "out_of_scope": [
+    "OD-10/11/12/13/19/14 implementation",
+    "v25 calibration or held-out evaluation",
+    "CRIT-154/OBS-153 changes",
+    "canonical register edits or merges",
+    "secret rotation or credential changes"
+  ],
+  "stop_conditions": [
+    "A requested change silently alters a threshold, operator, or cohort.",
+    "The old and new C5 runs cannot be bound to the same pinned v24 bytes.",
+    "A hash-lock mismatch appears without an intentional, documented re-pin.",
+    "A deletion breaks an import, build reference, or workflow."
+  ]
+}

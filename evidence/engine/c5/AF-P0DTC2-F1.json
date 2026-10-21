@@ -1,0 +1,9 @@
+{
+  "fmt": "cif",
+  "latest_version": 1,
+  "migrated_identifier": "AF-0000000365840314",
+  "model_entity_id": "AF-0000000365840314",
+  "requested_entity_id": "AF-0000000365840314",
+  "sha256": "a2a08202b9e84a7b056bebaafaf2185450c1b35a3b37cceb2c042d19674b7bb2",
+  "source_url": "https://alphafold.ebi.ac.uk/files/AF-0000000365840314-model_v1.cif"
+}

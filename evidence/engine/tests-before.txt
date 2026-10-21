@@ -1,0 +1,94 @@
+﻿tests-before.txt
+Base: c78ef15f696a2b1e2658e7ac7b54461f70c6e040
+Branch: engine/od-scope-v25
+Recorded: 2026-10-21T18:48:00Z
+Environment: Windows PowerShell 5.1; Python 3.12.7; pytest 9.1.1; gemmi 0.6.7; PYTHONUTF8=1; PYTHONPATH=backend
+Command: python -m pytest tests/test_plddt_scope_pin.py tests/test_law_182.py tests/test_law_155.py tests/test_law_200.py tests/test_adjudicator.py tests/test_law_definition_uniqueness.py -q --tb=line
+
+FFFF..F.F...F.F.F....F.......................FFF.......F.                [100%]
+================================== FAILURES ===================================
+E   assert 15 == 9
+C:\Users\Administrator\AppData\Local\Temp\opencode\control-atlas-saas\backend\tests\test_plddt_scope_pin.py:73: assert 15 == 9
+E   KeyError: 'residue_coverage'
+C:\Users\Administrator\AppData\Local\Temp\opencode\control-atlas-saas\backend\tests\test_plddt_scope_pin.py:86: KeyError: 'residue_coverage'
+E   assert 75.0 == 23.08
+     +  where 23.08 = round(((3 / 13) * 100), 2)
+C:\Users\Administrator\AppData\Local\Temp\opencode\control-atlas-saas\backend\tests\test_plddt_scope_pin.py:96: assert 75.0 == 23.08
+E   AssertionError: pdf_generator.py still has a 50 threshold
+    assert 'threshold=50' not in 'from fpdf i....encode())\n'
+      
+      'threshold=50' is contained here:
+        fidences, threshold=50.0, min_length=3):
+      ?           ++++++++++++
+            """Find contiguous stretches of residues below threshold. Returns 1-indexed tuples."""
+            regions, in_r, start = [], False, 0
+            for i, s in enumerate(confidences):...
+      
+      ...Full output truncated (762 lines hidden), use '-vv' to show
+C:\Users\Administrator\AppData\Local\Temp\opencode\control-atlas-saas\backend\tests\test_plddt_scope_pin.py:120: AssertionError: pdf_generator.py still has a 50 threshold
+E   AssertionError: assert 'VETO' == 'FAIL (Advisory)'
+      
+      - FAIL (Advisory)
+      + VETO
+C:\Users\Administrator\AppData\Local\Temp\opencode\control-atlas-saas\backend\tests\test_law_182.py:80: AssertionError: assert 'VETO' == 'FAIL (Advisory)'
+E   AssertionError: assert 'VETO' == 'FAIL (Advisory)'
+      
+      - FAIL (Advisory)
+      + VETO
+C:\Users\Administrator\AppData\Local\Temp\opencode\control-atlas-saas\backend\tests\test_law_182.py:119: AssertionError: assert 'VETO' == 'FAIL (Advisory)'
+E   AssertionError: assert 'VETO' == 'FAIL (Advisory)'
+      
+      - FAIL (Advisory)
+      + VETO
+C:\Users\Administrator\AppData\Local\Temp\opencode\control-atlas-saas\backend\tests\test_law_182.py:179: AssertionError: assert 'VETO' == 'FAIL (Advisory)'
+E   AssertionError: assert 'VETO' == 'FAIL (Advisory)'
+      
+      - FAIL (Advisory)
+      + VETO
+C:\Users\Administrator\AppData\Local\Temp\opencode\control-atlas-saas\backend\tests\test_law_155.py:71: AssertionError: assert 'VETO' == 'FAIL (Advisory)'
+E   AssertionError: assert 'VETO' == 'FAIL (Advisory)'
+      
+      - FAIL (Advisory)
+      + VETO
+C:\Users\Administrator\AppData\Local\Temp\opencode\control-atlas-saas\backend\tests\test_law_155.py:97: AssertionError: assert 'VETO' == 'FAIL (Advisory)'
+E   AssertionError: assert 'VETO' == 'FAIL (Advisory)'
+      
+      - FAIL (Advisory)
+      + VETO
+C:\Users\Administrator\AppData\Local\Temp\opencode\control-atlas-saas\backend\tests\test_law_200.py:83: AssertionError: assert 'VETO' == 'FAIL (Advisory)'
+E   AssertionError: assert 'VETO' == 'FAIL (Advisory)'
+      
+      - FAIL (Advisory)
+      + VETO
+C:\Users\Administrator\AppData\Local\Temp\opencode\control-atlas-saas\backend\tests\test_adjudicator.py:231: AssertionError: assert 'VETO' == 'FAIL (Advisory)'
+E   AssertionError: assert 'VETO' == 'FAIL (Advisory)'
+      
+      - FAIL (Advisory)
+      + VETO
+C:\Users\Administrator\AppData\Local\Temp\opencode\control-atlas-saas\backend\tests\test_adjudicator.py:231: AssertionError: assert 'VETO' == 'FAIL (Advisory)'
+E   AssertionError: assert 'VETO' == 'FAIL (Advisory)'
+      
+      - FAIL (Advisory)
+      + VETO
+C:\Users\Administrator\AppData\Local\Temp\opencode\control-atlas-saas\backend\tests\test_adjudicator.py:231: AssertionError: assert 'VETO' == 'FAIL (Advisory)'
+E   AssertionError: tracked nested control-atlas-saas/ copy is still present
+    assert not True
+     +  where True = exists()
+     +    where exists = WindowsPath('C:/Users/Administrator/AppData/Local/Temp/opencode/control-atlas-saas/control-atlas-saas').exists
+C:\Users\Administrator\AppData\Local\Temp\opencode\control-atlas-saas\backend\tests\test_law_definition_uniqueness.py:91: AssertionError: tracked nested control-atlas-saas/ copy is still present
+=========================== short test summary info ===========================
+FAILED tests/test_plddt_scope_pin.py::test_law_110_130_155_200_use_core_for_predicted
+FAILED tests/test_plddt_scope_pin.py::test_law_105_keeps_residue_coverage_and_reports_atom_basis
+FAILED tests/test_plddt_scope_pin.py::test_atom_coverage_below_70_blocks_pass_even_when_residue_coverage_passes
+FAILED tests/test_plddt_scope_pin.py::test_no_legacy_plddt_50_boundary_in_reporting
+FAILED tests/test_law_182.py::TestLaw182::test_scattered_hydrophobic_advisory
+FAILED tests/test_law_182.py::TestLaw182::test_multichain_worst_governs - Ass...
+FAILED tests/test_law_182.py::TestLaw182::test_heuristic_veto_cannot_veto_verdict
+FAILED tests/test_law_155.py::TestLaw155::test_sparse_structure_advisory - As...
+FAILED tests/test_law_155.py::TestLaw155::test_atoms_in_same_voxel_counted_once
+FAILED tests/test_law_200.py::TestLaw200::test_sparse_structure_advisory - As...
+FAILED tests/test_adjudicator.py::TestComputeVerdict::test_heuristic_veto_is_reported_as_advisory[LAW-155]
+FAILED tests/test_adjudicator.py::TestComputeVerdict::test_heuristic_veto_is_reported_as_advisory[LAW-182]
+FAILED tests/test_adjudicator.py::TestComputeVerdict::test_heuristic_veto_is_reported_as_advisory[LAW-200]
+FAILED tests/test_law_definition_uniqueness.py::test_nested_duplicate_engine_tree_is_absent
+14 failed, 43 passed in 1.40s

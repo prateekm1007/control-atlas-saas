@@ -1,0 +1,31 @@
+Hash locks after OD-03/04/05/20 changes
+Base: c78ef15f696a2b1e2658e7ac7b54461f70c6e040
+Branch: engine/od-scope-v25
+Recorded: 2026-10-21T19:37:54Z
+Command environment: Windows PowerShell 5.1, Python 3.12.7, PYTHONUTF8=1, PYTHONPATH=backend
+Note: local full-suite run used a temporary no-op fcntl shim because this is Windows; CI runs Linux and imports real fcntl.
+
+Computed values:
+law_semantic_sha256 = 4532a073225e98cb0094d7301591e9fe4d830b07169e670c9eb7d0deab561bbe
+canon_hash_computed  = 6a9cd4b4349b81de
+canon_hash_constant  = 6a9cd4b4349b81de
+modality_matrix_sha256 = ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4
+
+Pinned files:
+4532a073225e98cb0094d7301591e9fe4d830b07169e670c9eb7d0deab561bbe  governance/law_semantic.sha256 (content)
+7e3b42d59feeca5501001f702eab7d6af0a83f6855c5d3ec2e474840c0f23e93  governance/law_registry.sha256 (content)
+7e3b42d59feeca5501001f702eab7d6af0a83f6855c5d3ec2e474840c0f23e93  governance/law_registry.yaml (actual sha256)
+
+Source file hashes:
+54af66f997d5a78665bfefe0d80a002af70d616fee5c957c74b1150765131ebc  backend/tos/governance/station_sop.py
+2295c74bd2af4243d5175d51bc33bcdb2d244e575716c3167d43960e9c88df15  backend/tos/engine/tier1_measurements.py
+0c425632b238186cf9e2b8cc0ef8143c03e1ff55cc60dadfefd9c96c68a6d526  backend/tos/engine/adjudicator.py
+a10cc77b8657e1277bc9d52f160146eb837b7098353d84168f278f2e40337727  backend/tos/forensic_artifacts/pdf_generator.py
+c8eb3fa409b544e10e525a6aaf27815620f243241f6e9566254708d627dff291  backend/tos/forensic_artifacts/confidence_viz.py
+0c35f4bf658f206595228e22d67d46d268e684631c45e94e057c0b0df738f18e  backend/tos/forensic_artifacts/structure_viz.py
+5fb4bb2ead5b4dc6aefc94ea7625f3acfa8fa29460d1f784e11d9fe1008d047f  backend/tos/forensic_artifacts/residue_heatmap.py
+9722c3e45d316ff58ed326df074eec138b81ceb520191a492088cc0ddef63762  backend/calibration/runs/v24/coordinate_manifest.json
+f602351f4844531d409cfc256939508103e3c2d4f57fe21d7f77c34494aa4036  backend/calibration/runs/v24/run_manifest.json
+
+Test result:
+548 passed, 5 skipped (backend/tests, local Windows + temporary fcntl shim)
