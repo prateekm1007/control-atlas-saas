@@ -168,3 +168,68 @@ threshold or cohort change and no golden-artifact regeneration were performed (O
   and the OD-07 audit-ID derivation have no implementation in the tree to compare.
 - The merge-intent and the PR are governance records for this branch; the branch is not merged and
   no independent approval exists.
+
+## 7. CI results on this branch (candidate 5c913c02946e080b21aa49144aa8a7b41f22c5d4)
+
+| Run | Event | Workflow | Conclusion |
+|---|---|---|---|
+| 39595134819 | push | Toscanini Stability Gate | success (secret scan, unit tests, canon/matrix hash locks) |
+| 39595134963 | push | Governance Acceptance | FAILURE - `EC-18/EC-24 push-log schema, append-only, remote verification` |
+| 39595141488 | pull_request | Toscanini Stability Gate | success (the Status-summary in the PR body cites this run) |
+| 39595141461 | pull_request | Governance Acceptance | FAILURE - `EC-16/19/20 PR-body claim verification` (fixed, see below) and `EC-18/EC-24 push-log schema, append-only, remote verification` |
+
+### 7.1 The claim-verification failure was in the PR body, and is fixed
+
+The first PR-event run failed EC-20 with "acceptance test named but not collectable on the
+candidate" for all nine `backend/tests/test_law_160.py::...` identifiers. Cause: the
+`EC-16/19/20 PR-body claim verification` job installs only `pytest` and `pyyaml`, and
+`backend/tests/test_law_160.py` imports the engine (numpy), so the file cannot be COLLECTED in
+that job and the check fails closed by design ("the check cannot execute it here"). The fix is in
+the PR body, not in the code and not in the gate: the Acceptance-Tests field now names the
+acceptance-suite identifiers that are collectable in that environment, and the nine LAW-160
+identifiers are recorded in the PR body prose and in this file. The LAW-160 module itself is
+executed by the Stability Gate's unit-test job, which installs the backend dependencies, and it
+is green there (run 39595141488).
+
+### 7.2 The push-log failure is INHERITED from `main` and is not caused by this change
+
+The failing job reports confirmations that are already in `main`'s push log and that name branches
+deleted by the Round-26 pruning: `activation/ec23-r19` (P-055), `activation/ec24-r19` (P-056),
+`docs/owner-decisions-r19` (P-057), `repair/round19-mainline-acceptance` (P-058, P-059, P-060,
+P-066, P-069, P-070, P-073, P-078). The checker as it exists on `main` fails closed when a
+confirmation's branch ref is gone; the archive-tag resolution that verifies those records against
+`refs/tags/archive/<branch>` exists only on `repair/round24-claim-head-binding` (PR #37), not on
+`main`. Consequences, stated plainly:
+
+- `main`'s own Governance Acceptance run `39504181997` is already red, and the same findings are
+  reproduced locally by running the checker against `main`'s tree with the live remote.
+- EVERY branch derived from `main` inherits this failure, so no branch can currently pass that
+  job until PR #37's archive-tag resolution lands on `main`.
+- This branch does not edit, delete or contradict any of those historical records, and the LAW-160
+  change touches no push-log entry. The only push-log records this branch adds are its own
+  two-phase push records.
+
+### 7.3 Merge sequencing (a dependency, not a defect of this patch)
+
+LAW-160 must merge AFTER the archive-tag resolution is on `main` (PR #37 first), otherwise the
+push-log job stays red for this branch as well. This is recorded rather than worked around: the
+alternative - importing the checker change into this engine patch - is exactly the mixing of
+separate workstreams that the directions forbid.
+
+## 8. Verdict impact (restated for the record)
+
+Excluding nonconsecutive pairs CORRECTS false LAW-160 vetoes (a residue-number gap no longer
+reads as a chain break), and a structure with NO eligible, measured Cα pair now reports FAIL
+(absent metric) instead of PASS - which the existing adjudicator maps to VETO for a deterministic
+law. Both directions change verdicts for affected structures. This is an intended measurement
+correction, not a neutral refactor. No verdict was recomputed here: no calibration run, no dataset
+run, no held-out evaluation, no threshold or cohort change, no golden-artifact regeneration
+(OD-16 hard stop). The affected population must be re-adjudicated when the change is reviewed.
+
+## 9. Final state of this branch
+
+- Branch: `fix/law-160-sequence-adjacency`; pull request: #39 (open, not merged).
+- Commits: the code candidate (LAW-160 correction + regressions + reading note + preflight +
+  push-log records), then this evidence update and the push-state records.
+- The branch is feature-only. Nothing was merged into `main`, no workflow or governance file was
+  modified, no branch was created or deleted for this task, and the OD-16 hard stop is intact.
