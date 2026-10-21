@@ -54,7 +54,7 @@ class ToscaniniDossier(FPDF):
         self.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
         self.set_font("Helvetica", "B", 11)
         self.cell(badge_width, 10,
-                  f"Deterministic Score: {score}/100   |   Coverage: {coverage}%",
+                  f"Deterministic Score: {score}/100   |   Atom Coverage: {coverage}%",
                   border=0, ln=True, align="C", fill=True)
         self.ln(6)
 
@@ -109,14 +109,14 @@ def _extract_ca_atoms(pdb_b64):
                         bfactor = float(line[60:66])
                         confidences.append(bfactor)
                     except (ValueError, IndexError):
-                        confidences.append(50.0)
+                        confidences.append(0.0)
     except Exception:
         pass
     return coords, confidences
 
 
 
-def _find_low_regions(confidences, threshold=50.0, min_length=3):
+def _find_low_regions(confidences, threshold=70.0, min_length=3):
     """Find contiguous stretches of residues below threshold. Returns 1-indexed tuples."""
     regions, in_r, start = [], False, 0
     for i, s in enumerate(confidences):
@@ -184,8 +184,6 @@ def generate_v21_dossier(payload):
 
         if cov_val >= 70:
             cov_sub, cov_col = "SUFFICIENT", PDF_COLORS["PASS"]
-        elif cov_val >= 50:
-            cov_sub, cov_col = "MARGINAL", PDF_COLORS["ALERT"]
         else:
             cov_sub, cov_col = "INSUFFICIENT", PDF_COLORS["INDETERMINATE"]
 
@@ -205,7 +203,7 @@ def generate_v21_dossier(payload):
 
         cards = [
             ("DETERMINISTIC COMPLIANCE", "%d / %d" % (det_pass, det_total_v), comp_sub, comp_col),
-            ("RELIABILITY COVERAGE",     "%.1f%%" % cov_val,                  cov_sub,  cov_col),
+            ("ATOM COVERAGE",            "%.1f%%" % cov_val,                  cov_sub,  cov_col),
             ("PRIORITIZATION INDEX",     "%s%%" % str(pri_val),               pri_sub,  pri_col),
         ]
 
@@ -282,9 +280,9 @@ def generate_v21_dossier(payload):
 
         # ═══ REGULATOR FIX #1: Coverage failure high-contrast warning ═══
         if coverage < LAW_105_THRESHOLD:
-            pdf.red_banner(f"ADJUDICATION SUSPENDED -- Evidence Scope Below Threshold (LAW-105: {coverage}%)")
+            pdf.red_banner(f"ADJUDICATION SUSPENDED -- Atom Coverage Below Threshold (OD-04: {coverage}%)")
             pdf.set_font("Helvetica", "I", 8)
-            pdf.multi_cell(w, 4, "The engine cannot certify structural compliance when reliability "
+            pdf.multi_cell(w, 4, "The engine cannot certify structural compliance when atom "
                            "coverage falls below the 70% epistemic threshold. This is not a declaration "
                            "of failure -- it reflects insufficient high-confidence coordinate data to "
                            "support deterministic governance.")
@@ -302,11 +300,11 @@ def generate_v21_dossier(payload):
         pdf.set_font("Helvetica", "", 8)
 
         pdf.set_font("Helvetica", "B", 8); pdf.write(5, "PASS: "); pdf.set_font("Helvetica", "", 8)
-        pdf.write(5, f"Physically compliant. All deterministic invariants satisfied. Coverage >= {LAW_105_THRESHOLD}%.\n")
+        pdf.write(5, f"Physically compliant. All deterministic invariants satisfied. Atom coverage >= {LAW_105_THRESHOLD}%.\n")
         pdf.set_font("Helvetica", "B", 8); pdf.write(5, "VETO: "); pdf.set_font("Helvetica", "", 8)
         pdf.write(5, "Physically incompatible. Non-negotiable invariant violation detected.\n")
         pdf.set_font("Helvetica", "B", 8); pdf.write(5, "INDETERMINATE: "); pdf.set_font("Helvetica", "", 8)
-        pdf.write(5, "Epistemic insufficiency. Coverage < 70% or low-confidence data. Not a failure declaration.\n")
+        pdf.write(5, "Epistemic insufficiency. Atom coverage < 70% or low-confidence data. Not a failure declaration.\n")
 
         # ═══ REGULATOR FIX #2: Modality jurisdiction statement ═══
         pdf.ln(4)
@@ -330,7 +328,7 @@ def generate_v21_dossier(payload):
         pdf.set_font("Helvetica", "B", 8)
         pdf.set_text_color(*PDF_COLORS["ALERT"])
         # CANONICAL ADJUDICATION HIERARCHY - DO NOT DUPLICATE ANYWHERE
-        pdf.multi_cell(w, 4, f"Adjudication Hierarchy: Coverage gate (LAW-105 >= {LAW_105_THRESHOLD}%) precedes deterministic incompatibility checks. If coverage is insufficient, verdict is INDETERMINATE regardless of individual law compliance. This reflects epistemic insufficiency, not structural failure.")
+        pdf.multi_cell(w, 4, f"Adjudication Hierarchy: Atom coverage gate (OD-04 >= {LAW_105_THRESHOLD}%) precedes deterministic incompatibility checks. If atom coverage is insufficient, verdict is INDETERMINATE regardless of individual law compliance. This reflects epistemic insufficiency, not structural failure.")
         pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
         pdf.ln(2)
         pdf.set_font("Helvetica", "B", 8)
@@ -474,7 +472,7 @@ def generate_v21_dossier(payload):
                 pdf.set_text_color(*PDF_COLORS["TEXT_MUTED"])
                 _atom_msg = "Atoms plotted: %d CA | Colored by pLDDT/B-factor" % len(ca_coords)
                 pdf.cell(w, 5, _atom_msg, ln=True, align="C")
-                pdf.cell(w, 5, "Blue (>=90) | Light Blue (70-90) | Orange (50-70) | Red (<50)", ln=True, align="C")
+                pdf.cell(w, 5, "Blue (>=90) | Light Blue (70-90) | Red (<70)", ln=True, align="C")
                 pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
             except Exception:
                 pdf.set_font("Helvetica", "I", 9)
@@ -512,13 +510,12 @@ def generate_v21_dossier(payload):
                 pdf.set_font("Helvetica", "", 7)
                 pdf.set_text_color(*PDF_COLORS["TEXT_MUTED"])
                 n_total = len(ca_confidences)
-                n_low = sum(1 for s in ca_confidences if s < 50)
-                n_med = sum(1 for s in ca_confidences if 50 <= s < 70)
+                n_low = sum(1 for s in ca_confidences if s < 70)
                 n_high = sum(1 for s in ca_confidences if 70 <= s < 90)
                 n_vhigh = sum(1 for s in ca_confidences if s >= 90)
-                pdf.cell(w, 4, "Very High %d (%.0f%%) | High %d (%.0f%%) | Medium %d (%.0f%%) | Low %d (%.0f%%)" % (
+                pdf.cell(w, 4, "Very High %d (%.0f%%) | High %d (%.0f%%) | Low %d (%.0f%%)" % (
                     n_vhigh, n_vhigh/n_total*100, n_high, n_high/n_total*100,
-                    n_med, n_med/n_total*100, n_low, n_low/n_total*100), ln=True, align="C")
+                    n_low, n_low/n_total*100), ln=True, align="C")
                 if n_low > 0:
                     low_regions = _find_low_regions(ca_confidences)
                     if low_regions:
@@ -555,7 +552,7 @@ def generate_v21_dossier(payload):
             if coverage < LAW_105_THRESHOLD:
                 pdf.set_font("Helvetica", "I", 9)
                 pdf.set_text_color(*PDF_COLORS["VETO"])
-                pdf.multi_cell(w, 6, f"Secondary structure not computable: reliability coverage below {LAW_105_THRESHOLD}% "
+                pdf.multi_cell(w, 6, f"Secondary structure not computable: atom coverage below {LAW_105_THRESHOLD}% "
                                f"(observed: {coverage}%). Insufficient high-confidence coordinates for "
                                "phi/psi-based assignment.")
                 pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
@@ -588,7 +585,7 @@ def generate_v21_dossier(payload):
             pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
             if coverage < LAW_105_THRESHOLD:
                 pdf.multi_cell(w, 5,
-                    "This structure has insufficient reliability coverage (%.1f%%) and is not yet "
+                    "This structure has insufficient atom coverage (%.1f%%) and is not yet "
                     "suitable for drug discovery without refinement. The following physics-first "
                     "methods are recommended to improve structural quality." % coverage)
             else:
@@ -865,7 +862,7 @@ def generate_v21_dossier(payload):
         if s6_val == 0.0 or s6_val == 0:
             pdf.set_font("Helvetica", "I", 7)
             pdf.set_text_color(*PDF_COLORS["VETO"])
-            pdf.multi_cell(w, 4, f"Note: S6 = 0.0 because coverage gate (LAW-105) failed. When reliability coverage < {LAW_105_THRESHOLD}%, the prioritization index is zeroed regardless of individual law compliance. This is by design: epistemic insufficiency prevents meaningful prioritization scoring.")
+            pdf.multi_cell(w, 4, f"Note: S6 = 0.0 because the atom coverage gate (OD-04) failed. When atom coverage < {LAW_105_THRESHOLD}%, the prioritization index is zeroed regardless of individual law compliance. This is by design: epistemic insufficiency prevents meaningful prioritization scoring.")
             pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
             pdf.set_font("Helvetica", "", 8)
         pdf.ln(3)

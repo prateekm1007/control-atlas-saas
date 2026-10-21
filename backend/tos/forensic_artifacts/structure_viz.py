@@ -36,8 +36,6 @@ def generate_structure_render(coords: list, confidences: list, title: str = "Str
             colors.append('#0066CC')  # Dark blue - very high confidence
         elif conf >= 70:
             colors.append('#4DA6FF')  # Light blue - high confidence
-        elif conf >= 50:
-            colors.append('#FFB84D')  # Orange - medium confidence
         else:
             colors.append('#CC0000')  # Red - low confidence
     
@@ -58,8 +56,7 @@ def generate_structure_render(coords: list, confidences: list, title: str = "Str
     legend_elements = [
         Patch(facecolor='#0066CC', label='Very High (≥90)'),
         Patch(facecolor='#4DA6FF', label='High (70-90)'),
-        Patch(facecolor='#FFB84D', label='Medium (50-70)'),
-        Patch(facecolor='#CC0000', label='Low (<50)')
+        Patch(facecolor='#CC0000', label='Low (<70)')
     ]
     ax.legend(handles=legend_elements, loc='upper right', fontsize=8)
     

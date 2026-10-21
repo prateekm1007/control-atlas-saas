@@ -204,7 +204,7 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
         # NOT_MEASURED on a deterministic law blocks an authoritative
         # PASS via the indeterminate-causes path.
         raw_status = m.get("status", STATUS_NOT_MEASURED)
-        if method == "advisory_experimental" and raw_status == "VETO":
+        if method in ("advisory_experimental", "heuristic") and raw_status == "VETO":
             raw_status = "FAIL (Advisory)"
 
         row = {

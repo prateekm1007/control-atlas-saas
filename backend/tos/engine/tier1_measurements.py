@@ -104,6 +104,7 @@ class Tier1Measurements:
                 if incumbent is None or a.occupancy > incumbent.occupancy:
                     selected[a.atom_name] = a
             r["_atoms"] = {name: atom.pos for name, atom in selected.items()}
+            r["_selected_atoms"] = list(selected.values())
             r["_conf_acc"] = [atom.b_iso for atom in selected.values()]
             r["_conf"] = float(np.mean(r["_conf_acc"])) if r["_conf_acc"] else 0.0
         # P0 item 4: residues are returned in FILE ORDER (order of first
@@ -126,13 +127,30 @@ class Tier1Measurements:
         method = getattr(structure.confidence, "method", "predicted")
         is_experimental = (method != "predicted")
         core = residues if is_experimental else [r for r in residues if r["_conf"] >= 70]
+        core_ids = {id(r) for r in core}
         # P0 item 9: the coverage denominator is the SOURCE residue count
         # (ATOM records + retained HETATM polymer residues in the source
         # file), not the parsed-residue count — unparseable coordinate
         # lines or dropped records must not silently inflate LAW-105.
         source_residues = getattr(structure, "source_residue_count", None)
         coverage_denominator = source_residues if source_residues else len(residues)
-        coverage = 100.0 if is_experimental else (len(core) / coverage_denominator * 100)
+        residue_coverage = (
+            100.0 if is_experimental
+            else (len(core) / coverage_denominator * 100)
+        )
+        # OD-04: the global confidence gate is ATOM-based. A structure with
+        # fewer than 70 percent of its selected atoms in high-confidence
+        # residues cannot receive a PASS, even when residue coverage passes.
+        # LAW-105 keeps its historical residue-coverage meaning and reports
+        # both bases explicitly.
+        core_selected_atoms = [a for r in core for a in r["_selected_atoms"]]
+        total_selected_atoms = sum(len(r["_selected_atoms"]) for r in residues)
+        atom_coverage = (
+            100.0 if is_experimental
+            else (len(core_selected_atoms) / total_selected_atoms * 100
+                  if total_selected_atoms else 0.0)
+        )
+        core_coords = np.array([a.pos for a in core_selected_atoms])
 
         results = {}
 
@@ -176,10 +194,14 @@ class Tier1Measurements:
         # above), including retained HETATM-mapped ones.
         # ═══════════════════════════════════════════════════════════
         results["LAW-105"] = {
-            "observed": round(coverage, 2),
-            "status": "PASS" if coverage >= 70.0 else "FAIL",
+            "observed": round(residue_coverage, 2),
+            "status": "PASS" if residue_coverage >= 70.0 else "FAIL",
             "sample": len(residues),
-            "sample_source_residues": coverage_denominator
+            "sample_source_residues": coverage_denominator,
+            "residue_coverage": round(residue_coverage, 2),
+            "atom_coverage": round(atom_coverage, 2),
+            "sample_atoms": total_selected_atoms,
+            "sample_core_atoms": len(core_selected_atoms)
         }
 
         # ═══════════════════════════════════════════════════════════
@@ -190,6 +212,10 @@ class Tier1Measurements:
         peptide_pairs_checked = 0
         for i in range(len(residues) - 1):
             r1, r2 = residues[i], residues[i + 1]
+            # OD-03: only pairs wholly inside the pLDDT core. Keep the
+            # original file-order adjacency; do not re-pair insertion codes.
+            if id(r1) not in core_ids or id(r2) not in core_ids:
+                continue
             if r1["_chain"] == r2["_chain"] and Tier1Measurements._is_sequential(r1, r2):
                 if "C" in r1["_atoms"] and "N" in r2["_atoms"]:
                     peptide_pairs_checked += 1
@@ -333,15 +359,14 @@ class Tier1Measurements:
         # ═══════════════════════════════════════════════════════════
         clash = 0
         clash_pairs = []  # Phase A.5: inline residue-pair capture
-        all_coords = np.array([a.pos for a in structure.atoms])
         clash_search_failed = False  # WP-SCI-1: distinguish tooling failure
-        if len(all_coords) > 1:
+        if len(core_coords) > 1:
             try:
                 from scipy.spatial import cKDTree
-                tree = cKDTree(all_coords)
+                tree = cKDTree(core_coords)
                 pairs = tree.query_pairs(r=1.5)
                 for ii, jj in pairs:
-                    ai, aj = structure.atoms[ii], structure.atoms[jj]
+                    ai, aj = core_selected_atoms[ii], core_selected_atoms[jj]
                     if ai.res_seq == aj.res_seq and ai.chain_id == aj.chain_id:
                         continue
                     if ai.chain_id == aj.chain_id and abs(ai.res_seq - aj.res_seq) <= 1:
@@ -365,18 +390,18 @@ class Tier1Measurements:
                 "granularity": GRANULARITY_RESIDUE_PAIR, "failing_residue_pairs": [],
                 "reason": "clash search unavailable (neighbor-search tooling failure)"
             }
-        elif len(all_coords) == 0:
+        elif len(core_coords) == 0:
             results["LAW-130"] = {
                 "observed": None, "status": "NOT_MEASURED", "sample": 0,
                 "granularity": GRANULARITY_RESIDUE_PAIR, "failing_residue_pairs": [],
-                "reason": "no atomic coordinates available"
+                "reason": "no atomic coordinates available in the pLDDT core"
             }
         else:
-            clash_score = (clash / len(all_coords)) * 1000
+            clash_score = (clash / len(core_coords)) * 1000
             results["LAW-130"] = {
                 "observed": round(clash_score, 2),
                 "status": "PASS" if clash_score < LAW_CANON["LAW-130"]["threshold"] else "VETO",
-                "sample": len(all_coords),
+                "sample": len(core_coords),
                 "granularity": GRANULARITY_RESIDUE_PAIR,
                 "failing_residue_pairs": unique_pairs
             }
@@ -684,7 +709,7 @@ class Tier1Measurements:
         if total_hydrophobic > 0:
             results["LAW-182"] = {
                 "observed": round(min_burial_ratio, 3),
-                "status": "PASS" if min_burial_ratio >= LAW_CANON["LAW-182"]["threshold"] else "VETO",
+                "status": "PASS" if min_burial_ratio >= LAW_CANON["LAW-182"]["threshold"] else "FAIL (Advisory)",
                 "sample": total_hydrophobic
             }
         elif hydro_named > 0:
@@ -706,12 +731,12 @@ class Tier1Measurements:
         # Threshold: 2.0 from station_sop.py (operator >=)
         # ═══════════════════════════════════════════════════════════
         voxel_size = 2.0
-        n_residues = len(residues)
-        if len(all_coords) > 0 and n_residues > 0:
-            bbox_min = np.min(all_coords, axis=0)
-            # Quantize each atom position into a voxel index
+        n_residues = len(core)
+        if len(core_coords) > 0 and n_residues > 0:
+            bbox_min = np.min(core_coords, axis=0)
+            # Quantize each core atom position into a voxel index
             voxel_indices = set()
-            for pos in all_coords:
+            for pos in core_coords:
                 ix = int(np.floor((pos[0] - bbox_min[0]) / voxel_size))
                 iy = int(np.floor((pos[1] - bbox_min[1]) / voxel_size))
                 iz = int(np.floor((pos[2] - bbox_min[2]) / voxel_size))
@@ -719,8 +744,8 @@ class Tier1Measurements:
             voxels_per_residue = len(voxel_indices) / n_residues
             results["LAW-155"] = {
                 "observed": round(voxels_per_residue, 2),
-                "status": "PASS" if voxels_per_residue >= LAW_CANON["LAW-155"]["threshold"] else "VETO",
-                "sample": len(all_coords)
+                "status": "PASS" if voxels_per_residue >= LAW_CANON["LAW-155"]["threshold"] else "FAIL (Advisory)",
+                "sample": len(core_coords)
             }
         else:
             # WP-SCI-1: missing coordinates must not become a fabricated
@@ -736,18 +761,18 @@ class Tier1Measurements:
         # Exploded/sparse structures: >> 300 Å³/atom.
         # Threshold: 300.0 Å³/atom from station_sop.py
         # ═══════════════════════════════════════════════════════════
-        if len(all_coords) > 0:
-            bbox_min = np.min(all_coords, axis=0)
-            bbox_max = np.max(all_coords, axis=0)
+        if len(core_coords) > 0:
+            bbox_min = np.min(core_coords, axis=0)
+            bbox_max = np.max(core_coords, axis=0)
             bbox_dims = bbox_max - bbox_min
             # Clamp dimensions to minimum 1.0Å to avoid zero volume for planar/linear structures
             bbox_dims = np.maximum(bbox_dims, 1.0)
             bbox_volume = float(bbox_dims[0] * bbox_dims[1] * bbox_dims[2])
-            vol_per_atom = bbox_volume / len(all_coords)
+            vol_per_atom = bbox_volume / len(core_coords)
             results["LAW-200"] = {
                 "observed": round(vol_per_atom, 2),
-                "status": "PASS" if vol_per_atom <= LAW_CANON["LAW-200"]["threshold"] else "VETO",
-                "sample": len(all_coords)
+                "status": "PASS" if vol_per_atom <= LAW_CANON["LAW-200"]["threshold"] else "FAIL (Advisory)",
+                "sample": len(core_coords)
             }
         else:
             # WP-SCI-1: missing coordinates must not become a favorable 0.0.
@@ -756,7 +781,7 @@ class Tier1Measurements:
                 "reason": "no atomic coordinates available"
             }
 
-        return results, coverage, False
+        return results, atom_coverage, False
 
     @staticmethod
     def compute_structural_characterization(structure):

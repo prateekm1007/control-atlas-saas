@@ -20,28 +20,23 @@ def generate_confidence_bar(coverage_pct: float, det_passed: int, det_total: int
     bins = [
         ("Very High (>=90)",  "#0050A0", 90, 100),
         ("High (70-90)",      "#4DA6FF", 70,  90),
-        ("Medium (50-70)",    "#FFB84D", 50,  70),
-        ("Low (<50)",         "#CC2200",  0,  50),
+        ("Low (<70)",         "#CC2200",  0,  70),
     ]
 
     if coverage_pct >= 90:
         fracs = [coverage_pct * 0.85, coverage_pct * 0.15,
-                 (100 - coverage_pct) * 0.6, (100 - coverage_pct) * 0.4]
+                 100 - coverage_pct]
     elif coverage_pct >= 70:
         fracs = [coverage_pct * 0.55, coverage_pct * 0.45,
-                 (100 - coverage_pct) * 0.5, (100 - coverage_pct) * 0.5]
-    elif coverage_pct >= 50:
-        fracs = [coverage_pct * 0.1, coverage_pct * 0.3,
-                 coverage_pct * 0.6, 100 - coverage_pct]
+                 100 - coverage_pct]
     else:
-        fracs = [0.0, coverage_pct * 0.15,
-                 coverage_pct * 0.85, 100 - coverage_pct]
+        fracs = [0.0, coverage_pct, 100 - coverage_pct]
 
     total = sum(fracs)
     if total > 0:
         fracs = [f / total * 100 for f in fracs]
     else:
-        fracs = [0, 0, 0, 100]
+        fracs = [0, 0, 100]
 
     left = 0.0
     for (label, color, lo, hi), frac in zip(bins, fracs):
@@ -67,8 +62,7 @@ def generate_confidence_bar(coverage_pct: float, det_passed: int, det_total: int
                       edgecolor='#D32F2F', alpha=0.9))
 
     cov_color = '#2E7D32' if coverage_pct >= 70 else '#D32F2F'
-    cov_label = 'SUFFICIENT' if coverage_pct >= 70 else (
-        'MARGINAL' if coverage_pct >= 50 else 'INSUFFICIENT')
+    cov_label = 'SUFFICIENT' if coverage_pct >= 70 else 'INSUFFICIENT'
     ax.text(101, 0, '%.1f%%\n%s' % (coverage_pct, cov_label),
             ha='left', va='center', fontsize=9,
             fontweight='bold', color=cov_color,
@@ -81,7 +75,7 @@ def generate_confidence_bar(coverage_pct: float, det_passed: int, det_total: int
     ax.legend(handles=legend_patches,
               loc='upper center',
               bbox_to_anchor=(0.42, -0.25),
-              ncol=4, fontsize=8, frameon=False,
+              ncol=3, fontsize=8, frameon=False,
               handlelength=1.5, handletextpad=0.5,
               columnspacing=1.5)
 

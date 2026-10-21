@@ -19,7 +19,9 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from tos.engine.adjudicator import AdjudicationInput, adjudicate_laws
 from tos.engine.tier1_measurements import Tier1Measurements
+from tos.governance.station_sop import LAW_CANON
 from tos.ingestion.processor import Atom, Structure, ConfidenceProfile
 
 
@@ -57,11 +59,11 @@ class TestLaw182:
         assert res["observed"] == 1.0
         assert res["sample"] == 5
 
-    def test_scattered_hydrophobic_veto(self):
+    def test_scattered_hydrophobic_advisory(self):
         """Hydrophobic CAs spread > 30Å apart → some outside 15Å radius → low ratio.
         With 5 residues spread along x from 0 to 100:
           centroid at x=50. Only the middle one (x=50) is within 15Å.
-          Ratio = 1/5 = 0.2 < 0.3 → VETO.
+          Ratio = 1/5 = 0.2 < 0.3 → advisory failure, not a veto.
         """
         atoms = [
             _make_atom("CA", "C", [0, 0, 0],   res_name="LEU", res_seq=1),
@@ -75,7 +77,7 @@ class TestLaw182:
         # within 15Å: only res 3 (d=0) → ratio = 1/5 = 0.2
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
         res = results["LAW-182"]
-        assert res["status"] == "VETO"
+        assert res["status"] == "FAIL (Advisory)"
         assert res["observed"] < 0.3
         assert res["sample"] == 5
 
@@ -99,7 +101,7 @@ class TestLaw182:
 
     def test_multichain_worst_governs(self):
         """Chain A: compact (ratio 1.0). Chain B: scattered (ratio < 0.3).
-        Reports minimum → VETO from chain B."""
+        Reports minimum → advisory failure from chain B."""
         atoms = [
             # Chain A: compact cluster
             _make_atom("CA", "C", [0, 0, 0],  res_name="LEU", res_seq=1, chain_id="A"),
@@ -114,7 +116,7 @@ class TestLaw182:
         ]
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
         res = results["LAW-182"]
-        assert res["status"] == "VETO"
+        assert res["status"] == "FAIL (Advisory)"
         assert res["observed"] < 0.3
         assert res["sample"] == 8  # 3 from A + 5 from B
 
@@ -153,3 +155,26 @@ class TestLaw182:
         res = results["LAW-182"]
         assert res["status"] == "PASS"
         assert res["observed"] >= 0.3
+
+    def test_heuristic_veto_cannot_veto_verdict(self):
+        """Even a legacy raw VETO for heuristic LAW-182 is advisory only."""
+        measurements = {
+            lid: {"observed": 0, "deviation": "0.0", "sample": 1,
+                  "status": "PASS"}
+            for lid in LAW_CANON
+        }
+        measurements["LAW-182"] = {
+            "observed": 0.1, "deviation": "0.2", "sample": 5,
+            "status": "VETO",
+        }
+        result = adjudicate_laws(AdjudicationInput(
+            raw_measurements=measurements,
+            coverage=100.0,
+            is_experimental=False,
+            method_type="predicted",
+            architecture="NONE",
+        ))
+        row = next(r for r in result.law_rows if r["law_id"] == "LAW-182")
+        assert row["method"] == "heuristic"
+        assert row["status"] == "FAIL (Advisory)"
+        assert result.verdict == "PASS"

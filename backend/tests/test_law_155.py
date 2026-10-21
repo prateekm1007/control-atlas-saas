@@ -57,8 +57,8 @@ class TestLaw155:
         assert res["observed"] == 5.0
         assert res["sample"] == 5
 
-    def test_sparse_structure_veto(self):
-        """1 atom per residue, all in same voxel → 1 voxel / 3 residues < 2.0 → VETO.
+    def test_sparse_structure_advisory(self):
+        """1 atom per residue, all in same voxel → 1 voxel / 3 residues < 2.0 → advisory.
         Actually: atoms in same 2Å cube, 3 residues → 1/3 = 0.33.
         """
         atoms = [
@@ -68,7 +68,7 @@ class TestLaw155:
         ]
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
         res = results["LAW-155"]
-        assert res["status"] == "VETO"
+        assert res["status"] == "FAIL (Advisory)"
         assert res["observed"] < 2.0
         assert res["sample"] == 3
 
@@ -94,7 +94,7 @@ class TestLaw155:
         res = results["LAW-155"]
         # All 5 atoms in voxel (0,0,0) → 1 voxel / 1 residue = 1.0
         assert res["observed"] == 1.0
-        assert res["status"] == "VETO"  # 1.0 < 2.0
+        assert res["status"] == "FAIL (Advisory)"  # 1.0 < 2.0
 
     def test_spread_atoms_many_voxels(self):
         """Atoms spread across many voxels in 1 residue → high ratio."""
