@@ -734,3 +734,26 @@
 
 ## 2026-10-21T11:00:27Z | P-104 | merge-intent | target=main pr=37 source_branch=repair/round24-claim-head-binding expected_pre_merge_base=63da0e347002ed9b77071ff1ed0cefda7c0ce88a expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-27 decisions D-W1..D-W6 (one recovery PR, one head; port, do not merge; close PR #38 after the port; the approval targets the final head; merge then prune, both after O-1); the merge-intent is declared on the exact final candidate; it does NOT authorize the merge: a genuine non-author approval for the exact head is required, the two required Stability Gate checks must be green on the exact candidate, and the merge executes only through the protected pull-request mechanism with a MERGE COMMIT"
 - The declared pre-merge base 63da0e347002ed9b77071ff1ed0cefda7c0ce88a is the live tip of main at the time of this record; the declared head is the commit that introduces this record (expected_head=DEFERRED; a record cannot embed its own commit's SHA).
+
+## 2026-10-21T11:08:14Z | P-101-CONFIRM | push-confirm | branch=repair/round24-claim-head-binding remote_sha=599d3618c223236ee62534c47df2dc62af6f8c32 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/repair/round24-claim-head-binding -> 599d3618c223236ee62534c47df2dc62af6f8c32 (re-verified immediately before this confirmation was written; the push itself was the ordinary fast-forward 5010ca7..599d3618c223236ee62534c47df2dc62af6f8c32 declared by P-101-INTENT, and it carries the consolidated R27 incident note and the continued push-log chain)"
+
+- Two-phase completion for the push declared by P-101-INTENT (head_at_intent was DEFERRED; the
+  remote-verified tip is recorded after the push returned, never backdated). It confirms THAT
+  push only; the push that follows is declared separately by P-105-INTENT.
+
+## 2026-10-21T11:08:14Z | P-105-INTENT | push-intent | branch=repair/round24-claim-head-binding head_at_intent=DEFERRED expected_remote_tip_before_push=599d3618c223236ee62534c47df2dc62af6f8c32 credential=OWNER-PAT-1 authorized_by="auditor Round-26 direction 2 and 6 (the archive-ancestry rule in the push-log checker with its acceptance-test cases, the note's record of it, and the push-state redeclaration for this candidate; no force-push, no earlier entry edited, no merge into main, no product work)"
+
+- The declared pre-push tip is the exact tip published by the P-101-CONFIRM record above, which is
+  the live remote tip of this branch at declaration time.
+- head_at_intent is DEFERRED per the two-phase schema; the tip pushed by this INTENT is disclosed
+  as PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-21T11:08:14Z | P-106 | merge-intent | target=main pr=37 source_branch=repair/round24-claim-head-binding expected_pre_merge_base=63da0e347002ed9b77071ff1ed0cefda7c0ce88a expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-26 directions 1-7 and D-V1/D-V6: one recovery PR, one head; the merge executes only through the protected PR path and only with a legitimate non-author approval on the exact candidate head; if no eligible reviewer is available the PR stays BLOCKED - no self-approval, no retroactive approval, no weakened test"
+
+- Redeclaration on the exact final candidate (expected_head=DEFERRED resolves to the commit
+  introducing this record). expected_pre_merge_base is the live main tip at declaration time
+  (63da0e347002ed9b77071ff1ed0cefda7c0ce88a); if main moves, this intent fails its base
+  verification and must be redeclared. P-104 (the previous merge-intent for PR #37) is superseded
+  on the lineage.
+- The merge is NOT performed by this push. The pre-merge-verification job is expected to FAIL on
+  PR #37 until a genuine non-author approval exists on the exact head.

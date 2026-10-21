@@ -397,7 +397,7 @@ blob IDs are identical at the R24 candidate, at `main` and at this head.
   artifact, id `12315612470`, archive digest `sha256:29e321c48f4a0990ffcd6f7ae4809519d4dae93bfdb34db7ac4fe3e1eddf9a5c`,
   bundle manifest digest `f8828d7399a54a8e0aa6cf3ba5b7ad9afca26f6eedb62721dfa759d1099fe58a`,
   8/8 checksums verified from a fresh download); the R23 governance-bypass incident record
-  `docs/evidence/push-log/INCIDENT-2026-10-21-R23-GOVERNANCE-BYPASS.md`; the gate regression
+  `docs/evidence/push-log/INCIDENT-2026-10-21-R27-GOVERNANCE-BYPASS.md`; the gate regression
   coverage (now AT-39 and AT-40, renumbered because AT-35..AT-38 are this head's own
   claim-binding / manifest tests); the R24 recovery status, register and index rows; and the
   push-log records for the R24 candidate (renumbered P-082..P-086 -> P-090..P-090-CONFIRM,
@@ -474,6 +474,24 @@ two-phase records the schema requires) and is fixed by the commit that introduce
 P-096 reconciles that push truthfully instead of pretending an intent existed, P-097 voids the
 superseded intent, P-098-INTENT declares this push on the exact recorded state, and P-099
 redeclares this PR's merge-intent on the exact final candidate.
+
+### 11.3d The archive tag also proves a HISTORICAL record (Round-26)
+
+The archive tag holds a branch's FINAL tip. A confirmation that describes an EARLIER push of that
+branch is therefore not equal to the tag's commit, and it is proven the same way the live-ref path
+proves it: by ancestry inside the archived history. The checker now resolves the recorded SHA
+against the archived commit - through the local object store, and through the GitHub compare API
+when the object is not in the checkout - and classifies such a record ARCHIVED-HISTORICAL (valid
+for the push it describes, explicitly not a confirmation of the archived tip). A tag that neither
+equals the recorded SHA nor contains it in its history still fails closed. AT-41 now covers all
+three cases: tag at the recorded tip (verified), tag at a descendant (verified by ancestry), tag
+at an unrelated SHA (fail closed).
+
+The live check against the pruned repository shows the control working on the real records: the
+confirmations of the pruned branches (including `activation/ec18-r19` at
+`97067ad0320968bfb73f7e045408fcb60ccd5c7d` and the R24 candidate at
+`781175d18f94b65ee09635f2e4f38bf67d545b45`) are classified ARCHIVED, and the earlier
+confirmations of branches that later advanced are classified ARCHIVED-HISTORICAL.
 
 ### 11.4 Rule mapping additions in this round
 

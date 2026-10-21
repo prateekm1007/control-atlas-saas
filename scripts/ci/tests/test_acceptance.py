@@ -3474,3 +3474,20 @@ def test_at41_archive_tag_resolution():
             "--remote", bare)
     check("AT-41", "an archive tag at a different SHA does not preserve the confirmation (fail closed)",
           r.returncode == 1 and "archive tag" in r.stdout, r.stdout[-500:])
+
+    # branch three: the archive tag holds a DESCENDANT of the recorded tip -
+    # the earlier confirmation is proven by ancestry inside the archived history
+    sp.run(["git", "-C", src, "checkout", "-q", "-b", "three"], check=True)
+    three_sha = commit("branch three tip")
+    three_later = commit("branch three later tip")
+    sp.run(["git", "-C", src, "-c", "user.email=t@t", "-c", "user.name=t", "tag", "-a",
+            "archive/three", "-m", "archived three", three_later], check=True)
+    push("refs/tags/archive/three:refs/tags/archive/three")
+    sp.run(["git", "-C", src, "checkout", "-q", "main"], check=True)
+    sp.run(["git", "-C", src, "branch", "-D", "three"], check=True)
+    write_log(entry("P-3", "three", three_sha, "2026-10-21T10:20:00Z"))
+    r = run("evidence_sequence_check.py", logpath, "--pushlog-schema", "--remote-verify",
+            "--remote", bare)
+    check("AT-41", "an archive tag holding a descendant of the recorded tip preserves the "
+                   "confirmation by ancestry",
+          r.returncode == 0 and "ARCHIVED-HISTORICAL" in r.stdout, r.stdout[-500:])

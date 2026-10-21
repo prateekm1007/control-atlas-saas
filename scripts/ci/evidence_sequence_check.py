@@ -850,6 +850,27 @@ class RunVerifier:
 
     # ------------------------- Events API (Round-22 direction 4)
 
+
+    def api_is_ancestor(self, base: str, head: str) -> bool | None:
+        """Is <base> an ancestor of <head> per the GitHub compare API?
+
+        Used for a PRUNED branch whose archive tag holds the branch's final
+        tip: an earlier confirmation of that branch is proven by ancestry
+        inside the archived history. Fail-closed: any doubt is None.
+        """
+        if not self.token or not self.repo:
+            return None
+        try:
+            req = urllib.request.Request(
+                f"{API}/repos/{self.repo}/compare/{base}...{head}",
+                headers={"Accept": "application/vnd.github+json",
+                         **({"Authorization": "Bearer " + self.token} if self.token else {})})
+            with urllib.request.urlopen(req, timeout=30) as r:
+                d = json.loads(r.read() or b"{}")
+                return str(d.get("status")) in ("ahead", "identical")
+        except (urllib.error.URLError, urllib.error.HTTPError, OSError, ValueError):
+            return None
+
     def events_available(self) -> bool:
         return self.events_fixture is not None or self.has_api
 
@@ -1246,11 +1267,26 @@ def check_remote_verification(path: str, state: dict, remote: str,
                             f"gone, the commit is not); CI-success support: {len(supporting)} "
                             f"verified successful run(s)")
                 continue
+            # The archive tag holds the branch's FINAL tip. An older
+            # confirmation describes an earlier push of that branch, so it is
+            # proven by ANCESTRY inside the archived history - the same rule
+            # the live-ref path uses, applied to the archive tag.
+            anc = logrepo.is_ancestor(sha, archived)
+            if anc is not True and runs is not None:
+                anc = runs.api_is_ancestor(sha, archived)
+            if anc is True:
+                info.append(f"ARCHIVED-HISTORICAL: {eid} confirmed {branch} @ {sha[:12]}…; the "
+                            f"branch ref was pruned and its content is preserved by {tag_ref} at "
+                            f"{archived[:12]}…; the recorded SHA is an ancestor of the archived "
+                            f"commit (the confirmation stays valid for the push it describes and "
+                            f"does NOT confirm the archived tip); CI-success support: "
+                            f"{len(supporting)} verified successful run(s)")
+                continue
             findings.append(
                 f"FAIL: {path}:{e['n']}: {eid} could not be verified against the live remote "
-                f"ref: {err}; the archive tag {tag_ref} points at {archived[:12]}…, not the "
-                f"recorded {sha[:12]}… (an archive tag at another SHA does not preserve this "
-                f"confirmation -- fail closed)")
+                f"ref: {err}; the archive tag {tag_ref} points at {archived[:12]}…, which is not "
+                f"the recorded {sha[:12]}… and does not contain it in its history (an archive tag "
+                f"at another SHA does not preserve this confirmation -- fail closed)")
             continue
         if tip == sha:
             current_for[branch] = sha
