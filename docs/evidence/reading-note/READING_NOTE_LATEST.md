@@ -182,3 +182,33 @@ available to reviewers and to any future maintainer with review authority.)
   table, the independent archive verification, A-02 issuer-side revocation, and the EC2
   deployment secrets remain OPEN. A-04 (branch-protection required-check configuration)
   was verified live on 2026-10-20 and stays as recorded in register Part 14.
+
+## LAW-130 branch read record (2026-10-21T18:43:54Z, fix/law-130-clash-boundary)
+
+The constitution was read before any change on this branch. The read is recorded with the exact
+blob hashes and the read timestamp, as AGENTS.md and EC-2 require.
+
+| Document | Blob (full SHA-1) | Read (UTC) |
+|---|---|---|
+| `AGENTS.md` | `85767237399ffb30f3e45894d9dfbe6f4240584f` | 2026-10-21T18:43:54Z |
+| `constitution.md` | `211ad2c5d4b40059d9f3f03de12e0701f9235bc7` | 2026-10-21T18:43:54Z |
+| `ENGINEERING_CONSTITUTION.md` | `b6bb35e84956d84a8c9d9e65734c212baf3ed075` | 2026-10-21T18:43:54Z |
+| `docs/coder/BRIEF.md` | `052a84ca829d321dc0841a4b1c8702145dcbf6b5` | 2026-10-21T18:43:54Z |
+
+Branch `fix/law-130-clash-boundary`, based on `main` @ `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`
+(a fresh fetch; the branch is isolated from the LAW-160 work so that the two engine corrections
+never share a patch). Rules enforced here: EC-2 (constitutions first, preflight, machine-readable
+evidence), EC-4 (a failed measurement is never a numerical zero and never a scientific failure),
+EC-6 (regression tests first, exact-SHA evidence, "not run" is never "passed"), EC-7 (feature
+branch, checks on the exact candidate), EC-11 (append-only records, no rewriting of published
+history), EC-12 (definition of done), EC-13 (no weakened gate, no invented status, no
+fabricated measurement), EC-14 (artifacts), OD-02/OD-03/OD-05 (the law canon, its thresholds
+and the active law set are frozen; this change corrects the implementation of the EXISTING
+contract and alters no threshold, operator, scope or law id), and OD-16 (the scientific/production
+hard stop: no merge to `main`, no deployment, no v25 run, no held-out evaluation, no threshold or
+cohort change, no golden-artifact regeneration).
+
+Scope of this branch: the LAW-130 clashscore measurement only. A failed calculation becomes
+NOT_MEASURED (never a PASS with a zero value) and the comparison is brought into exact agreement
+with the declared inclusive operator (`<=` at 20.0). The canon, the modality matrix, the
+calibration cohort and the golden artifacts are not touched.
