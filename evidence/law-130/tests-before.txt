@@ -1,0 +1,49 @@
+LAW-130 regression tests against the UNMODIFIED implementation
+branch: fix/law-130-clash-boundary (base main @ 63da0e347002ed9b77071ff1ed0cefda7c0ce88a)
+command: cd backend && python -m pytest tests/test_law_130.py -q --tb=line
+exit status: 1
+
+FFFFFF                                                                   [100%]
+================================== FAILURES ===================================
+E   assert 0.0 == 20.0 ± 2.0e-05
+      
+      comparison failed
+      Obtained: 0.0
+      Expected: 20.0 ± 2.0e-05
+C:\Users\Administrator\AppData\Local\Temp\opencode\caslf-l130\backend\tests\test_law_130.py:74: assert 0.0 == 20.0 ± 2.0e-05
+E   assert 0.0 == 40.0 ± 4.0e-05
+      
+      comparison failed
+      Obtained: 0.0
+      Expected: 40.0 ± 4.0e-05
+C:\Users\Administrator\AppData\Local\Temp\opencode\caslf-l130\backend\tests\test_law_130.py:82: assert 0.0 == 40.0 ± 4.0e-05
+E   AssertionError: assert 'PASS' == 'NOT_MEASURED'
+      
+      - NOT_MEASURED
+      + PASS
+C:\Users\Administrator\AppData\Local\Temp\opencode\caslf-l130\backend\tests\test_law_130.py:90: AssertionError: assert 'PASS' == 'NOT_MEASURED'
+E   assert 0.0 == 20.0 ± 2.0e-05
+      
+      comparison failed
+      Obtained: 0.0
+      Expected: 20.0 ± 2.0e-05
+C:\Users\Administrator\AppData\Local\Temp\opencode\caslf-l130\backend\tests\test_law_130.py:102: assert 0.0 == 20.0 ± 2.0e-05
+E   AssertionError: assert [] == [('A:1', 'A:2...'B:1', 'B:2')]
+      
+      Right contains 2 more items, first extra item: ('A:1', 'A:2')
+      Use -v to get more diff
+C:\Users\Administrator\AppData\Local\Temp\opencode\caslf-l130\backend\tests\test_law_130.py:110: AssertionError: assert [] == [('A:1', 'A:2...'B:1', 'B:2')]
+E   AssertionError: assert 'PASS' == 'NOT_MEASURED'
+      
+      - NOT_MEASURED
+      + PASS
+C:\Users\Administrator\AppData\Local\Temp\opencode\caslf-l130\backend\tests\test_law_130.py:119: AssertionError: assert 'PASS' == 'NOT_MEASURED'
+=========================== short test summary info ===========================
+FAILED tests/test_law_130.py::TestLaw130::test_exactly_the_threshold_passes
+FAILED tests/test_law_130.py::TestLaw130::test_above_the_threshold_vetoes - a...
+FAILED tests/test_law_130.py::TestLaw130::test_a_calculation_failure_is_not_measured_not_a_zero_pass
+FAILED tests/test_law_130.py::TestLaw130::test_clash_counts_and_sample_semantics
+FAILED tests/test_law_130.py::TestLaw130::test_residue_pair_reporting_is_deterministic
+FAILED tests/test_law_130.py::TestLaw130::test_a_single_atom_has_no_pair_to_measure
+6 failed in 0.26s
+
