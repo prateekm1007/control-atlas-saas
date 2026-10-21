@@ -59,25 +59,37 @@ def _run(atoms):
     return results["LAW-130"]
 
 
-def _chain(n_atoms, spacing=10.0, chain="A"):
+def _chain(n_atoms, spacing=10.0, chain="A", offset=0.0):
     """n_atoms spread far apart in one chain (no accidental clashes)."""
-    return [_atom(i * spacing, 0.0, 0.0, res_seq=i + 1, chain=chain) for i in range(n_atoms)]
+    return [_atom(offset + i * spacing, 0.0, 0.0, res_seq=i + 1, chain=chain)
+            for i in range(n_atoms)]
+
+
+def _two_chains(n_atoms=25, spacing=10.0):
+    """Two chains whose first atoms sit on top of each other.
+
+    The neighbour-exclusion rule skips atoms of the SAME chain whose residue
+    numbers differ by at most one, so a counted clash needs two different
+    chains: atoms A:1 and B:1 are close in space and are not neighbours.
+    """
+    return (_chain(n_atoms, spacing, chain="A")
+            + _chain(n_atoms, spacing, chain="B", offset=0.5))
 
 
 class TestLaw130:
     def test_exactly_the_threshold_passes(self, monkeypatch):
         """The canon declares operator `<=` at 20.0: exactly 20.0 must PASS."""
-        atoms = _chain(50)
-        # one clash in 50 atoms => (1/50)*1000 = 20.0 exactly
-        _install_fake_scipy(monkeypatch, pairs=[(0, 1)])
+        atoms = _two_chains(25)
+        # one counted clash in 50 atoms => (1/50)*1000 = 20.0 exactly
+        _install_fake_scipy(monkeypatch, pairs=[(0, 25)])
         res = _run(atoms)
         assert res["observed"] == pytest.approx(20.0)
         assert res["status"] == "PASS", "the declared operator is inclusive (<=)"
 
     def test_above_the_threshold_vetoes(self, monkeypatch):
         """A clashscore above 20.0 must VETO."""
-        atoms = _chain(50)
-        _install_fake_scipy(monkeypatch, pairs=[(0, 1), (2, 3)])
+        atoms = _two_chains(25)
+        _install_fake_scipy(monkeypatch, pairs=[(0, 25), (1, 26)])
         res = _run(atoms)
         assert res["observed"] == pytest.approx(40.0)
         assert res["status"] == "VETO"
@@ -95,21 +107,21 @@ class TestLaw130:
 
     def test_clash_counts_and_sample_semantics(self, monkeypatch):
         """`sample` is the number of atoms the clashscore is normalised over."""
-        atoms = _chain(50)
-        _install_fake_scipy(monkeypatch, pairs=[(0, 1)])
+        atoms = _two_chains(25)
+        _install_fake_scipy(monkeypatch, pairs=[(0, 25)])
         res = _run(atoms)
         assert res["sample"] == 50
         assert res["observed"] == pytest.approx(20.0)
 
     def test_residue_pair_reporting_is_deterministic(self, monkeypatch):
         """The failing residue pairs are reported in a deterministic order."""
-        atoms = (_chain(4, chain="A") + _chain(3, chain="B", spacing=10.0))
-        _install_fake_scipy(monkeypatch, pairs=[(4, 5), (0, 1)])
+        atoms = (_chain(2, chain="A") + _chain(2, chain="B", spacing=10.0, offset=0.5))
+        _install_fake_scipy(monkeypatch, pairs=[(0, 2), (1, 3)])
         res = _run(atoms)
         pairs = res["failing_residue_pairs"]
-        assert pairs == [("A:1", "A:2"), ("B:1", "B:2")]
+        assert pairs == [("A:1", "B:1"), ("A:2", "B:2")]
         # the same input yields the same output, and the pairs are deduplicated
-        _install_fake_scipy(monkeypatch, pairs=[(0, 1), (1, 0)])
+        _install_fake_scipy(monkeypatch, pairs=[(0, 2), (2, 0)])
         assert _run(atoms)["failing_residue_pairs"] == pairs
 
     def test_a_single_atom_has_no_pair_to_measure(self, monkeypatch):
