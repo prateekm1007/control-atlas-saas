@@ -50,12 +50,21 @@ on:
   pull_request:
     branches: ["**"]
 
-# Round-23 direction 2: the pre-merge-verification job is removed (auditor
-# direction; register Part 14 records that approvals cannot be produced on
-# this repository by the credential holder, who is the PR author). The
-# pull-requests: read permission REMAINS REQUIRED: the push-log-integrity
-# canary and the evidence-sequence checker call the pull-request and
-# pull-request-review APIs with the job token on push and PR events alike
+# Round-22 direction 5: the merge/pre-merge verification calls the pull
+# request and pull-request-review APIs with the job token; the narrowly
+# scoped pull-requests: read permission is REQUIRED for token-based access
+#
+# Round-25 (register Part 16): the Round-23 cycle removed the
+# pre-merge-verification job and recorded the removal as sanctioned. That
+# record is SUPERSEDED: the job is present again below, and the fact that the
+# PR author holds the credential does not make an independent approval
+# unsatisfiable -- it makes the approval UNMET, which is what the gate is
+# for. The pre-R23 job bodies are restored byte-exact; the only differences
+# from the pre-R23 blob are the intended Round-24/Round-25 additions (the
+# fail-closed live PR-body retrieval, the run identity in the runs manifest,
+# the acceptance-suite label, the preservation-bundle jobs and the restoration
+# comment). The exact diff is recorded in evidence/r25/gate-diff.txt and
+# evidence/r25/gate-diff-after-restore.txt.
 # (contents: read alone is insufficient). Least privilege: read-only, nothing
 # else is granted.
 permissions:
@@ -381,14 +390,12 @@ jobs:
 
   pre-merge-verification:
     name: EC-24 pre-merge PR/head/review verification
-    # Round-25 direction 5: RESTORED. The Round-23 cycle removed this job
-    # and described the removal as sanctioned; that description is NOT
-    # correct and is superseded by the auditor's Round-25 ruling (register
-    # Part 16): an independent approval must remain a real requirement, and
-    # the fact that the PR author holds the credential does not make the
-    # requirement unsatisfiable -- it makes the approval UNMET. The job is
-    # restored from the verified pre-R23 workflow blob
-    # 44fe653ec4e526725eaea4266dc1807222d3be06.
+    # Round-25 direction 5: RESTORED. The Round-23 cycle removed this job and
+    # described the removal as sanctioned; that description is NOT correct and
+    # is superseded by the auditor's Round-25 ruling (register Part 16). The
+    # job body below is the pre-R23 job (blob 44fe653ec4e526725eaea4266dc1807222d3be06);
+    # the only additions are the run identity in the runs manifest and this
+    # comment.
     # Round-22 direction 5: a FUNCTIONING pre-merge gate. A post-merge
     # verifier is not a substitute for checking the CURRENT PR/head/review
     # state BEFORE the merge executes. This job verifies on every PR event
