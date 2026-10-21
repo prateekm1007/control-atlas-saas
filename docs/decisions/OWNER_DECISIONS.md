@@ -1163,3 +1163,49 @@ exact head) both remain OPEN. The auditor's decision on which of the two
 recovery heads becomes the recovery line - and therefore on whether PR #38's
 outstanding content is ported into the R25 head or is accepted as superseded -
 is recorded in the incident note and is not decided here.
+
+## Part 17 - Round-26 records
+(AUDITOR-ADJUDICATED, 2026-10-21; register rev 14)
+
+### 17.1 Ruling received
+
+The Round-24 authorization to restore the deleted pre-merge gate is ACCEPTED as the stronger
+control (D-V1: one recovery PR, one head - PR #37 carries everything). The recovery PR stays
+blocked because no eligible independent reviewer exists (D-V6, EC-13: no self-approval, no
+retroactive approval, no weakened test). The reading note is IN-TREE (D-V2) and lands with the
+fold.
+
+### 17.2 Decisions
+
+17.2.1 **One recovery PR, one head.** PR #38 is folded into PR #37 and closed only afterwards,
+with a pointer comment; its head is preserved by the annotated tag
+`archive/repair-r23-governance-recovery` at `781175d18f94b65ee09635f2e4f38bf67d545b45` before
+its branch is deleted.
+
+17.2.2 **Superseded PRs are closed, not reopened** (D-V3): PRs #18-#29 and #31-#36 are closed
+in batches of six with a pointer comment, before their head branches are deleted, so the
+auto-close churn of Round 23 is not repeated.
+
+17.2.3 **Archive before delete, always** (D-V4): every pruned branch receives an ANNOTATED
+tag `archive/<branch>` at its recorded SHA, verified with `git ls-remote --tags` against the
+branch SHA, before the branch is deleted. The push-log checker resolves those tags as remote
+evidence (this round's new control, AT-41): a pruned branch's recorded tip still verifies, and
+a tag at a different SHA or a tag without a peeled commit fails closed.
+
+17.2.4 **Prune set** (D-V5): everything except the keep set (`main`,
+`science/p0-correctness-2026-10-19`, `science/law-validity-wp15`, `feature/od07-audit-id`,
+`feature/n8-altlocs-per-residue`, `feature/provenance-v2`, `feature/modrs-census-v2`,
+`hygiene/h1-remove-gemini`, `policy/engineering-constitution`, `fix/c2-api-key-enforcement`,
+`repair/round24-claim-head-binding`). Merged branches and the unmerged evidence branches are
+archived; their content is preserved by the tags, not by the refs.
+
+17.2.5 **PAT** (D-V7): the owner rotates it when the owner decides. It stays in-shell only; no
+credential value is written into the repository, the evidence bundles, or any log.
+
+### 17.3 Standing items - UNCHANGED
+
+O-1 (an independent collaborator with write access, who approves the exact head of PR #37)
+remains outstanding and is NOT delegable. The scientific hard stop (OD-16) is preserved in
+full: no production deployment, no v25 calibration, no held-out evaluation, no threshold or
+cohort changes, no law-semantic changes, no golden-artifact regeneration without their
+approved gates. A-01 (PAT rotation) and A-09 (token-history review) remain owner actions.

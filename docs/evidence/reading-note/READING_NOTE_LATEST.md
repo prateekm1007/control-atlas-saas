@@ -376,3 +376,74 @@ that did not pass the required checks).
 | EC-A11 | incident discipline: contain, preserve the evidence, remediate, prevent recurrence | docs/evidence/push-log/INCIDENT-2026-10-21-R25-PR-IDENTITY.md; docs/evidence/push-log/INCIDENT-2026-10-20-P015-COLLISION.md | NONE |
 | EC-A12 | definition of done ("not run" is never "passed") | script:scripts/ci/status_vocabulary_lint.py | AT-04, AT-11, AT-19 |
 | EC-A13 | no gate weakening, no invented evidence | workflow:.github/workflows/governance-acceptance.yml#pre-merge-verification | AT-33 |
+
+## 11. Round-26 cycle - reading record (2026-10-21T10:11:06Z, SERIES-2026-10-21-R26)
+
+### 11.1 Sources read (verified by blob ID before reading, this round)
+
+| Document | Pinned blob (full SHA-1) | Verified | Source commit at read time | Read window (UTC) |
+|---|---|---|---|---|
+| `constitution.md` | `211ad2c5d4b40059d9f3f03de12e0701f9235bc7` | YES - `git ls-tree` at `781175d...` and at `63da0e3...` (identical) | `repair/round24-claim-head-binding` @ `f00e3be9f040045fdb9fae7a35f59be1ba25549f` | 2026-10-21T10:11:06Z, read in full (11 lines; OBS-153 and CRIT-154 both ACTIVE) |
+| `ENGINEERING_CONSTITUTION.md` | `b6bb35e84956d84a8c9d9e65734c212baf3ed075` | YES - same method, identical ID | same tree | 2026-10-21T10:11:06Z, read in full (178 lines: EC section 1-15 + Final Rule) |
+
+Both files were re-read in full in this round, not carried over from the previous cycle; the
+blob IDs are identical at the R24 candidate, at `main` and at this head.
+
+### 11.2 What is folded into this head (D-V1: one recovery PR, one head)
+
+- The R24 recovery content of PR #38 (head `781175d18f94b65ee09635f2e4f38bf67d545b45`): the
+  preservation-bundle generator `scripts/ci/generate_preservation_bundle.py` and its workflow
+  `.github/workflows/preservation-bundle.yml` (the generator that produced the published
+  artifact, id `12315612470`, archive digest `sha256:29e321c48f4a0990ffcd6f7ae4809519d4dae93bfdb34db7ac4fe3e1eddf9a5c`,
+  bundle manifest digest `f8828d7399a54a8e0aa6cf3ba5b7ad9afca26f6eedb62721dfa759d1099fe58a`,
+  8/8 checksums verified from a fresh download); the R23 governance-bypass incident record
+  `docs/evidence/push-log/INCIDENT-2026-10-21-R23-GOVERNANCE-BYPASS.md`; the gate regression
+  coverage (now AT-39 and AT-40, renumbered because AT-35..AT-38 are this head's own
+  claim-binding / manifest tests); the R24 recovery status, register and index rows; and the
+  push-log records for the R24 candidate (renumbered P-082..P-086 -> P-090..P-090-CONFIRM,
+  because this head already used P-082..P-089; the R24 content is preserved, nothing is
+  rewritten).
+- The pre-merge gate itself: this head's `f00e3be` already restored the pre-R23 gate content,
+  so the R24 restoration is subsumed rather than duplicated. AT-39 asserts the gate is an
+  executable job (not a comment) with `pull-requests: read`, the authenticated API canary, the
+  runs manifest and the exact-head verification; AT-40 asserts it rejects missing, stale,
+  non-qualifying and author-only approval evidence and still accepts a fresh non-author
+  approval on the exact head.
+- The archive-tag resolution (D-V3/D-V4, this round's new control): `scripts/ci/evidence_sequence_check.py`
+  now resolves `refs/tags/archive/<branch>` - and the hyphen spelling
+  `refs/tags/archive/<branch-with-slashes-as-hyphens>` - as remote evidence for a PRUNED
+  branch, using the PEELED commit of the ANNOTATED tag; an archive tag at a different SHA does
+  not preserve the confirmation (fail closed), and a tag without a peeled commit is refused.
+  AT-41 proves both directions.
+- The R24 bundle generator's `merged`-flag correction is folded into this head's producer
+  `scripts/ci/preservation_bundle.py`: the PR LIST endpoint returns a null `merged` flag, so
+  every PR is re-read from its DETAIL endpoint, which carries the authoritative merged state.
+- Two bundle producers now exist and this is disclosed rather than hidden: the R25 in-workflow
+  jobs use `scripts/ci/preservation_bundle.py`; `scripts/ci/generate_preservation_bundle.py`
+  is retained because it is the byte-exact provenance of PR #38's published artifact. Their
+  consolidation is a follow-up, not part of this fold.
+
+### 11.3 State verified live in this round
+
+- `main` is untouched at `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`; this head descends from it.
+- 57 branch heads: 55 (the 55 refs of the restore set, incl. the R24 candidate) + this head's
+  branch + the parallel writer's branch. The D-V5 keep set (11 branches) is present and
+  disjoint from the prune set.
+- Four out-of-scope heads are NOT merged into `main` and are archived rather than deleted
+  without a tag: `chore/hygiene-2026-10-19`, `docs/owner-decisions-r19`,
+  `evidence/round11-fix-2026-10-20`, `evidence/round9-r2-2026-10-20`. Their content is
+  preserved by their archive tags at their recorded SHAs.
+- `refs/tags/archive/*`: none existed before this round; the archive tags are created by the
+  Round-26 pruning steps, each verified with `git ls-remote --tags` against the branch SHA
+  before its branch is deleted.
+- O-1 (an independent collaborator with write access) is still outstanding: the repository's
+  only collaborator is the PR author. PR #37 therefore stays blocked; no self-approval is
+  sought or given (D-V1, D-V6, EC-13).
+
+### 11.4 Rule mapping additions in this round
+
+| Rule ID | Enforcement point(s) | Acceptance test(s) |
+|---|---|---|
+| EC-§7 | workflow:.github/workflows/governance-acceptance.yml#pre-merge-verification~events=pull_request~governs=docs/evidence/push-log/**+scripts/ci/evidence_sequence_check.py | AT-33, AT-39, AT-40 |
+| EC-17 | script:scripts/ci/evidence_sequence_check.py (archive-tag resolution for pruned branches) | AT-13, AT-31, AT-32, AT-33, AT-41 |
+| EC-24 | script:scripts/ci/evidence_sequence_check.py; workflow:.github/workflows/governance-acceptance.yml#pre-merge-verification~events=pull_request~governs=docs/evidence/push-log/**+scripts/ci/evidence_sequence_check.py | AT-31, AT-32, AT-33, AT-39, AT-40, AT-41 |

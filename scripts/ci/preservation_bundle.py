@@ -130,6 +130,14 @@ def main() -> int:
 
     # ------------------------------------------------------------ pull requests
     pulls = api.get("pulls?state=all&per_page=100", paginate=True) or []
+    # The PR LIST endpoint omits the `merged` flag (it is null on every entry),
+    # so each PR is re-read from its DETAIL endpoint, which carries the
+    # authoritative merged state and merge timestamp.
+    for _p in pulls:
+        _d = api.get("pulls/%d" % _p.get("number", 0))
+        if isinstance(_d, dict):
+            _p["merged"] = _d.get("merged")
+            _p["merged_at"] = _d.get("merged_at")
     pr_rows = []
     for p in pulls:
         if not isinstance(p, dict):

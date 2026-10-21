@@ -73,7 +73,7 @@ permissions:
 
 jobs:
   acceptance-suite:
-    name: Acceptance suite (AT-01..AT-38)
+    name: Acceptance suite (AT-01..AT-41)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

@@ -649,8 +649,8 @@ def test_at16_inventory_counts():
         "verify-claimed-shas.yml"}, str(ymls))
     checkers = sorted(f for f in os.listdir(CI)
                       if f.endswith(".py") and os.path.isfile(os.path.join(CI, f)))
-    check("AT-16", "thirteen checker scripts exist",
-          len(checkers) == 13, str(checkers))
+    check("AT-16", "fourteen checker scripts exist",
+          len(checkers) == 14, str(checkers))
     reg = json.load(open(os.path.join(HERE, "ACCEPTANCE_TESTS.json")))["tests"]
     idx = open(os.path.join(REPO, "docs", "directives", "INDEX.md")).read()
     idx_ats = set(re.findall(r"AT-\d+", idx))
@@ -3265,3 +3265,210 @@ def test_at38_manifest_committed_tree():
     r = chk()
     check("AT-38", "a manifest over the index bytes is not accepted for the committed tree",
           r.returncode == 1, r.stdout + r.stderr)
+# ---------------------------------------------------------------- AT-39 (EC-24, Round-26 fold)
+def test_at39_premerge_gate_restored():
+    """Round-24 recovery: the pre-merge-verification gate must exist as an
+    EXECUTABLE job in the live governance workflow (a comment is not a gate),
+    must keep the pull-requests: read permission, the authenticated API canary
+    and the exact-head pre-merge verification, and the Round-23 removal claim
+    must be gone."""
+    import yaml
+    wf_rel = ".github/workflows/governance-acceptance.yml"
+    with open(os.path.join(REPO, wf_rel), encoding="utf-8") as fh:
+        raw = fh.read()
+    doc = yaml.safe_load(raw)
+    jobs = doc.get("jobs") or {}
+    check("AT-39", "the pre-merge-verification job exists as an executable job",
+          isinstance(jobs.get("pre-merge-verification"), dict),
+          "jobs: %s" % sorted(jobs))
+    job = jobs.get("pre-merge-verification") or {}
+    body = yaml.safe_dump(job) if job else ""
+    check("AT-39", "the gate keeps the authenticated API canary (fail-closed reads)",
+          "canary" in body.lower() and "urllib.request" in body, body[:200])
+    check("AT-39", "the gate verifies the current PR/head/review state before the merge",
+          "--pre-merge-verify" in body and "--pr-number" in body, body[:200])
+    check("AT-39", "the gate builds the runs manifest from the Actions records",
+          "actions/runs" in body, body[:200])
+    check("AT-39", "the gate is bound to pull_request events",
+          "pull_request" in str(job.get("if") or ""), str(job.get("if")))
+    perms = doc.get("permissions") or {}
+    check("AT-39", "the pull-requests: read permission is retained",
+          perms.get("pull-requests") == "read", str(perms))
+    check("AT-39", "the Round-23 removal claim is absent from the workflow",
+          "pre-merge-verification job is removed" not in raw, "")
+
+
+# ---------------------------------------------------------------- AT-40 (EC-24, Round-26 fold)
+def test_at40_premerge_approval_failclosed():
+    """Round-24 recovery: the restored pre-merge gate must REJECT missing,
+    stale (bound to another commit), non-qualifying (COMMENTED / DISMISSED)
+    and author-only approval evidence, and must still ACCEPT a fresh
+    non-author approval on the exact head (soundness control: the negative
+    controls are not vacuous)."""
+    import subprocess as sp
+    # realpath: the checker derives the git pathspec from the log path relative
+    # to the repository top level; on Windows a short (8.3) temp path and the
+    # long path git reports do not relativize, so the fixture is created with
+    # the canonical long path. The behavior under test is unaffected.
+    d = os.path.realpath(tempfile.mkdtemp())
+    bare = os.path.join(d, "remote.git")
+    sp.run(["git", "init", "-q", "--bare", bare], check=True)
+    sp.run(["git", "-C", bare, "config", "core.autocrlf", "false"], check=True)
+    src = os.path.join(d, "src")
+    sp.run(["git", "init", "-q", "-b", "main", src], check=True)
+    sp.run(["git", "-C", src, "config", "core.autocrlf", "false"], check=True)
+
+    def commit(tag, path=None, text=None):
+        if path and text is not None:
+            full = os.path.join(src, path)
+            os.makedirs(os.path.dirname(full) or src, exist_ok=True)
+            with open(full, "w", encoding="utf-8", newline="\n") as fh:
+                fh.write(text)
+            sp.run(["git", "-C", src, "add", path], check=True)
+        sp.run(["git", "-C", src, "-c", "user.email=t@t", "-c", "user.name=t",
+                "commit", "-q", "--allow-empty", "-m", tag], check=True)
+        return sp.run(["git", "-C", src, "rev-parse", "HEAD"],
+                      capture_output=True, text=True).stdout.strip()
+
+    def push(refspec):
+        sp.run(["git", "-C", src, "push", "-q", bare, refspec], check=True)
+
+    # The fixture log lives at the fixture repository ROOT on purpose: the
+    # checker derives the git pathspec from the log path relative to the
+    # repository top level, and a nested path would be a backslash pathspec on
+    # Windows (where the pickaxe search then matches nothing). The behavior
+    # under test - approval verification - is independent of the log location.
+    logrel = "PUSH_LOG.md"
+    logpath = os.path.join(src, logrel)
+    base = commit("base")
+    push("HEAD:refs/heads/main")
+    sp.run(["git", "-C", src, "checkout", "-q", "-b", "feat"], check=True)
+    mi = ("## 2026-10-21T00:00:00Z | P-1-INTENT | push-intent | branch=feat "
+          "expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1\n"
+          "## 2026-10-21T01:00:00Z | P-2 | merge-intent | target=main pr=7 "
+          "source_branch=feat expected_pre_merge_base=%s expected_head=DEFERRED "
+          "credential=OWNER-PAT-1 authorized_by=\"auditor direction\"\n" % base)
+    head2 = commit("merge-intent", path=logrel, text=mi)
+    push("HEAD:refs/heads/feat")
+
+    def gate(reviews):
+        pr = {"merged": False, "merge_commit_sha": None, "merged_at": None,
+              "user": {"login": "author"},
+              "head": {"sha": head2, "ref": "feat"},
+              "base": {"ref": "main"}}
+        prf = tmpfile(json.dumps(pr), ".json")
+        revf = tmpfile(json.dumps(reviews), ".json")
+        return run("evidence_sequence_check.py", logpath, "--pushlog-schema",
+                   "--remote-verify", "--remote", bare, "--branch", "feat",
+                   "--expect-tip", head2, "--pr-json", prf, "--reviews-json", revf,
+                   "--pre-merge-verify", "--pr-number", "7")
+
+    r = gate([])
+    check("AT-40", "missing approval evidence is rejected",
+          r.returncode == 1 and "PRE-MERGE BLOCKED" in r.stdout, r.stdout[-400:])
+    r = gate([{"state": "APPROVED", "user": {"login": "author"}, "commit_id": head2,
+               "submitted_at": "2026-10-21T01:30:00Z"}])
+    check("AT-40", "an author-only approval is rejected",
+          r.returncode == 1 and "PRE-MERGE BLOCKED" in r.stdout and "author" in r.stdout,
+          r.stdout[-400:])
+    r = gate([{"state": "COMMENTED", "user": {"login": "chatgpt-codex-connector[bot]"},
+               "commit_id": head2, "submitted_at": "2026-10-21T01:30:00Z"}])
+    check("AT-40", "a bot COMMENTED review is not an approval",
+          r.returncode == 1 and "PRE-MERGE BLOCKED" in r.stdout and "COMMENTED" in r.stdout,
+          r.stdout[-400:])
+    r = gate([{"state": "DISMISSED", "user": {"login": "reviewer"}, "commit_id": head2,
+               "submitted_at": "2026-10-21T01:30:00Z"}])
+    check("AT-40", "a dismissed review is not an approval",
+          r.returncode == 1 and "PRE-MERGE BLOCKED" in r.stdout and "DISMISSED" in r.stdout,
+          r.stdout[-400:])
+    r = gate([{"state": "APPROVED", "user": {"login": "reviewer"}, "commit_id": "9" * 40,
+               "submitted_at": "2026-10-21T01:30:00Z"}])
+    check("AT-40", "an approval bound to another commit is rejected (stale head)",
+          r.returncode == 1 and "PRE-MERGE BLOCKED" in r.stdout and "exact head" in r.stdout,
+          r.stdout[-400:])
+    r = gate([{"state": "APPROVED", "user": {"login": "reviewer"}, "commit_id": head2,
+               "submitted_at": "2026-10-21T01:30:00Z"}])
+    check("AT-40", "a fresh non-author approval on the exact head is accepted (soundness control)",
+          r.returncode == 0 and "PRE-MERGE-VERIFIED" in r.stdout, r.stdout[-400:])
+
+
+# ---------------------------------------------------------------- AT-41 (EC-24, Round-26 D-V3/D-V4)
+def test_at41_archive_tag_resolution():
+    """D-V3/D-V4: a PRUNED branch keeps its content in an ANNOTATED archive tag
+    refs/tags/archive/<branch> at its recorded SHA, and the push-log checker
+    must resolve that tag as remote evidence: the recorded confirmation of the
+    deleted branch still verifies. An archive tag at a DIFFERENT SHA does not
+    preserve the confirmation (fail closed)."""
+    import subprocess as sp
+    d = os.path.realpath(tempfile.mkdtemp())
+    bare = os.path.join(d, "remote.git")
+    sp.run(["git", "init", "-q", "--bare", bare], check=True)
+    src = os.path.join(d, "src")
+    sp.run(["git", "init", "-q", "-b", "main", src], check=True)
+
+    def commit(tag, path=None, text=None):
+        if path and text is not None:
+            full = os.path.join(src, path)
+            os.makedirs(os.path.dirname(full) or src, exist_ok=True)
+            with open(full, "w", encoding="utf-8", newline="\n") as fh:
+                fh.write(text)
+            sp.run(["git", "-C", src, "add", path], check=True)
+        sp.run(["git", "-C", src, "-c", "user.email=t@t", "-c", "user.name=t",
+                "commit", "-q", "--allow-empty", "-m", tag], check=True)
+        return sp.run(["git", "-C", src, "rev-parse", "HEAD"],
+                      capture_output=True, text=True).stdout.strip()
+
+    def push(refspec):
+        sp.run(["git", "-C", src, "push", "-q", bare, refspec], check=True)
+
+    def archive_branch(name, sha):
+        """Publish an ANNOTATED archive tag for <name> at <sha> and delete the branch."""
+        sp.run(["git", "-C", src, "tag", "-a", "archive/" + name, "-m",
+                "archived " + name, sha], check=True)
+        push("refs/tags/archive/%s:refs/tags/archive/%s" % (name, name))
+
+    logrel = "PUSH_LOG.md"
+    logpath = os.path.join(src, logrel)
+    base = commit("base")
+    push("HEAD:refs/heads/main")
+
+    # branch one: pruned, archive tag AT the recorded SHA -> must verify
+    sp.run(["git", "-C", src, "checkout", "-q", "-b", "one"], check=True)
+    one_sha = commit("branch one tip")
+    archive_branch("one", one_sha)
+    sp.run(["git", "-C", src, "checkout", "-q", "main"], check=True)
+    sp.run(["git", "-C", src, "branch", "-D", "one"], check=True)
+
+    # branch two: pruned, archive tag at a DIFFERENT SHA -> must fail closed
+    sp.run(["git", "-C", src, "checkout", "-q", "-b", "two"], check=True)
+    two_sha = commit("branch two tip")
+    other_sha = base
+    archive_branch("two", other_sha)
+    sp.run(["git", "-C", src, "checkout", "-q", "main"], check=True)
+    sp.run(["git", "-C", src, "branch", "-D", "two"], check=True)
+
+    def write_log(text):
+        with open(logpath, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(text)
+        sp.run(["git", "-C", src, "add", logrel], check=True)
+        sp.run(["git", "-C", src, "-c", "user.email=t@t", "-c", "user.name=t",
+                "commit", "-q", "--allow-empty", "-m", "push log"], check=True)
+
+    def entry(eid, branch, sha, ts):
+        return ("## %s | %s-INTENT | push-intent | branch=%s expected_remote_tip_before_push=ABSENT "
+                "credential=OWNER-PAT-1\n"
+                "## %s | %s-CONFIRM | push-confirm | branch=%s remote_sha=%s credential=OWNER-PAT-1 "
+                "evidence=\"git ls-remote r refs/heads/%s -> %s\"\n"
+                % (ts, eid, branch, ts, eid, branch, sha, branch, sha))
+
+    write_log(entry("P-1", "one", one_sha, "2026-10-21T10:00:00Z"))
+    r = run("evidence_sequence_check.py", logpath, "--pushlog-schema", "--remote-verify",
+            "--remote", bare)
+    check("AT-41", "a pruned branch whose tip is preserved by an archive tag still verifies",
+          r.returncode == 0 and "ARCHIVED" in r.stdout, r.stdout[-500:])
+
+    write_log(entry("P-2", "two", two_sha, "2026-10-21T10:10:00Z"))
+    r = run("evidence_sequence_check.py", logpath, "--pushlog-schema", "--remote-verify",
+            "--remote", bare)
+    check("AT-41", "an archive tag at a different SHA does not preserve the confirmation (fail closed)",
+          r.returncode == 1 and "archive tag" in r.stdout, r.stdout[-500:])

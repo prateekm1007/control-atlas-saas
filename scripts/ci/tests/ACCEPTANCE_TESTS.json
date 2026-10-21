@@ -152,6 +152,18 @@
     "AT-38": {
       "name": "Package manifest semantics: the manifest validates the COMMITTED tree; a staged tree that differs from the commit is rejected, a CRLF working tree against LF blobs still verifies, and a manifest over index bytes is not accepted for the committed tree",
       "node": "scripts/ci/tests/test_acceptance.py::test_at38_manifest_committed_tree"
-    }
+    },
+  "AT-39": {
+   "name": "EC-24 gate presence/executability (folded from PR #38): the pre-merge-verification job exists as an executable job in the live governance workflow, keeps pull-requests: read, the authenticated API canary, the runs manifest and the exact-head pre-merge verification, and the removal claim is absent",
+   "node": "scripts/ci/tests/test_acceptance.py::test_at39_premerge_gate_restored"
+  },
+  "AT-40": {
+   "name": "EC-24 approval verification fail-closed (folded from PR #38): the pre-merge gate rejects missing, stale (other commit), non-qualifying (COMMENTED/DISMISSED) and author-only approval evidence, and still accepts a fresh non-author approval on the exact head (soundness control)",
+   "node": "scripts/ci/tests/test_acceptance.py::test_at40_premerge_approval_failclosed"
+  },
+  "AT-41": {
+   "name": "EC-24 archive-tag resolution (D-V3/D-V4): a pruned branch whose recorded tip is preserved by an ANNOTATED tag refs/tags/archive/<branch> still verifies; an archive tag at a different SHA fails closed",
+   "node": "scripts/ci/tests/test_acceptance.py::test_at41_archive_tag_resolution"
+  }
   }
 }

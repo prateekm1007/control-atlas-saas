@@ -605,6 +605,54 @@ def ls_remote_tip(remote: str, branch: str) -> tuple[str | None, str | None]:
     return None, f"remote ref {ref} not found on {remote} (missing remote verification)"
 
 
+def ls_remote_archive(remote: str, branch: str) -> tuple[str | None, str | None, str | None]:
+    """Return (commit_sha, tag_ref, error): the commit an archive tag preserves
+    for a PRUNED branch.
+
+    D-V3/D-V4 (auditor, Round-26): a branch that is pruned is first preserved
+    as an ANNOTATED tag at its recorded SHA, and the push-log checker must
+    resolve that tag as remote evidence. Two spellings are accepted:
+    refs/tags/archive/<branch> (the D-V4 policy spelling) and
+    refs/tags/archive/<branch-with-slashes-as-hyphens> (the spelling the
+    auditor named for repair/r23-governance-recovery). The peeled commit of
+    the annotated tag is authoritative; a lightweight tag resolves to its
+    commit directly.
+    """
+    candidates = [f"refs/tags/archive/{branch}",
+                  f"refs/tags/archive/{branch.replace('/', '-')}"]
+    try:
+        # A glob over the archive namespace is required: the peeled
+        # ("^{}") line of an annotated tag only appears when the pattern
+        # matches it too, and the peeled commit -- not the tag object -- is
+        # the SHA the branch pointed at.
+        r = subprocess.run(["git", "ls-remote", "--tags", remote, "refs/tags/archive/*"],
+                           capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return None, None, f"ls-remote failed for the archive tag of {branch!r} ({e})"
+    if r.returncode != 0:
+        return None, None, (f"ls-remote exited {r.returncode} for the archive tag of "
+                            f"{branch!r}: {r.stderr.strip()[:120]}")
+    direct: dict[str, str] = {}
+    peeled: dict[str, str] = {}
+    for line in r.stdout.splitlines():
+        parts = line.split()
+        if len(parts) != 2 or not re.fullmatch(r"[0-9a-f]{40}", parts[0]):
+            continue
+        sha, ref = parts
+        if ref.endswith("^{}"):
+            peeled[ref[:-3]] = sha
+        else:
+            direct[ref] = sha
+    for ref in candidates:
+        if ref in peeled:
+            return peeled[ref], ref, None
+        if ref in direct:
+            return None, ref, (f"the archive tag {ref} carries no peeled commit "
+                                f"(an archive tag must be ANNOTATED, so the preserved "
+                                f"commit is provable)")
+    return None, None, f"no archive tag for {branch!r} on {remote}"
+
+
 class LogRepo:
     """The git repository containing the push log (for ancestry, object and
     introducing-commit queries). A log outside any repository is legal for
@@ -1090,6 +1138,13 @@ def check_remote_verification(path: str, state: dict, remote: str,
             live_cache[branch] = ls_remote_tip(remote, branch)
         return live_cache[branch]
 
+    archive_cache: dict[str, tuple[str | None, str | None, str | None]] = {}
+
+    def archive(branch: str):
+        if branch not in archive_cache:
+            archive_cache[branch] = ls_remote_archive(remote, branch)
+        return archive_cache[branch]
+
     def entry_runs(e) -> tuple[str, list[str]]:
         evm = re.search(r'evidence="([^"]*)"', e["subject"])
         text = (evm.group(1) if evm else "") + "\n" + "\n".join(e["body"])
@@ -1175,8 +1230,27 @@ def check_remote_verification(path: str, state: dict, remote: str,
         # 4. live-ref comparison
         tip, err = live(branch)
         if err:
-            findings.append(f"FAIL: {path}:{e['n']}: {eid} could not be verified against the "
-                            f"live remote ref: {err} (fail closed)")
+            # D-V3/D-V4: a pruned branch keeps its content in an ANNOTATED
+            # archive tag at the recorded SHA; that tag is remote evidence.
+            # An archive tag at a DIFFERENT SHA does not preserve the
+            # confirmation -- both paths stay fail-closed.
+            archived, tag_ref, aerr = archive(branch)
+            if archived is None:
+                findings.append(f"FAIL: {path}:{e['n']}: {eid} could not be verified against the "
+                                f"live remote ref: {err} (fail closed)")
+                continue
+            if archived == sha:
+                info.append(f"ARCHIVED: {eid} confirmed {branch} @ {sha[:12]}…; the branch ref "
+                            f"was pruned and its content is preserved by {tag_ref} at the "
+                            f"identical SHA (the archive tag is the remote evidence; the ref is "
+                            f"gone, the commit is not); CI-success support: {len(supporting)} "
+                            f"verified successful run(s)")
+                continue
+            findings.append(
+                f"FAIL: {path}:{e['n']}: {eid} could not be verified against the live remote "
+                f"ref: {err}; the archive tag {tag_ref} points at {archived[:12]}…, not the "
+                f"recorded {sha[:12]}… (an archive tag at another SHA does not preserve this "
+                f"confirmation -- fail closed)")
             continue
         if tip == sha:
             current_for[branch] = sha

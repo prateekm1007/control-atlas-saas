@@ -1,0 +1,29 @@
+# git diff 781175d bc6fdb5 --stat
+# 781175d = PR #38 head (repair/r23-governance-recovery, the R24 recovery candidate)
+# bc6fdb5 = the head named in the auditor direction
+# Recorded by the Round-26 fold (auditor direction 1). The branch head of
+# repair/round24-claim-head-binding advanced from bc6fdb5 to f00e3be9 during the
+# round (three further commits by the parallel writer); BOTH diffs are kept so the
+# fold is auditable against the head the auditor named and the head it actually
+# landed on. The fold is a fast-forward on top of f00e3be9 - no force, no rewrite.
+
+ .github/workflows/governance-acceptance.yml        | 124 ++++-
+ .github/workflows/preservation-bundle.yml          |  87 ----
+ SHA256SUMS                                         |  24 +-
+ docs/P0_STATUS.md                                  | 204 +++++++--
+ docs/decisions/OWNER_DECISIONS.md                  | 351 +++++++++++----
+ docs/directives/INDEX.md                           |  29 +-
+ docs/evidence/ec16-ec26/R21_EVIDENCE_TABLE.md      |  91 ++--
+ docs/evidence/ec16-ec26/RECEIPT.md                 |  64 +++
+ .../INCIDENT-2026-10-21-R23-GOVERNANCE-BYPASS.md   |  72 ---
+ docs/evidence/push-log/PUSH_LOG.md                 |  38 +-
+ docs/evidence/reading-note/READING_NOTE_LATEST.md  | 398 +++++++++++-----
+ scripts/ci/evidence_sequence_check.py              |  29 +-
+ scripts/ci/fetch_pr_body.py                        | 126 ++++++
+ scripts/ci/generate_preservation_bundle.py         | 348 --------------
+ scripts/ci/manifest_check.py                       | 136 +++++-
+ scripts/ci/preservation_bundle.py                  | 254 +++++++++++
+ scripts/ci/tests/ACCEPTANCE_TESTS.json             | 303 +++++++------
+ scripts/ci/tests/test_acceptance.py                | 498 +++++++++++++++------
+ scripts/ci/verify_claimed_shas.py                  | 183 ++++++++
+ 19 files changed, 2230 insertions(+), 1129 deletions(-)

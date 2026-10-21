@@ -590,3 +590,30 @@ content is ported or accepted as superseded; the stale PR/branch pruning
 cohort table, A-02 issuer-side revocation and the EC2 deployment secrets.
 The scientific hard stop is preserved in full and no product, deployment,
 threshold, cohort or law-semantic work was started.
+
+## 16. Round-26 fold and archive-before-delete cycle (added 2026-10-21T10:11:06Z, SERIES-2026-10-21-R26)
+
+- The R24 recovery content of PR #38 is folded into this head (PR #37, branch
+  `repair/round24-claim-head-binding`): the preservation-bundle generator and its workflow, the
+  R23 governance-bypass incident record, the gate regression coverage (AT-39/AT-40), the R24
+  status/register/index rows and the R24 push-log records (renumbered to avoid the IDs this
+  head already used; nothing rewritten). The diff artifacts are `evidence/r26/fold-diff.txt`
+  (against the head the auditor named) and `evidence/r26/fold-diff-current-head.txt` (against
+  the head the fold actually built on).
+- New control: the push-log checker resolves `refs/tags/archive/<branch>` (and the hyphen
+  spelling) as remote evidence for a pruned branch, using the peeled commit of an ANNOTATED
+  tag; a tag at a different SHA, or a tag without a peeled commit, does not preserve the
+  record and fails closed (AT-41).
+- Archive before delete (D-V3/D-V4): every pruned branch gets an annotated tag
+  `archive/<branch>` at its recorded SHA, verified with `git ls-remote --tags` against the
+  branch SHA, before the branch is deleted. No branch is deleted without its tag.
+- Prune set: everything except the D-V5 keep set (11 branches). This includes the 20
+  `activation/*` and 2 `proposal/*` branches restored in Round 24, the 18 heads that were
+  already merged into `main`, and the 4 unmerged evidence heads
+  (`chore/hygiene-2026-10-19`, `docs/owner-decisions-r19`, `evidence/round11-fix-2026-10-20`,
+  `evidence/round9-r2-2026-10-20`), whose content is preserved by their tags.
+- **Recovery remains OPEN.** O-1 (an independent collaborator with write access) is
+  outstanding, so PR #37 stays blocked until that reviewer approves the exact head; the
+  pre-merge-verification job is red until then by design. OD-16 scientific/production hard
+  stop preserved: no deployment, no v25 run, no held-out evaluation, no threshold or cohort
+  change, no law-semantic change, no golden-artifact modification.
