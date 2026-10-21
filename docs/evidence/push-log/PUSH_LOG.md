@@ -671,3 +671,24 @@
   the pre-merge-verification job only - the gate functioning while no independent approval
   exists on the exact head. That failure is disclosed, not hidden, and it is not represented as
   successful gate evidence.
+
+## 2026-10-21T10:35:51Z | P-093-CONFIRM | push-confirm | branch=repair/round24-claim-head-binding remote_sha=3d0b5ab5056b02f451e6afe9ca9816bb5d20875e credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/repair/round24-claim-head-binding -> 3d0b5ab5056b02f451e6afe9ca9816bb5d20875e (re-verified immediately before this confirmation was written; the push itself was the ordinary fast-forward f00e3be..3d0b5ab5056b02f451e6afe9ca9816bb5d20875e declared by P-093-INTENT); push-event checks on this exact head: Toscanini Stability Gate run 39583630909 conclusion=success and Governance Acceptance run 39583630921 conclusion=failure (disclosed, not represented as success: that push-event run's acceptance-suite and package-manifest jobs failed because the fold commit staged the regenerated SHA256SUMS before the manifest itself was rewritten, so the committed manifest carried stale digest rows for the two evidence files edited last - the manifest is re-staged by the following commit, and no run failure is hidden)"
+
+- Two-phase completion for the fold push (head_at_intent was DEFERRED; the remote-verified tip is
+  recorded after the push returned, never backdated). It confirms THAT push only; the push that
+  follows is declared separately by P-094-INTENT.
+
+## 2026-10-21T10:35:51Z | P-094-INTENT | push-intent | branch=repair/round24-claim-head-binding head_at_intent=DEFERRED expected_remote_tip_before_push=3d0b5ab5056b02f451e6afe9ca9816bb5d20875e credential=OWNER-PAT-1 authorized_by="auditor Round-26 direction 2 (fix only the cause of the failing jobs on the exact candidate: the committed manifest rows are re-staged, and the next push is declared on the exact recorded branch state; no force-push, no earlier entry edited, no merge into main)"
+
+- The declared pre-push tip is the exact tip published by the P-093-CONFIRM record above, which
+  is the live remote tip of this branch at declaration time.
+- P-092 (the previous merge-intent for PR #37) is superseded on the lineage by P-095 below, in
+  the same way P-085 was superseded by P-088; no earlier entry is edited or deleted.
+
+## 2026-10-21T10:35:51Z | P-095 | merge-intent | target=main pr=37 source_branch=repair/round24-claim-head-binding expected_pre_merge_base=63da0e347002ed9b77071ff1ed0cefda7c0ce88a expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-26 directions 1-7 and D-V1/D-V6: one recovery PR, one head; the merge executes only through the protected PR path and only with a legitimate non-author approval on the exact candidate head; if no eligible reviewer is available the PR stays BLOCKED - no self-approval, no retroactive approval, no weakened test"
+
+- Redeclaration on the exact final candidate (expected_head=DEFERRED resolves to the commit
+  introducing this record). expected_pre_merge_base is the live main tip at declaration time
+  (63da0e347002ed9b77071ff1ed0cefda7c0ce88a); if main moves, this intent fails its base verification and must be redeclared.
+- The merge is NOT performed by this push. The pre-merge-verification job is expected to FAIL on
+  PR #37 until a genuine non-author approval exists on the exact head.
