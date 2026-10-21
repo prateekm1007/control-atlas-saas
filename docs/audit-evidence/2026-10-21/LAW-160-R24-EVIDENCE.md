@@ -420,3 +420,57 @@ the orphaned `P-083-INTENT`, and the published entries are untouched (the
 append-only parent-prefix check passes). The records are ASCII on purpose: the
 governance tests print the log, and a non-ASCII marker breaks the Windows
 console encoding.
+
+## 9. Round-25 continuation: the final candidate and the CI evidence
+
+**Final candidate SHA:** `9a149aae2dacd06e2e24f4ad699620311a906614` (branch `feature/law-160-sequence-adjacency`; base `main` @ `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`).
+
+**CI on the exact candidate 9a149aae2dacd06e2e24f4ad699620311a906614:**
+
+| Run | Event | Conclusion |
+|---|---|---|
+| `39649469536` (Toscanini Stability Gate) | push | **success** - "Unit Tests + Hash Lock" and "Secret Scan (gitleaks)" both green on this exact candidate |
+| `39649482980` (Toscanini Stability Gate) | pull request | **success** |
+| `39649469505` (Governance Acceptance) | push | failure - ONE job: `EC-18/EC-24 push-log schema, append-only, remote verification` |
+| `39649483107` (Governance Acceptance) | pull request | failure - the same push-log job plus `EC-16/19/20 PR-body claim verification` |
+
+**Local verification on the same tree (Windows host; the Linux runner is the
+supported platform and its Stability Gate is green):**
+
+```
+$ cd backend && python -m pytest tests -q --no-header <the five POSIX-only modules ignored>
+25 failed, 302 passed, 5 skipped, 445 warnings, 23 errors
+```
+The failing/erroring set is the SAME pre-existing set as the unmodified
+baseline (25 failed / 284 passed / 23 errors on the base tree); the delta is
+the new tests. The pre-existing failures are Windows import/API issues in
+other modules and are disclosed, not suppressed.
+
+```
+canon  : 6a9cd4b4349b81de          (unchanged)
+matrix : b1249cedde5018628ea2351de49c9622cdce4657561af7f74146df182d1a210d
+```
+(the local matrix value is the CRLF-checkout artefact of 3.3; the Linux
+runner's Stability Gate re-verified BOTH locks on this candidate)
+
+```
+patch secret-pattern hits: 0
+```
+
+**Remaining blockers (reported honestly):**
+
+1. The push-log remote verification is red because the push log inherited
+   from `main` records confirmations for `repair/round19-mainline-acceptance`
+   and that branch was deleted by the repository-wide pruning; the historical
+   remote references are truthfully unverifiable. Per the auditor's direction
+   this is NOT repaired in this engine task and no gate is bypassed.
+2. The PR-body claim verification is red because the claim gate requires a
+   successful run of BOTH required workflows on the exact head, and the
+   Governance Acceptance workflow is red for the reason in (1). The PR body
+   names the exact collectable pytest node IDs and cites the successful
+   Stability Gate run on this exact head; the Governance Acceptance run is
+   disclosed as red rather than cited as a pass.
+3. The candidate is therefore NOT mergeable yet: the technical defects of
+   Round 25 are closed, but the governance evidence is not green, no
+   independent approval exists on this head, and the standing hard stop
+   forbids a merge.
