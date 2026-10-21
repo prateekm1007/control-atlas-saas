@@ -913,3 +913,67 @@ fail-open clash measurement and the `<` where the canon specifies `<=` at the
 20.0 boundary) and the calibration runner (the missing `X-API-Key` header,
 continuing after failures, and writing partial results) are the NEXT engine
 and calibration corrections, each in its own separate branch.
+
+## Part 19 - Round-25 records (AUDITOR-ADJUDICATED, 2026-10-21; register rev 14)
+
+### 19.1 The decision (as given)
+
+The Round-25 audit found that PR #40 was not complete: the NOT_MEASURED
+implementation was present, but the PDF reporting semantics and the
+response-contract validation were not. The approved behaviour (Option A, as
+decided under the owner's delegation in Round 24) stands and is recorded here
+so that the push-log reference to this Part resolves.
+
+The R25 work is a focused continuation of the same branch
+(`feature/law-160-sequence-adjacency`), started from the head `fbc0ff9f66dc7927866895d5f3b6c562a05776c1` (base `main` @ `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`).
+
+### 19.2 What this round corrected
+
+1. **PDF reporting (four defects).** The dedicated NOT MEASURED section was
+   nested inside the violations branch and was therefore never rendered for an
+   otherwise compliant structure; the VETO banner and the refinement
+   recommendation list used a broad `status != PASS` filter and could name an
+   unmeasured law as a violation; and the advisory/heuristic table printed
+   `str(observed)`, so an unmeasured LAW-160 could be rendered as `None` (the
+   frozen modality matrix reclassifies LAW-160 as advisory_experimental for
+   X-ray, cryo-EM and NMR). The corrections: the unmeasured collection spans
+   EVERY law row; the section is rendered whenever it is nonempty, independent
+   of the violations; unmeasured rows are excluded from the violation counts,
+   the VETO cause list and the refinement targets; every table renders an
+   unmeasured row through the shared observation helper as "not measured"; and
+   the compliance-ledger wording is qualified so it cannot imply that every
+   deterministic law was measured. The frozen modality matrix is NOT changed.
+2. **Response-contract validation.** `PhysicsMeasurement` now carries a
+   Pydantic v2 model-level validator: a measured result must have
+   `measured=true` and a non-null numeric observation; an unmeasured result
+   must have `status=NOT_MEASURED`, `measured=false`, `observed=null`,
+   `deviation=null` and `sample_size=0`. Contradictory combinations are
+   rejected at the contract boundary instead of being serialised as if they
+   were measurements. The observation field stays REQUIRED and nullable.
+3. **Candidate-specific push-log provenance.** The terminal intent that
+   accompanied the previous candidate is completed by its confirmation and a
+   fresh terminal intent is declared for this candidate through the
+   append-only protocol (no historical record is rewritten).
+
+### 19.3 Evidence
+
+`docs/audit-evidence/2026-10-21/LAW-160-R24-EVIDENCE.md` records the base and
+candidate SHAs, the runtime versions, every command with its exit code and
+output, the focused and full-suite results against the unmodified baseline,
+the hash-lock results, the secret scan and the unresolved limitations. The
+Round-25 additions (the PDF rendering assertions, the model-contract
+assertions and the top-level response round-trip) are covered by
+`backend/tests/test_not_measured_contract_round25.py`.
+
+### 19.4 Standing items
+
+Unchanged: A-01 remains ACCEPTED RISK; the scientific/production hard stop
+is preserved (no merge, no deployment, no v25 run, no held-out evaluation, no
+threshold or cohort change, no golden-artifact regeneration); the inherited
+push-log remote-reference failures (the branch the repository-wide pruning
+deleted) remain truthfully red and are NOT repaired in this engine task; the
+canonical law file, the modality matrix and the calibration runner are
+unchanged. LAW-130 (the fail-open clash measurement and the `<` versus the
+canonical `<=` at the 20.0 boundary) is the next engine task on its own
+branch, and the calibration-runner authentication and atomic-publication fix
+follows on its own branch without executing the real calibration cohort.

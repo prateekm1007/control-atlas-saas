@@ -12,6 +12,18 @@ from ..governance.station_sop import (
 from ..governance.modality_matrix import compute_matrix_hash
 
 
+def _is_unmeasured(law: dict) -> bool:
+    """Is this law row an explicitly unmeasured measurement?
+
+    Round-25: NOT_MEASURED is neither a pass nor a violation. It applies to
+    EVERY law row, not only the deterministic ones: the frozen modality
+    matrix reclassifies LAW-160 as advisory_experimental for X-ray, cryo-EM
+    and NMR, so an unmeasured LAW-160 can appear in the advisory table.
+    """
+    return ((not law.get("measured", True)) or law.get("observed") is None
+            or law.get("status") == "NOT_MEASURED")
+
+
 def _observed_cell(law: dict) -> str:
     """The Observed column of a law row.
 
@@ -303,7 +315,11 @@ def generate_v21_dossier(payload):
             pdf.ln(3)
 
         if verdict_binary == "VETO":
-            det_fails = [l for l in laws if l.get('method') == 'deterministic' and l['status'] != 'PASS']
+            # Round-25: an unmeasured law is not a veto cause. Only actual
+            # violations are named.
+            det_fails = [l for l in laws
+                         if l.get('method') == 'deterministic'
+                         and l['status'] != 'PASS' and not _is_unmeasured(l)]
             fail_ids = ', '.join([l['law_id'] for l in det_fails])
             pdf.red_banner(f"DETERMINISTIC VETO: {fail_ids}")
 
@@ -349,13 +365,16 @@ def generate_v21_dossier(payload):
         pdf.set_text_color(*PDF_COLORS["ALERT"])
 
         det_laws = [l for l in laws if l.get('method') == 'deterministic']
-        # Round-24: NOT_MEASURED is not a violation - it is a law that could
+        # Round-25: NOT_MEASURED is not a violation - it is a law that could
         # not be evaluated. It is reported in its own table and never counted
-        # as a detection.
+        # as a detection. The collection spans EVERY law row (the frozen
+        # modality matrix can reclassify LAW-160 as advisory_experimental, so
+        # an unmeasured LAW-160 must still be reported).
         violations = [l for l in det_laws
-                      if l['status'] != 'PASS' and l['status'] != 'NOT_MEASURED']
+                      if l['status'] != 'PASS' and not _is_unmeasured(l)]
         passes = [l for l in det_laws if l['status'] == 'PASS']
-        not_measured = [l for l in det_laws if l['status'] == 'NOT_MEASURED']
+        not_measured = [l for l in laws if _is_unmeasured(l)]
+        det_not_measured = [l for l in det_laws if _is_unmeasured(l)]
 
         headers = ["ID", "Metric", "Class", "Observed", "Threshold", "Status"]
         widths = [15, 50, 30, 35, 35, 25]
@@ -377,22 +396,6 @@ def generate_v21_dossier(payload):
                     pdf.cell(widths[i], 7, pdf.safe(field), 1, 0, "C" if i != 1 else "L")
                 pdf.ln(7)
             pdf.ln(5)
-            if not_measured:
-                # Round-24: an unmeasured law is shown as such - no number is
-                # invented for it.
-                pdf.set_font("Helvetica", "B", 8)
-                pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
-                pdf.cell(w, 8, f"NOT MEASURED ({len(not_measured)} law(s) could not be "
-                                f"evaluated; no observation was fabricated)", ln=True)
-                pdf.set_font("Helvetica", "", 7)
-                for l in not_measured:
-                    for i, field in enumerate([l['law_id'], l['title'], "Deterministic",
-                                               "not measured",
-                                               f"{l['operator']} {l['threshold']}",
-                                               l['status']]):
-                        pdf.cell(widths[i], 7, pdf.safe(field), 1, 0, "C" if i != 1 else "L")
-                    pdf.ln(7)
-                pdf.ln(5)
 
         pdf.set_font("Helvetica", "B", 9)
         pdf.set_font("Helvetica", "B", 9)
@@ -420,7 +423,14 @@ def generate_v21_dossier(payload):
         pdf.ln(3)
         pdf.set_font("Helvetica", "I", 7)
         pdf.set_text_color(*PDF_COLORS["TEXT_SUBTLE"])
-        pdf.cell(w, 5, "All deterministic coordinate measurements within thresholds.", ln=True)
+        if det_not_measured:
+            # Round-25: do not imply that every deterministic law was measured.
+            pdf.cell(w, 5, f"{len(passes)} measured deterministic measurement(s) within "
+                            f"thresholds; {len(det_not_measured)} deterministic law(s) "
+                            f"were NOT MEASURED (see the NOT MEASURED section) and are "
+                            f"neither a pass nor a violation.", ln=True)
+        else:
+            pdf.cell(w, 5, "All deterministic coordinate measurements within thresholds.", ln=True)
         pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
         # ═══ REGULATOR FIX #3: LAW-100 inline footnote ═══
         pdf.ln(3)
@@ -430,6 +440,33 @@ def generate_v21_dossier(payload):
                        "and Advisory for experimental coordinate regimes, reflecting resolution-dependent uncertainty. "
                        "See PIL-CAL-03 modality matrix for full classification rules.")
         pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+
+        # ── NOT MEASURED (Round-25) ────────────────────────────────────────────
+        # Rendered whenever ANY law row is unmeasured, INDEPENDENTLY of whether
+        # there are violations: a structure can be otherwise compliant and
+        # still have a law that could not be evaluated.
+        if not_measured:
+            pdf.set_font("Helvetica", "B", 9)
+            pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+            pdf.cell(w, 8, "NOT MEASURED (NO OBSERVATION WAS FABRICATED)", ln=True)
+            pdf.set_font("Helvetica", "", 7)
+            for l in not_measured:
+                cls = ("Advisory" if "advisory" in l.get('method', '')
+                       else ("Heuristic" if "heuristic" in l.get('method', '')
+                             else "Deterministic"))
+                for i, field in enumerate([l['law_id'], l['title'], cls,
+                                           "not measured",
+                                           f"{l.get('operator', '')} {l.get('threshold', 'N/A')}",
+                                           l.get('status', 'NOT_MEASURED')]):
+                    pdf.cell(widths[i], 7, pdf.safe(field), 1, 0, "C" if i != 1 else "L")
+                pdf.ln(7)
+            pdf.set_font("Helvetica", "I", 7)
+            pdf.set_text_color(*PDF_COLORS["TEXT_SUBTLE"])
+            pdf.cell(w, 5, "These laws could not be evaluated for this structure (no eligible "
+                            "measurement); they are neither a pass nor a violation.",
+                     ln=True)
+            pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+            pdf.ln(5)
 
         # ══════ PAGE 3: SECTION II - ADVISORY METRICS ══════
         pdf.add_page()
@@ -466,7 +503,7 @@ def generate_v21_dossier(payload):
             cls = "Advisory" if "advisory" in l.get('method', '') else "Heuristic"
             display_status = l['status'] if l['status'] != 'VETO' else 'FAIL'
             for i, field in enumerate([l['law_id'], l['title'], cls,
-                                       str(l['observed']), f"{l['operator']} {l['threshold']}", display_status]):
+                                       _observed_cell(l), f"{l['operator']} {l['threshold']}", display_status]):
                 pdf.cell(widths[i], 7, pdf.safe(field), 1, 0, "C" if i != 1 else "L")
             pdf.ln(7)
 
@@ -623,7 +660,11 @@ def generate_v21_dossier(payload):
                     "suitable for drug discovery without refinement. The following physics-first "
                     "methods are recommended to improve structural quality." % coverage)
             else:
-                det_fail_list = [l for l in laws if l.get('method') == 'deterministic' and l['status'] != 'PASS']
+                # Round-25: an unmeasured law is not a deterministic violation
+                # and must not be presented as a refinement target.
+                det_fail_list = [l for l in laws
+                                 if l.get('method') == 'deterministic'
+                                 and l['status'] != 'PASS' and not _is_unmeasured(l)]
                 fail_names = ", ".join([l['law_id'] for l in det_fail_list])
                 pdf.multi_cell(w, 5,
                     "This structure has deterministic violations (%s) that prevent certification. "

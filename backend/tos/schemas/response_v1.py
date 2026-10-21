@@ -5,7 +5,7 @@ Pydantic v2 models enforcing the exact contract of the /ingest response.
 """
 from __future__ import annotations
 from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class GovernanceFingerprint(BaseModel):
@@ -46,7 +46,7 @@ class PhysicsMeasurement(BaseModel):
     title: str
     status: str
     method: str
-    # Round-24 (the auditor-approved NOT_MEASURED state): a measurement that
+    # Round-24/25 (the auditor-approved NOT_MEASURED state): a measurement that
     # could not be taken is represented truthfully - `measured` is False, the
     # observation is null (still REQUIRED: a measurement always carries the
     # field) and the deviation is null. An ordinary measurement keeps its
@@ -60,6 +60,39 @@ class PhysicsMeasurement(BaseModel):
     sample_size: int = Field(..., ge=0)
     scope: str
     principle: str = "N/A"
+
+    @model_validator(mode="after")
+    def _check_measurement_contract(self):
+        """The cross-field contract of a measurement row.
+
+        A MEASURED result carries a number; an UNMEASURED result carries no
+        number, no deviation and no samples, and says so in its status.
+        Contradictory combinations are rejected at the contract boundary
+        instead of being serialised as if they were measurements.
+        """
+        if self.status == "NOT_MEASURED":
+            if self.measured:
+                raise ValueError(
+                    "an unmeasured result (status NOT_MEASURED) must have measured=false")
+            if self.observed is not None:
+                raise ValueError(
+                    "an unmeasured result (status NOT_MEASURED) must not carry a "
+                    "numerical observation")
+            if self.deviation is not None:
+                raise ValueError(
+                    "an unmeasured result (status NOT_MEASURED) must not carry a deviation")
+            if self.sample_size != 0:
+                raise ValueError(
+                    "an unmeasured result (status NOT_MEASURED) must have sample_size 0")
+            return self
+        if not self.measured:
+            raise ValueError(
+                f"a measured result (status {self.status!r}) must have measured=true")
+        if self.observed is None:
+            raise ValueError(
+                f"a measured result (status {self.status!r}) must carry a numerical "
+                f"observation")
+        return self
 
 
 class Tier1(BaseModel):
