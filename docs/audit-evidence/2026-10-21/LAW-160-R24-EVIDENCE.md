@@ -128,15 +128,26 @@ matrix: b1249cedde5018628ea2351de49c9622cdce4657561af7f74146df182d1a210d
 ```
 
 The candidate's canon and matrix hashes are byte-identical to the base
-commit's (the patch touches no governance artefact). The canon lock asserted
-by the Stability Gate (`6a9cd4b4349b81de`) still holds. NOTE - a
-PRE-EXISTING, separate finding: the matrix hash computed on `main` is
-`b1249cedde5018628ea2351de49c9622cdce4657561af7f74146df182d1a210d`, while the
-Stability Gate asserts `ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4`.
-The same value is computed on the unmodified base commit, so the drift is NOT
-caused by this patch; it is reported here and is not "fixed" here (the canon
-and the matrix are frozen artefacts; changing the assertion or the matrix
-needs a recorded decision).
+commit's: the patch touches no governance artefact, and the Stability Gate on
+the candidate (run `39598182836`, conclusion `success`) re-computed and
+verified BOTH locks on the exact candidate.
+
+A NOTE ON THE LOCAL MATRIX VALUE, so the record is not misread: the matrix hash
+computed on THIS Windows host (`b1249cedde5018628ea2351de49c9622cdce4657561af7f74146df182d1a210d`)
+differs from the value the Stability Gate asserts
+(`ed1731ace09a9a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4`). That
+difference is a CHECKOUT-ARTEFACT of this platform, not a repository drift:
+the same local value is computed on the unmodified base commit, and the Linux
+runner computes the asserted value on the same tree. The hash inputs are
+checked-out files whose line endings differ between a CRLF and an LF checkout.
+The same artefact explains why the local `manifest_check.py` run reports 46
+digest mismatches while the CI package-integrity job is green: the checker on
+`main` hashes the WORKING TREE (a CRLF checkout here), while the manifest
+pins the COMMITTED bytes. This is a PRE-EXISTING platform dependence of the
+checker on `main` (a fix for it exists on the unmerged PR #37 branch and is
+out of scope for this LAW-160 patch); it is reported here and NOT fixed here,
+because the patch is limited to LAW-160 and the canon/matrix are frozen
+artefacts.
 
 ### 3.4 Secret scan of the patch
 
@@ -250,3 +261,25 @@ PARTIALLY COMPLETE with this item explicitly outstanding.
    host; the Linux CI runs the complete suite on the exact candidate.
 5. No production, deployment, calibration, v25, held-out or threshold work
    was performed, and nothing was merged.
+
+## 7. CI on the exact candidate
+
+| Run | Event | Conclusion |
+|---|---|---|
+| `39598182836` (Toscanini Stability Gate) | push | **success** - unit tests and the canon/matrix hash locks pass on the exact candidate |
+| `39598182682` (Governance Acceptance) | push | failure - one job, see below |
+
+The failing job is `EC-18/EC-24 push-log schema, append-only, remote
+verification`. It is NOT caused by this patch: the push log on `main` records
+confirmations for the branch `repair/round19-mainline-acceptance`, and that
+branch was deleted by the repository-wide pruning that happened AFTER `main`'s
+last Governance Acceptance run. Every affected entry fails with "remote ref
+refs/heads/repair/round19-mainline-acceptance not found". The same defect is
+inherent in `main`; a branch cut from `main` inherits it. It is a
+push-log/governance matter, outside the LAW-160 scope of this patch, and it is
+reported here rather than patched here.
+
+Every other job of that run is green, including the acceptance suite, the
+package manifest, the reading-note validation, the status-vocabulary lint, the
+deploy-trigger lint, the full-history secret scan and the preservation-bundle
+jobs.
