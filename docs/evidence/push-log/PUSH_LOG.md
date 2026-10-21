@@ -779,3 +779,37 @@
   on the lineage.
 - The merge is NOT performed by this push. The pre-merge-verification job is expected to FAIL on
   PR #37 until a genuine non-author approval exists on the exact head.
+
+## 2026-10-21T11:27:09Z | P-114 | push-not-proven | reclassifies=P-012-CONFIRM branch=docs/owner-decisions remote_sha=78b147d55660dc79c2f5aada368d8499339bc339 credential=OWNER-PAT-1 review_ref=docs/evidence/push-log/RECONCILIATION-2026-10-21-ARCHIVE-TAG-PROVENANCE.md#archived-branch-provenance-reconciliation evidence="the branch docs/owner-decisions was pruned after its content was archived as the annotated tag refs/tags/archive/docs/owner-decisions; that tag's peeled commit is not the recorded SHA and does not contain it in its history, because the branch was later REBUILT; the live ref is absent, the recorded commit exists in the repository's object store but is not on the archived lineage, and the compare API shows the recorded SHA is not an ancestor of the archived tip - the commit may still exist, but the branch PUSH is NOT PROVEN; the complete search is recorded in the canonical reconciliation record"
+
+- Honest reclassification of a historical confirmation whose push provenance cannot be proven after
+  the branch was rebuilt and pruned. The original entry stays visible and unchanged; this record
+  is never counted as evidence for any declaration.
+
+## 2026-10-21T11:27:09Z | P-115 | push-not-proven | reclassifies=P-013-CONFIRM branch=proposal/ec16-ec26-enforcement remote_sha=dab33d946fe31891efbd6e4917e360abcb1872c1 credential=OWNER-PAT-1 review_ref=docs/evidence/push-log/RECONCILIATION-2026-10-21-ARCHIVE-TAG-PROVENANCE.md#archived-branch-provenance-reconciliation evidence="the branch proposal/ec16-ec26-enforcement was pruned after its content was archived as the annotated tag refs/tags/archive/proposal/ec16-ec26-enforcement; that tag's peeled commit is not the recorded SHA and does not contain it in its history, because the branch was later REBUILT; the live ref is absent, the recorded commit exists in the repository's object store but is not on the archived lineage, and the compare API shows the recorded SHA is not an ancestor of the archived tip - the commit may still exist, but the branch PUSH is NOT PROVEN; the complete search is recorded in the canonical reconciliation record"
+
+- Honest reclassification of a historical confirmation whose push provenance cannot be proven after
+  the branch was rebuilt and pruned. The original entry stays visible and unchanged; this record
+  is never counted as evidence for any declaration.
+
+## 2026-10-21T11:27:09Z | P-116 | push-not-proven | reclassifies=P-014-CONFIRM branch=governance/canonical-docs remote_sha=b12f30e95255b0c5d31a70cb9b6bb42776aac9a6 credential=OWNER-PAT-1 review_ref=docs/evidence/push-log/RECONCILIATION-2026-10-21-ARCHIVE-TAG-PROVENANCE.md#archived-branch-provenance-reconciliation evidence="the branch governance/canonical-docs was pruned after its content was archived as the annotated tag refs/tags/archive/governance/canonical-docs; that tag's peeled commit is not the recorded SHA and does not contain it in its history, because the branch was later REBUILT; the live ref is absent, the recorded commit exists in the repository's object store but is not on the archived lineage, and the compare API shows the recorded SHA is not an ancestor of the archived tip - the commit may still exist, but the branch PUSH is NOT PROVEN; the complete search is recorded in the canonical reconciliation record"
+
+- Honest reclassification of a historical confirmation whose push provenance cannot be proven after
+  the branch was rebuilt and pruned. The original entry stays visible and unchanged; this record
+  is never counted as evidence for any declaration.
+
+## 2026-10-21T11:27:09Z | P-117-INTENT | push-intent | branch=repair/round24-claim-head-binding head_at_intent=DEFERRED expected_remote_tip_before_push=36a8921a733941044d2b9151f5f8e9e18aebd7f6 credential=OWNER-PAT-1 authorized_by="auditor Round-26 direction 2 and 6 (the three remaining push-not-proven reclassifications with their canonical review_ref record, and the push-state redeclaration for this candidate; no force-push, no earlier entry edited, no merge into main, no product work)"
+
+- The declared pre-push tip is the exact tip published by the P-105-CONFIRM record, which is the
+  live remote tip of this branch at declaration time.
+- head_at_intent is DEFERRED per the two-phase schema; the tip pushed by this INTENT is disclosed
+  as PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-21T11:27:09Z | P-118 | merge-intent | target=main pr=37 source_branch=repair/round24-claim-head-binding expected_pre_merge_base=63da0e347002ed9b77071ff1ed0cefda7c0ce88a expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-26 directions 1-7 and D-V1/D-V6: one recovery PR, one head; the merge executes only through the protected PR path and only with a legitimate non-author approval on the exact candidate head; if no eligible reviewer is available the PR stays BLOCKED - no self-approval, no retroactive approval, no weakened test"
+
+- Redeclaration on the exact final candidate (expected_head=DEFERRED resolves to the commit
+  introducing this record). expected_pre_merge_base is the live main tip at declaration time
+  (63da0e347002ed9b77071ff1ed0cefda7c0ce88a); if main moves, this intent fails its base
+  verification and must be redeclared.
+- The merge is NOT performed by this push. The pre-merge-verification job is expected to FAIL on
+  PR #37 until a genuine non-author approval exists on the exact head.

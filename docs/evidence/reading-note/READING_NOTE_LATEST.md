@@ -516,6 +516,15 @@ earlier in the same run (a `push-not-proven` record with an unresolvable `review
 before this path is reached). No gate was relaxed: an un-reclassified record whose branch and
 archive tag cannot prove it still FAILS.
 
+### 11.3g Which records are reclassified, and which were already
+
+`P-011-CONFIRM` was already reclassified `push-not-proven` by the pre-existing record `P-074`
+(2026-10-20) and needed nothing new. The three remaining unprovable records - `P-012-CONFIRM`
+(branch `docs/owner-decisions`), `P-013-CONFIRM` and `P-014-CONFIRM` (both on
+`proposal/ec16-ec26-enforcement`) - are reclassified here as P-114, P-115 and P-116, each with a
+`review_ref` into the canonical reconciliation record. All four are disclosed as NOT PROVEN on
+every verification run and are never counted as evidence for any declaration.
+
 ### 11.4 Rule mapping additions in this round
 
 | Rule ID | Enforcement point(s) | Acceptance test(s) |
