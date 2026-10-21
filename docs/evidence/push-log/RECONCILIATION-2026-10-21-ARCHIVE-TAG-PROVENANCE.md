@@ -45,3 +45,14 @@ neither the live ref nor the archive tag can prove the push. Commit existence ma
 provenance is not. The reclassification records carry the complete search, and the entries stay
 visible in the log, are disclosed as NOT PROVEN on every verification run, and are never counted
 as evidence for any declaration. The complete search for each entry is in the section above.
+
+## archived branch provenance reconciliation
+
+The reclassified entries are `P-011-CONFIRM` (reclassified by the pre-existing record `P-074`),
+`P-012-CONFIRM` (reclassified by `P-114`), `P-013-CONFIRM` (reclassified by `P-115`) and
+`P-014-CONFIRM` (reclassified by `P-116`). Each describes a push of a branch that was later
+REBUILT and then pruned: the recorded tip is in neither the archived tip nor its history, so
+neither the live ref nor the archive tag can prove the push. Commit existence may be proven; push
+provenance is not. The reclassification records carry the complete search; the entries stay
+visible in the log, are disclosed as NOT PROVEN on every verification run, and are never counted
+as evidence for any declaration.
