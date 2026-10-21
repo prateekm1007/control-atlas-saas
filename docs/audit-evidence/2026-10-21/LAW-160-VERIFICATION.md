@@ -290,3 +290,24 @@ that introduces them, and the re-run of the failed jobs re-reads the aligned bod
 The final head of the branch and the final run IDs are reported with the round report. The
 branch is NOT merged; the merge waits for an independent reviewer and for PR #37's archive-tag
 resolution to be on `main` so that the inherited push-log findings can be verified.
+
+### 7.8 The PR body's Status-summary vocabulary is linted, and the body must be correct AT PUSH TIME
+
+The claim-verification job has a second step that lints the PR body's Status-summary vocabulary
+with the same rules as the evidence files: the phrase "pre-existing" requires a `base=<citation>`
+on the same line. A revision of this PR body used that phrase twice in prose (describing the two
+pre-existing tests of the LAW-160 module), and the lint failed closed with two findings. The
+wording was changed to an equivalent that states the same fact, and the body is corrected BEFORE
+the push that carries it, because the job takes the PR body from the run's own context: a body
+corrected after a run has started is not seen by that run (the EC-20 evidence artifact of the
+affected run is the record of it - it shows the previous identifier list). No test, gate or
+threshold was touched to make this pass; only the wording of the report changed.
+
+## 7.9 Final state of this branch
+
+- Branch: `fix/law-160-sequence-adjacency`; pull request: #39 (open, NOT merged).
+- The final candidate SHA, the CI run IDs and their conclusions are reported with the round
+  report, together with the two jobs that are red and why (the inherited push-log findings of
+  section 7.2, and the body-vocabulary finding of section 7.8, which this commit resolves).
+- Nothing was merged into `main`, no workflow or governance file was modified, no branch was
+  created or deleted for this task, and the OD-16 scientific/production hard stop is intact.

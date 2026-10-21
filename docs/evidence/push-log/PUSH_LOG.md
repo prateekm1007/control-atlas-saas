@@ -689,3 +689,23 @@
   (63da0e347002ed9b77071ff1ed0cefda7c0ce88a); if main moves, this intent fails its base verification and must be redeclared. P-090
   (the previous merge-intent for PR #39) is superseded on the lineage.
 - The merge is NOT performed by this push.
+
+## 2026-10-21T16:12:02Z | P-092-CONFIRM | push-confirm | branch=fix/law-160-sequence-adjacency remote_sha=7f67756814547f70315008d31dc26670eb4cc5a0 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/fix/law-160-sequence-adjacency -> 7f67756814547f70315008d31dc26670eb4cc5a0 (re-verified immediately before this confirmation was written; the push itself was the ordinary fast-forward 564a292..7f67756814547f70315008d31dc26670eb4cc5a0 declared by P-092-INTENT)"
+
+- Two-phase completion for the push declared by P-092-INTENT (head_at_intent was DEFERRED; the
+  remote-verified tip is recorded after the push returned, never backdated).
+
+## 2026-10-21T16:12:02Z | P-094-INTENT | push-intent | branch=fix/law-160-sequence-adjacency head_at_intent=DEFERRED expected_remote_tip_before_push=7f67756814547f70315008d31dc26670eb4cc5a0 credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder direction 3: the PR-body Status-summary vocabulary correction, the evidence record of it, and the push-state redeclaration for this candidate"
+
+- The declared pre-push tip is the exact tip published by the P-092-CONFIRM record above, which is
+  the live remote tip of this branch at declaration time.
+- head_at_intent is DEFERRED per the two-phase schema; the tip pushed by this INTENT is disclosed
+  as PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-21T16:12:02Z | P-095 | merge-intent | target=main pr=39 source_branch=fix/law-160-sequence-adjacency expected_pre_merge_base=63da0e347002ed9b77071ff1ed0cefda7c0ce88a expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder directions 2 and 3: the isolated LAW-160 sequence-pair adjacency correction is reviewed and merged through the protected PR path only, with the required checks green on the exact candidate head; the merge is NOT performed by this push, and it also waits for PR #37's archive-tag resolution to be on main so that the push-log job can verify the historical records of the pruned branches"
+
+- Redeclaration on the exact final candidate (expected_head=DEFERRED resolves to the commit
+  introducing this record). expected_pre_merge_base is the live main tip at declaration time
+  (63da0e347002ed9b77071ff1ed0cefda7c0ce88a); if main moves, this intent fails its base verification and must be redeclared. P-093
+  (the previous merge-intent for PR #39) is superseded on the lineage.
+- The merge is NOT performed by this push.
