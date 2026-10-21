@@ -836,3 +836,126 @@ law-semantic changes, no golden-artifact regeneration without their approved
 gates. The independent r2 evidence-archive verification, the portable 40-row
 cohort metadata table, A-02 issuer-side revocation, and the EC2 deployment
 secrets remain OPEN and are not closed by this governance work.
+
+## Part 18 - Round-24 records (AUDITOR-ADJUDICATED, 2026-10-21; register rev 13)
+
+### 18.1 The decision
+
+The governance-only workstream is STOPPED and the unfinished LAW-160 engine
+correction resumes immediately. The next round is not spent on the P-122
+reconciliation, archive tags, pull-request pruning or the O-1 approval process:
+those activities do not fix the outstanding engine or calibration defects.
+PR #37 stays open and unmerged; the engine patch does not go into it. A new,
+isolated feature branch is cut from freshly verified `main`
+(`63da0e347002ed9b77071ff1ed0cefda7c0ce88a`); the LAW-160 patch goes there.
+
+### 18.2 The defect and the correction (LAW-160, Chain Integrity)
+
+`get_sequential_residues()` returns the residues that are PRESENT (sorted,
+de-duplicated); it does not guarantee that two successive entries are
+consecutive in the biological sequence. LAW-160 measured the C-alpha distance
+between successive entries, so a chain with missing intervening residues (a
+modelling gap) was reported as a physical chain break - a FALSE VETO.
+
+The correction factors the adjacency predicate into one source of truth
+(`Tier1Measurements._adjacent`), keeps the semantics of the existing
+`_is_sequential()` VERBATIM, adds the tuple-form
+`_is_sequential_residues()` for the `(res_seq, insertion_code, res_name)`
+tuples, and measures only sequence-adjacent pairs. `get_sequential_residues()`
+is unchanged (other laws use it). The canonical 4.5 A threshold, the law ID,
+the operator, the units and the classification are unchanged; the canon and the
+modality matrix are untouched.
+
+**Verdict impact (explicit):** correcting pair eligibility can remove false
+LAW-160 vetoes and therefore change the verdict of affected structures. A
+structure that previously vetoed on a modelling gap now passes, or - when no
+pair is eligible at all - is reported as unmeasured (18.3). Pre- and
+post-correction results are not comparable for chains with gaps.
+
+### 18.3 OPEN: the zero-eligible-pair representation (release blocker)
+
+With no sequence-adjacent C-alpha pair, LAW-160 is not measured. The previous
+code emitted `observed=0.0`, `PASS`, `sample=0` - a fabricated value and a PASS
+for a law that was never evaluated. The patch removes that: the engine emits
+no measurement, and the adjudicator's EXISTING missing-measurement default
+applies (status FAIL, sample 0 - the representation every other unmeasured law
+already receives). Nothing is fabricated, no status is invented, no PASS is
+claimed.
+
+That is not the final answer: "FAIL" for an unmeasurable law still reads as
+a scientific failure. A dedicated unmeasured state needs an owner decision on
+the approved status vocabulary (the engine's vocabulary today is exactly
+PASS / VETO / FAIL) and on the response schema
+(`backend/tos/schemas/response_v1.py`: `PhysicsMeasurement.observed` is a
+REQUIRED float, so a null observation is not available without a schema
+change). The proposal, the inspected engine/adjudicator/schema/consumers and
+the two options are recorded in
+`docs/audit-evidence/2026-10-21/LAW-160-R24-EVIDENCE.md`, section 5. The task is
+reported as PARTIALLY COMPLETE with this item explicitly outstanding.
+
+### 18.4 Evidence
+
+`docs/audit-evidence/2026-10-21/LAW-160-R24-EVIDENCE.md` records the base and
+candidate SHAs, the runtime versions, every command with its exit code and
+output, the test counts against the unmodified baseline in the same
+environment, the canon/matrix hash results, the secret scan, the changed-file
+digests, the verdict impact, the zero-sample proposal and the unresolved
+limitations. The LAW-160 target tests and the full backend suite were run on
+the exact candidate.
+
+### 18.5 Standing items
+
+The scientific/production hard stop is preserved in full: no merge to `main`,
+no deployment, no v25 run, no held-out evaluation, no threshold or cohort
+change, no golden-artifact regeneration. PR #37 is not merged and the new
+feature branch is not merged. A-01 remains ACCEPTED RISK. LAW-130 (the
+fail-open clash measurement and the `<` where the canon specifies `<=` at the
+20.0 boundary) and the calibration runner (the missing `X-API-Key` header,
+continuing after failures, and writing partial results) are the NEXT engine
+and calibration corrections, each in its own separate branch.
+
+## Part 19 - Round-24 NOT_MEASURED contract and its enforcement (AUDITOR-ADJUDICATED, 2026-10-21; register rev 14)
+
+### 19.1 The approved contract (recorded, not re-decided)
+
+The auditor approved the explicit unmeasurable state for LAW-160 (the Round-24 Option A
+contract, as adjudicated and recorded in
+`docs/audit-evidence/2026-10-21/LAW-160-R24-EVIDENCE.md` and in the pull request body of the
+canonical branch). The contract is:
+
+- An unmeasured law is reported with `status = "NOT_MEASURED"`, `measured = false`,
+  `observed = null`, `deviation = null` and `sample_size = 0`. A measurement that could not be
+  taken is never presented as a numerical zero, and never as a scientific failure.
+- A required deterministic law that is NOT_MEASURED yields the verdict `INDETERMINATE` - it
+  neither passes the structure nor fails it scientifically. A known deterministic veto takes
+  precedence and remains a VETO.
+- The response model enforces the cross-field consistency of a measurement row: a measured row
+  carries a numeric observation, an unmeasured row carries the NOT_MEASURED status with null
+  observation, null deviation and a zero sample. A contradictory row is rejected.
+- The PDF report states the unmeasured laws explicitly, in their own section, independently of
+  whether any other law was violated; an unmeasured law is not counted as a violation, is never
+  named as a VETO cause, is never a refinement target, and is never rendered as a bare `None`.
+
+Part 18 is preserved unchanged; this part records the contract and the state of its enforcement
+on the canonical branch `feature/law-160-sequence-adjacency` (pull request #40).
+
+### 19.2 State of the implementation on the canonical branch
+
+- The engine emits the NOT_MEASURED row for LAW-160 when no eligible C-alpha pair exists
+  (`backend/tos/engine/tier1_measurements.py`).
+- The adjudicator maps a required deterministic NOT_MEASURED law to INDETERMINATE and keeps a
+  real deterministic veto as a VETO (`backend/tos/engine/adjudicator.py`).
+- The response model validates measurement consistency (`backend/tos/schemas/response_v1.py`).
+- The PDF reporting paths render the unmeasured section, exclude unmeasured laws from
+  violations, VETO causes and refinement recommendations, and use the shared observation
+  rendering helper (`backend/tos/forensic_artifacts/pdf_generator.py`).
+- The end-to-end tests are rendering-level: the generated PDF is decoded and its content is
+  asserted (`backend/tests/test_not_measured_pdf_contract.py`), and the regressions of the
+  superseded R24 candidate are preserved in `backend/tests/test_law_160.py`.
+
+### 19.3 Standing items - UNCHANGED
+
+The scientific/production hard stop is preserved in full: no merge to `main`, no deployment, no
+v25 calibration run, no held-out evaluation, no threshold or cohort change, no golden-artifact
+regeneration. A-01 remains ACCEPTED RISK. LAW-130 and the calibration runner remain the NEXT
+separate corrections, each in its own branch, and are not touched by this record.

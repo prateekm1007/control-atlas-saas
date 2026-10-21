@@ -34,3 +34,236 @@ def test_law_160_fail(broken_backbone):
     res = results["LAW-160"]
     assert res["status"] == "VETO"
     assert res["observed"] > 9.0
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Round-24 (auditor direction 2): sequence-adjacency eligibility.
+#
+# get_sequential_residues() returns the residues that are PRESENT (sorted,
+# de-duplicated). It does NOT guarantee that two successive entries are
+# consecutive in the biological sequence, so measuring the C-alpha distance
+# between successive entries can mistake a MODELLING GAP (missing intervening
+# residues) for a physical chain break - a false veto. These tests pin the
+# corrected eligibility, the retained true-break detection, the
+# insertion-code semantics (UNCHANGED - the existing _is_sequential() semantics
+# are preserved verbatim), and the sample count.
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def _audit(atoms):
+    struct = Structure(atoms=atoms, audit_id="TEST",
+                       confidence=ConfidenceProfile([], False, "predicted"))
+    results, coverage, _ = Tier1Measurements.run_full_audit(struct)
+    return results
+
+
+def test_law_160_missing_residues_are_not_a_chain_break(mock_atom_factory):
+    """Residues 1, 2 and 4 with 3 absent: the 2->4 pair spans a modelling gap.
+
+    Before the correction the C-alpha distance across the gap (here 10 A) was
+    reported as a chain break (a false veto). The pair is now ineligible, so
+    only the genuine 1->2 pair is measured.
+    """
+    make = mock_atom_factory
+    atoms = [
+        make("N",  "N", [0.0, 0.0, 0.0],    res_name="ALA", res_seq=1),
+        make("CA", "C", [1.47, 0.0, 0.0],    res_name="ALA", res_seq=1),
+        make("C",  "C", [2.5, 1.0, 0.0],     res_name="ALA", res_seq=1),
+        make("N",  "N", [3.8, 1.0, 0.0],     res_name="GLY", res_seq=2),
+        make("CA", "C", [5.27, 1.0, 0.0],    res_name="GLY", res_seq=2),
+        make("C",  "C", [6.3, 2.0, 0.0],     res_name="GLY", res_seq=2),
+        # residue 3 is ABSENT from the model; residue 4 sits 10 A away
+        make("N",  "N", [15.0, 2.0, 0.0],    res_name="ALA", res_seq=4),
+        make("CA", "C", [16.47, 2.0, 0.0],   res_name="ALA", res_seq=4),
+        make("C",  "C", [17.5, 3.0, 0.0],    res_name="ALA", res_seq=4),
+    ]
+    res = _audit(atoms)["LAW-160"]
+    # only the consecutive 1->2 pair is eligible and measured
+    assert res["sample"] == 1
+    assert res["status"] == "PASS"
+    assert 3.7 <= res["observed"] <= 4.0
+
+
+def test_law_160_true_chain_break_is_still_veto(broken_backbone):
+    """A real, excessive C-alpha distance between CONSECUTIVE residues still vetoes."""
+    res = _audit(broken_backbone)["LAW-160"]
+    assert res["status"] == "VETO"
+    assert res["observed"] > 9.0
+    assert res["sample"] == 2
+
+
+def test_law_160_insertion_code_adjacency_semantics(mock_atom_factory):
+    """1, 2A, 2B, 3 - the insertion-code semantics are the PRESERVED ones.
+
+    The existing _is_sequential() semantics are unchanged: a pair is adjacent
+    when the residue number advances by one and neither residue carries an
+    insertion code, when the residue number is unchanged and the insertion code
+    advances, or when the residue number advances by one out of an
+    insertion-coded residue. So 2A->2B and 2B->3 are adjacent, while 1->2A is
+    not (the base residue 2 is itself insertion-coded, and the preserved
+    semantics do not treat a missing base residue as adjacency).
+    """
+    make = mock_atom_factory
+    atoms = [
+        make("CA", "C", [1.47, 0.0, 0.0],  res_name="ALA", res_seq=1),
+        make("CA", "C", [5.27, 1.0, 0.0],  res_name="GLY", res_seq=2, insertion_code="A"),
+        make("CA", "C", [9.07, 2.0, 0.0],  res_name="GLY", res_seq=2, insertion_code="B"),
+        make("CA", "C", [12.87, 3.0, 0.0], res_name="ALA", res_seq=3),
+    ]
+    res = _audit(atoms)["LAW-160"]
+    assert res["sample"] == 2          # (2A,2B) and (2B,3)
+    assert res["status"] == "PASS"
+
+
+def test_law_160_insertion_code_transition_to_next_residue(mock_atom_factory):
+    """1, 2A, 3: the transition OUT of an insertion-coded residue is adjacent."""
+    make = mock_atom_factory
+    atoms = [
+        make("CA", "C", [1.47, 0.0, 0.0],  res_name="ALA", res_seq=1),
+        make("CA", "C", [5.27, 1.0, 0.0],  res_name="GLY", res_seq=2, insertion_code="A"),
+        make("CA", "C", [9.07, 2.0, 0.0],  res_name="ALA", res_seq=3),
+    ]
+    res = _audit(atoms)["LAW-160"]
+    assert res["sample"] == 1          # (2A,3); 1->2A is not adjacent
+    assert res["status"] == "PASS"
+
+
+def test_law_160_gap_after_insertion_code_is_skipped(mock_atom_factory):
+    """1, 2, 2A, 4: the 2A->4 pair spans a gap and is not eligible."""
+    make = mock_atom_factory
+    atoms = [
+        make("CA", "C", [1.47, 0.0, 0.0],  res_name="ALA", res_seq=1),
+        make("CA", "C", [5.27, 1.0, 0.0],  res_name="GLY", res_seq=2),
+        make("CA", "C", [9.07, 2.0, 0.0],  res_name="GLY", res_seq=2, insertion_code="A"),
+        make("CA", "C", [16.47, 3.0, 0.0], res_name="ALA", res_seq=4),
+    ]
+    res = _audit(atoms)["LAW-160"]
+    assert res["sample"] == 2          # (1,2) and (2,2A); (2A,4) is a gap
+    assert res["status"] == "PASS"
+    assert 3.7 <= res["observed"] <= 4.0
+
+
+def test_law_160_sample_counts_only_pairs_with_both_atoms(mock_atom_factory):
+    """A residue without a C-alpha atom contributes no pair and no sample."""
+    make = mock_atom_factory
+    atoms = [
+        make("N",  "N", [0.0, 0.0, 0.0],    res_name="ALA", res_seq=1),
+        make("CA", "C", [1.47, 0.0, 0.0],    res_name="ALA", res_seq=1),
+        make("C",  "C", [2.5, 1.0, 0.0],     res_name="ALA", res_seq=1),
+        make("N",  "N", [3.8, 1.0, 0.0],     res_name="GLY", res_seq=2),
+        make("C",  "C", [6.3, 2.0, 0.0],      res_name="GLY", res_seq=2),  # no CA
+        make("N",  "N", [7.6, 2.0, 0.0],     res_name="ALA", res_seq=3),
+        make("CA", "C", [9.07, 2.0, 0.0],    res_name="ALA", res_seq=3),
+        make("C",  "C", [10.1, 3.0, 0.0],    res_name="ALA", res_seq=3),
+        make("N",  "N", [11.6, 3.0, 0.0],    res_name="ALA", res_seq=4),
+        make("CA", "C", [13.07, 3.0, 0.0],   res_name="ALA", res_seq=4),
+        make("C",  "C", [14.1, 4.0, 0.0],    res_name="ALA", res_seq=4),
+    ]
+    res = _audit(atoms)["LAW-160"]
+    # (1,2) and (2,3) have no C-alpha on residue 2; only (3,4) is measured
+    assert res["sample"] == 1
+
+
+def test_law_160_unmeasurable_is_not_reported_as_a_pass(mock_atom_factory):
+    """No eligible pair => the law is NOT MEASURED, explicitly and truthfully.
+
+    Round-24 (the auditor-approved explicit state): the engine returns a
+    LAW-160 row with status NOT_MEASURED, measured=False, a NULL observation
+    and sample 0. No observation is fabricated (the old code reported
+    0.0 A and a PASS for a law that was never evaluated) and the row is not
+    omitted, so no generic fallback can invent a number either.
+    """
+    make = mock_atom_factory
+    atoms = [
+        make("N",  "N", [0.0, 0.0, 0.0],    res_name="ALA", res_seq=1),
+        make("CA", "C", [1.47, 0.0, 0.0],    res_name="ALA", res_seq=1),
+        make("C",  "C", [2.5, 1.0, 0.0],     res_name="ALA", res_seq=1),
+    ]
+    results = _audit(atoms)
+    assert "LAW-160" in results
+    res = results["LAW-160"]
+    assert res["status"] == "NOT_MEASURED"
+    assert res["measured"] is False
+    assert res["observed"] is None
+    assert res["deviation"] is None
+    assert res["sample"] == 0
+
+
+# ── Coverage preserved from the superseded PR #39 (the R24 candidate) ──
+# The cases below were the R24 candidate's own regressions. They are kept here
+# (adapted to the approved NOT_MEASURED contract) so that closing that PR as
+# superseded loses no coverage.
+
+def _ca(make, res_seq, x, chain_id="A", insertion_code=""):
+    return make("CA", "C", [x, 0.0, 0.0], res_name="ALA", res_seq=res_seq,
+                chain_id=chain_id, insertion_code=insertion_code)
+
+
+def test_sequence_gap_is_not_measured_as_a_sequential_pair(mock_atom_factory):
+    """Residues 1 and 2 are consecutive; residue 67 is far away.
+
+    The 2 -> 67 pair is NOT consecutive in the sequence (residues 3..66 are
+    missing), so it is not a chain-integrity measurement: its distance must not
+    be reported and must not veto the structure.
+    """
+    make = mock_atom_factory
+    atoms = [_ca(make, 1, 0.0), _ca(make, 2, 3.8), _ca(make, 67, 40.0)]
+    results, _, _ = Tier1Measurements.run_full_audit(
+        Structure(atoms=atoms, audit_id="TEST",
+                  confidence=ConfidenceProfile([], False, "predicted")))
+    res = results["LAW-160"]
+    assert res["sample"] == 1, "only the consecutive 1-2 pair may be measured"
+    assert res["observed"] is not None and res["observed"] <= 4.0
+    assert res["status"] == "PASS"
+
+
+def test_only_eligible_measured_pairs_count_in_sample(mock_atom_factory):
+    """Two consecutive pairs plus one sequence gap: the sample counts the two."""
+    make = mock_atom_factory
+    atoms = [_ca(make, 1, 0.0), _ca(make, 2, 3.8), _ca(make, 3, 7.6), _ca(make, 40, 60.0)]
+    results, _, _ = Tier1Measurements.run_full_audit(
+        Structure(atoms=atoms, audit_id="TEST",
+                  confidence=ConfidenceProfile([], False, "predicted")))
+    res = results["LAW-160"]
+    assert res["sample"] == 2, "only the 1-2 and 2-3 pairs are eligible and measured"
+    assert res["observed"] <= 4.0
+    assert res["status"] == "PASS"
+
+
+def test_insertion_code_transition_after_plain_residue_is_not_adjacent(mock_atom_factory):
+    """11 -> 12A is NOT adjacent under the established rules.
+
+    The rule set treats a residue number plus one as adjacent only when the
+    FIRST residue carries the insertion code (or neither does). A plain residue
+    followed by an insertion-coded next residue is therefore not a consecutive
+    pair, and its distance must not be measured.
+    """
+    make = mock_atom_factory
+    atoms = [_ca(make, 10, 0.0), _ca(make, 11, 3.8), _ca(make, 12, 40.0, insertion_code="A")]
+    results, _, _ = Tier1Measurements.run_full_audit(
+        Structure(atoms=atoms, audit_id="TEST",
+                  confidence=ConfidenceProfile([], False, "predicted")))
+    res = results["LAW-160"]
+    assert res["sample"] == 1, "the 11 -> 12A transition is not a sequential pair"
+    assert res["observed"] <= 4.0
+    assert res["status"] == "PASS"
+
+
+def test_two_nonconsecutive_residues_yield_no_measurement_at_all(mock_atom_factory):
+    """Two residues that are not consecutive yield no measurement.
+
+    The approved contract: the law is reported as NOT MEASURED - a null
+    observation, a zero sample - and never as a measured zero or a scientific
+    failure.
+    """
+    make = mock_atom_factory
+    atoms = [_ca(make, 1, 0.0), _ca(make, 9, 25.0)]
+    results, _, _ = Tier1Measurements.run_full_audit(
+        Structure(atoms=atoms, audit_id="TEST",
+                  confidence=ConfidenceProfile([], False, "predicted")))
+    res = results["LAW-160"]
+    assert res["status"] == "NOT_MEASURED"
+    assert res["measured"] is False
+    assert res["observed"] is None
+    assert res["deviation"] is None
+    assert res["sample"] == 0

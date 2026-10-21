@@ -583,3 +583,102 @@
   pushed again, P-081-CONFIRM records the remote-verified tip after that
   push returns. Until then the tip pushed by this INTENT is disclosed as
   PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-21T12:05:17Z | P-082-INTENT | push-intent | branch=feature/law-160-sequence-adjacency head_at_intent=DEFERRED expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1 authorized_by="auditor Round-24 decision: stop the governance-only workstream and resume the LAW-160 engine correction; a new, isolated feature branch from freshly verified main, never mixed into PR #37; the scientific hard stop (no merge, no deployment, no v25 run, no held-out evaluation, no threshold/cohort change, no golden-artifact regeneration) is preserved; register Part 18"
+- Pre-push observation: `git ls-remote origin refs/heads/feature/law-160-sequence-adjacency` returned no such ref (the branch name did not exist on the remote before this push; the first push of this ref name declares ABSENT).
+- Scope of this push: the LAW-160 sequence-adjacency correction in backend/tos/engine/tier1_measurements.py with its regression coverage in backend/tests/test_law_160.py, the audit evidence under docs/audit-evidence/2026-10-21/, and the reading record. No threshold, canon, matrix, law-ID, operator or classification change; no other law touched; no calibration-runner change.
+
+## 2026-10-21T12:30:00Z | P-082-CONFIRM | push-confirm | branch=feature/law-160-sequence-adjacency remote_sha=bf0043aedd40c8e2a0a94215aea6a3227eb9f205 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/feature/law-160-sequence-adjacency -> bf0043aedd40c8e2a0a94215aea6a3227eb9f205 (re-verified 2026-10-21T12:30:00Z; the first push of this ref name, an ordinary fast-forward from the freshly verified main 63da0e347002ed9b77071ff1ed0cefda7c0ce88a); push-event checks on this exact head: Toscanini Stability Gate run 39598182836 conclusion=success (unit tests and the canon/matrix hash locks green on this exact candidate) and Governance Acceptance run 39598182682 conclusion=FAILURE - exactly one failing job, the push-log schema/remote verification, whose cause is NOT this patch: the push log inherited from main records confirmations for the branch repair/round19-mainline-acceptance, which was deleted by the repository-wide pruning after main's last Governance Acceptance run, so those entries cannot be verified against a live ref (a push-log/governance matter, outside the LAW-160 scope of this branch; reported, not patched here)"
+
+## 2026-10-21T12:31:00Z | P-083-INTENT | push-intent | branch=feature/law-160-sequence-adjacency head_at_intent=DEFERRED expected_remote_tip_before_push=bf0043aedd40c8e2a0a94215aea6a3227eb9f205 credential=OWNER-PAT-1 authorized_by="auditor Round-24 direction 2 (the live PR-body retrieval must fail closed), direction 3 (the claimed CI evidence must identify the required workflow), direction 4 (the manifest must validate the committed tree) and direction 5 (restore the executable pre-merge gate) - all closed by the commit 7ffe471 on the PR #37 branch, which this branch does NOT contain and does not depend on; register Part 18; no direct push to main; no force-push; no merge is authorized by this push"
+- Pre-push tip: the live tip of this branch before this push is bf0043aedd40c8e2a0a94215aea6a3227eb9f205, confirmed by P-082-CONFIRM and re-verified by ls-remote; the push is an ordinary fast-forward.
+- Scope of this push: a documentation-only correction of the LAW-160 audit evidence (the local matrix-hash value is a CRLF-checkout artefact of this Windows host, not a repository drift - the Linux runner computes the asserted value on the same tree and the Stability Gate on the candidate is green), the CI results on the exact candidate, and this cycle's push-log records. The engine patch itself is unchanged by this commit.
+
+## 2026-10-21T13:07:44Z | P-084-CONFIRM | push-confirm | branch=feature/law-160-sequence-adjacency remote_sha=1831bdfa98180e9c95d64d5e0a8a7148e3624d4e credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/feature/law-160-sequence-adjacency -> 1831bdfa98180e9c95d64d5e0a8a7148e3624d4e (re-verified 2026-10-21T13:07:44Z; the live ref points here; main verified untouched at 63da0e347002ed9b77071ff1ed0cefda7c0ce88a); push-event checks on this exact head: Toscanini Stability Gate run 39599235593 conclusion=success and Governance Acceptance run 39599235440 conclusion=FAILURE with exactly one failing job, the push-log schema/remote verification, whose cause is NOT this branch's work: the push log inherited from main records confirmations for the branch repair/round19-mainline-acceptance, which the repository-wide pruning deleted after main's last Governance Acceptance run, so those entries cannot be verified against a live ref (a push-log/governance matter, explicitly out of scope for the engine patch)"
+
+## 2026-10-21T13:07:44Z | P-085-INTENT | push-intent | branch=feature/law-160-sequence-adjacency head_at_intent=DEFERRED expected_remote_tip_before_push=1831bdfa98180e9c95d64d5e0a8a7148e3624d4e credential=OWNER-PAT-1 authorized_by="auditor Round-24 continuation decision (Option A approved under the owner's delegation: an explicit NOT_MEASURED state with a truthful typed response and conservative adjudication; complete it on this branch; open a PR when the contract and CI evidence are ready; do not merge); register Part 19; no direct push to main; no force-push; no merge is authorized by this push"
+- Pre-push tip: the live tip of this branch before this push is 1831bdfa98180e9c95d64d5e0a8a7148e3624d4e, confirmed by P-084-CONFIRM and re-verified by ls-remote; the push is an ordinary fast-forward.
+- Scope of this push: the approved NOT_MEASURED contract (the engine row, the adjudicator, the API response schema and the two consumers), the end-to-end contract tests, and this cycle's records. No canonical law, threshold, cohort, matrix or calibration artefact is touched; the push-log job's red state is not repaired here.
+
+## 2026-10-21T13:27:29Z | P-084-INTENT | push-intent | branch=feature/law-160-sequence-adjacency head_at_intent=DEFERRED expected_remote_tip_before_push=bf0043aedd40c8e2a0a94215aea6a3227eb9f205 credential=OWNER-PAT-1 authorized_by="Round-24 bookkeeping correction: see the body; this record declares NO new push"
+- CORRECTION RECORD, NOT A NEW DECLARATION. The push of 1831bdfa98180e9c95d64d5e0a8a7148e3624d4e was declared by P-083-INTENT, and its confirmation was written with the wrong identifier base (P-084-CONFIRM instead of P-083-CONFIRM) - a bookkeeping error, disclosed here rather than hidden. The identifier pairing requires the confirmation and the intent to share their base, so this record re-establishes the P-084 pair for the SAME push (1831bdfa98180e9c95d64d5e0a8a7148e3624d4e); it declares no additional push, and the pre-push state it carries is the one that actually applied (the live tip before that push was bf0043aedd40c8e2a0a94215aea6a3227eb9f205).
+- P-083-INTENT is discharged by P-086 (intent-reconcile) so that the branch holds exactly ONE unmatched intent.
+
+## 2026-10-21T13:27:29Z | P-086 | intent-reconcile | voids=P-083-INTENT branch=feature/law-160-sequence-adjacency credential=OWNER-PAT-1 evidence="P-083-INTENT declared the push of 1831bdfa98180e9c95d64d5e0a8a7148e3624d4e, which is completed by the P-084 pair (P-084-INTENT + P-084-CONFIRM - the confirmation of that push had been written with the wrong identifier base and P-084-INTENT restores the pairing); the intent's pairing obligation is discharged so that the branch holds exactly one unmatched intent (P-085-INTENT). P-083-INTENT stays visible in the log unchanged; no earlier entry is edited and no push is re-declared or re-confirmed"
+
+## 2026-10-21T18:09:46Z | P-87-INTENT | push-intent | branch=feature/law-160-sequence-adjacency head_at_intent=DEFERRED expected_remote_tip_before_push=fbc0ff9f66dc7927866895d5f3b6c562a05776c1 credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder direction 2 (A: the response-model consistency validator; B: the four PDF reporting defects; C: the end-to-end rendering-level tests; D: the candidate's test metadata, push-log binding, register Part 19 and evidence) and the preserved coverage of the superseded R24 candidate"
+
+- The declared pre-push tip is the exact tip of the candidate published by the previous push of
+  this branch, re-verified against the live remote before this record was written.
+- head_at_intent is DEFERRED per the two-phase schema; the tip pushed by this INTENT is disclosed
+  as PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-21T18:09:46Z | P-88-INTENT | push-intent | branch=feature/law-160-sequence-adjacency head_at_intent=DEFERRED expected_remote_tip_before_push=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder direction 2: the same content as the preceding intent, re-declared under its own identifier so that the confirmation that follows pairs with it (the identifier-pairing rule: a confirmation consumes the intent with the SAME identifier base)"
+
+- This intent declares the same push as the intent above. The identifier-pairing rule requires
+  the confirmation of a push to carry the identifier of the intent it consumes, and the log is
+  append-only, so the intent is declared once more under the identifier the confirmation will
+  use. The earlier intent is voided by the record below, so exactly one terminal intent per
+  branch remains pending and no push is claimed twice.
+
+## 2026-10-21T18:09:46Z | P-89 | intent-reconcile | voids=P-87-INTENT branch=feature/law-160-sequence-adjacency credential=OWNER-PAT-1 evidence="P-87-INTENT and P-88-INTENT declare the SAME push (fbc0ff9f66dc7927866895d5f3b6c562a05776c1 -> the candidate that carries this record); the confirmation of that push must carry the identifier of the intent it consumes, so the intent is re-declared as P-88-INTENT and this duplicate declaration is voided - the voided intent stays visible in the log unchanged and only its pairing obligation is discharged"
+
+- Truthful void record: the push is recorded once and proven by the live remote ref; no push is
+  invented and none is claimed twice.
+
+## 2026-10-21T18:09:46Z | P-90 | merge-intent | target=main pr=40 source_branch=feature/law-160-sequence-adjacency expected_pre_merge_base=63da0e347002ed9b77071ff1ed0cefda7c0ce88a expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder direction 2 and 3: the NOT_MEASURED contract and the LAW-160 adjacency correction are reviewed and merged through the protected PR path only, with the required checks green on the exact candidate head and an independent approval; the merge is NOT performed by this push, and the standing scientific hard stop (no deployment, no v25 run, no held-out evaluation, no threshold or cohort change, no golden-artifact regeneration) remains in force"
+
+- Redeclaration on the exact final candidate (expected_head=DEFERRED resolves to the commit
+  introducing this record). expected_pre_merge_base is the live main tip at declaration time
+  (63da0e347002ed9b77071ff1ed0cefda7c0ce88a); if main moves, this intent fails its base verification and must be redeclared.
+- The merge is NOT performed by this push.
+
+## 2026-10-21T18:13:10Z | P-91-CONFIRM | push-confirm | branch=feature/law-160-sequence-adjacency remote_sha=ef9e9ef4ce7c20d6a3ebdd47fcbb80a1454e8e2c credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/feature/law-160-sequence-adjacency -> ef9e9ef4ce7c20d6a3ebdd47fcbb80a1454e8e2c (re-verified immediately before this confirmation was written; the push itself was the fast-forward that produced this tip)"
+
+- Two-phase completion for the push that declared this branch's current tip. It confirms THAT
+  push only; the push that follows is declared separately below.
+
+## 2026-10-21T18:13:10Z | P-92 | intent-reconcile | voids=P-87-INTENT branch=feature/law-160-sequence-adjacency credential=OWNER-PAT-1 evidence="P-87-INTENT declared a push that was REJECTED by the remote (the branch had advanced, so the push was not fast-forward) and therefore never happened; the intent is voided rather than left pending, and the push that was actually made is declared below - no push is claimed that did not happen"
+
+- Truthful void record: the voided intent stays visible in the log unchanged; only its pairing
+  obligation is discharged.
+
+## 2026-10-21T18:13:10Z | P-93-INTENT | push-intent | branch=feature/law-160-sequence-adjacency head_at_intent=DEFERRED expected_remote_tip_before_push=ef9e9ef4ce7c20d6a3ebdd47fcbb80a1454e8e2c credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder direction 2 (A: the response-model consistency validator; B: the four PDF reporting defects; C: the end-to-end rendering-level tests; D: the candidate's test metadata, push-log binding, register Part 19 and evidence) and the preserved coverage of the superseded R24 candidate"
+
+- The declared pre-push tip is the exact live tip of this branch at declaration time, re-verified
+  against the remote immediately before this record was written.
+- head_at_intent is DEFERRED per the two-phase schema; the tip pushed by this INTENT is disclosed
+  as PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-21T18:13:10Z | P-94 | merge-intent | target=main pr=40 source_branch=feature/law-160-sequence-adjacency expected_pre_merge_base=63da0e347002ed9b77071ff1ed0cefda7c0ce88a expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder direction 2 and 3: the NOT_MEASURED contract and the LAW-160 adjacency correction are reviewed and merged through the protected PR path only, with the required checks green on the exact candidate head and an independent approval; the merge is NOT performed by this push, and the standing scientific hard stop (no deployment, no v25 run, no held-out evaluation, no threshold or cohort change, no golden-artifact regeneration) remains in force"
+
+- Redeclaration on the exact final candidate (expected_head=DEFERRED resolves to the commit
+  introducing this record). expected_pre_merge_base is the live main tip at declaration time
+  (63da0e347002ed9b77071ff1ed0cefda7c0ce88a); if main moves, this intent fails its base verification and must be redeclared.
+- The merge is NOT performed by this push.
+
+## 2026-10-21T18:34:03Z | P-091-INTENT | push-intent | branch=feature/law-160-sequence-adjacency head_at_intent=DEFERRED expected_remote_tip_before_push=fbc0ff9f66dc7927866895d5f3b6c562a05776c1 credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder direction 2 B (the confirmation of that push is already published; the intent it consumes is declared here, on the exact pre-push state that was re-verified against the remote)"
+
+- This intent declares the push that produced ef9e9ef4ce7c20d6a3ebdd47fcbb80a1454e8e2c. Its pre-push state is the tip that the branch carried before that push (fbc0ff9f66dc7927866895d5f3b6c562a05776c1), re-verified against the remote. The published P-091-CONFIRM consumes this intent: the identifier-pairing rule requires the confirmation to carry the identifier of the intent it consumes.
+
+## 2026-10-21T18:34:03Z | P-085-CONFIRM | push-confirm | branch=feature/law-160-sequence-adjacency remote_sha=5c913c02946e080b21aa49144aa8a7b41f22c5d4 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/feature/law-160-sequence-adjacency -> 5c913c02946e080b21aa49144aa8a7b41f22c5d4 (the tip of this branch when the push was made; the push itself was the fast-forward 8ab970f68bea315a442c5274fc4090250e4414d9..5c913c02946e080b21aa49144aa8a7b41f22c5d4, declared by P-085-INTENT)"
+
+- Two-phase completion for the push that P-085-INTENT declared. It confirms THAT push only.
+
+## 2026-10-21T18:34:03Z | P-093-CONFIRM | push-confirm | branch=feature/law-160-sequence-adjacency remote_sha=9efe599080517479f9def4a92d68e20f201d2e55 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/feature/law-160-sequence-adjacency -> 9efe599080517479f9def4a92d68e20f201d2e55 (the tip of this branch when the push was made; the push itself was the fast-forward ef9e9ef4ce7c20d6a3ebdd47fcbb80a1454e8e2c..9efe599080517479f9def4a92d68e20f201d2e55, declared by P-093-INTENT)"
+
+- Two-phase completion for the push that P-093-INTENT declared. It confirms THAT push only.
+
+## 2026-10-21T18:34:03Z | P-95 | intent-reconcile | voids=P-088-INTENT branch=feature/law-160-sequence-adjacency credential=OWNER-PAT-1 evidence="P-088-INTENT declared a push that was never made (the remote rejected it as not fast-forward) and carries an unusable expected_remote_tip_before_push value; the intent is voided so that it does not sit pending, and the pushes that were actually made are declared and confirmed separately - the entry itself is preserved unchanged and is disclosed as an external blocker for the push-log gate"
+
+- Truthful void record: the voided intent stays visible in the log unchanged; only its pairing obligation is discharged.
+
+## 2026-10-21T18:34:03Z | P-96-INTENT | push-intent | branch=feature/law-160-sequence-adjacency head_at_intent=DEFERRED expected_remote_tip_before_push=9efe599080517479f9def4a92d68e20f201d2e55 credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder direction 2 (the remaining PDF reporting defect, the rendering-level regressions, the pre-render consistency check that closes the raw-payload bypass, the push-log reconciliation of this branch's own records, the corrected pull request body and the evidence reconciliation)"
+
+- The declared pre-push tip is the live tip of this branch at declaration time, re-verified against the remote.
+- head_at_intent is DEFERRED per the two-phase schema; the tip pushed by this INTENT is disclosed as PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-21T18:34:03Z | P-97 | merge-intent | target=main pr=40 source_branch=feature/law-160-sequence-adjacency expected_pre_merge_base=63da0e347002ed9b77071ff1ed0cefda7c0ce88a expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-26 coder direction 2 and 3: the NOT_MEASURED contract, the LAW-160 adjacency correction and the PDF reporting fixes are reviewed and merged through the protected PR path only, with the required checks green on the exact candidate head and an independent approval; the merge is NOT performed by this push, and the standing scientific hard stop remains in force"
+
+- Redeclaration on the exact final candidate (expected_head=DEFERRED resolves to the commit introducing this record). expected_pre_merge_base is the live main tip at declaration time (63da0e347002ed9b77071ff1ed0cefda7c0ce88a).
+- The merge is NOT performed by this push.

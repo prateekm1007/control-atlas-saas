@@ -182,3 +182,136 @@ available to reviewers and to any future maintainer with review authority.)
   table, the independent archive verification, A-02 issuer-side revocation, and the EC2
   deployment secrets remain OPEN. A-04 (branch-protection required-check configuration)
   was verified live on 2026-10-20 and stays as recorded in register Part 14.
+
+## 12. Round-24 (LAW-160 engine correction) - reading record (2026-10-21T12:05:17Z)
+
+**Directive series:** the auditor's Round-24 decision - stop the
+governance-only workstream and resume the LAW-160 engine correction on a NEW,
+isolated feature branch from freshly verified `main`; PR #37 is not to be
+merged and the engine patch is not to go into it.
+
+**Base and starting commit (live, re-verified):** `main` =
+`63da0e347002ed9b77071ff1ed0cefda7c0ce88a`; the engine file `backend/tos/engine/tier1_measurements.py` is blob
+`df46b0947d542a559276ca1eec809da09cbd95bc` and the test file
+`backend/tests/test_law_160.py` is blob
+`800484ec91e1cbd6f4eebb82bf1d663af8af320b` on that commit. The branch
+`feature/law-160-sequence-adjacency` did not exist on the remote before this push.
+
+**Constitution read (in full, before any edit of this cycle, in the mandated
+order):**
+
+| Document | SHA-256 (working tree) | Blob SHA-1 (at the base commit) | Read |
+|---|---|---|---|
+| `AGENTS.md` | `d0416ce4ae4ebb1f9782f93f195a6959c48b4577d1a75c6d6120d1ccacd773da` | `85767237399ffb30f3e45894d9dfbe6f4240584f` | in full (75 lines) |
+| `constitution.md` | `0697871616f20d8acd6a1f22cbc029e177dcaf48f5623d6c528dfb7f88654568` | `211ad2c5d4b40059d9f3f03de12e0701f9235bc7` | in full (11 lines; OBS-153 contact density, CRIT-154 warhead RMSD / steric-clash veto - both ACTIVE and untouched) |
+| `ENGINEERING_CONSTITUTION.md` | `dd77f90e2df9e8c46f5330fcde556300fc891c5e99a61303e7af856ef8da827f` | `b6bb35e84956d84a8c9d9e65734c212baf3ed075` | in full (178 lines, EC 1-15 + Final Rule) |
+| `docs/coder/BRIEF.md` | `70775d2a4b0d4dcd9da684027852848452af22c045becfe4ed75996f42024010` | `052a84ca829d321dc0841a4b1c8702145dcbf6b5` | in full (70 lines) |
+| `docs/decisions/OWNER_DECISIONS.md` | `05add7d327c140a724ad62f0b62286fad611d3642d46751abb6625fe5c865943` | `12906bf5997a3e2c6b5c41e5d5c60fee14613274` | read (register rev 12; Parts 13-17 and the standing hard stop) |
+| `docs/P0_STATUS.md` | `3a88a77028d0d094e7a1ae601cd45d5a41eb62ad1df4ec35dd45459b8244f65d` | `a31517abbc046c495930ba19ef7aeaf8bb72f2d0` | read (the applicable sections: the P0 blockers and the open engine work) |
+
+**Rules enforced in this cycle:** EC 3 (fail closed; secrets), EC 4 (an
+authoritative result must carry its provenance; a measurement that was not
+taken is not a measurement), EC 6/12 (evidence or it did not happen; "not run"
+is never "passed"), EC 7 (required checks on the exact candidate), EC 12 (the
+definition of done), EC 13 (no gate weakening, no fabricated evidence), and
+OD-16 (the scientific hard stop).
+
+**Preflight (recorded before the first edit):** expected behaviour - LAW-160
+measures the C-alpha distance between CONSECUTIVE residues only; a
+residue-number gap is a modelling gap, not a physical chain break; a real
+excessive distance between consecutive residues still vetoes; the sample counts
+only eligible pairs with both atoms present; the canonical 4.5 A threshold,
+the law ID, the operator and the classification are unchanged. Risks - a
+structure that previously vetoed on a modelling gap will now pass (a verdict
+change, disclosed below); a chain with no eligible pair is unmeasured (the
+zero-sample contract, disclosed below and NOT silently passed). Files to
+change - `backend/tos/engine/tier1_measurements.py`,
+`backend/tests/test_law_160.py`, this note, the push log, and the audit
+evidence under `docs/audit-evidence/2026-10-21/`. Regression tests - the seven
+LAW-160 cases in `backend/tests/test_law_160.py` plus the full backend
+suite. Rollback - revert the two source files; the push log is append-only.
+Acceptance criteria - the auditor's items 1-5 and the evidence requirements.
+
+**What this cycle changed:** the LAW-160 eligibility correction and its
+regression coverage, the audit evidence, this reading record and the push-log
+intent. It did NOT touch any other law, the calibration runner, the canon, the
+modality matrix, any threshold, the deployment path or the held-out cohort, and
+it did not merge anything.
+
+## 13. Round-24 continuation (the approved NOT_MEASURED state) - reading record (2026-10-21T13:07:44Z)
+
+**Directive series:** the auditor's Round-24 continuation decision - finish the
+missing-measurement contract for LAW-160 before any LAW-130 or calibration
+work; Option A (an explicit `NOT_MEASURED` state) is approved under the
+owner's delegation; complete it as a focused continuation of the same feature
+branch; open a PR when the contract and CI evidence are ready; do not merge.
+
+**Starting SHA:** `1831bdfa98180e9c95d64d5e0a8a7148e3624d4e` (branch `feature/law-160-sequence-adjacency`); `main` = `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`.
+
+**Constitution and governing files read in full before any edit of this
+continuation** (SHA-256 of the working tree / blob at the starting commit):
+
+| Document | SHA-256 | Blob | Read |
+|---|---|---|---|
+| `AGENTS.md` | `d0416ce4ae4ebb1f9782f93f195a6959c48b4577d1a75c6d6120d1ccacd773da` | `85767237399ffb30f3e45894d9dfbe6f4240584f` | in full (75 lines) |
+| `constitution.md` | `0697871616f20d8acd6a1f22cbc029e177dcaf48f5623d6c528dfb7f88654568` | `211ad2c5d4b40059d9f3f03de12e0701f9235bc7` | in full (11 lines; OBS-153, CRIT-154 - ACTIVE, untouched) |
+| `ENGINEERING_CONSTITUTION.md` | `dd77f90e2df9e8c46f5330fcde556300fc891c5e99a61303e7af856ef8da827f` | `b6bb35e84956d84a8c9d9e65734c212baf3ed075` | in full (178 lines) |
+| `docs/coder/BRIEF.md` | `70775d2a4b0d4dcd9da684027852848452af22c045becfe4ed75996f42024010` | `052a84ca829d321dc0841a4b1c8702145dcbf6b5` | in full (70 lines) |
+| `docs/decisions/OWNER_DECISIONS.md` | `ff7e79b2125e85a115344856a25dd131f687e2ac3a97cd3411320ce873b102cf` | `3db043a75e9b5e30542bab26d627f2a971298179` | read (register rev 12, Parts 13-18) |
+| `docs/P0_STATUS.md` | `3a88a77028d0d094e7a1ae601cd45d5a41eb62ad1df4ec35dd45459b8244f65d` | `a31517abbc046c495930ba19ef7aeaf8bb72f2d0` | read (the applicable sections) |
+| `backend/tos/engine/tier1_measurements.py` | `0d62dbad6bf4f165bdd58971316addb2b91f6b20d6313ed50291a7616b2d8bb4` | `e84fa945a98da1eb729046eeae599d68cdd64511` | read in full (the LAW-160 block) |
+| `backend/tos/engine/adjudicator.py` | `00a01b271fbc189423f036b270386e8f27d20e6f7497c7b6ce76415c4dc12ae4` | `ba8fe592cd7591cfe965e1c388545ff10a395436` | read in full (stages 3-4, the verdict logic, the scoring) |
+| `backend/tos/schemas/response_v1.py` | `6ba3b657a7952fbf046c039b8963abbe5c0ef28879c3a7ab147d14c740a67617` | `c61ffcfadbe72dddc2c86e36f0190abc742ad482` | read in full (the response contract) |
+
+**Preflight (repeated for the expanded contract scope, before the first edit):**
+expected behaviour - an unmeasurable LAW-160 is represented explicitly and
+truthfully end to end and never yields a misleading scientific result;
+risks - the change touches the API output contract at the unmeasured edge
+case, so every consumer of a law row was audited (API serialisation, batch
+processing, the PDF dossier, the sentinel audit, the tests); files to change -
+the engine, the adjudicator, the response schema, the two consumers and the
+tests; regression tests - the focused LAW-160/adjudicator/schema set plus the
+full backend suite; rollout/rollback - one branch, no merge, revert the
+commit; acceptance criteria - the auditor's six end-to-end proofs.
+
+**Caller/consumer audit performed for this continuation** (the contract scope
+was expanded, so the previous engine-only preflight was not reused): the API
+response builder and the Pydantic model, the batch processor, the PDF dossier
+generator, the sentinel audit script, the dashboard (no `observed` consumer),
+and the acceptance/contract tests.
+
+**What this continuation did NOT do:** it did not change the canonical law
+definition, the modality matrix, any threshold, any cohort or any calibration
+artefact; it did not reinterpret any other law's status; it did not resume the
+governance-only repairs (the push-log job is left red and is not touched
+here); it did not merge anything, and the scientific hard stop is preserved.
+
+## 13. Round-26 completion read record (2026-10-21T18:35:04Z, SERIES-2026-10-21-R26)
+
+### 13.1 Documents read in full before editing (blob hashes verified)
+
+| Document | Blob (full SHA-1) | Read (UTC) |
+|---|---|---|
+| `AGENTS.md` | `85767237399ffb30f3e45894d9dfbe6f4240584f` | 2026-10-21T18:35:04Z |
+| `constitution.md` | `211ad2c5d4b40059d9f3f03de12e0701f9235bc7` | 2026-10-21T18:35:04Z |
+| `ENGINEERING_CONSTITUTION.md` | `b6bb35e84956d84a8c9d9e65734c212baf3ed075` | 2026-10-21T18:35:04Z |
+| `docs/coder/BRIEF.md` | `052a84ca829d321dc0841a4b1c8702145dcbf6b5` | 2026-10-21T18:35:04Z |
+| `docs/decisions/OWNER_DECISIONS.md` | `ff53dbab634399dea6f1195ab18b686f13da66a3` | 2026-10-21T18:35:04Z |
+| `docs/P0_STATUS.md` | `a31517abbc046c495930ba19ef7aeaf8bb72f2d0` | 2026-10-21T18:35:04Z |
+
+Branch `feature/law-160-sequence-adjacency` at `9efe599080517479f9def4a92d68e20f201d2e55`, base `main` @ `63da0e347002ed9b77071ff1ed0cefda7c0ce88a` (freshly fetched and verified), working
+tree state recorded in the preflight
+(`docs/audit-evidence/2026-10-21/PREFLIGHT-R26-COMPLETION.md`).
+
+### 13.2 Rules enforced in this round
+
+EC-2 (constitutions first, preflight, machine-readable evidence), EC-4 (measured vs inferred:
+an unmeasured law is never a numerical zero and never a scientific failure), EC-6 (exact-SHA
+evidence, baseline reproduced in the same environment, "not run" is never "passed"), EC-7
+(feature branch, required checks on the exact candidate), EC-11 (append-only records, no
+rewriting of published history), EC-12 (the definition of done, including the disclosure of what
+remains unverified), EC-13 (no weakened gate, no invented status, no fabricated measurement),
+EC-14 (artifacts), OBS-153 and CRIT-154 (unchanged, and untouched by this work). OD-16 (the
+scientific/production hard stop) remains in force: no merge to `main`, no deployment, no v25
+calibration run, no held-out evaluation, no threshold or cohort change, no golden-artifact
+regeneration.

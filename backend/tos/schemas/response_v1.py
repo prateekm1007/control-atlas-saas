@@ -5,7 +5,7 @@ Pydantic v2 models enforcing the exact contract of the /ingest response.
 """
 from __future__ import annotations
 from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class GovernanceFingerprint(BaseModel):
@@ -46,14 +46,55 @@ class PhysicsMeasurement(BaseModel):
     title: str
     status: str
     method: str
-    observed: float
+    # Round-24 (the auditor-approved NOT_MEASURED state): a measurement that
+    # could not be taken is represented truthfully - `measured` is False, the
+    # observation is null (still REQUIRED: a measurement always carries the
+    # field) and the deviation is null. An ordinary measurement keeps its
+    # number.
+    measured: bool = True
+    observed: Optional[float]
     threshold: float
     operator: str
     units: str
-    deviation: str
+    deviation: Optional[str]
     sample_size: int = Field(..., ge=0)
     scope: str
     principle: str = "N/A"
+
+    @model_validator(mode="after")
+    def _measurement_is_self_consistent(self) -> "PhysicsMeasurement":
+        """A measurement row must agree with itself.
+
+        Round-24 (the auditor-approved NOT_MEASURED contract): a law that
+        could not be evaluated is reported as NOT MEASURED with a null
+        observation, a null deviation, a zero sample and measured=False. A row
+        that claims a number while saying it was not measured, or that claims
+        to have been measured while carrying no number, is contradictory and
+        is rejected here: the contract cannot be violated by accident in a
+        response.
+        """
+        if self.status == "NOT_MEASURED":
+            if self.measured:
+                raise ValueError(
+                    "NOT_MEASURED requires measured=false, got measured=true")
+            if self.observed is not None:
+                raise ValueError(
+                    "NOT_MEASURED requires a null observation, got %r" % (self.observed,))
+            if self.deviation is not None:
+                raise ValueError(
+                    "NOT_MEASURED requires a null deviation, got %r" % (self.deviation,))
+            if self.sample_size != 0:
+                raise ValueError(
+                    "NOT_MEASURED requires sample_size=0, got %r" % (self.sample_size,))
+        else:
+            if not self.measured:
+                raise ValueError(
+                    "an unmeasured row must carry status=NOT_MEASURED, got %r" % (self.status,))
+            if self.observed is None:
+                raise ValueError(
+                    "a measured row requires a numeric observation, got None")
+        return self
+
 
 
 class Tier1(BaseModel):
