@@ -583,3 +583,7 @@
   pushed again, P-081-CONFIRM records the remote-verified tip after that
   push returns. Until then the tip pushed by this INTENT is disclosed as
   PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-21T12:05:17Z | P-082-INTENT | push-intent | branch=feature/law-160-sequence-adjacency head_at_intent=DEFERRED expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1 authorized_by="auditor Round-24 decision: stop the governance-only workstream and resume the LAW-160 engine correction; a new, isolated feature branch from freshly verified main, never mixed into PR #37; the scientific hard stop (no merge, no deployment, no v25 run, no held-out evaluation, no threshold/cohort change, no golden-artifact regeneration) is preserved; register Part 18"
+- Pre-push observation: `git ls-remote origin refs/heads/feature/law-160-sequence-adjacency` returned no such ref (the branch name did not exist on the remote before this push; the first push of this ref name declares ABSENT).
+- Scope of this push: the LAW-160 sequence-adjacency correction in backend/tos/engine/tier1_measurements.py with its regression coverage in backend/tests/test_law_160.py, the audit evidence under docs/audit-evidence/2026-10-21/, and the reading record. No threshold, canon, matrix, law-ID, operator or classification change; no other law touched; no calibration-runner change.

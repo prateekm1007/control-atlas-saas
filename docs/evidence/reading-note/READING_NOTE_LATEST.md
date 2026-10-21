@@ -182,3 +182,58 @@ available to reviewers and to any future maintainer with review authority.)
   table, the independent archive verification, A-02 issuer-side revocation, and the EC2
   deployment secrets remain OPEN. A-04 (branch-protection required-check configuration)
   was verified live on 2026-10-20 and stays as recorded in register Part 14.
+
+## 12. Round-24 (LAW-160 engine correction) - reading record (2026-10-21T12:05:17Z)
+
+**Directive series:** the auditor's Round-24 decision - stop the
+governance-only workstream and resume the LAW-160 engine correction on a NEW,
+isolated feature branch from freshly verified `main`; PR #37 is not to be
+merged and the engine patch is not to go into it.
+
+**Base and starting commit (live, re-verified):** `main` =
+`63da0e347002ed9b77071ff1ed0cefda7c0ce88a`; the engine file `backend/tos/engine/tier1_measurements.py` is blob
+`df46b0947d542a559276ca1eec809da09cbd95bc` and the test file
+`backend/tests/test_law_160.py` is blob
+`800484ec91e1cbd6f4eebb82bf1d663af8af320b` on that commit. The branch
+`feature/law-160-sequence-adjacency` did not exist on the remote before this push.
+
+**Constitution read (in full, before any edit of this cycle, in the mandated
+order):**
+
+| Document | SHA-256 (working tree) | Blob SHA-1 (at the base commit) | Read |
+|---|---|---|---|
+| `AGENTS.md` | `d0416ce4ae4ebb1f9782f93f195a6959c48b4577d1a75c6d6120d1ccacd773da` | `85767237399ffb30f3e45894d9dfbe6f4240584f` | in full (75 lines) |
+| `constitution.md` | `0697871616f20d8acd6a1f22cbc029e177dcaf48f5623d6c528dfb7f88654568` | `211ad2c5d4b40059d9f3f03de12e0701f9235bc7` | in full (11 lines; OBS-153 contact density, CRIT-154 warhead RMSD / steric-clash veto - both ACTIVE and untouched) |
+| `ENGINEERING_CONSTITUTION.md` | `dd77f90e2df9e8c46f5330fcde556300fc891c5e99a61303e7af856ef8da827f` | `b6bb35e84956d84a8c9d9e65734c212baf3ed075` | in full (178 lines, EC 1-15 + Final Rule) |
+| `docs/coder/BRIEF.md` | `70775d2a4b0d4dcd9da684027852848452af22c045becfe4ed75996f42024010` | `052a84ca829d321dc0841a4b1c8702145dcbf6b5` | in full (70 lines) |
+| `docs/decisions/OWNER_DECISIONS.md` | `05add7d327c140a724ad62f0b62286fad611d3642d46751abb6625fe5c865943` | `12906bf5997a3e2c6b5c41e5d5c60fee14613274` | read (register rev 12; Parts 13-17 and the standing hard stop) |
+| `docs/P0_STATUS.md` | `3a88a77028d0d094e7a1ae601cd45d5a41eb62ad1df4ec35dd45459b8244f65d` | `a31517abbc046c495930ba19ef7aeaf8bb72f2d0` | read (the applicable sections: the P0 blockers and the open engine work) |
+
+**Rules enforced in this cycle:** EC 3 (fail closed; secrets), EC 4 (an
+authoritative result must carry its provenance; a measurement that was not
+taken is not a measurement), EC 6/12 (evidence or it did not happen; "not run"
+is never "passed"), EC 7 (required checks on the exact candidate), EC 12 (the
+definition of done), EC 13 (no gate weakening, no fabricated evidence), and
+OD-16 (the scientific hard stop).
+
+**Preflight (recorded before the first edit):** expected behaviour - LAW-160
+measures the C-alpha distance between CONSECUTIVE residues only; a
+residue-number gap is a modelling gap, not a physical chain break; a real
+excessive distance between consecutive residues still vetoes; the sample counts
+only eligible pairs with both atoms present; the canonical 4.5 A threshold,
+the law ID, the operator and the classification are unchanged. Risks - a
+structure that previously vetoed on a modelling gap will now pass (a verdict
+change, disclosed below); a chain with no eligible pair is unmeasured (the
+zero-sample contract, disclosed below and NOT silently passed). Files to
+change - `backend/tos/engine/tier1_measurements.py`,
+`backend/tests/test_law_160.py`, this note, the push log, and the audit
+evidence under `docs/audit-evidence/2026-10-21/`. Regression tests - the seven
+LAW-160 cases in `backend/tests/test_law_160.py` plus the full backend
+suite. Rollback - revert the two source files; the push log is append-only.
+Acceptance criteria - the auditor's items 1-5 and the evidence requirements.
+
+**What this cycle changed:** the LAW-160 eligibility correction and its
+regression coverage, the audit evidence, this reading record and the push-log
+intent. It did NOT touch any other law, the calibration runner, the canon, the
+modality matrix, any threshold, the deployment path or the held-out cohort, and
+it did not merge anything.

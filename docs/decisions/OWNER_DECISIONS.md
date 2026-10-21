@@ -836,3 +836,80 @@ law-semantic changes, no golden-artifact regeneration without their approved
 gates. The independent r2 evidence-archive verification, the portable 40-row
 cohort metadata table, A-02 issuer-side revocation, and the EC2 deployment
 secrets remain OPEN and are not closed by this governance work.
+
+## Part 18 - Round-24 records (AUDITOR-ADJUDICATED, 2026-10-21; register rev 13)
+
+### 18.1 The decision
+
+The governance-only workstream is STOPPED and the unfinished LAW-160 engine
+correction resumes immediately. The next round is not spent on the P-122
+reconciliation, archive tags, pull-request pruning or the O-1 approval process:
+those activities do not fix the outstanding engine or calibration defects.
+PR #37 stays open and unmerged; the engine patch does not go into it. A new,
+isolated feature branch is cut from freshly verified `main`
+(`63da0e347002ed9b77071ff1ed0cefda7c0ce88a`); the LAW-160 patch goes there.
+
+### 18.2 The defect and the correction (LAW-160, Chain Integrity)
+
+`get_sequential_residues()` returns the residues that are PRESENT (sorted,
+de-duplicated); it does not guarantee that two successive entries are
+consecutive in the biological sequence. LAW-160 measured the C-alpha distance
+between successive entries, so a chain with missing intervening residues (a
+modelling gap) was reported as a physical chain break - a FALSE VETO.
+
+The correction factors the adjacency predicate into one source of truth
+(`Tier1Measurements._adjacent`), keeps the semantics of the existing
+`_is_sequential()` VERBATIM, adds the tuple-form
+`_is_sequential_residues()` for the `(res_seq, insertion_code, res_name)`
+tuples, and measures only sequence-adjacent pairs. `get_sequential_residues()`
+is unchanged (other laws use it). The canonical 4.5 A threshold, the law ID,
+the operator, the units and the classification are unchanged; the canon and the
+modality matrix are untouched.
+
+**Verdict impact (explicit):** correcting pair eligibility can remove false
+LAW-160 vetoes and therefore change the verdict of affected structures. A
+structure that previously vetoed on a modelling gap now passes, or - when no
+pair is eligible at all - is reported as unmeasured (18.3). Pre- and
+post-correction results are not comparable for chains with gaps.
+
+### 18.3 OPEN: the zero-eligible-pair representation (release blocker)
+
+With no sequence-adjacent C-alpha pair, LAW-160 is not measured. The previous
+code emitted `observed=0.0`, `PASS`, `sample=0` - a fabricated value and a PASS
+for a law that was never evaluated. The patch removes that: the engine emits
+no measurement, and the adjudicator's EXISTING missing-measurement default
+applies (status FAIL, sample 0 - the representation every other unmeasured law
+already receives). Nothing is fabricated, no status is invented, no PASS is
+claimed.
+
+That is not the final answer: "FAIL" for an unmeasurable law still reads as
+a scientific failure. A dedicated unmeasured state needs an owner decision on
+the approved status vocabulary (the engine's vocabulary today is exactly
+PASS / VETO / FAIL) and on the response schema
+(`backend/tos/schemas/response_v1.py`: `PhysicsMeasurement.observed` is a
+REQUIRED float, so a null observation is not available without a schema
+change). The proposal, the inspected engine/adjudicator/schema/consumers and
+the two options are recorded in
+`docs/audit-evidence/2026-10-21/LAW-160-R24-EVIDENCE.md`, section 5. The task is
+reported as PARTIALLY COMPLETE with this item explicitly outstanding.
+
+### 18.4 Evidence
+
+`docs/audit-evidence/2026-10-21/LAW-160-R24-EVIDENCE.md` records the base and
+candidate SHAs, the runtime versions, every command with its exit code and
+output, the test counts against the unmodified baseline in the same
+environment, the canon/matrix hash results, the secret scan, the changed-file
+digests, the verdict impact, the zero-sample proposal and the unresolved
+limitations. The LAW-160 target tests and the full backend suite were run on
+the exact candidate.
+
+### 18.5 Standing items
+
+The scientific/production hard stop is preserved in full: no merge to `main`,
+no deployment, no v25 run, no held-out evaluation, no threshold or cohort
+change, no golden-artifact regeneration. PR #37 is not merged and the new
+feature branch is not merged. A-01 remains ACCEPTED RISK. LAW-130 (the
+fail-open clash measurement and the `<` where the canon specifies `<=` at the
+20.0 boundary) and the calibration runner (the missing `X-API-Key` header,
+continuing after failures, and writing partial results) are the NEXT engine
+and calibration corrections, each in its own separate branch.

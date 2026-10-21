@@ -1,0 +1,252 @@
+# LAW-160 (Chain Integrity) - sequence-adjacency correction: audit evidence
+
+**Cycle:** Round-24 (auditor decision: stop the governance-only workstream and
+resume the LAW-160 engine correction on a new, isolated feature branch).
+**Branch:** `feature/law-160-sequence-adjacency` (created from a freshly
+verified `main`; the branch did not exist on the remote before this push).
+**Base commit:** `63da0e347002ed9b77071ff1ed0cefda7c0ce88a` (`main`).
+**Candidate:** the commit that carries this evidence file. A commit cannot
+contain its own SHA, so the candidate is bound by the push-log terminal intent
+`P-082-INTENT` and, after the push returns, by the `P-082-CONFIRM` record and
+the pull-request body (the repository's established two-phase convention).
+
+**Runtime:** Python 3.12.7 on Windows 10 (AMD64); pytest as invoked above. The Linux CI
+runner executes the same commands with the full suite (the five modules
+excluded locally import `fcntl`, a POSIX-only module, and cannot be collected
+on Windows).
+
+---
+
+## 1. The defect and the correction
+
+`get_sequential_residues()` returns the residues that are PRESENT in a chain
+(sorted by `(res_seq, insertion_code)`, de-duplicated). It does NOT guarantee
+that two successive entries are consecutive in the biological sequence. LAW-160
+measured the C-alpha distance between successive ENTRIES, so a chain with
+missing intervening residues (a modelling gap) produced a large C-alpha
+distance across the gap and was reported as a physical chain break: a FALSE
+VETO.
+
+The correction:
+
+1. the adjacency predicate is factored into a single source of truth
+   (`Tier1Measurements._adjacent(s1, i1, s2, i2)`); the existing
+   `_is_sequential()` (residue dictionaries) and the new
+   `_is_sequential_residues()` (the `(res_seq, insertion_code, res_name)`
+   tuples of `get_sequential_residues()`) both delegate to it, so the two
+   representations cannot drift apart;
+2. the semantics of `_is_sequential()` are PRESERVED verbatim (same three
+   clauses, same chain check) - only the factoring is new;
+3. LAW-160 now measures only pairs that are sequence-adjacent; a pair with a
+   residue-number gap is skipped;
+4. `get_sequential_residues()` is NOT changed (other laws use it);
+5. the canonical 4.5 A threshold, the law ID, the operator, the units and the
+   classification are UNCHANGED (`backend/tos/governance/station_sop.py` was
+   not touched).
+
+## 2. Verdict impact (explicit)
+
+Correcting pair eligibility can REMOVE false LAW-160 vetoes, and therefore
+CHANGE the verdict of affected structures: a structure whose chain has missing
+intervening residues previously vetoed on the modelling gap and now passes
+(or, when no pair is eligible at all, is reported as unmeasured - see 5). The
+Stability Gate / Governance Acceptance results and any structure-level
+verdicts produced before this correction are not comparable with the
+post-correction results for chains with gaps. The threshold, the law
+semantics and every other law are unaffected.
+
+## 3. Commands, exit codes and outputs
+
+### 3.1 Targeted LAW-160 tests
+
+```
+$ cd backend && python -m pytest tests/test_law_160.py -q --no-header
+```
+exit code: 0
+
+```
+.........                                                                [100%]
+9 passed in 4.36s
+```
+
+### 3.2 Full backend suite (candidate)
+
+```
+$ cd backend && python -m pytest tests -q --no-header --ignore=tests/test_internal_callback_security.py --ignore=tests/test_nkg_validation.py --ignore=tests/test_source_unavailable.py --ignore=tests/test_wp13_jwt_secret_gate.py --ignore=tests/test_ids.py
+```
+exit code: 1
+
+```
+_pinned_labels
+FAILED tests/test_law_registry.py::TestHandoffMatchesRegistry::test_handoff_has_no_conflict_markers
+FAILED tests/test_modality_matrix.py::TestMatrixHash::test_hash_matches_known_value
+FAILED tests/test_phase3_hardening.py::TestGovernanceFingerprintStructure::test_matrix_hash_matches_locked_value
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[GET _health]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[GET _laws]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[GET _definitions]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[POST _ingest]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[POST _v1_batch]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[GET _audit_{audit_id}]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[POST _search]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[GET _nkg]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[GET _comparison_{o}_{r}]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[GET _comparisons_by-original_{id}]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[POST _compare]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[GET _refinement_pdb_{audit_id}]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[POST _refinement_token]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[POST _refinement_callback]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[POST _refinement_submit]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[GET _refinement_status_{job_id}]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[GET _refinement_jobs_{audit_id}]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[GET _history_{user_email:path}]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[GET _usage]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[GET _history_ip_1.2.3.4]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_route_auth[POST _refinement_internal-callback]
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_all_app_routes_covered
+ERROR tests/test_api_key_guard.py::TestRouteCoverage::test_invalid_key_rejected_on_protected_route
+25 failed, 291 passed, 5 skipped, 1 warning, 23 errors in 56.46s
+```
+
+**Baseline (unmodified tree, same environment, same command):** the identical
+suite reports `25 failed, 284 passed, 5 skipped, 23 errors` - the same
+failing/erroring set (29 unique ids) as the candidate. The candidate reports
+`25 failed, 291 passed, 5 skipped, 23 errors`: the delta is exactly the seven
+new LAW-160 regression tests. The pre-existing failures and errors are
+UNRELATED to this patch (they are Windows import/API issues in other modules)
+and are reported, not suppressed.
+
+### 3.3 Hash locks
+
+```
+$ cd backend && python -c "from tos.governance.station_sop import compute_canon_hash; ..."
+```
+exit code: 0
+
+```
+canon : 6a9cd4b4349b81de
+matrix: b1249cedde5018628ea2351de49c9622cdce4657561af7f74146df182d1a210d
+```
+
+The candidate's canon and matrix hashes are byte-identical to the base
+commit's (the patch touches no governance artefact). The canon lock asserted
+by the Stability Gate (`6a9cd4b4349b81de`) still holds. NOTE - a
+PRE-EXISTING, separate finding: the matrix hash computed on `main` is
+`b1249cedde5018628ea2351de49c9622cdce4657561af7f74146df182d1a210d`, while the
+Stability Gate asserts `ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4`.
+The same value is computed on the unmodified base commit, so the drift is NOT
+caused by this patch; it is reported here and is not "fixed" here (the canon
+and the matrix are frozen artefacts; changing the assertion or the matrix
+needs a recorded decision).
+
+### 3.4 Secret scan of the patch
+
+The scan reads the patch as bytes and decodes it defensively (the diff
+contains non-UTF-8 bytes from the surrounding evidence, which is why the
+first attempt at this scan aborted on a decode error - the scan itself found
+nothing).
+
+```
+$ python - <<'PY'
+import re, subprocess
+d = subprocess.run(["git","-C",REPO,"diff",BASE], capture_output=True).stdout.decode("utf-8","replace")
+pat = re.compile(r"(ghp_[A-Za-z0-9]{36}|AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{32,}|"
+                 r"-----BEGIN [A-Z ]*PRIVATE KEY-----|xox[baprs]-[A-Za-z0-9-]{10,})")
+hits = [l for l in d.splitlines() if pat.search(l)]
+print("patch secret-pattern hits:", len(hits))
+raise SystemExit(1 if hits else 0)
+PY
+```
+exit code: 0
+
+```
+patch secret-pattern hits: 0
+```
+
+Patterns: GitHub PAT (`ghp_*`), AWS access key id (`AKIA*`), OpenAI-style
+key (`sk-*`), PEM private-key header, Slack token. The tracked tree was also
+scanned for a PAT-shaped value: none. The credential used for the push is
+injected through the environment only and is never written to a file, a log, a
+commit message or this evidence.
+
+### 3.5 Changed files
+
+```
+$ git diff --stat 63da0e347002ed9b77071ff1ed0cefda7c0ce88a
+```
+```
+$(subprocess.run(["git", "-C", REPO, "diff", "--stat", BASE], capture_output=True, text=True).stdout.strip())
+```
+
+The complete diff is the two source files above plus this evidence, the
+reading record and the push-log intent. No other engine, law, threshold,
+canon, matrix, calibration, deployment or dashboard file is touched.
+
+## 4. Files changed and their content digests (SHA-256)
+
+| File | SHA-256 |
+|---|---|
+| `backend/tos/engine/tier1_measurements.py` | `0d62dbad6bf4f165bdd58971316addb2b91f6b20d6313ed50291a7616b2d8bb4` |
+| `backend/tests/test_law_160.py` | `b73b241aca229a0bf9c2ec62381b743957ea1a4f2e28341b5771c3827b1f3152` |
+| `docs/evidence/push-log/PUSH_LOG.md` | `aba041345431398cc0d47f6e73f262826f16d8ab7baa829a3ba23711cde3b433` |
+| `docs/evidence/reading-note/READING_NOTE_LATEST.md` | `e618604bfd0ebfaaa70deb69aa6eea0514db5587f35cdcfae4c372d6341f24c5` |
+
+(base-commit digests for comparison: the engine file
+`adc46abae2ee6d6c03ed3f0aaf2372d89e3ca6b42936c0fcb47a37062087c9e0`, the test
+file `16d50669aa76f79462cd2fd936faa626c9c017afa6b1b6ae2e38b5e23254293e`.)
+
+## 5. OPEN: the zero-eligible-pair contract (release blocker, not fixed here)
+
+When no sequence-adjacent C-alpha pair exists (or no pair has both atoms),
+LAW-160 is NOT measured. The previous code emitted `observed=0.0`, `PASS`,
+`sample=0` - a fabricated value and a PASS for a law that was never
+evaluated, which is exactly the misleading scientific result the auditor
+identified.
+
+**What this patch does.** The engine emits NO LAW-160 measurement in that
+case. The adjudicator's EXISTING missing-measurement default then applies
+(`backend/tos/engine/adjudicator.py`: `{"observed": 0, "deviation": "0.0",
+"sample": 0, "status": "FAIL"}`) - the same representation every other
+unmeasured law already receives. Nothing is fabricated, no new status is
+invented, and no PASS is claimed.
+
+**Why that is not the final answer.** "FAIL" for a law that could not be
+measured still reads as a scientific failure, and it lowers the deterministic
+score of an otherwise sound structure. The correct representation needs a
+contract decision:
+
+- **Proposal A (preferred):** extend the approved status vocabulary with an
+  explicit unmeasured state (e.g. `NOT_MEASURED`) and make the adjudicator
+  treat it as "not evaluated": excluded from `det_passed`, excluded from
+  `failing_det`, and surfaced in the response with an explicit
+  `measured: false` flag. Requires: an approved status token (the engine's
+  vocabulary today is exactly `PASS` / `VETO` / `FAIL`), a change to
+  `backend/tos/engine/adjudicator.py` (the status handling and the
+  deterministic score), and a change to the API model
+  (`backend/tos/schemas/response_v1.py`, where `PhysicsMeasurement.status` is a
+  free string but `observed: float` is REQUIRED).
+- **Proposal B (minimal, weaker):** keep `observed` a float and add a sibling
+  boolean `measured` to the measurement row, with the status left as `FAIL`
+  for backward compatibility. The response model needs the extra field; the
+  consumer surface (the audit report, the PDF) needs to render it.
+
+**Why `null` was rejected:** `PhysicsMeasurement.observed` is `float` and
+required, so a null observation fails validation of the whole response.
+
+**Status: OPEN.** This point requires an owner decision (the status
+vocabulary and the response schema are approved artefacts). The LAW-160
+correctness repair in this patch is complete and verified; the
+zero-sample representation is NOT, and the task is therefore reported as
+PARTIALLY COMPLETE with this item explicitly outstanding.
+
+## 6. Unresolved limitations
+
+1. The zero-eligible-pair representation (5) is unresolved and needs an
+   owner decision.
+2. The pre-existing matrix-hash drift between `main` and the Stability Gate
+   assertion (3.3) is reported, not fixed (frozen artefact).
+3. The pre-existing failures/errors in the backend suite (3.2) are reported
+   with the baseline comparison; they are outside the LAW-160 scope.
+4. The four POSIX-only test modules could not be collected on this Windows
+   host; the Linux CI runs the complete suite on the exact candidate.
+5. No production, deployment, calibration, v25, held-out or threshold work
+   was performed, and nothing was merged.

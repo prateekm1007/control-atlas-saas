@@ -35,16 +35,43 @@ logger = logging.getLogger("toscanini.tier1")
 
 class Tier1Measurements:
     @staticmethod
-    def _is_sequential(r1, r2):
-        if r1["_chain"] != r2["_chain"]:
-            return False
-        s1, s2 = r1["_seq"], r2["_seq"]
-        i1, i2 = r1.get("_icode", ""), r2.get("_icode", "")
+    def _adjacent(s1, i1, s2, i2):
+        """Are two residues CONSECUTIVE in the biological sequence?
+
+        True when (a) the residue number advances by one and neither residue
+        carries an insertion code, (b) the residue number is unchanged and the
+        insertion code advances, or (c) the residue number advances by one and
+        the FIRST residue carries an insertion code while the second does not.
+
+        This is the single source of truth for sequence adjacency. The
+        residue-dictionary form (_is_sequential) and the
+        (res_seq, insertion_code, res_name) tuple form
+        (_is_sequential_residues) both delegate to it, so the two
+        representations cannot drift apart in meaning.
+        """
         return (
             (s2 - s1 == 1 and not i1 and not i2) or
             (s2 == s1 and i2 > i1) or
             (s2 - s1 == 1 and i1 and not i2)
         )
+
+    @staticmethod
+    def _is_sequential(r1, r2):
+        if r1["_chain"] != r2["_chain"]:
+            return False
+        return Tier1Measurements._adjacent(r1["_seq"], r1.get("_icode", ""),
+                                          r2["_seq"], r2.get("_icode", ""))
+
+    @staticmethod
+    def _is_sequential_residues(r1, r2):
+        """Sequence adjacency for the (res_seq, insertion_code, res_name)
+        tuples returned by get_sequential_residues().
+
+        The tuple carries the same (res_seq, insertion_code) information as
+        the residue dictionaries, so the adjacency semantics are identical to
+        _is_sequential() by construction (both delegate to _adjacent()).
+        """
+        return Tier1Measurements._adjacent(r1[0], r1[1], r2[0], r2[1])
 
     @staticmethod
     def _is_rama_outlier(res_name, phi, psi):
@@ -422,6 +449,16 @@ class Tier1Measurements:
             for i in range(len(chain_residues) - 1):
                 curr_res = chain_residues[i]
                 next_res = chain_residues[i + 1]
+                # Only CONSECUTIVE residues form a chain-integrity pair.
+                # get_sequential_residues() returns the residues that are
+                # PRESENT, sorted and de-duplicated; it does not guarantee
+                # that two successive entries are consecutive in the biological
+                # sequence. A residue-number gap therefore means intervening
+                # residues are absent from the model, and the C-alpha distance
+                # across that gap measures the modelling gap, not a physical
+                # chain break. Measuring it as a break is a false veto.
+                if not Tier1Measurements._is_sequential_residues(curr_res, next_res):
+                    continue
                 p1 = get_atom_pos(structure.atoms, chain_id, curr_res[0], "CA", curr_res[1])
                 p2 = get_atom_pos(structure.atoms, chain_id, next_res[0], "CA", next_res[1])
                 if p1 is not None and p2 is not None:
@@ -430,11 +467,24 @@ class Tier1Measurements:
                     if d > max_gap:
                         max_gap = d
 
-        results["LAW-160"] = {
-            "observed": round(max_gap, 2),
-            "status": "PASS" if max_gap <= LAW_CANON["LAW-160"]["threshold"] else "VETO",
-            "sample": ca_pairs_checked
-        }
+        if ca_pairs_checked:
+            results["LAW-160"] = {
+                "observed": round(max_gap, 2),
+                "status": "PASS" if max_gap <= LAW_CANON["LAW-160"]["threshold"] else "VETO",
+                "sample": ca_pairs_checked
+            }
+        # No eligible C-alpha pair: LAW-160 was NOT measured. Emitting a
+        # measurement here would fabricate a value (0.0 A) and would report a
+        # PASS for a law that was never evaluated. The measurement is
+        # therefore omitted, and the adjudicator applies its existing
+        # missing-measurement default (status FAIL, sample 0) - the same
+        # representation every other unmeasured law already receives. A
+        # dedicated "not measured" state that does not read as a scientific
+        # failure needs a change to the approved status vocabulary and to the
+        # response schema (observed is a required float): that proposal is
+        # recorded in docs/audit-evidence/2026-10-21/ and awaits the owner's
+        # decision. This point is OPEN; the LAW-160 repair is not complete on
+        # it.
 
         # ═══════════════════════════════════════════════════════════
         # STUBS: Remaining laws
