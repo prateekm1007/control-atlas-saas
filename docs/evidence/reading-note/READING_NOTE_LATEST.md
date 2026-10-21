@@ -493,6 +493,29 @@ confirmations of the pruned branches (including `activation/ec18-r19` at
 `781175d18f94b65ee09635f2e4f38bf67d545b45`) are classified ARCHIVED, and the earlier
 confirmations of branches that later advanced are classified ARCHIVED-HISTORICAL.
 
+### 11.3e Four historical confirmations reclassified NOT PROVEN (Round-26)
+
+After the pruning, four early confirmations cannot be proven: P-011-CONFIRM, P-012-CONFIRM,
+P-013-CONFIRM and P-014-CONFIRM describe pushes of branches that were later REBUILT, so their
+recorded tips are in neither the archived tip nor its history, and neither the live ref nor the
+archive tag can prove the push. Commit existence may be provable; push provenance is not. The
+schema's own mechanism is used: each is reclassified `push-not-proven` with a `review_ref` into
+`docs/evidence/push-log/RECONCILIATION-2026-10-21-ARCHIVE-TAG-PROVENANCE.md`, which names every
+reclassified entry and records the complete search. The reclassified entries stay visible in the
+log, are disclosed as NOT PROVEN on every verification run, and are never counted as evidence for
+any declaration. No gate, checker or test was changed to accommodate them.
+
+### 11.3f A reclassified record is disclosed even when its branch ref is gone
+
+The checker compared a confirmation against the live ref before it consulted the reviewed
+`push-not-proven` reclassifications, so a reclassified record whose branch had been pruned still
+failed instead of being disclosed. The reclassification is now consulted first: such an entry is
+disclosed as NOT PROVEN (commit existence may be proven; push provenance is not), is never counted
+as evidence for any declaration, and the reclassification itself is still validated fail-closed
+earlier in the same run (a `push-not-proven` record with an unresolvable `review_ref` is rejected
+before this path is reached). No gate was relaxed: an un-reclassified record whose branch and
+archive tag cannot prove it still FAILS.
+
 ### 11.4 Rule mapping additions in this round
 
 | Rule ID | Enforcement point(s) | Acceptance test(s) |

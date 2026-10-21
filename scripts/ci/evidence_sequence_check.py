@@ -1251,6 +1251,21 @@ def check_remote_verification(path: str, state: dict, remote: str,
         # 4. live-ref comparison
         tip, err = live(branch)
         if err:
+            # A reviewed `push-not-proven` reclassification is disclosed, never
+            # counted as evidence: the branch push is NOT PROVEN (the commit
+            # may still exist). This is the same treatment the off-lineage
+            # HISTORICAL path gives, applied when the branch ref itself is
+            # gone and the archive tag cannot preserve the record.
+            if eid in state.get("reclassified", set()):
+                rc_eid = next((rc["eid"] for rc in entries
+                               if rc["m"] and rc["verb"] == "push-not-proven"
+                               and field(rc["subject"], "reclassifies") == eid), eid)
+                info.append(f"NOT-PROVEN: {eid} confirmed {branch} @ {sha[:12]}… is "
+                            f"RECLASSIFIED by {rc_eid}: the branch push is NOT PROVEN "
+                            f"(commit existence may be proven; push provenance is not) -- "
+                            f"the branch ref is gone and its archive tag cannot preserve this "
+                            f"record; disclosed, never counted as evidence for any declaration")
+                continue
             # D-V3/D-V4: a pruned branch keeps its content in an ANNOTATED
             # archive tag at the recorded SHA; that tag is remote evidence.
             # An archive tag at a DIFFERENT SHA does not preserve the
