@@ -1,1 +1,0 @@
-EXPLANATION = {"title": "Aggregation Propensity", "tier": "CALIBRATED", "cutoff": ">5% APR", "summary": "Detects aggregation-prone regions in sequence", "rationale": "TANGO/Zyggregator detect regions correlating with inclusion body formation."}
