@@ -1,1 +1,0 @@
-EXPLANATION = {"title": "Conformational Entropy", "tier": "ADVISORY", "cutoff": "Variance", "summary": "Assesses rigidity/flexibility balance", "rationale": "Excessive flexibility indicates disordered regions that may not bind ligands effectively."}

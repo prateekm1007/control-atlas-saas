@@ -23,9 +23,11 @@ import pytest
 from tos.governance.station_sop import LAW_CANON
 
 BACKEND = Path(__file__).resolve().parents[1]
+REPO_ROOT = BACKEND.parent
 TOS = BACKEND / "tos"
 MEASUREMENTS = TOS / "engine" / "tier1_measurements.py"
-REGISTRY = BACKEND.parent / "governance" / "law_registry.yaml"
+REGISTRY = REPO_ROOT / "governance" / "law_registry.yaml"
+NESTED_COPY = REPO_ROOT / "control-atlas-saas"
 
 
 def _emitted_law_ids(source: str) -> dict[str, int]:
@@ -80,6 +82,24 @@ def test_deleted_dead_module_stays_deleted():
         "engine/tier1_laws.py was the dead duplicate LAW-155 "
         "(Steric Clash Prohibition) competing with the live Voxel "
         "Occupancy LAW-155; it must not come back")
+
+
+def test_nested_duplicate_engine_tree_is_absent():
+    """The tracked nested control-atlas-saas copy was a second source of
+    truth. It must be deleted wholesale, not silently ignored by a scan
+    rooted at backend/tos."""
+    assert not NESTED_COPY.exists(), (
+        "tracked nested control-atlas-saas/ copy is still present")
+    nested_engines = [
+        p for p in REPO_ROOT.rglob("tier1_measurements.py")
+        if ".git" not in p.parts and p != MEASUREMENTS
+    ]
+    nested_laws = [
+        p for p in REPO_ROOT.rglob("tier1_laws.py")
+        if ".git" not in p.parts and p != (TOS / "engine" / "tier1_laws.py")
+    ]
+    assert not nested_engines, f"duplicate engine implementation: {nested_engines}"
+    assert not nested_laws, f"dead law implementation: {nested_laws}"
 
 
 def test_registry_enforced_set_equals_canon():
