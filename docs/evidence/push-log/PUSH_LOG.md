@@ -813,3 +813,29 @@
   verification and must be redeclared.
 - The merge is NOT performed by this push. The pre-merge-verification job is expected to FAIL on
   PR #37 until a genuine non-author approval exists on the exact head.
+
+## 2026-10-21T11:29:34Z | P-117-CONFIRM | push-confirm | branch=repair/round24-claim-head-binding remote_sha=9d3ebca0eac1912b00e83532f4471a39c23662fb credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/repair/round24-claim-head-binding -> 9d3ebca0eac1912b00e83532f4471a39c23662fb (re-verified immediately before this confirmation was written; the push itself was the ordinary fast-forward 36a8921..9d3ebca0eac1912b00e83532f4471a39c23662fb declared by P-117-INTENT)"
+
+- Two-phase completion for the push declared by P-117-INTENT (head_at_intent was DEFERRED; the
+  remote-verified tip is recorded after the push returned, never backdated).
+
+## 2026-10-21T11:29:34Z | P-119 | intent-reconcile | voids=P-112-INTENT branch=repair/round24-claim-head-binding credential=OWNER-PAT-1 evidence="P-112-INTENT declared a push that was never made as a separate ref update: the candidate was finished and published as one fast-forward 36a8921..9d3ebca0eac1912b00e83532f4471a39c23662fb, whose tip is published by the P-117-CONFIRM record; the intent is voided so that only one terminal intent per branch remains pending - the same supersession pattern used by P-087 for P-085"
+
+- Truthful void record: P-112-INTENT stays visible in the log unchanged; only its pairing
+  obligation is discharged.
+
+## 2026-10-21T11:29:34Z | P-120-INTENT | push-intent | branch=repair/round24-claim-head-binding head_at_intent=DEFERRED expected_remote_tip_before_push=9d3ebca0eac1912b00e83532f4471a39c23662fb credential=OWNER-PAT-1 authorized_by="auditor Round-26 direction 2 and 6 (the canonical reconciliation record gains the heading the committed review_refs name, the superseded intent is voided, and this push is declared on the exact recorded branch state; no force-push, no earlier entry edited, no merge into main, no product work)"
+
+- The declared pre-push tip is the exact tip published by the P-117-CONFIRM record above, which is
+  the live remote tip of this branch at declaration time.
+- head_at_intent is DEFERRED per the two-phase schema; the tip pushed by this INTENT is disclosed
+  as PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-21T11:29:34Z | P-121 | merge-intent | target=main pr=37 source_branch=repair/round24-claim-head-binding expected_pre_merge_base=63da0e347002ed9b77071ff1ed0cefda7c0ce88a expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-26 directions 1-7 and D-V1/D-V6: one recovery PR, one head; the merge executes only through the protected PR path and only with a legitimate non-author approval on the exact candidate head; if no eligible reviewer is available the PR stays BLOCKED - no self-approval, no retroactive approval, no weakened test"
+
+- Redeclaration on the exact final candidate (expected_head=DEFERRED resolves to the commit
+  introducing this record). expected_pre_merge_base is the live main tip at declaration time
+  (63da0e347002ed9b77071ff1ed0cefda7c0ce88a); if main moves, this intent fails its base
+  verification and must be redeclared.
+- The merge is NOT performed by this push. The pre-merge-verification job is expected to FAIL on
+  PR #37 until a genuine non-author approval exists on the exact head.
