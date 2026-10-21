@@ -692,3 +692,31 @@
   (63da0e347002ed9b77071ff1ed0cefda7c0ce88a); if main moves, this intent fails its base verification and must be redeclared.
 - The merge is NOT performed by this push. The pre-merge-verification job is expected to FAIL on
   PR #37 until a genuine non-author approval exists on the exact head.
+
+## 2026-10-21T10:51:49Z | P-096 | push-reconcile | branch=repair/round24-claim-head-binding remote_sha=7cb888c80d04d7bdda6a741e8ea596339cf52158 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/repair/round24-claim-head-binding -> 7cb888c80d04d7bdda6a741e8ea596339cf52158 (re-verified immediately before this record was written); the push itself was the ordinary fast-forward 7071b5d..7cb888c80d04d7bdda6a741e8ea596339cf52158 carrying the AT-41 fixture identity fix and the reading note's CI-evidence section; it was made without a preceding INTENT, so this truthful post-hoc record is used instead of pretending an intent existed - the schema's push-reconcile mechanism, never a backdated intent; push-event checks on this exact head: Toscanini Stability Gate run 39586742835 conclusion=success and Governance Acceptance run 39586742893 conclusion=failure (disclosed, not represented as success: that push-event run's push-log and status-vocabulary jobs failed - the push-log cause is diagnosed and fixed by the commit that introduces this record, and the status-vocabulary cause is NOT yet identified because the job log is not retrievable with the available credential; the local reproduction of that job passes, so the cause is recorded as UNDIAGNOSED rather than guessed)"
+
+- A post-hoc record of a push that happened without a preceding INTENT. It is not backdated, it
+  does not pair with or consume an intent, and it publishes the branch's exact state so the next
+  push can be declared on it.
+
+## 2026-10-21T10:51:49Z | P-097 | intent-reconcile | voids=P-094-INTENT branch=repair/round24-claim-head-binding credential=OWNER-PAT-1 evidence="P-094-INTENT declared the push of 7071b5d, whose push-event run failed the push-log job (its declared pre-push tip did not match the newest recorded branch state, because the CONFIRM that publishes the fold push's tip was appended after it); the push it declared did happen, its tip is published by P-096, and the intent is voided here so that only one terminal intent per branch remains pending - the same supersession pattern used by P-087 for P-085"
+
+- Truthful void record: P-094-INTENT stays visible in the log unchanged; only its pairing
+  obligation is discharged. Its own failure is disclosed in the P-096 evidence above.
+
+## 2026-10-21T10:51:49Z | P-098-INTENT | push-intent | branch=repair/round24-claim-head-binding head_at_intent=DEFERRED expected_remote_tip_before_push=7cb888c80d04d7bdda6a741e8ea596339cf52158 credential=OWNER-PAT-1 authorized_by="auditor Round-26 direction 2 (fix only the cause of the failing jobs on the exact candidate; no force-push, no earlier entry edited, no merge into main, no product work)"
+
+- The declared pre-push tip is the exact tip published by the P-096 record above, which is the
+  live remote tip of this branch at declaration time.
+- head_at_intent is DEFERRED per the two-phase schema; the tip pushed by this INTENT is
+  disclosed as PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-21T10:51:49Z | P-099 | merge-intent | target=main pr=37 source_branch=repair/round24-claim-head-binding expected_pre_merge_base=63da0e347002ed9b77071ff1ed0cefda7c0ce88a expected_head=DEFERRED credential=OWNER-PAT-1 authorized_by="auditor Round-26 directions 1-7 and D-V1/D-V6: one recovery PR, one head; the merge executes only through the protected PR path and only with a legitimate non-author approval on the exact candidate head; if no eligible reviewer is available the PR stays BLOCKED - no self-approval, no retroactive approval, no weakened test"
+
+- Redeclaration on the exact final candidate (expected_head=DEFERRED resolves to the commit
+  introducing this record). expected_pre_merge_base is the live main tip at declaration time
+  (63da0e347002ed9b77071ff1ed0cefda7c0ce88a); if main moves, this intent fails its base verification and must be redeclared.
+- P-095 (the previous merge-intent for PR #37) is superseded on the lineage, in the same way
+  P-085 was superseded by P-088.
+- The merge is NOT performed by this push. The pre-merge-verification job is expected to FAIL on
+  PR #37 until a genuine non-author approval exists on the exact head.

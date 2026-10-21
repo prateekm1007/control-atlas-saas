@@ -460,6 +460,21 @@ blob IDs are identical at the R24 candidate, at `main` and at this head.
   exact head, so it is updated to this head before the push that introduces it; the recorded
   job for a given head is evidence about the body as it stood when that job ran.
 
+### 11.3c Undiagnosed failures on head 7cb888c (disclosed, not guessed)
+
+The push-event run on 7cb888c failed two jobs besides the push-log job: the EC-22 status-vocabulary
+lint (against a runs manifest) and, on the PR event, the EC-21 declared-base verification. The
+job logs could NOT be retrieved: the available credential lacks the `actions:read` scope, so
+`/actions/jobs/<id>/logs` answers HTTP 401, and the public job page renders its log only through
+an authenticated XHR. A local reproduction of the EC-22 job - the same lint, the same file list,
+and a runs manifest built from the live Actions API (537 run records) - PASSES, so the cause is
+recorded as UNDIAGNOSED rather than guessed, and the next run on the next head is the evidence
+that settles it. The push-log failure on that head WAS diagnosed (the push was made without the
+two-phase records the schema requires) and is fixed by the commit that introduces this section:
+P-096 reconciles that push truthfully instead of pretending an intent existed, P-097 voids the
+superseded intent, P-098-INTENT declares this push on the exact recorded state, and P-099
+redeclares this PR's merge-intent on the exact final candidate.
+
 ### 11.4 Rule mapping additions in this round
 
 | Rule ID | Enforcement point(s) | Acceptance test(s) |
