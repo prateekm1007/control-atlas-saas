@@ -253,3 +253,40 @@ Verified locally before applying: with the repair committed, the checker reports
 attributable to this branch** against the live remote; the remaining findings are the inherited
 ones of section 7.2. No push is invented, none is claimed twice, and no published record is
 edited.
+
+### 7.5 The named acceptance tests were corrected to exist on the candidate
+
+The EC-20 job executes the identifiers named in the PR body's `Acceptance-Tests` field, after
+collecting them ON THE CANDIDATE. Two revisions of this PR body named identifiers that do not
+exist on this candidate: the first named the nine `backend/tests/test_law_160.py::...` node IDs
+(the claim job installs only pytest and pyyaml, so a module that imports the engine cannot be
+collected there), and the second named `test_at35_claim_exact_head_binding` and
+`test_at38_manifest_committed_tree`, which exist on `repair/round24-claim-head-binding` (PR #37)
+but NOT on `main`. In both cases the check failed closed with "named but not collectable on the
+candidate" - correctly, because the named test could not be executed. The named identifiers are
+now the ones that exist on this candidate and are collectable in that environment
+(`test_at16_inventory_counts`, `test_at07_pr_template`, `test_at19_status_summary_grammar`,
+`test_at20_pushlog_schema_hardening`); the EC-20 evidence artifact of the run that reported the
+collection failure is the record of it. No test was weakened, skipped or deleted.
+
+### 7.6 The claim-verification job reads the body as of the run, so the body must be aligned BEFORE the push
+
+The `EC-16/19/20 PR-body claim verification` job takes the PR body from the run's own context, so
+a body corrected AFTER a run has started is not seen by that run: the re-run of attempt 3 still
+executed the identifiers of the previous body revision (see the EC-20 evidence artifact of that
+attempt, whose `tests_requested` lists the previous identifiers and whose `tests_missing_from_
+collection` names them). The body and the candidate head are therefore aligned BEFORE the push
+that introduces them, and the re-run of the failed jobs re-reads the aligned body.
+
+## 7.7 Final CI state of this branch
+
+| Run | Event | Workflow | Conclusion |
+|---|---|---|---|
+| 39599403837 | push | Toscanini Stability Gate | success |
+| 39599403806 | push | Governance Acceptance | FAILURE - `EC-18/EC-24 push-log schema, append-only, remote verification` (the inherited findings of section 7.2 only) |
+| 39599409042 | pull_request | Toscanini Stability Gate | success (secret scan, unit tests, canon/matrix hash locks on the exact head) |
+| 39599409058 | pull_request | Governance Acceptance | FAILURE - the push-log job (inherited findings) and the claim-verification job (the body revision of section 7.5) |
+
+The final head of the branch and the final run IDs are reported with the round report. The
+branch is NOT merged; the merge waits for an independent reviewer and for PR #37's archive-tag
+resolution to be on `main` so that the inherited push-log findings can be verified.
