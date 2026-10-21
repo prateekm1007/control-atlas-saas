@@ -46,7 +46,7 @@ class PhysicsMeasurement(BaseModel):
     title: str
     status: str
     method: str
-    # Round-24/25 (the auditor-approved NOT_MEASURED state): a measurement that
+    # Round-24 (the auditor-approved NOT_MEASURED state): a measurement that
     # could not be taken is represented truthfully - `measured` is False, the
     # observation is null (still REQUIRED: a measurement always carries the
     # field) and the deviation is null. An ordinary measurement keeps its
@@ -62,37 +62,39 @@ class PhysicsMeasurement(BaseModel):
     principle: str = "N/A"
 
     @model_validator(mode="after")
-    def _check_measurement_contract(self):
-        """The cross-field contract of a measurement row.
+    def _measurement_is_self_consistent(self) -> "PhysicsMeasurement":
+        """A measurement row must agree with itself.
 
-        A MEASURED result carries a number; an UNMEASURED result carries no
-        number, no deviation and no samples, and says so in its status.
-        Contradictory combinations are rejected at the contract boundary
-        instead of being serialised as if they were measurements.
+        Round-24 (the auditor-approved NOT_MEASURED contract): a law that
+        could not be evaluated is reported as NOT MEASURED with a null
+        observation, a null deviation, a zero sample and measured=False. A row
+        that claims a number while saying it was not measured, or that claims
+        to have been measured while carrying no number, is contradictory and
+        is rejected here: the contract cannot be violated by accident in a
+        response.
         """
         if self.status == "NOT_MEASURED":
             if self.measured:
                 raise ValueError(
-                    "an unmeasured result (status NOT_MEASURED) must have measured=false")
+                    "NOT_MEASURED requires measured=false, got measured=true")
             if self.observed is not None:
                 raise ValueError(
-                    "an unmeasured result (status NOT_MEASURED) must not carry a "
-                    "numerical observation")
+                    "NOT_MEASURED requires a null observation, got %r" % (self.observed,))
             if self.deviation is not None:
                 raise ValueError(
-                    "an unmeasured result (status NOT_MEASURED) must not carry a deviation")
+                    "NOT_MEASURED requires a null deviation, got %r" % (self.deviation,))
             if self.sample_size != 0:
                 raise ValueError(
-                    "an unmeasured result (status NOT_MEASURED) must have sample_size 0")
-            return self
-        if not self.measured:
-            raise ValueError(
-                f"a measured result (status {self.status!r}) must have measured=true")
-        if self.observed is None:
-            raise ValueError(
-                f"a measured result (status {self.status!r}) must carry a numerical "
-                f"observation")
+                    "NOT_MEASURED requires sample_size=0, got %r" % (self.sample_size,))
+        else:
+            if not self.measured:
+                raise ValueError(
+                    "an unmeasured row must carry status=NOT_MEASURED, got %r" % (self.status,))
+            if self.observed is None:
+                raise ValueError(
+                    "a measured row requires a numeric observation, got None")
         return self
+
 
 
 class Tier1(BaseModel):

@@ -421,56 +421,79 @@ append-only parent-prefix check passes). The records are ASCII on purpose: the
 governance tests print the log, and a non-ASCII marker breaks the Windows
 console encoding.
 
-## 9. Round-25 continuation: the final candidate and the CI evidence
+## Round-26 completion record (added 2026-10-21T18:10:44Z)
 
-**Final candidate SHA:** `9a149aae2dacd06e2e24f4ad699620311a906614` (branch `feature/law-160-sequence-adjacency`; base `main` @ `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`).
+This section records the results of the work the Round-26 audit directed on this branch
+(`feature/law-160-sequence-adjacency`, pull request #40): the response-model consistency
+validator, the four PDF reporting fixes, the end-to-end rendering-level tests, the preserved
+coverage of the superseded R24 candidate, the register record (Part 19), the candidate's
+push-log binding and the test metadata of the pull request body.
 
-**CI on the exact candidate 9a149aae2dacd06e2e24f4ad699620311a906614:**
+### What was implemented
 
-| Run | Event | Conclusion |
-|---|---|---|
-| `39649469536` (Toscanini Stability Gate) | push | **success** - "Unit Tests + Hash Lock" and "Secret Scan (gitleaks)" both green on this exact candidate |
-| `39649482980` (Toscanini Stability Gate) | pull request | **success** |
-| `39649469505` (Governance Acceptance) | push | failure - ONE job: `EC-18/EC-24 push-log schema, append-only, remote verification` |
-| `39649483107` (Governance Acceptance) | pull request | failure - the same push-log job plus `EC-16/19/20 PR-body claim verification` |
+- `backend/tos/schemas/response_v1.py`: a Pydantic v2 model-level validator on
+  `PhysicsMeasurement`. A measured row must carry a numeric, non-null observation; an unmeasured
+  row must carry `status="NOT_MEASURED"`, `measured=false`, `observed=null`, `deviation=null`
+  and `sample_size=0`. Contradictory combinations (measured=false with a number, measured=true
+  with a null observation, NOT_MEASURED with a non-zero sample, NOT_MEASURED with a deviation,
+  an unmeasured row with another status) are rejected. `observed` stays required but nullable,
+  and ordinary measured rows are unaffected.
+- `backend/tos/forensic_artifacts/pdf_generator.py`: the unmeasured collection is built over ALL
+  law rows (an advisory/heuristic unmeasured law is still unmeasured) and its section is rendered
+  whenever it is non-empty, independently of the violations block; unmeasured laws are excluded
+  from the VETO-cause list and from the violation-driven refinement recommendations; the
+  advisory/heuristic table uses the shared observation-rendering helper, so an unmeasured row
+  reads "not measured" and never `None`; and the compliance wording is explicit when not every
+  required law was measured ("All MEASURED deterministic coordinate measurements within
+  thresholds; N law(s) could not be evaluated and are listed under NOT MEASURED."). The frozen
+  modality matrix was NOT changed.
+- `backend/tests/test_not_measured_pdf_contract.py`: sixteen end-to-end tests. The PDF is
+  generated and its compressed content streams are decoded, so the assertions are about the
+  rendered report: the dedicated NOT MEASURED section appears in an otherwise compliant
+  structure, the compliance wording does not imply that every law was measured, an unmeasured
+  advisory LAW-160 renders as "not measured" and never `None`, a true deterministic veto stays
+  the VETO cause next to an unmeasured law, an unmeasured law is neither a violation nor a
+  refinement target, the model rejects every contradictory combination, and a full
+  `ToscaniniResponse` serializes an unmeasured row with a null observation and a zero sample.
+  No extra dependency is required, so the module is collectable in the CI environment that
+  installs only pytest and the backend requirements.
+- `backend/tests/test_law_160.py`: the four regressions of the superseded R24 candidate that
+  were not yet covered here are preserved (the sequence gap, the sample count with a gap, the
+  plain-residue -> insertion-coded-next-residue transition that is NOT adjacent, and two
+  nonconsecutive residues yielding no measurement), adapted to the approved NOT_MEASURED
+  contract. Closing that PR as superseded therefore loses no coverage.
+- `docs/decisions/OWNER_DECISIONS.md`: Part 19 records the already-approved NOT_MEASURED
+  contract and the state of its enforcement. Part 18 is unchanged, and no owner signature is
+  invented.
 
-**Local verification on the same tree (Windows host; the Linux runner is the
-supported platform and its Stability Gate is green):**
+### Verification (this candidate, this environment)
 
-```
-$ cd backend && python -m pytest tests -q --no-header <the five POSIX-only modules ignored>
-25 failed, 302 passed, 5 skipped, 445 warnings, 23 errors
-```
-The failing/erroring set is the SAME pre-existing set as the unmodified
-baseline (25 failed / 284 passed / 23 errors on the base tree); the delta is
-the new tests. The pre-existing failures are Windows import/API issues in
-other modules and are disclosed, not suppressed.
+| Check | Command | Exit | Result |
+|---|---|---|---|
+| focused tests (LAW-160, contract, adjudicator, response schema, PDF) | `tests/test_law_160.py tests/test_not_measured_contract.py tests/test_not_measured_pdf_contract.py tests/test_adjudicator.py tests/test_response_schema.py` | 0 | 56 passed, 5 skipped, 451 warnings in 5.30s |
+| full backend suite - candidate | `python -m pytest tests -q --tb=no --ignore=<6 modules that cannot be collected in this environment>` | 1 | 21 failed, 309 passed, 5 skipped, 452 warnings, 23 errors in 14.11s |
+| full backend suite - base of this branch (same environment, same exclusions) | `python -m pytest tests -q --tb=no --ignore=<6 modules>` (changes stashed) | 1 | 21 failed, 289 passed, 5 skipped, 1 warning, 23 errors in 9.96s |
+| hash locks | `compute_canon_hash() / compute_matrix_hash()` | 0 | canon=6a9cd4b4349b81de (unchanged) matrix=ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4 (unchanged) |
+| secret scan of the diff | `regex scan of `git diff 63da0e3..HEAD` and the working diff` | 0 | 0 credential-shaped string(s) in the diff |
 
-```
-canon  : 6a9cd4b4349b81de          (unchanged)
-matrix : b1249cedde5018628ea2351de49c9622cdce4657561af7f74146df182d1a210d
-```
-(the local matrix value is the CRLF-checkout artefact of 3.3; the Linux
-runner's Stability Gate re-verified BOTH locks on this candidate)
+Six test modules cannot be COLLECTED in this sandbox (ImportError on optional dependencies); they are
+excluded from BOTH runs, and the exclusion is stated rather than hidden. The full backend suite is
+compared against the SAME suite on the base of this branch in the SAME environment (the changes were stashed for that run), so the pre-existing environment-level
+failures are separated from anything this change introduced. A green full suite is NOT claimed:
+the suite does not pass in this sandbox, and the exact numbers above are the record.
 
-```
-patch secret-pattern hits: 0
-```
+The historical remote-reference findings that the push-log job reports for the confirmations of
+the branches the Round-26 pruning deleted are inherited from `main` and are NOT re-verified here:
+PR #37's archive-tag resolution is not imported into this science patch, no historical entry is
+rewritten, and the findings are disclosed rather than worked around. The candidate's own
+push-log records are corrected append-only on this push.
 
-**Remaining blockers (reported honestly):**
+### The candidate was rebuilt on a concurrent head (disclosed)
 
-1. The push-log remote verification is red because the push log inherited
-   from `main` records confirmations for `repair/round19-mainline-acceptance`
-   and that branch was deleted by the repository-wide pruning; the historical
-   remote references are truthfully unverifiable. Per the auditor's direction
-   this is NOT repaired in this engine task and no gate is bypassed.
-2. The PR-body claim verification is red because the claim gate requires a
-   successful run of BOTH required workflows on the exact head, and the
-   Governance Acceptance workflow is red for the reason in (1). The PR body
-   names the exact collectable pytest node IDs and cites the successful
-   Stability Gate run on this exact head; the Governance Acceptance run is
-   disclosed as red rather than cited as a pass.
-3. The candidate is therefore NOT mergeable yet: the technical defects of
-   Round 25 are closed, but the governance evidence is not green, no
-   independent approval exists on this head, and the standing hard stop
-   forbids a merge.
+The first push of this candidate was REJECTED by the remote: the branch had advanced (the
+concurrent writer's commit `ef9e9ef4ce7c20d6a3ebdd47fcbb80a1454e8e2c`) and the push was not fast-forward, so the commit never
+landed. The content was therefore rebuilt ON TOP of that head - no history was rewritten and no
+published commit was amended - and the push-log records follow the truth: the intent that had
+declared the rejected push (P-87-INTENT) is VOIDED (the push never happened), the push that
+actually produced the current tip is confirmed, and the new push is declared on the exact live
+tip (ef9e9ef4ce7c20d6a3ebdd47fcbb80a1454e8e2c) with a fresh merge-intent for PR #40.

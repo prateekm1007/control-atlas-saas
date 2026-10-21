@@ -914,66 +914,48 @@ fail-open clash measurement and the `<` where the canon specifies `<=` at the
 continuing after failures, and writing partial results) are the NEXT engine
 and calibration corrections, each in its own separate branch.
 
-## Part 19 - Round-25 records (AUDITOR-ADJUDICATED, 2026-10-21; register rev 14)
+## Part 19 - Round-24 NOT_MEASURED contract and its enforcement (AUDITOR-ADJUDICATED, 2026-10-21; register rev 14)
 
-### 19.1 The decision (as given)
+### 19.1 The approved contract (recorded, not re-decided)
 
-The Round-25 audit found that PR #40 was not complete: the NOT_MEASURED
-implementation was present, but the PDF reporting semantics and the
-response-contract validation were not. The approved behaviour (Option A, as
-decided under the owner's delegation in Round 24) stands and is recorded here
-so that the push-log reference to this Part resolves.
+The auditor approved the explicit unmeasurable state for LAW-160 (the Round-24 Option A
+contract, as adjudicated and recorded in
+`docs/audit-evidence/2026-10-21/LAW-160-R24-EVIDENCE.md` and in the pull request body of the
+canonical branch). The contract is:
 
-The R25 work is a focused continuation of the same branch
-(`feature/law-160-sequence-adjacency`), started from the head `fbc0ff9f66dc7927866895d5f3b6c562a05776c1` (base `main` @ `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`).
+- An unmeasured law is reported with `status = "NOT_MEASURED"`, `measured = false`,
+  `observed = null`, `deviation = null` and `sample_size = 0`. A measurement that could not be
+  taken is never presented as a numerical zero, and never as a scientific failure.
+- A required deterministic law that is NOT_MEASURED yields the verdict `INDETERMINATE` - it
+  neither passes the structure nor fails it scientifically. A known deterministic veto takes
+  precedence and remains a VETO.
+- The response model enforces the cross-field consistency of a measurement row: a measured row
+  carries a numeric observation, an unmeasured row carries the NOT_MEASURED status with null
+  observation, null deviation and a zero sample. A contradictory row is rejected.
+- The PDF report states the unmeasured laws explicitly, in their own section, independently of
+  whether any other law was violated; an unmeasured law is not counted as a violation, is never
+  named as a VETO cause, is never a refinement target, and is never rendered as a bare `None`.
 
-### 19.2 What this round corrected
+Part 18 is preserved unchanged; this part records the contract and the state of its enforcement
+on the canonical branch `feature/law-160-sequence-adjacency` (pull request #40).
 
-1. **PDF reporting (four defects).** The dedicated NOT MEASURED section was
-   nested inside the violations branch and was therefore never rendered for an
-   otherwise compliant structure; the VETO banner and the refinement
-   recommendation list used a broad `status != PASS` filter and could name an
-   unmeasured law as a violation; and the advisory/heuristic table printed
-   `str(observed)`, so an unmeasured LAW-160 could be rendered as `None` (the
-   frozen modality matrix reclassifies LAW-160 as advisory_experimental for
-   X-ray, cryo-EM and NMR). The corrections: the unmeasured collection spans
-   EVERY law row; the section is rendered whenever it is nonempty, independent
-   of the violations; unmeasured rows are excluded from the violation counts,
-   the VETO cause list and the refinement targets; every table renders an
-   unmeasured row through the shared observation helper as "not measured"; and
-   the compliance-ledger wording is qualified so it cannot imply that every
-   deterministic law was measured. The frozen modality matrix is NOT changed.
-2. **Response-contract validation.** `PhysicsMeasurement` now carries a
-   Pydantic v2 model-level validator: a measured result must have
-   `measured=true` and a non-null numeric observation; an unmeasured result
-   must have `status=NOT_MEASURED`, `measured=false`, `observed=null`,
-   `deviation=null` and `sample_size=0`. Contradictory combinations are
-   rejected at the contract boundary instead of being serialised as if they
-   were measurements. The observation field stays REQUIRED and nullable.
-3. **Candidate-specific push-log provenance.** The terminal intent that
-   accompanied the previous candidate is completed by its confirmation and a
-   fresh terminal intent is declared for this candidate through the
-   append-only protocol (no historical record is rewritten).
+### 19.2 State of the implementation on the canonical branch
 
-### 19.3 Evidence
+- The engine emits the NOT_MEASURED row for LAW-160 when no eligible C-alpha pair exists
+  (`backend/tos/engine/tier1_measurements.py`).
+- The adjudicator maps a required deterministic NOT_MEASURED law to INDETERMINATE and keeps a
+  real deterministic veto as a VETO (`backend/tos/engine/adjudicator.py`).
+- The response model validates measurement consistency (`backend/tos/schemas/response_v1.py`).
+- The PDF reporting paths render the unmeasured section, exclude unmeasured laws from
+  violations, VETO causes and refinement recommendations, and use the shared observation
+  rendering helper (`backend/tos/forensic_artifacts/pdf_generator.py`).
+- The end-to-end tests are rendering-level: the generated PDF is decoded and its content is
+  asserted (`backend/tests/test_not_measured_pdf_contract.py`), and the regressions of the
+  superseded R24 candidate are preserved in `backend/tests/test_law_160.py`.
 
-`docs/audit-evidence/2026-10-21/LAW-160-R24-EVIDENCE.md` records the base and
-candidate SHAs, the runtime versions, every command with its exit code and
-output, the focused and full-suite results against the unmodified baseline,
-the hash-lock results, the secret scan and the unresolved limitations. The
-Round-25 additions (the PDF rendering assertions, the model-contract
-assertions and the top-level response round-trip) are covered by
-`backend/tests/test_not_measured_contract_round25.py`.
+### 19.3 Standing items - UNCHANGED
 
-### 19.4 Standing items
-
-Unchanged: A-01 remains ACCEPTED RISK; the scientific/production hard stop
-is preserved (no merge, no deployment, no v25 run, no held-out evaluation, no
-threshold or cohort change, no golden-artifact regeneration); the inherited
-push-log remote-reference failures (the branch the repository-wide pruning
-deleted) remain truthfully red and are NOT repaired in this engine task; the
-canonical law file, the modality matrix and the calibration runner are
-unchanged. LAW-130 (the fail-open clash measurement and the `<` versus the
-canonical `<=` at the 20.0 boundary) is the next engine task on its own
-branch, and the calibration-runner authentication and atomic-publication fix
-follows on its own branch without executing the real calibration cohort.
+The scientific/production hard stop is preserved in full: no merge to `main`, no deployment, no
+v25 calibration run, no held-out evaluation, no threshold or cohort change, no golden-artifact
+regeneration. A-01 remains ACCEPTED RISK. LAW-130 and the calibration runner remain the NEXT
+separate corrections, each in its own branch, and are not touched by this record.
