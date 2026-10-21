@@ -324,7 +324,7 @@ def build(args):
     files = sorted(p for p in r.out.iterdir() if p.is_file() and p.name != "SHA256SUMS")
     sums = []
     for p in files:
-        sums.append("%s  *%s" % (hashlib.sha256(p.read_bytes()).hexdigest(), p.name))
+        sums.append("%s  %s" % (hashlib.sha256(p.read_bytes()).hexdigest(), p.name))
     (r.out / "SHA256SUMS").write_text("\n".join(sums) + "\n", encoding="utf-8")
     digest = hashlib.sha256((r.out / "SHA256SUMS").read_bytes()).hexdigest()
     print("bundle_dir=%s" % r.out)
