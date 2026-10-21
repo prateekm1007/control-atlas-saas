@@ -201,6 +201,12 @@ def run_sentinel() -> bool:
                 drift_count += 1
                 continue
 
+            # Round-24: an unmeasured law has no observation to compare; it
+            # is skipped instead of being coerced into a number.
+            if snap_law.get("observed") is None or live_law.get("observed") is None:
+                log.info(f"    - {lid} not measured in one of the two outputs; "
+                         f"skipped (no observation to compare)")
+                continue
             snap_obs = float(snap_law.get("observed", 0))
             live_obs = float(live_law.get("observed", 0))
             checked += 1

@@ -237,3 +237,51 @@ regression coverage, the audit evidence, this reading record and the push-log
 intent. It did NOT touch any other law, the calibration runner, the canon, the
 modality matrix, any threshold, the deployment path or the held-out cohort, and
 it did not merge anything.
+
+## 13. Round-24 continuation (the approved NOT_MEASURED state) - reading record (2026-10-21T13:07:44Z)
+
+**Directive series:** the auditor's Round-24 continuation decision - finish the
+missing-measurement contract for LAW-160 before any LAW-130 or calibration
+work; Option A (an explicit `NOT_MEASURED` state) is approved under the
+owner's delegation; complete it as a focused continuation of the same feature
+branch; open a PR when the contract and CI evidence are ready; do not merge.
+
+**Starting SHA:** `1831bdfa98180e9c95d64d5e0a8a7148e3624d4e` (branch `feature/law-160-sequence-adjacency`); `main` = `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`.
+
+**Constitution and governing files read in full before any edit of this
+continuation** (SHA-256 of the working tree / blob at the starting commit):
+
+| Document | SHA-256 | Blob | Read |
+|---|---|---|---|
+| `AGENTS.md` | `d0416ce4ae4ebb1f9782f93f195a6959c48b4577d1a75c6d6120d1ccacd773da` | `85767237399ffb30f3e45894d9dfbe6f4240584f` | in full (75 lines) |
+| `constitution.md` | `0697871616f20d8acd6a1f22cbc029e177dcaf48f5623d6c528dfb7f88654568` | `211ad2c5d4b40059d9f3f03de12e0701f9235bc7` | in full (11 lines; OBS-153, CRIT-154 - ACTIVE, untouched) |
+| `ENGINEERING_CONSTITUTION.md` | `dd77f90e2df9e8c46f5330fcde556300fc891c5e99a61303e7af856ef8da827f` | `b6bb35e84956d84a8c9d9e65734c212baf3ed075` | in full (178 lines) |
+| `docs/coder/BRIEF.md` | `70775d2a4b0d4dcd9da684027852848452af22c045becfe4ed75996f42024010` | `052a84ca829d321dc0841a4b1c8702145dcbf6b5` | in full (70 lines) |
+| `docs/decisions/OWNER_DECISIONS.md` | `ff7e79b2125e85a115344856a25dd131f687e2ac3a97cd3411320ce873b102cf` | `3db043a75e9b5e30542bab26d627f2a971298179` | read (register rev 12, Parts 13-18) |
+| `docs/P0_STATUS.md` | `3a88a77028d0d094e7a1ae601cd45d5a41eb62ad1df4ec35dd45459b8244f65d` | `a31517abbc046c495930ba19ef7aeaf8bb72f2d0` | read (the applicable sections) |
+| `backend/tos/engine/tier1_measurements.py` | `0d62dbad6bf4f165bdd58971316addb2b91f6b20d6313ed50291a7616b2d8bb4` | `e84fa945a98da1eb729046eeae599d68cdd64511` | read in full (the LAW-160 block) |
+| `backend/tos/engine/adjudicator.py` | `00a01b271fbc189423f036b270386e8f27d20e6f7497c7b6ce76415c4dc12ae4` | `ba8fe592cd7591cfe965e1c388545ff10a395436` | read in full (stages 3-4, the verdict logic, the scoring) |
+| `backend/tos/schemas/response_v1.py` | `6ba3b657a7952fbf046c039b8963abbe5c0ef28879c3a7ab147d14c740a67617` | `c61ffcfadbe72dddc2c86e36f0190abc742ad482` | read in full (the response contract) |
+
+**Preflight (repeated for the expanded contract scope, before the first edit):**
+expected behaviour - an unmeasurable LAW-160 is represented explicitly and
+truthfully end to end and never yields a misleading scientific result;
+risks - the change touches the API output contract at the unmeasured edge
+case, so every consumer of a law row was audited (API serialisation, batch
+processing, the PDF dossier, the sentinel audit, the tests); files to change -
+the engine, the adjudicator, the response schema, the two consumers and the
+tests; regression tests - the focused LAW-160/adjudicator/schema set plus the
+full backend suite; rollout/rollback - one branch, no merge, revert the
+commit; acceptance criteria - the auditor's six end-to-end proofs.
+
+**Caller/consumer audit performed for this continuation** (the contract scope
+was expanded, so the previous engine-only preflight was not reused): the API
+response builder and the Pydantic model, the batch processor, the PDF dossier
+generator, the sentinel audit script, the dashboard (no `observed` consumer),
+and the acceptance/contract tests.
+
+**What this continuation did NOT do:** it did not change the canonical law
+definition, the modality matrix, any threshold, any cohort or any calibration
+artefact; it did not reinterpret any other law's status; it did not resume the
+governance-only repairs (the push-log job is left red and is not touched
+here); it did not merge anything, and the scientific hard stop is preserved.

@@ -105,6 +105,15 @@ def _compute_verdict(res_t1: list[dict], coverage: float) -> str:
         if r["method"] == "deterministic" and r["status"] in ("FAIL", "VETO"):
             return "VETO"
 
+    # Round-24 (the auditor-approved NOT_MEASURED state): a required
+    # deterministic law that could not be measured is neither a pass nor a
+    # scientific failure. It must never silently permit an overall PASS - the
+    # structure's verdict is INDETERMINATE until the law can be measured. A
+    # real deterministic veto (checked above) is retained.
+    for r in res_t1:
+        if r["method"] == "deterministic" and r["status"] == "NOT_MEASURED":
+            return "INDETERMINATE"
+
     return "PASS"
 
 
@@ -152,6 +161,10 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
         row = {
             "law_id": lid, "title": LAW_CANON[lid]["title"], "status": raw_status,
             "method": method,
+            # Round-24: an explicitly unmeasured measurement carries
+            # measured=False and a null observation; an ordinary measurement
+            # keeps its number.
+            "measured": bool(m.get("measured", True)),
             "observed": m.get("observed", 0), "threshold": LAW_CANON[lid]["threshold"],
             "operator": LAW_CANON[lid]["operator"], "units": LAW_CANON[lid]["unit"],
             "deviation": m.get("deviation", "0.0"), "sample_size": m.get("sample", 0),
@@ -165,6 +178,8 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
         if "failing_residue_pairs" in m:
             row["failing_residue_pairs"] = m["failing_residue_pairs"]
         res_t1.append(row)
+        # Round-24: NOT_MEASURED is not a scientific failure and never enters
+        # the failing deterministic list.
         if m.get("status", "FAIL") in ("FAIL", "VETO") and row["method"] == "deterministic":
             failing_det.append(f"{lid}: {LAW_CANON[lid]['title']}")
 

@@ -473,18 +473,23 @@ class Tier1Measurements:
                 "status": "PASS" if max_gap <= LAW_CANON["LAW-160"]["threshold"] else "VETO",
                 "sample": ca_pairs_checked
             }
-        # No eligible C-alpha pair: LAW-160 was NOT measured. Emitting a
-        # measurement here would fabricate a value (0.0 A) and would report a
-        # PASS for a law that was never evaluated. The measurement is
-        # therefore omitted, and the adjudicator applies its existing
-        # missing-measurement default (status FAIL, sample 0) - the same
-        # representation every other unmeasured law already receives. A
-        # dedicated "not measured" state that does not read as a scientific
-        # failure needs a change to the approved status vocabulary and to the
-        # response schema (observed is a required float): that proposal is
-        # recorded in docs/audit-evidence/2026-10-21/ and awaits the owner's
-        # decision. This point is OPEN; the LAW-160 repair is not complete on
-        # it.
+        else:
+            # NOT MEASURED (Round-24, the auditor-approved explicit state):
+            # there is no sequence-adjacent C-alpha pair with both atoms
+            # present, so LAW-160 was NOT evaluated. The row is explicit and
+            # truthful - no observation is fabricated (null), no deviation is
+            # invented (null), the sample size is zero, and the status says
+            # the law was not measured. It is neither a PASS nor a scientific
+            # failure: the adjudicator excludes it from the deterministic
+            # score and from the failing-law list, and an unmeasured required
+            # deterministic law yields INDETERMINATE rather than a silent PASS.
+            results["LAW-160"] = {
+                "observed": None,
+                "deviation": None,
+                "measured": False,
+                "status": "NOT_MEASURED",
+                "sample": 0
+            }
 
         # ═══════════════════════════════════════════════════════════
         # STUBS: Remaining laws

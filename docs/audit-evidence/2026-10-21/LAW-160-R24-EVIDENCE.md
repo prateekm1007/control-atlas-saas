@@ -283,3 +283,128 @@ Every other job of that run is green, including the acceptance suite, the
 package manifest, the reading-note validation, the status-vocabulary lint, the
 deploy-trigger lint, the full-history secret scan and the preservation-bundle
 jobs.
+
+## 8. Round-24 continuation: the approved explicit NOT_MEASURED state
+
+**Decision (as given, by the auditor under the owner's delegation):** Option A
+is approved - an explicitly unmeasured measurement gets an explicit
+`NOT_MEASURED` state, a truthful typed response and conservative
+adjudication. The owner delegated this decision to the auditor; this section
+records the decision AS GIVEN. It is not an owner signature and it does not
+introduce a new decision-register identifier.
+
+**Starting SHA of this continuation:** `1831bdfa98180e9c95d64d5e0a8a7148e3624d4e` (the branch head that carried
+the sequence-adjacency repair and the evidence correction). The patch below is
+a focused continuation of the same branch; it is not merged.
+
+### 8.1 What was implemented
+
+1. **Engine** (`backend/tos/engine/tier1_measurements.py`): when no
+   sequence-adjacent C-alpha pair with both atoms exists, LAW-160 returns an
+   EXPLICIT row - `status="NOT_MEASURED"`, `measured=False`, `observed=None`,
+   `deviation=None`, `sample=0`. No observation is fabricated, no deviation is
+   invented, and the row is not omitted, so no generic fallback can invent a
+   numerical value either.
+2. **Response schema** (`backend/tos/schemas/response_v1.py`):
+   `PhysicsMeasurement` gained `measured: bool = True`, a REQUIRED-but-NULLABLE
+   `observed: Optional[float]` and a nullable `deviation: Optional[str]`. An
+   ordinary measurement keeps its number; an unmeasured one carries null with
+   the explicit flag.
+3. **Adjudication** (`backend/tos/engine/adjudicator.py`): `NOT_MEASURED` is
+   neither PASS nor scientific FAIL. It is excluded from `det_passed` (an
+   unmeasured observation never earns a passing point), it never enters
+   `failing_deterministic`, and an unmeasured REQUIRED deterministic law
+   yields `INDETERMINATE` instead of a silent PASS. The existing behaviour is
+   preserved: the coverage gate still yields INDETERMINATE when it applies, and
+   a real deterministic FAIL/VETO is still a VETO (the veto check runs first).
+4. **Consumers audited and updated**:
+   - `backend/tos/forensic_artifacts/pdf_generator.py` - a `NOT_MEASURED` row
+     is NOT counted as a detection (it is neither a violation nor a pass) and
+     is rendered in its own "NOT MEASURED" table with the cell text "not
+     measured" - no number is printed for it;
+   - `backend/scripts/sentinel_audit.py` - a law with no observation is
+     skipped (it was previously coerced with `float(... or 0)`, which would
+     have raised on a null observation);
+   - `backend/main.py` (API serialization) and the batch processor carry the
+     adjudicator rows through unchanged - the Pydantic model is the contract
+     boundary and it now carries the flag and the nullable observation;
+   - the dashboard consumes the API JSON and does not read `observed` (no
+     matching reference), so no front-end change is required by this patch.
+5. **Scope control**: LAW-160's threshold (4.5 A), law ID, operator, units and
+   modality classification are unchanged; the canonical law definition, the
+   modality matrix, the cohorts and the calibration artefacts are NOT touched.
+   The new state is limited to an explicitly unmeasured measurement and the
+   contract handling it needs - the global missing-measurement fallback for a
+   law the engine did not produce at all is deliberately left as it was, so no
+   other law's status is reinterpreted by this patch.
+
+### 8.2 Why this is an output-contract change (and where it is bounded)
+
+The change is bounded to the unmeasured edge case, but it IS an API
+output-contract change: a consumer that assumed `observed` is always a number
+must now read the `measured` flag (or tolerate null). The response model keeps
+`observed` REQUIRED, so a missing field is still a validation error - only a
+genuinely unmeasured measurement may carry null. The consumers inside this
+repository (the API, the batch path, the PDF dossier, the sentinel audit) were
+audited and updated accordingly; the acceptance tests below prove the
+serialisation and the contract behaviour.
+
+### 8.3 Tests added (end to end)
+
+`backend/tests/test_not_measured_contract.py` (new) and
+`backend/tests/test_law_160.py` (updated):
+
+- a structure with no eligible C-alpha pairs returns a LAW-160 row with
+  `measured=false`, a null observation, a null deviation, zero sample size and
+  `NOT_MEASURED`;
+- the response model serialises that row successfully and still validates
+  ordinary measured rows with their numbers;
+- a structure with that unmeasured LAW-160 row and otherwise PASSing
+  deterministic laws yields `INDETERMINATE`, not PASS;
+- a genuine deterministic veto (LAW-120) remains a VETO when LAW-160 is
+  `NOT_MEASURED`;
+- `NOT_MEASURED` is absent from the failing deterministic list and is never
+  counted as a pass;
+- the coverage gate keeps its INDETERMINATE behaviour;
+- the existing insertion-code and gap regressions remain green.
+
+### 8.4 Results on this candidate
+
+```
+$ cd backend && python -m pytest tests/test_law_160.py tests/test_not_measured_contract.py \
+      tests/test_adjudicator.py tests/test_response_schema.py -q --no-header
+36 passed, 5 skipped
+```
+(the 5 skips are the pre-existing response-schema tests that need a captured
+live sample at /tmp - unrelated to this change)
+
+```
+$ cd backend && python -m pytest tests -q --no-header <the five POSIX-only modules ignored>
+25 failed, 296 passed, 5 skipped, 1 warning, 23 errors
+```
+The failing/erroring set is the SAME pre-existing set as the unmodified
+baseline (25 failed / 284 passed / 23 errors on the base tree); the delta is
+the new tests. The pre-existing failures are Windows import/API issues in
+other modules and are disclosed, not suppressed.
+
+```
+canon  : 6a9cd4b4349b81de          (unchanged; the Stability Gate lock)
+matrix : b1249cedde5018628ea2351de49c9622cdce4657561af7f74146df182d1a210d
+```
+The local matrix value is the CRLF-checkout artefact described in 3.3 (the
+Linux runner computes the asserted value on the same tree; the Stability Gate
+re-verified both locks on the candidate).
+
+```
+patch secret-pattern hits: 0
+```
+
+### 8.5 Status of the LAW-160 task
+
+The zero-sample representation is now CLOSED: an unmeasured LAW-160 is
+represented explicitly and truthfully end to end (engine, adjudicator, API
+schema, PDF dossier, sentinel audit) and never produces a misleading
+scientific result. No further LAW-160 item is outstanding. The next work
+items, each on its own branch, are LAW-130 (fail-open clash measurement and the
+`<` vs the canonical `<=` at the 20.0 boundary) and then the calibration
+runner's authentication and atomic publication.

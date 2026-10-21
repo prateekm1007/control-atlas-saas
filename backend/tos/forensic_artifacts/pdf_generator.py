@@ -12,6 +12,18 @@ from ..governance.station_sop import (
 from ..governance.modality_matrix import compute_matrix_hash
 
 
+def _observed_cell(law: dict) -> str:
+    """The Observed column of a law row.
+
+    Round-24: an unmeasured measurement has NO observation - the cell says
+    "not measured" instead of printing a number (or "None").
+    """
+    if not law.get("measured", True) or law.get("observed") is None:
+        return "not measured"
+    observed = law.get("observed", "N/A")
+    return str(observed)
+
+
 class ToscaniniDossier(FPDF):
     def header(self):
         self.set_font("Helvetica", "B", 8)
@@ -337,8 +349,13 @@ def generate_v21_dossier(payload):
         pdf.set_text_color(*PDF_COLORS["ALERT"])
 
         det_laws = [l for l in laws if l.get('method') == 'deterministic']
-        violations = [l for l in det_laws if l['status'] != 'PASS']
+        # Round-24: NOT_MEASURED is not a violation - it is a law that could
+        # not be evaluated. It is reported in its own table and never counted
+        # as a detection.
+        violations = [l for l in det_laws
+                      if l['status'] != 'PASS' and l['status'] != 'NOT_MEASURED']
         passes = [l for l in det_laws if l['status'] == 'PASS']
+        not_measured = [l for l in det_laws if l['status'] == 'NOT_MEASURED']
 
         headers = ["ID", "Metric", "Class", "Observed", "Threshold", "Status"]
         widths = [15, 50, 30, 35, 35, 25]
@@ -356,10 +373,26 @@ def generate_v21_dossier(payload):
             pdf.set_font("Helvetica", "", 7)
             for l in violations:
                 for i, field in enumerate([l['law_id'], l['title'], "Deterministic",
-                                           str(l['observed']), f"{l['operator']} {l['threshold']}", l['status']]):
+                                           _observed_cell(l), f"{l['operator']} {l['threshold']}", l['status']]):
                     pdf.cell(widths[i], 7, pdf.safe(field), 1, 0, "C" if i != 1 else "L")
                 pdf.ln(7)
             pdf.ln(5)
+            if not_measured:
+                # Round-24: an unmeasured law is shown as such - no number is
+                # invented for it.
+                pdf.set_font("Helvetica", "B", 8)
+                pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+                pdf.cell(w, 8, f"NOT MEASURED ({len(not_measured)} law(s) could not be "
+                                f"evaluated; no observation was fabricated)", ln=True)
+                pdf.set_font("Helvetica", "", 7)
+                for l in not_measured:
+                    for i, field in enumerate([l['law_id'], l['title'], "Deterministic",
+                                               "not measured",
+                                               f"{l['operator']} {l['threshold']}",
+                                               l['status']]):
+                        pdf.cell(widths[i], 7, pdf.safe(field), 1, 0, "C" if i != 1 else "L")
+                    pdf.ln(7)
+                pdf.ln(5)
 
         pdf.set_font("Helvetica", "B", 9)
         pdf.set_font("Helvetica", "B", 9)
@@ -376,7 +409,7 @@ def generate_v21_dossier(payload):
                 law['law_id'],
                 law['title'],
                 "Deterministic",
-                str(law.get('observed', 'N/A')),
+                _observed_cell(law),
                 "%s %s" % (law.get('operator', ''), law.get('threshold', 'N/A')),
                 "[PASS]"
             ]

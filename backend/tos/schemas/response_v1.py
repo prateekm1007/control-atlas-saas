@@ -46,11 +46,17 @@ class PhysicsMeasurement(BaseModel):
     title: str
     status: str
     method: str
-    observed: float
+    # Round-24 (the auditor-approved NOT_MEASURED state): a measurement that
+    # could not be taken is represented truthfully - `measured` is False, the
+    # observation is null (still REQUIRED: a measurement always carries the
+    # field) and the deviation is null. An ordinary measurement keeps its
+    # number.
+    measured: bool = True
+    observed: Optional[float]
     threshold: float
     operator: str
     units: str
-    deviation: str
+    deviation: Optional[str]
     sample_size: int = Field(..., ge=0)
     scope: str
     principle: str = "N/A"

@@ -165,13 +165,13 @@ def test_law_160_sample_counts_only_pairs_with_both_atoms(mock_atom_factory):
 
 
 def test_law_160_unmeasurable_is_not_reported_as_a_pass(mock_atom_factory):
-    """No eligible pair => the law is NOT measured; no fabricated PASS.
+    """No eligible pair => the law is NOT MEASURED, explicitly and truthfully.
 
-    The engine emits no LAW-160 measurement, so the adjudicator applies its
-    existing missing-measurement default (status FAIL, sample 0) instead of
-    the engine claiming a perfect 0.0 A gap. A dedicated "not measured" state
-    that does not read as a scientific failure is proposed in the audit
-    evidence and awaits the owner's decision - this point is OPEN.
+    Round-24 (the auditor-approved explicit state): the engine returns a
+    LAW-160 row with status NOT_MEASURED, measured=False, a NULL observation
+    and sample 0. No observation is fabricated (the old code reported
+    0.0 A and a PASS for a law that was never evaluated) and the row is not
+    omitted, so no generic fallback can invent a number either.
     """
     make = mock_atom_factory
     atoms = [
@@ -180,4 +180,10 @@ def test_law_160_unmeasurable_is_not_reported_as_a_pass(mock_atom_factory):
         make("C",  "C", [2.5, 1.0, 0.0],     res_name="ALA", res_seq=1),
     ]
     results = _audit(atoms)
-    assert "LAW-160" not in results
+    assert "LAW-160" in results
+    res = results["LAW-160"]
+    assert res["status"] == "NOT_MEASURED"
+    assert res["measured"] is False
+    assert res["observed"] is None
+    assert res["deviation"] is None
+    assert res["sample"] == 0
