@@ -86,7 +86,29 @@ class Tier1Measurements:
         method = getattr(structure.confidence, "method", "predicted")
         is_experimental = (method != "predicted")
         core = residues if is_experimental else [r for r in residues if r["_conf"] >= 70]
-        coverage = 100.0 if is_experimental else (len(core) / len(residues) * 100)
+
+        # OD-03/04 (owner clarification, 2026-10-21): predicted structures
+        # measure the pLDDT >= 70 core; experimental structures keep every
+        # atom. The global PASS vs INDETERMINATE gate is computed on ATOM
+        # coverage: with fewer than 70% of atoms in a high-confidence core
+        # the audit is INDETERMINATE, never PASS. Residue coverage keeps
+        # the LAW-105 row meaning; the returned value drives the gate.
+        core_keys = {(r["_chain"], r["_seq"], r["_icode"]) for r in core}
+        core_selected_atoms = [
+            a for a in structure.atoms
+            if (a.chain_id, a.res_seq, a.insertion_code) in core_keys
+        ]
+        total_atoms = len(structure.atoms)
+        residue_coverage = (
+            100.0 if is_experimental
+            else (len(core) / max(len(residues), 1) * 100)
+        )
+        atom_coverage = (
+            100.0 if is_experimental
+            else (len(core_selected_atoms) / total_atoms * 100
+                  if total_atoms else 0.0)
+        )
+        core_coords = np.array([a.pos for a in core_selected_atoms])
 
         results = {}
 
@@ -120,9 +142,13 @@ class Tier1Measurements:
         # LAW-105: Reliability Coverage
         # ═══════════════════════════════════════════════════════════
         results["LAW-105"] = {
-            "observed": round(coverage, 2),
-            "status": "PASS" if coverage >= 70.0 else "FAIL",
-            "sample": len(residues)
+            "observed": round(residue_coverage, 2),
+            "status": "PASS" if residue_coverage >= 70.0 else "FAIL",
+            "sample": len(residues),
+            "residue_coverage": round(residue_coverage, 2),
+            "atom_coverage": round(atom_coverage, 2),
+            "sample_atoms": total_atoms,
+            "sample_core_atoms": len(core_selected_atoms)
         }
 
         # ═══════════════════════════════════════════════════════════
@@ -130,17 +156,27 @@ class Tier1Measurements:
         # Measures C(i)-N(i+1) peptide bond distance for sequential pairs.
         # ═══════════════════════════════════════════════════════════
         gaps = 0
-        for i in range(len(residues) - 1):
-            r1, r2 = residues[i], residues[i + 1]
+        pairs_checked = 0
+        # OD-03: only sequential pairs inside the measured core; the tail's
+        # low-confidence residues cannot open or hide a backbone gap.
+        for i in range(len(core) - 1):
+            r1, r2 = core[i], core[i + 1]
             if r1["_chain"] == r2["_chain"] and Tier1Measurements._is_sequential(r1, r2):
                 if "C" in r1["_atoms"] and "N" in r2["_atoms"]:
+                    pairs_checked += 1
                     if distance(r1["_atoms"]["C"], r2["_atoms"]["N"]) > 2.0:
                         gaps += 1
-        results["LAW-110"] = {
-            "observed": gaps,
-            "status": "PASS" if gaps == 0 else "VETO",
-            "sample": len(residues) - 1
-        }
+        if pairs_checked > 0:
+            results["LAW-110"] = {
+                "observed": gaps,
+                "status": "PASS" if gaps == 0 else "VETO",
+                "sample": pairs_checked
+            }
+        else:
+            results["LAW-110"] = {
+                "observed": None, "status": "NOT_MEASURED", "sample": 0,
+                "reason": "no sequentially adjacent C-N pairs available in the measured set"
+            }
 
         # ═══════════════════════════════════════════════════════════
         # LAW-120: Bond Angle RMSD (Module 1.2.1 — uses coord_math.angle_deg)
@@ -233,14 +269,15 @@ class Tier1Measurements:
         # ═══════════════════════════════════════════════════════════
         clash = 0
         clash_pairs = []  # Phase A.5: inline residue-pair capture
-        all_coords = np.array([a.pos for a in structure.atoms])
-        if len(all_coords) > 1:
+        clash_search_failed = False
+        positions = core_selected_atoms  # OD-03: clash scope is the measured core
+        if len(positions) > 1:
             try:
                 from scipy.spatial import cKDTree
-                tree = cKDTree(all_coords)
+                tree = cKDTree(np.array([a.pos for a in positions]))
                 pairs = tree.query_pairs(r=1.5)
                 for ii, jj in pairs:
-                    ai, aj = structure.atoms[ii], structure.atoms[jj]
+                    ai, aj = positions[ii], positions[jj]
                     if ai.res_seq == aj.res_seq and ai.chain_id == aj.chain_id:
                         continue
                     if ai.chain_id == aj.chain_id and abs(ai.res_seq - aj.res_seq) <= 1:
@@ -252,17 +289,36 @@ class Tier1Measurements:
                     pair = tuple(sorted([r1, r2], key=lambda x: (x.split(":")[0], int(x.split(":")[1]))))
                     clash_pairs.append(pair)
             except Exception:
-                pass
+                # Directive §2/EC §4 (ported): a tooling failure is an explicit
+                # non-success state, never a silent favorable zero.
+                clash_search_failed = True
         # Deduplicate and sort pairs
         unique_pairs = sorted(set(clash_pairs), key=lambda p: (p[0].split(":")[0], int(p[0].split(":")[1]), p[1].split(":")[0], int(p[1].split(":")[1])))
-        clash_score = (clash / len(all_coords)) * 1000 if len(all_coords) > 0 else 0.0
-        results["LAW-130"] = {
-            "observed": round(clash_score, 2),
-            "status": "PASS" if clash_score < LAW_CANON["LAW-130"]["threshold"] else "VETO",
-            "sample": len(all_coords),
-            "granularity": GRANULARITY_RESIDUE_PAIR,
-            "failing_residue_pairs": unique_pairs
-        }
+        if clash_search_failed:
+            results["LAW-130"] = {
+                "observed": None, "status": "MEASUREMENT_FAILED", "sample": 0,
+                "granularity": GRANULARITY_RESIDUE_PAIR, "failing_residue_pairs": [],
+                "reason": "neighbor search failed (KDTree unavailable or errored)"
+            }
+        elif len(positions) == 0:
+            results["LAW-130"] = {
+                "observed": None, "status": "NOT_MEASURED", "sample": 0,
+                "granularity": GRANULARITY_RESIDUE_PAIR, "failing_residue_pairs": [],
+                "reason": "no atomic coordinates available in the measured set"
+            }
+        else:
+            # Canonical clashing comparison is the registry operator "<="
+            # (station_sop.LAW_CANON["LAW-130"]["operator"]). The operator
+            # applies to the reported value (the rounded score), so the
+            # exact boundary counts toward the threshold deterministically.
+            observed = round((clash / len(positions)) * 1000, 2)
+            results["LAW-130"] = {
+                "observed": observed,
+                "status": ("PASS" if observed <= LAW_CANON["LAW-130"]["threshold"] else "VETO"),
+                "sample": len(positions),
+                "granularity": GRANULARITY_RESIDUE_PAIR,
+                "failing_residue_pairs": unique_pairs
+            }
 
         # ═══════════════════════════════════════════════════════════
         # LAW-170: Residue Identity
@@ -484,21 +540,21 @@ class Tier1Measurements:
         burial_radius = 15.0
         min_burial_ratio = 1.0
         total_hydrophobic = 0
+        hydro_named = 0
+        hydro_cas = []
 
         for chain_id in get_chains(structure.atoms):
             # Collect CA positions of hydrophobic residues in this chain
-            hydro_cas = []
             chain_res = get_sequential_residues(structure.atoms, chain_id)
             for res_seq, icode, res_name in chain_res:
                 if res_name in HYDROPHOBIC_RESIDUES:
+                    hydro_named += 1
                     ca_pos = get_atom_pos(structure.atoms, chain_id, res_seq, "CA", icode)
                     if ca_pos is not None:
                         hydro_cas.append(ca_pos)
 
-            if len(hydro_cas) == 0:
-                continue
-
-            total_hydrophobic += len(hydro_cas)
+        total_hydrophobic = len(hydro_cas)
+        if total_hydrophobic > 0:
             hydro_array = np.array(hydro_cas)
             centroid = np.mean(hydro_array, axis=0)
 
@@ -507,15 +563,23 @@ class Tier1Measurements:
             if ratio < min_burial_ratio:
                 min_burial_ratio = ratio
 
-        # If no hydrophobic residues found anywhere, report 1.0 (vacuously true)
-        if total_hydrophobic == 0:
-            min_burial_ratio = 1.0
-
-        results["LAW-182"] = {
-            "observed": round(min_burial_ratio, 3),
-            "status": "PASS" if min_burial_ratio >= LAW_CANON["LAW-182"]["threshold"] else "VETO",
-            "sample": total_hydrophobic
-        }
+            # OD-20 owner brief: heuristics are advisory — below-threshold
+            # outcomes are reported as advisory failures, never as vetoes.
+            results["LAW-182"] = {
+                "observed": round(min_burial_ratio, 3),
+                "status": "PASS" if min_burial_ratio >= LAW_CANON["LAW-182"]["threshold"] else "FAIL (Advisory)",
+                "sample": total_hydrophobic
+            }
+        elif hydro_named > 0:
+            results["LAW-182"] = {
+                "observed": None, "status": "NOT_MEASURED", "sample": 0,
+                "reason": "hydrophobic residues present but no CA positions measurable"
+            }
+        else:
+            results["LAW-182"] = {
+                "observed": None, "status": "NOT_APPLICABLE", "sample": 0,
+                "reason": "no hydrophobic residues — no hydrophobic core to measure"
+            }
         # ═══════════════════════════════════════════════════════════
         # LAW-155: Voxel Occupancy (Module 1.2.8 — heuristic)
         # Divides bounding box into 2Å voxels. Counts voxels containing
@@ -525,25 +589,35 @@ class Tier1Measurements:
         # Threshold: 2.0 from station_sop.py (operator >=)
         # ═══════════════════════════════════════════════════════════
         voxel_size = 2.0
-        n_residues = len(residues)
-        if len(all_coords) > 0 and n_residues > 0:
-            bbox_min = np.min(all_coords, axis=0)
-            # Quantize each atom position into a voxel index
+        core_residues = len(core)
+        if len(core_coords) == 0:
+            results["LAW-155"] = {
+                "observed": None, "status": "NOT_MEASURED", "sample": 0,
+                "reason": "no atomic coordinates available to grid"
+            }
+        elif core_residues > 0:
+            bbox_min = np.min(core_coords, axis=0)
+            # Quantize each core atom position into a voxel index
             voxel_indices = set()
-            for pos in all_coords:
+            for pos in core_coords:
                 ix = int(np.floor((pos[0] - bbox_min[0]) / voxel_size))
                 iy = int(np.floor((pos[1] - bbox_min[1]) / voxel_size))
                 iz = int(np.floor((pos[2] - bbox_min[2]) / voxel_size))
                 voxel_indices.add((ix, iy, iz))
-            voxels_per_residue = len(voxel_indices) / n_residues
-        else:
-            voxels_per_residue = 0.0
+            voxels_per_residue = len(voxel_indices) / core_residues
 
-        results["LAW-155"] = {
-            "observed": round(voxels_per_residue, 2),
-            "status": "PASS" if voxels_per_residue >= LAW_CANON["LAW-155"]["threshold"] else "VETO",
-            "sample": len(all_coords)
-        }
+            # OD-20 owner brief: heuristic below-threshold outcomes are
+            # advisory failures, never vetoes. OD-03: grid only the core.
+            results["LAW-155"] = {
+                "observed": round(voxels_per_residue, 2),
+                "status": "PASS" if voxels_per_residue >= LAW_CANON["LAW-155"]["threshold"] else "FAIL (Advisory)",
+                "sample": len(core_coords)
+            }
+        else:
+            results["LAW-155"] = {
+                "observed": None, "status": "NOT_MEASURED", "sample": 0,
+                "reason": "no core residues available to grid atomic occupancy"
+            }
         # ═══════════════════════════════════════════════════════════
         # LAW-200: Packing Quality (Module 1.2.6 — heuristic)
         # Computes bounding box volume / number of atoms.
@@ -551,24 +625,31 @@ class Tier1Measurements:
         # Exploded/sparse structures: >> 300 Å³/atom.
         # Threshold: 300.0 Å³/atom from station_sop.py
         # ═══════════════════════════════════════════════════════════
-        if len(all_coords) > 0:
-            bbox_min = np.min(all_coords, axis=0)
-            bbox_max = np.max(all_coords, axis=0)
+        if len(core_coords) == 0:
+            results["LAW-200"] = {
+                "observed": None, "status": "NOT_MEASURED", "sample": 0,
+                "reason": "no atomic coordinates available"
+            }
+        else:
+            bbox_min = np.min(core_coords, axis=0)
+            bbox_max = np.max(core_coords, axis=0)
             bbox_dims = bbox_max - bbox_min
             # Clamp dimensions to minimum 1.0Å to avoid zero volume for planar/linear structures
             bbox_dims = np.maximum(bbox_dims, 1.0)
             bbox_volume = float(bbox_dims[0] * bbox_dims[1] * bbox_dims[2])
-            vol_per_atom = bbox_volume / len(all_coords)
-        else:
-            vol_per_atom = 0.0
+            vol_per_atom = bbox_volume / len(core_coords)
 
-        results["LAW-200"] = {
-            "observed": round(vol_per_atom, 2),
-            "status": "PASS" if vol_per_atom <= LAW_CANON["LAW-200"]["threshold"] else "VETO",
-            "sample": len(all_coords)
-        }
+            # OD-20 owner brief: heuristic below-threshold outcomes are
+            # advisory failures, never vetoes. OD-03: box only the core.
+            results["LAW-200"] = {
+                "observed": round(vol_per_atom, 2),
+                "status": "PASS" if vol_per_atom <= LAW_CANON["LAW-200"]["threshold"] else "FAIL (Advisory)",
+                "sample": len(core_coords)
+            }
 
-        return results, coverage, False
+        # The returned coverage is the atom basis and drives the global
+        # PASS vs INDETERMINATE gate (OD-04).
+        return results, atom_coverage, False
 
     @staticmethod
     def compute_structural_characterization(structure):

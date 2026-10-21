@@ -26,6 +26,12 @@ from tos.governance.station_sop import (
     LAW_METHOD_CLASSIFICATIONS,
     ARCHITECTURE_WEIGHTS,
 )
+
+# OD-04 candidate port: statuses that record missing or failed measurements
+# (ported from the delivered engine branch's WP-SCI-1 vocabulary). On a
+# deterministic law they are neither favorable evidence nor a fabricated
+# violation: they block an authoritative PASS.
+INDETERMINATE_CAUSE_STATUSES = ("NOT_MEASURED", "MEASUREMENT_FAILED")
 from tos.governance.modality_matrix import resolve_method
 
 
@@ -79,6 +85,7 @@ class AdjudicationResult:
     heur_passed: int = 0
     det_score_normalized: int = 0
     det_passed_normalized: int = 0
+    indeterminate_causes: list = field(default_factory=list)
     strategic_math: StrategicMath = field(
         default_factory=lambda: StrategicMath(0.0, 1.0, 0.0, 0, None)
     )
@@ -92,9 +99,12 @@ def _compute_verdict(res_t1: list[dict], coverage: float) -> str:
     """
     Determine binary verdict from classified law rows and coverage.
 
-    Logic preserved exactly from main.py:
+    Logic preserved from main.py, plus the OD-04 honest-evidence rule:
     - Coverage below LAW-105 threshold → INDETERMINATE
-    - Any deterministic law with FAIL or VETO → VETO
+    - Any deterministic law measured FAIL or VETO → VETO
+    - Any deterministic law NOT_MEASURED or MEASUREMENT_FAILED blocks an
+      authoritative PASS → INDETERMINATE (missing evidence is neither
+      favorable evidence nor a fabricated violation)
     - Otherwise → PASS
     """
     cov_threshold = float(LAW_CANON["LAW-105"]["threshold"])
@@ -104,6 +114,11 @@ def _compute_verdict(res_t1: list[dict], coverage: float) -> str:
     for r in res_t1:
         if r["method"] == "deterministic" and r["status"] in ("FAIL", "VETO"):
             return "VETO"
+
+    for r in res_t1:
+        if (r["method"] == "deterministic"
+                and r["status"] in INDETERMINATE_CAUSE_STATUSES):
+            return "INDETERMINATE"
 
     return "PASS"
 
@@ -144,9 +159,12 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
             default_method=method,
         )
 
-        # PIL-CAL-03: Advisory laws cannot VETO — normalize status
+        # PIL-CAL-03: Advisory laws cannot VETO — normalize status. OD-20
+        # owner brief: this covers both advisory_experimental reclassifications
+        # and the engine's own heuristic laws (LAW-155/182/200), so no
+        # heuristic outcome can independently veto a verdict.
         raw_status = m.get("status", "FAIL")
-        if method == "advisory_experimental" and raw_status == "VETO":
+        if method in ("advisory_experimental", "heuristic") and raw_status == "VETO":
             raw_status = "FAIL (Advisory)"
 
         row = {
@@ -179,6 +197,10 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
     adv_score = int((heur_passed / max(HEURISTIC_COUNT, 1)) * 100)
 
     verdict = _compute_verdict(res_t1, inp.coverage)
+    indeterminate_causes = [
+        r["law_id"] for r in res_t1
+        if r["method"] == "deterministic" and r["status"] in INDETERMINATE_CAUSE_STATUSES
+    ]
 
     # PIL-MTH-12: Strategic Success Math
     raw_s6 = round(det_score / 100.0, 4)
@@ -206,6 +228,7 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
         heur_passed=heur_passed,
         det_score_normalized=det_score_normalized,
         det_passed_normalized=det_passed_normalized,
+        indeterminate_causes=indeterminate_causes,
         strategic_math=StrategicMath(
             s6=s6_final, w_arch=w_arch, m_s8=m_s8,
             p_score=p_score, suppression=suppression,

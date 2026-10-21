@@ -52,7 +52,7 @@ LAW_CANON = {
     "LAW-110": {"title": "Backbone Gap", "threshold": 2.0, "unit": "Å", "operator": "<=", "scope": "sequential pairs", "type": "Scalar"},
     "LAW-120": {"title": "Bond Angle", "threshold": 18.0, "unit": "°", "operator": "<=", "scope": "core residues", "type": "RMSD"},
     "LAW-125": {"title": "Ramachandran", "threshold": 5.0, "unit": "%", "operator": "<=", "scope": "core residues", "type": "Percentage"},
-    "LAW-130": {"title": "Clashscore", "threshold": 20.0, "unit": "clashes/1000 atoms", "operator": "<=", "scope": "total atoms", "type": "Rate"},
+    "LAW-130": {"title": "Clashscore", "threshold": 20.0, "unit": "clashes/1000 atoms", "operator": "<=", "scope": "core atoms", "type": "Rate"},
     "LAW-135": {"title": "Omega Planarity", "threshold": 3.0, "unit": "%", "operator": "<=", "scope": "core residues", "type": "Percentage"},
     "LAW-145": {"title": "Chirality", "threshold": 0.0, "unit": "count", "operator": "=", "scope": "core residues", "type": "Count"},
     "LAW-150": {"title": "Rotamer Audit", "threshold": 20.0, "unit": "%", "operator": "<=", "scope": "core residues", "type": "Percentage"},
@@ -60,8 +60,8 @@ LAW_CANON = {
     "LAW-170": {"title": "Residue Identity", "threshold": 0.0, "unit": "count", "operator": "=", "scope": "total residues", "type": "Count"},
     "LAW-182": {"title": "Hydrophobic Burial", "threshold": 0.3, "unit": "ratio", "operator": ">=", "scope": "hydrophobic core", "type": "Rate"},
     "LAW-195": {"title": "Disulfide Geometry", "threshold": 0.20, "unit": "Å", "operator": "<=", "scope": "cys pairs", "type": "Scalar"},
-    "LAW-155": {"title": "Voxel Occupancy", "threshold": 2.0, "unit": "V", "operator": ">=", "scope": "atomic grid", "type": "Scalar"},
-    "LAW-200": {"title": "Packing Quality", "threshold": 300.0, "unit": "Å³/atom", "operator": "<=", "scope": "bounding box", "type": "Rate"}
+    "LAW-155": {"title": "Voxel Occupancy", "threshold": 2.0, "unit": "V", "operator": ">=", "scope": "core atomic grid", "type": "Scalar"},
+    "LAW-200": {"title": "Packing Quality", "threshold": 300.0, "unit": "Å³/atom", "operator": "<=", "scope": "core bounding box", "type": "Rate"}
 }
 
 LAW_METHOD_CLASSIFICATIONS = {lid: "deterministic" if lid not in ["LAW-155", "LAW-182", "LAW-200"] else "heuristic" for lid in LAW_CANON}

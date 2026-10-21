@@ -59,9 +59,10 @@ laws:
     scope: total residues
     type: Percentage
     measures: >
-      Percentage of residues passing the reliability filter: mean B-factor /
-      pLDDT >= 70 for predicted structures; 100% for experimental structures.
-      Governs the PASS vs INDETERMINATE coverage gate.
+      Percentage of source residues passing the reliability filter: mean
+      B-factor / pLDDT >= 70 for predicted structures; 100% for experimental
+      structures. Reports residue coverage; the global PASS vs INDETERMINATE
+      gate uses atom coverage (OD-04), also reported by the engine.
     implementation: "backend/tos/engine/tier1_measurements.py::Tier1Measurements.run_full_audit (LAW-105 block)"
     test: {file: backend/tests/test_math_migration.py, dedicated: false}
     cited_in: [TRUST_MATRIX_v22.5.3.md]
@@ -78,6 +79,9 @@ laws:
     measures: >
       Count of sequential same-chain C(i)-N(i+1) peptide distances exceeding
       2.0 Angstrom (missing-residue gaps). Observed value is the gap count.
+      For predicted structures only sequential pairs entirely within the
+      pLDDT >= 70 core are measured; experimental structures use all atoms.
+      An empty measured set yields NOT_MEASURED, never a favorable zero.
     implementation: "backend/tos/engine/tier1_measurements.py::Tier1Measurements.run_full_audit (LAW-110 block)"
     test: {file: backend/tests/test_math_migration.py, dedicated: false}
     cited_in: ["station_sop.py calibration notes (Word et al. 1999)"]
@@ -122,11 +126,16 @@ laws:
     threshold: 20.0
     units: "clashes/1000 atoms"
     operator: "<="
-    scope: total atoms
+    scope: core atoms
     type: Rate
     measures: >
-      Number of non-bonded steric clashes per 1000 atoms (atom pairs closer
-      than their combined van der Waals radii allow).
+      Number of non-bonded steric clashes within the pLDDT >= 70 core per
+      1000 core atoms (atom pairs closer than their combined van der Waals
+      radii allow); experimental structures use all selected atoms.
+      Excludes pairs in the same residue or adjacent residues. The
+      comparison uses the canonical operator "<=" (the threshold boundary
+      itself complies). A neighbor-search failure yields MEASUREMENT_FAILED
+      and an empty core yields NOT_MEASURED — never a silent favorable zero.
     implementation: "backend/tos/engine/tier1_measurements.py::Tier1Measurements.run_full_audit (LAW-130 block)"
     test: {file: backend/tests/test_math_migration.py, dedicated: false}
     cited_in: []
@@ -186,15 +195,17 @@ laws:
     threshold: 2.0
     units: V
     operator: ">="
-    scope: atomic grid
+    scope: core atomic grid
     type: Scalar
     measures: >
       Heuristic voxel-occupancy score: average number of occupied grid
-      voxels per residue over an atomic occupancy grid. This is an
+      voxels per core residue over the pLDDT >= 70 core atomic occupancy
+      grid; experimental structures use all selected atoms. This is an
       occupancy-density heuristic — it is NOT a deterministic
       atoms-cannot-overlap rule (owner decision, brief §4.1: the pinned
       code is the authority). Heuristic failures do not by themselves
-      trigger VETO.
+      trigger VETO; below-threshold outcomes are reported as FAIL
+      (Advisory). An empty core yields NOT_MEASURED.
     implementation: "backend/tos/engine/tier1_measurements.py::Tier1Measurements.run_full_audit (LAW-155 block)"
     test: {file: backend/tests/test_law_155.py, dedicated: true}
     cited_in: [TRUST_MATRIX_v22.5.3.md]
@@ -272,13 +283,16 @@ laws:
     threshold: 300.0
     units: "Å³/atom"
     operator: "<="
-    scope: bounding box
+    scope: core bounding box
     type: Rate
     measures: >
-      Heuristic packing density: structure bounding-box volume divided by
-      atom count, in cubic Angstroms per atom. Sparse packing suggests an
+      Heuristic packing density: pLDDT >= 70 core bounding-box volume
+      divided by core atom count, in cubic Angstroms per atom; experimental
+      structures use all selected atoms. Sparse packing suggests an
       implausibly expanded model. NOT a binding-cavity volume rule (owner
-      decision, brief §4.1 applies: code is the authority).
+      decision, brief §4.1 applies: code is the authority). Heuristic
+      failures do not by themselves trigger VETO; below-threshold outcomes
+      are reported as FAIL (Advisory). An empty core yields NOT_MEASURED.
     implementation: "backend/tos/engine/tier1_measurements.py::Tier1Measurements.run_full_audit (LAW-200 block)"
     test: {file: backend/tests/test_law_200.py, dedicated: true}
     cited_in: []

@@ -70,7 +70,7 @@ class TestLaw200:
         assert abs(res["observed"] - 12.5) < 0.1
         assert res["sample"] == 10
 
-    def test_sparse_structure_veto(self):
+    def test_sparse_structure_advisory(self):
         """2 atoms 100Å apart = 100x1x1 / 2 = 50 per atom.
         But let's make it really sparse: 2 atoms, bbox 1000x1x1."""
         atoms = [
@@ -80,7 +80,7 @@ class TestLaw200:
         # bbox: 1000 x 1(clamped) x 1(clamped) = 1000. 1000/2 = 500 Å³/atom
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
         res = results["LAW-200"]
-        assert res["status"] == "VETO"
+        assert res["status"] == "FAIL (Advisory)"
         assert res["observed"] == 500.0
         assert res["sample"] == 2
 

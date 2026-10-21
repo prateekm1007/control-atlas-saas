@@ -11,14 +11,12 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib.patches import Patch
 
 BAND_COLORS = {
-    "Very High": "#0066CC", "High": "#4DA6FF",
-    "Medium": "#FFB84D", "Low": "#CC0000",
+    "Very High": "#0066CC", "High": "#4DA6FF", "Low": "#CC0000",
 }
 CMAP = ListedColormap([
-    BAND_COLORS["Low"], BAND_COLORS["Medium"],
-    BAND_COLORS["High"], BAND_COLORS["Very High"],
+    BAND_COLORS["Low"], BAND_COLORS["High"], BAND_COLORS["Very High"],
 ])
-NORM = BoundaryNorm([0, 50, 70, 90, 100], CMAP.N)
+NORM = BoundaryNorm([0, 70, 90, 100], CMAP.N)
 
 
 def generate_residue_heatmap_png(plddt_scores, title="Per-Residue Confidence (pLDDT)",
@@ -54,7 +52,7 @@ def generate_residue_heatmap_png(plddt_scores, title="Per-Residue Confidence (pL
     # Trace
     ax_t.fill_between(res_ids, scores, alpha=0.06, color="#1A1A1A")
     ax_t.plot(res_ids, scores, linewidth=0.6, color="#1A1A1A", alpha=0.85)
-    for th in [50, 70, 90]:
+    for th in [70, 90]:
         ax_t.axhline(y=th, linewidth=0.4, linestyle="--", color="#E0E0E0", zorder=0)
         ax_t.text(n + 0.8, th, str(th), fontsize=5, color="#999", va="center")
     ax_t.set_xlim(0.5, n + 0.5)
@@ -71,7 +69,7 @@ def generate_residue_heatmap_png(plddt_scores, title="Per-Residue Confidence (pL
 
     legend = [Patch(facecolor=BAND_COLORS[k], label=k) for k in BAND_COLORS]
     ax_t.legend(handles=legend, loc="upper right", fontsize=5.5,
-                frameon=True, framealpha=0.9, edgecolor="#E0E0E0", ncol=4)
+                frameon=True, framealpha=0.9, edgecolor="#E0E0E0", ncol=3)
     fig.subplots_adjust(left=0.06, right=0.95, top=0.88, bottom=0.22, hspace=0.05)
 
     buf = io.BytesIO()

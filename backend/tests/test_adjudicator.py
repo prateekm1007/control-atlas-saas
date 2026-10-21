@@ -133,6 +133,49 @@ class TestAdjudicateModalityInteraction:
         assert law100_row["status"] == "VETO"
         assert result.verdict == "VETO"
 
+    @pytest.mark.parametrize("law_id", ["LAW-155", "LAW-182", "LAW-200"])
+    def test_heuristic_veto_is_reported_as_advisory(self, law_id):
+        """OD-20 owner brief: engine heuristic laws cannot veto, even when
+        a legacy measurement row carries a raw VETO status."""
+        measurements = _all_passing_measurements()
+        measurements[law_id] = {
+            "observed": 0.0, "deviation": "999.0", "sample": 10,
+            "status": "VETO",
+        }
+        result = adjudicate_laws(_make_input(
+            measurements=measurements, coverage=100.0))
+        row = next(r for r in result.law_rows if r["law_id"] == law_id)
+        assert row["method"] == "heuristic"
+        assert row["status"] == "FAIL (Advisory)"
+        assert result.verdict == "PASS"
+
+    def test_not_measured_deterministic_law_blocks_authoritative_pass(self):
+        """OD-04 candidate port: a missing mandatory measurement is neither
+        favorable evidence nor a fabricated violation."""
+        measurements = _all_passing_measurements()
+        measurements["LAW-110"] = {
+            "observed": None, "deviation": "N/A", "sample": 0,
+            "status": "NOT_MEASURED",
+        }
+        result = adjudicate_laws(_make_input(
+            measurements=measurements, coverage=100.0))
+        assert result.verdict == "INDETERMINATE"
+        assert "LAW-110" in result.indeterminate_causes
+
+    def test_measurement_failed_deterministic_law_blocks_authoritative_pass(self):
+        """OD-04 candidate port: tooling failure on a deterministic law
+        blocks an authoritative PASS (fail-closed, never a silent
+        favorable zero)."""
+        measurements = _all_passing_measurements()
+        measurements["LAW-130"] = {
+            "observed": None, "deviation": "N/A", "sample": 0,
+            "status": "MEASUREMENT_FAILED",
+        }
+        result = adjudicate_laws(_make_input(
+            measurements=measurements, coverage=100.0))
+        assert result.verdict == "INDETERMINATE"
+        assert "LAW-130" in result.indeterminate_causes
+
 
 class TestAdjudicateScoring:
 
