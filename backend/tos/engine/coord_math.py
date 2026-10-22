@@ -29,8 +29,7 @@ def distance(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.linalg.norm(a - b))
 
 
-def angle_deg(a: np.ndarray, b: np.ndarray, c: np.ndarray,
-              *, include_degenerate: bool = True) -> float:
+def angle_deg(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> float:
     """
     Angle at vertex B formed by vectors BA and BC, in degrees.
 
@@ -69,8 +68,7 @@ def angle_deg_valid(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> tuple[float,
 
 
 def dihedral_deg(a: np.ndarray, b: np.ndarray,
-                 c: np.ndarray, d: np.ndarray,
-                 *, include_degenerate: bool = True) -> float:
+                 c: np.ndarray, d: np.ndarray) -> float:
     """
     Dihedral (torsion) angle defined by four points, in degrees.
 

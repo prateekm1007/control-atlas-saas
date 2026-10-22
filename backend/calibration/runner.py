@@ -511,6 +511,7 @@ def acquire_coordinates(pdb_id: str, source_dir: Path | None,
         "bytes": None,
         "fetched_at_utc": None,
         "detail": None,
+        "requested_entity_id": _afdb_entity_id(pdb_id) if pdb_id.startswith("AF-") else None,
     }
     if not _validate_expectation(record, digest_expectation):
         return record, None

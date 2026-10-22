@@ -468,8 +468,5 @@ def test_afdb_pin_requires_all_exact_fields(tmp_path, monkeypatch):
         )
         assert content is None
         assert record["authoritative"] is False
-        if bad_field == "sha256":
-            assert "invalid prior digest" in record["detail"]
-        else:
-            assert "incomplete AlphaFold pin" in record["detail"]
-            assert bad_field in record["detail"]
+        assert "incomplete AlphaFold pin" in record["detail"]
+        assert bad_field in record["detail"]

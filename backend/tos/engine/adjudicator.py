@@ -139,20 +139,11 @@ def _normalize_sample(raw_sample) -> tuple[int, Optional[str]]:
     """Strict sample-count normalization without boolean/fractional coercion."""
     if isinstance(raw_sample, bool):
         return 0, "sample size is a boolean, not an integer count"
-    if isinstance(raw_sample, int):
-        sample = raw_sample
-    elif isinstance(raw_sample, float) and raw_sample.is_integer():
-        sample = int(raw_sample)
-    else:
-        try:
-            sample = int(raw_sample)
-        except (TypeError, ValueError):
-            return 0, f"sample size {raw_sample!r} is not an integer count"
-        if raw_sample is not None and sample != raw_sample:
-            return 0, f"sample size {raw_sample!r} is not an integer count"
-    if sample < 0:
+    if not isinstance(raw_sample, int):
+        return 0, f"sample size {raw_sample!r} is not an integer count"
+    if raw_sample < 0:
         return 0, "sample size is negative"
-    return sample, None
+    return raw_sample, None
 
 
 def _normalize_observation(raw_observed) -> tuple[object, Optional[str]]:
@@ -220,10 +211,10 @@ def _normalize_measurement(
                 return (
                     "MEASUREMENT_FAILED",
                     None,
-                    0,
+                    sample,
                     f"{lid} cannot prove NOT_APPLICABLE for this structure",
                 )
-        return status, None, 0, None
+        return status, None, sample, None
 
     if status in MISSING_STATUSES and observed is not None:
         return (
