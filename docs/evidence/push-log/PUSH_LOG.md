@@ -641,3 +641,31 @@
   designed truthful state.
 - ID selection: P-082..P-085 verified unused across the published log (the
   highest previously used identifier is P-081-INTENT).
+
+## 2026-10-22T18:25:00Z | P-085-CONFIRM | push-confirm | branch=review/od-scope-v25-2026-10-22 remote_sha=37698cd448cc351a25a7340d34599dac6b4a4f45 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas refs/heads/review/od-scope-v25-2026-10-22 -> 37698cd448cc351a25a7340d34599dac6b4a4f45 (at push time 2026-10-22T18:19:3xZ; workflow runs on this exact head: governance run 39830332863 (failure), stability run 39830332865 (success))"
+
+- Two-phase completion for the push declared by P-085-INTENT (head_at_intent
+  was DEFERRED; the remote tip 37698cd448cc351a25a7340d34599dac6b4a4f45
+  is recorded here after the push returned, never backdated). This entry
+  confirms THAT push; it does not confirm any later tip.
+- The governance-acceptance run on this exact head concluded failure: the 22
+  pre-existing dead-ref findings (identical set on the base-commit run
+  39677508627 of 2026-10-21, before any round-26 change existed) plus the
+  package-manifest digest mismatch this push carries (the PUSH_LOG.md
+  digest refresh landed in the follow-up commit; disclosed, not claimed as
+  gate success). The stability-gate run on this exact head concluded
+  success.
+
+## 2026-10-22T18:25:00Z | P-086-INTENT | push-intent | branch=review/od-scope-v25-2026-10-22 head_at_intent=DEFERRED expected_remote_tip_before_push=37698cd448cc351a25a7340d34599dac6b4a4f45 credential=OWNER-PAT-1 authorized_by="standing push-log protocol (PUSH_LOG.md header) + round-26 scope discipline (no governance or checker changes, no merge, no calibration) per the OD-16 hard stop"
+
+- This push carries: the P-085-CONFIRM completion row, the P-086-INTENT row,
+  the root SHA256SUMS digest refresh for docs/evidence/push-log/PUSH_LOG.md,
+  and the report update in
+  docs/audit/2026-10-22_od_port_candidate/push-log-reconciliation-2026-10-22.md.
+  No source, checker, governance, registry, or test content is modified.
+- Two-phase disclosure: head_at_intent is DEFERRED; the tip this push
+  creates is recorded by P-086-CONFIRM on the branch's next legitimate push
+  (never backdated); until then this intent's state is PENDING, the
+  designed truthful state.
+- ID selection: P-085-CONFIRM / P-086 verified unused across the published
+  log (the highest previously used identifier is P-085-INTENT).

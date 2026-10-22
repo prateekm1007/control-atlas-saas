@@ -21,7 +21,9 @@ push they describe, per the log's two-phase protocol.
 | 1 | `97d62a89f0efb2917e80a82808a930d34af7f492` (delivery tip, wrong refspec) | 2026-10-21T21:16:46Z (RECONSTRUCTED, bound by run creation) | ref created -> 97d62a8 | P-082 |
 | 2 | `63da0e347002ed9b77071ff1ed0cefda7c0ce88a` (audited base) | 2026-10-21T21:17:01Z (RECONSTRUCTED, bound by run creation) | 97d62a8 -> 63da0e3 (force; only this ref touched) | P-083 |
 | 3 | `e2cd17d0f9c5231c489c42b8dd90d74055d1f648` (round-26 audit package) | 2026-10-22T12:34:27Z (bound by run creation) | 63da0e3 -> e2cd17d | P-084 (push-reconcile, live-verified at write time) |
-| 4 | (the tip this push creates) | 2026-10-22 | e2cd17d -> (this push's tip) | P-085-INTENT (two-phase; P-085-CONFIRM lands with the next legitimate push of the branch) |
+| 4 | `9c4bb1637474c199d1238cec10b35a6ca88d1efb` (reconciliation rows + run record) | 2026-10-22T18:16:37Z (bound by run creation) | e2cd17d -> 9c4bb16 | P-085-INTENT (two-phase, deferred) |
+| 5 | `37698cd448cc351a25a7340d34599dac6b4a4f45` (SHA256SUMS digest refresh) | 2026-10-22T18:19:37Z (bound by run creation) | 9c4bb16 -> 37698cd | P-085-CONFIRM (records the two-phase pair opened by P-085-INTENT; the refresh push is the legitimate push that carries the confirm) |
+| 6 | (the tip this push creates) | 2026-10-22 | 37698cd -> (this push's tip) | P-086-INTENT (two-phase; P-086-CONFIRM lands with the next legitimate push of the branch) |
 
 ## 3. Verification runs cited by the appended rows
 
@@ -32,10 +34,14 @@ push they describe, per the log's two-phase protocol.
 | 39677508732 | Toscanini Stability Gate | 63da0e3 | push | success |
 | 39779457004 | Governance Acceptance | e2cd17d | push | failure (22 pre-existing dead-ref entries + 1 new undeclared-tip finding) |
 | 39779457093 | Toscanini Stability Gate | e2cd17d | push | success |
+| 39829905845 | Governance Acceptance | 9c4bb16 | push | failure (22 pre-existing dead-ref entries + 1 package-manifest digest mismatch) |
+| 39829905992 | Toscanini Stability Gate | 9c4bb16 | push | success |
+| 39830332863 | Governance Acceptance | 37698cd | push | failure (22 pre-existing dead-ref entries + terminal-intent binding failure carried over from the undeclared 9c4bb16 push) |
+| 39830332865 | Toscanini Stability Gate | 37698cd | push | success |
 
 The runs for THIS push's tip are recorded after it completes; their IDs are
-available in the workflow history of the tip that P-085-INTENT declares
-(this record was written before those runs concluded).
+available in the workflow history of the tip that P-086-INTENT declares
+(this record was updated before those runs concluded).
 
 ## 4. Pre-existing EC-18/EC-24 dead-ref findings (NOT introduced by round-26)
 
