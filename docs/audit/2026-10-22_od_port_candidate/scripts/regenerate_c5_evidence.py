@@ -67,6 +67,11 @@ import urllib.error
 import urllib.request
 
 OLD_REV = "c78ef15f696a2b1e2658e7ac7b54461f70c6e040"
+# The candidate branch's own base. The round-25 delta is exactly
+# base..new, so base-vs-new is the attributed comparison. OLD_REV stays
+# as a cross-lineage documentary check (the od-scope lineage already
+# carries the P0/WP-SCI-1 items, which are NOT part of the ported scope).
+BASE_REV = "63da0e347002ed9b77071ff1ed0cefda7c0ce88a"
 DEFAULT_V24_REF = "97d62a89f0efb2917e80a82808a930d34af7f492"
 V24_COORD_MANIFEST_PIN = (
     "9722c3e45d316ff58ed326df074eec138b81ceb520191a492088cc0ddef63762")
@@ -403,6 +408,9 @@ def verdict_bucket(verdicts):
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--old-rev", default=OLD_REV)
+    ap.add_argument("--base-rev", default=BASE_REV,
+                    help="candidate branch base; primary comparison "
+                         "base-vs-new isolates the reviewed round-25 delta")
     ap.add_argument("--new-rev", default=None, help="default: current HEAD")
     ap.add_argument("--v24-ref", default=DEFAULT_V24_REF)
     ap.add_argument("--work-root", required=True,
@@ -425,6 +433,7 @@ def main() -> int:
         ["git", "rev-parse", "--show-toplevel"], check=True,
         capture_output=True, text=True).stdout.strip()
     old_rev = args.old_rev
+    base_rev = args.base_rev
     new_rev = args.new_rev or git(git_root, "rev-parse", "HEAD").decode().strip()
     new_rev12 = new_rev[:12]
 
@@ -436,8 +445,10 @@ def main() -> int:
     dl_dir = os.path.join(work_root, "downloads")
     os.makedirs(dl_dir, exist_ok=True)
     old_backend = os.path.join(work_root, "-old", "backend")
+    base_backend = os.path.join(work_root, "-base", "backend")
     new_backend = os.path.join(work_root, "-new", "backend")
     materialize(git_root, old_rev, os.path.join(work_root, "-old"))
+    materialize(git_root, base_rev, os.path.join(work_root, "-base"))
     materialize(git_root, new_rev, os.path.join(work_root, "-new"))
 
     # ---- v24 manifests (byte-pins verified against the immutable ref) -----
@@ -472,18 +483,29 @@ def main() -> int:
                            expected_sha=meta["sha256"],
                            expected_bytes=meta["bytes"])
         old_out = evaluate(old_backend, rec["path"], rec["sha256"])
+        base_out = evaluate(base_backend, rec["path"], rec["sha256"])
         new_out = evaluate(new_backend, rec["path"], rec["sha256"])
         print("PROBE old:", json.dumps(
             {k: old_out[k] for k in ("atoms", "coverage", "verdict",
                                      "det_passed", "det_total",
                                      "contained_law_failures",
                                      "indeterminate_causes")}, sort_keys=True))
+        print("PROBE base:", json.dumps(
+            {k: base_out[k] for k in ("atoms", "coverage", "verdict",
+                                      "det_passed", "det_total",
+                                      "contained_law_failures",
+                                      "indeterminate_causes")}, sort_keys=True))
         print("PROBE new:", json.dumps(
             {k: new_out[k] for k in ("atoms", "coverage", "verdict",
                                      "det_passed", "det_total",
                                      "contained_law_failures",
                                      "indeterminate_causes")}, sort_keys=True))
-        print("PROBE old laws:", json.dumps(old_out["laws"], sort_keys=True))
+        print("PROBE base LAw rows vs new:", json.dumps(
+            {k: [base_out["laws"].get(k, {}).get("status"),
+                 new_out["laws"].get(k, {}).get("status")]
+             for k in sorted(set(base_out["laws"]) | set(new_out["laws"]))
+             if base_out["laws"].get(k, {}).get("status")
+             != new_out["laws"].get(k, {}).get("status")}, sort_keys=True))
         return 0
 
     state_path = os.path.join(work_root, "state.json")
@@ -541,97 +563,138 @@ def main() -> int:
             acquisition["v24_acquired_verified"] += 1
             pinned_paths[target] = rec
 
+    def acquire_supp(target: str, accession: str) -> None:
+        """Metadata-first AFDB v6 acquisition (delivered-record semantics);
+        attempts are idempotent and update the acquisition counters."""
+        try:
+            metadata = json.loads(http_get(
+                AFDB_API.format(accession=accession)))
+            # AFDB serves some accessions under migrated numeric
+            # entity ids; prefer the canonical AF-{acc}-F* id, fall
+            # back to whatever served entity the metadata lists
+            # (mirrors the delivered acquisition records).
+            candidates = [e for e in metadata
+                          if e.get("entryId", "").startswith(
+                              f"AF-{accession}-F")]
+            chosen = None
+            for entry in candidates:
+                if chosen is None or int(
+                        entry.get("latestVersion", 0) or 0) > int(
+                            chosen.get("latestVersion", 0) or 0):
+                    chosen = entry
+            if chosen is None:
+                chosen = metadata[0]
+            url = chosen.get("cifUrl") or chosen.get("pdbUrl")
+            rec = fetch_cached(url, dl_dir)
+            if rec["path"] is None:
+                raise RuntimeError(rec.get("detail", "fetch failed"))
+            entry_id = chosen["entryId"]
+            migrated = entry_id if (
+                not entry_id.startswith(f"AF-{accession}-")
+            ) else None
+            af_records[target] = {
+                "fmt": "cif" if url.endswith(".cif") else "pdb",
+                "latest_version": int(
+                    chosen.get("latestVersion") or 1),
+                "migrated_identifier": migrated,
+                "model_entity_id": entry_id,
+                "requested_entity_id": entry_id,
+                "sha256": rec["sha256"],
+                "source_url": url}
+            converted = cif_to_pdb_bytes(open(rec["path"], "rb").read())
+            convert_sha = sha256_bytes(converted)
+            converted_path = os.path.join(dl_dir,
+                                          target + ".converted.pdb")
+            with open(converted_path, "wb") as fh:
+                fh.write(converted)
+            supp_paths[target] = {"path": converted_path,
+                                  "sha256": convert_sha,
+                                  "bytes": len(converted)}
+            acquisition["afdb_v6_acquired"] += 1
+            if target in acquisition["afdb_v6_missing"]:
+                acquisition["afdb_v6_missing"].remove(target)
+        except Exception as exc:
+            if target not in acquisition["afdb_v6_missing"]:
+                acquisition["afdb_v6_missing"].append(target)
+            af_records[target] = {"model_entity_id": target,
+                                  "unavailable": str(exc)[:160]}
+        with open(os.path.join(c5_out, f"{target}.json"), "w",
+                  encoding="utf-8", newline="\n") as fh:
+            json.dump(af_records[target], fh, indent=1, sort_keys=True)
+            fh.write("\n")
+
+    resume_state = os.path.exists(state_path) and not args.probe
+    if resume_state:
+        # Only re-attempt the targets the previous run failed to acquire;
+        # kept attempts are idempotent but not re-counted.
+        retry = list(acquisition["afdb_v6_missing"])
+        for target in retry:
+            acquire_supp(target, target.replace("AF-", "").replace("-F1", ""))
+    else:
         for target, meta in coord_manifest.items():
             if meta["acquisition_status"] == "acquired":
                 continue
             accession = target.replace("AF-", "").replace("-F1", "")
             acquisition["afdb_v6_attempted"] += 1
-            try:
-                metadata = json.loads(http_get(
-                    AFDB_API.format(accession=accession)))
-                chosen = None
-                for entry in metadata:
-                    if entry.get("entryId", "").startswith(
-                            f"AF-{accession}-F1"):
-                        if chosen is None or int(
-                                entry.get("modelVersion", 0)) > int(
-                                    chosen.get("modelVersion", 0)):
-                            chosen = entry
-                if chosen is None:
-                    raise RuntimeError("no F1 model in AFDB metadata")
-                url = chosen.get("cifUrl") or chosen.get("pdbUrl")
-                rec = fetch_cached(url, dl_dir)
-                if rec["path"] is None:
-                    raise RuntimeError(rec.get("detail", "fetch failed"))
-                af_records[target] = {
-                    "fmt": "cif" if url.endswith(".cif") else "pdb",
-                    "latest_version": int(chosen.get("modelVersion", 0)),
-                    "model_entity_id": chosen["entryId"],
-                    "sha256": rec["sha256"],
-                    "source_url": url}
-                converted = cif_to_pdb_bytes(open(rec["path"], "rb").read())
-                convert_sha = sha256_bytes(converted)
-                converted_path = os.path.join(dl_dir,
-                                              target + ".converted.pdb")
-                with open(converted_path, "wb") as fh:
-                    fh.write(converted)
-                supp_paths[target] = {"path": converted_path,
-                                      "sha256": convert_sha,
-                                      "bytes": len(converted)}
-                acquisition["afdb_v6_acquired"] += 1
-            except Exception as exc:
-                acquisition["afdb_v6_missing"].append(target)
-                af_records[target] = {"model_entity_id": target,
-                                      "unavailable": str(exc)[:160]}
-            with open(os.path.join(c5_out, f"{target}.json"), "w",
-                      encoding="utf-8", newline="\n") as fh:
-                json.dump(af_records[target], fh, indent=1, sort_keys=True)
-                fh.write("\n")
+            acquire_supp(target, accession)
+        # drop supplemental records the retry could not acquire so the
+        # evaluator never sees a stale file for an unavailable target
+        supp_paths = {t: r for t, r in supp_paths.items()
+                      if t not in acquisition["afdb_v6_missing"]}
+        af_records = {t: r for t, r in af_records.items()
+                      if t not in acquisition["afdb_v6_missing"]}
 
-        state = {
-            "acquisition": acquisition, "verification": verification,
-            "af_records": af_records,
-            "pinned": {t: {"url": coord_manifest[t]["source"],
-                           "sha256": r["sha256"], "bytes": r["bytes"]}
-                       for t, r in pinned_paths.items()},
-            "supp": {t: {"url": af_records[t].get("source_url"),
-                         "convert_sha256": r["sha256"],
-                         "convert_bytes": r["bytes"]}
-                     for t, r in supp_paths.items()}}
-        with open(state_path, "w", encoding="utf-8", newline="\n") as fh:
-            json.dump(state, fh, indent=1, sort_keys=True)
-            fh.write("\n")
+    state = {
+        "acquisition": acquisition, "verification": verification,
+        "af_records": af_records,
+        "pinned": {t: {"url": coord_manifest[t]["source"],
+                       "sha256": r["sha256"], "bytes": r["bytes"]}
+                   for t, r in pinned_paths.items()},
+        "supp": {t: {"url": af_records[t].get("source_url"),
+                     "convert_sha256": r["sha256"],
+                     "convert_bytes": r["bytes"]}
+                 for t, r in supp_paths.items()}}
+    with open(state_path, "w", encoding="utf-8", newline="\n") as fh:
+        json.dump(state, fh, indent=1, sort_keys=True)
+        fh.write("\n")
 
     gov_cache = args.work_root
 
-    evals = {"old": {}, "new": {}}
-    supp_evals = {"old": {}, "new": {}}
+    evals = {"old": {}, "base": {}, "new": {}}
+    supp_evals = {"old": {}, "base": {}, "new": {}}
     if args.phase in ("pinned", "all"):
         for target, rec in sorted(pinned_paths.items()):
             evals["old"][target] = evaluate_cached(
                 "old", old_backend, rec["path"], rec["sha256"], gov_cache)
+            evals["base"][target] = evaluate_cached(
+                "base", base_backend, rec["path"], rec["sha256"], gov_cache)
             evals["new"][target] = evaluate_cached(
                 "new", new_backend, rec["path"], rec["sha256"], gov_cache)
             print(f"evaluated pinned {target}", flush=True)
     else:
         for target in sorted(pinned_paths):
-            for engine in ("old", "new"):
+            for engine, backend in (("old", old_backend),
+                                    ("base", base_backend),
+                                    ("new", new_backend)):
                 evals[engine][target] = evaluate_cached(
-                    engine, old_backend if engine == "old" else new_backend,
-                    pinned_paths[target]["path"],
+                    engine, backend, pinned_paths[target]["path"],
                     pinned_paths[target]["sha256"], gov_cache)
     if args.phase in ("support", "all"):
         for target, rec in sorted(supp_paths.items()):
             supp_evals["old"][target] = evaluate_cached(
                 "old", old_backend, rec["path"], rec["sha256"], gov_cache)
+            supp_evals["base"][target] = evaluate_cached(
+                "base", base_backend, rec["path"], rec["sha256"], gov_cache)
             supp_evals["new"][target] = evaluate_cached(
                 "new", new_backend, rec["path"], rec["sha256"], gov_cache)
             print(f"evaluated supplementary {target}", flush=True)
     else:
         for target in sorted(supp_paths):
-            for engine in ("old", "new"):
+            for engine, backend in (("old", old_backend),
+                                    ("base", base_backend),
+                                    ("new", new_backend)):
                 supp_evals[engine][target] = evaluate_cached(
-                    engine, old_backend if engine == "old" else new_backend,
+                    engine, backend,
                     supp_paths[target]["path"],
                     supp_paths[target]["sha256"], gov_cache)
 
@@ -658,16 +721,22 @@ def main() -> int:
 
     old_fl = cohort("old-c78", evals["old"],
                     f"git materialization of engine rev {old_rev[:12]}")
+    base_fl = cohort(f"base-{base_rev[:12]}", evals["base"],
+                     f"git materialization of engine rev {base_rev[:12]}")
     new_fl = cohort(f"new-candidate-{new_rev12}", evals["new"],
                     f"git materialization of engine rev {new_rev[:12]}")
     old_sf = cohort("old-c78-af-v6", supp_evals["old"],
                     f"git materialization of engine rev {old_rev[:12]}")
+    base_sf = cohort(f"base-{base_rev[:12]}-af-v6", supp_evals["base"],
+                     f"git materialization of engine rev {base_rev[:12]}")
     new_sf = cohort(f"new-candidate-{new_rev12}-af-v6",
                     supp_evals["new"],
                     f"git materialization of engine rev {new_rev[:12]}")
     for name, payload in (("v24-pinned-old-c78.json", old_fl),
+                          (f"v24-pinned-base-{base_rev[:12]}.json", base_fl),
                           (f"v24-pinned-new-{new_rev12}.json", new_fl),
                           ("af-v6-supp-old-c78.json", old_sf),
+                          (f"af-v6-supp-base-{base_rev[:12]}.json", base_sf),
                           (f"af-v6-supp-new-{new_rev12}.json", new_sf)):
         with open(os.path.join(c5_out, name), "w", encoding="utf-8",
                   newline="\n") as fh:
@@ -716,14 +785,21 @@ def main() -> int:
     lines.append("**Status:** diagnostic evidence for owner review. Not a threshold validation.")
     lines.append(f"**Regenerated by:** "
                  f"`docs/audit/2026-10-22_od_port_candidate/scripts/regenerate_c5_evidence.py`")
-    lines.append(f"**Old engine:** `{old_rev}` (`old-c78`)")
-    lines.append(f"**New engine:** `{new_rev}` (candidate review branch)")
+    lines.append(f"**Base engine (candidate branch base, pre-port):** `{base_rev}`")
+    lines.append(f"**New engine (candidate review branch tip):** `{new_rev}`")
+    lines.append(f"**Cross-lineage reference engine (od-scope lineage):** `{old_rev}`")
     lines.append(f"**Coordinate manifest pin (verified):** {V24_COORD_MANIFEST_PIN}")
     lines.append(f"**Run manifest pin (verified):** {V24_RUN_MANIFEST_PIN}")
-    lines.append("**Comparison rule:** identical bytes, identical thresholds, "
-                 "identical ingestion/adjudication path; only the ported "
-                 "OD-03/04/20 scope and status semantics differ (plus their "
-                 "dependent measurement scopes).")
+    lines.append("**Primary comparison rule:** base-vs-new. The candidate "
+                 "branch differs from its base ONLY by the reviewed "
+                 "round-25 port, so the base-vs-new delta attributes each "
+                 "verdict/law change to the reviewed OD-03/04/20 package.")
+    lines.append("**Cross-lineage comparison rule:** the od-scope-lineage "
+                 "engine (old rev) additionally carries the earlier P0/WP-SCI-1 "
+                 "measurement-definition items (file-order residue pool, "
+                 "conformer selection, coverage denominator, honest empty "
+                 "states) that were NOT part of the reviewed round-25 delta; "
+                 "that comparison documents lineage differences only.")
     lines.append("")
     lines.append("## Provenance (portable)")
     lines.append("")
@@ -738,7 +814,7 @@ def main() -> int:
     lines.append("- Supplementary AlphaFold models are fetched metadata-first "
                  "from the AlphaFold DB API; mmCIF payloads are converted to "
                  "PDB records by a deterministic converter inside the script, "
-                 "applied identically to both engines.")
+                 "applied identically to every engine.")
     lines.append("- No machine-specific path is recorded in any artifact.")
     lines.append("")
     lines.append("## Acquisition summary")
@@ -754,11 +830,106 @@ def main() -> int:
                  + (f" unavailable: {', '.join(acquisition['afdb_v6_missing'])}."
                     if acquisition['afdb_v6_missing'] else "."))
     lines.append("")
-    lines.append(f"## Verdict-change tables")
+
+    # ---- primary attribution comparison: base vs new ----------------------
+    base_rows = pair_rows(evals["base"], evals["new"], pinned_paths)
+    base_supp_rows = pair_rows(supp_evals["base"], supp_evals["new"],
+                               supp_paths)
+    vc_base = [r for r in base_rows if r[1]["verdict"] != r[2]["verdict"]]
+    vc_base_supp = [r for r in base_supp_rows
+                    if r[1]["verdict"] != r[2]["verdict"]]
+    law_row_changes_base = []
+    for (t, o, n, deltas, _c) in base_rows:
+        for d in deltas:
+            law_row_changes_base.append((t, d))
+    for (t, o, n, deltas, _c) in base_supp_rows:
+        for d in deltas:
+            law_row_changes_base.append((t, d))
+
+    lines.append("## ROUND-25 ATTRIBUTION: base vs candidate (primary)")
     lines.append("")
     lines.append(f"### v24-pinned cohort ({len(pinned_paths)}/{acquisition['v24_manifest_total']})")
     lines.append("")
-    lines.append("Old: " + verdict_bucket([r[1]["verdict"] for r in pinned_rows]) + ".")
+    lines.append("Base: " + verdict_bucket([r[1]["verdict"] for r in base_rows]) + ".")
+    lines.append("New: " + verdict_bucket([r[2]["verdict"] for r in base_rows]) + ".")
+    lines.append("")
+    lines.append(f"**Verdict changes: {len(vc_base)}/{len(pinned_paths)}.**")
+    lines.append("")
+    lines.append("| Target | Base verdict | New verdict | Changed law rows |")
+    lines.append("|---|---|---|---|")
+    for (t, o, n, deltas, cell) in base_rows:
+        if o["verdict"] != n["verdict"] or deltas:
+            lines.append(f"| {t} | {o['verdict']} | {n['verdict']} | {cell} |")
+    lines.append("")
+    lines.append(f"### Supplementary predicted cohort ({len(supp_paths)}/{acquisition['afdb_v6_attempted']})")
+    lines.append("")
+    lines.append(f"These rows are supplementary (current AlphaFold DB, not "
+                 f"v24-pinned) and must not be reported as v24-pinned evidence.")
+    lines.append("")
+    lines.append("Base: " + verdict_bucket([r[1]["verdict"] for r in base_supp_rows]) + ".")
+    lines.append("New: " + verdict_bucket([r[2]["verdict"] for r in base_supp_rows]) + ".")
+    lines.append("")
+    lines.append(f"**Verdict changes: {len(vc_base_supp)}/{len(supp_paths)}.**")
+    lines.append("")
+    if base_supp_rows:
+        lines.append("| Target | Base verdict | New verdict | Changed law rows |")
+        lines.append("|---|---|---|---|")
+        for (t, o, n, deltas, cell) in base_supp_rows:
+            if o["verdict"] != n["verdict"] or deltas:
+                lines.append(f"| {t} | {o['verdict']} | {n['verdict']} | {cell} |")
+        lines.append("")
+    total_base = len(vc_base) + len(vc_base_supp)
+    lines.append(f"**{total_base} verdict changes across "
+                 f"{len(pinned_paths) + len(supp_paths)} measured structures** "
+                 f"({len(pinned_paths)} v24-pinned + {len(supp_paths)} supplementary), "
+                 f"attributable to the reviewed round-25 port.")
+    lines.append("")
+    lines.append(f"{len(law_row_changes_base)} law rows changed status "
+                 f"(base vs candidate, both cohorts; per-row table in "
+                 f"`v24-pinned-base-*.json` / `af-v6-supp-base-*.json` against "
+                 f"the `new-*` files):")
+    lines.append("")
+    lines.append("| Target | Law | Base status | New status | Observed base -> new | Sample base -> new |")
+    lines.append("|---|---|---|---|---|---|")
+    for (t, d) in law_row_changes_base:
+        obs = f"{d['observed_old']} -> {d['observed_new']}"
+        smp = f"{d['sample_old']} -> {d['sample_new']}"
+        lines.append(f"| {t} | {d['law']} | {d['old_status']} | {d['new_status']} | {obs} | {smp} |")
+    lines.append("")
+
+    # ---- cross-lineage documentary comparison: c78 lineage vs candidate ---
+    pinned_rows = pair_rows(evals["old"], evals["new"], pinned_paths)
+    supp_rows = pair_rows(supp_evals["old"], supp_evals["new"], supp_paths)
+    verdict_changes_pinned = [r for r in pinned_rows if r[1]["verdict"] != r[2]["verdict"]]
+    verdict_changes_supp = [r for r in supp_rows if r[1]["verdict"] != r[2]["verdict"]]
+    law_change_rows = []
+    for (t, o, n, deltas, _c) in pinned_rows:
+        for d in deltas:
+            law_change_rows.append((t, d))
+    for (t, o, n, deltas, _c) in supp_rows:
+        for d in deltas:
+            law_change_rows.append((t, d))
+
+    lines.append("## CROSS-LINEAGE documentation (od-scope lineage vs candidate)")
+    lines.append("")
+    lines.append("The od-scope-lineage engine additionally carries the earlier "
+                 "P0/WP-SCI-1 measurement-definition items; the candidate is "
+                 "main + the reviewed port only. Differences below therefore "
+                 "document lineage divergence, NOT the effect of the "
+                 "reviewed round-25 package. In particular: `1PPE` differences "
+                 "are the documented P0 item-4 symptom (deprecated (chain, seq, "
+                 "icode) sort re-pairs 1PPE chain E around 183/184/184A/185 and "
+                 "fabricates backbone gaps); `5T4O` differences come from "
+                 "main-lineage LAW-150 empty-sample and LAW-195 "
+                 "not-applicable semantics, both outside the ported scope.")
+    lines.append("")
+    lines.append("Base cross-check: the od-scope-lineage engine regenerates the "
+                 "delivered `old-c78` artifacts (e.g. 1AKE atoms 3312, det "
+                 "9/10; LAW-182 observed values identical to the frozen record).")
+    lines.append("")
+    lines.append(f"### v24-pinned cohort ({len(pinned_paths)}/{acquisition['v24_manifest_total']})")
+    lines.append("")
+    lines.append("Old (c78): " + verdict_bucket([r[1]["verdict"] for r in pinned_rows]) + ".")
     lines.append("New: " + verdict_bucket([r[2]["verdict"] for r in pinned_rows]) + ".")
     lines.append("")
     lines.append(f"**Verdict changes: {len(verdict_changes_pinned)}/{len(pinned_paths)}.**")
@@ -766,14 +937,12 @@ def main() -> int:
     lines.append("| Target | Old verdict | New verdict | Changed law rows |")
     lines.append("|---|---|---|---|")
     for (t, o, n, deltas, cell) in pinned_rows:
-        lines.append(f"| {t} | {o['verdict']} | {n['verdict']} | {cell} |")
+        if o["verdict"] != n["verdict"] or deltas:
+            lines.append(f"| {t} | {o['verdict']} | {n['verdict']} | {cell} |")
     lines.append("")
     lines.append(f"### Supplementary predicted cohort ({len(supp_paths)}/{acquisition['afdb_v6_attempted']})")
     lines.append("")
-    lines.append(f"These rows are supplementary (current AlphaFold DB, not "
-                 f"v24-pinned) and must not be reported as v24-pinned evidence.")
-    lines.append("")
-    lines.append("Old: " + verdict_bucket([r[1]["verdict"] for r in supp_rows]) + ".")
+    lines.append("Old (c78): " + verdict_bucket([r[1]["verdict"] for r in supp_rows]) + ".")
     lines.append("New: " + verdict_bucket([r[2]["verdict"] for r in supp_rows]) + ".")
     lines.append("")
     lines.append(f"**Verdict changes: {len(verdict_changes_supp)}/{len(supp_paths)}.**")
@@ -787,18 +956,13 @@ def main() -> int:
                 f"{o['coverage']:.2f} | {n['coverage']:.2f} | "
                 f"{(o.get('atom_coverage_return') if isinstance(o.get('atom_coverage_return'), (int, float)) else 'n/a')} | "
                 f"{(n.get('atom_coverage_return') if isinstance(n.get('atom_coverage_return'), (int, float)) else 'n/a')} |")
-    lines.append("")
+        lines.append("")
     total_changes = len(verdict_changes_pinned) + len(verdict_changes_supp)
-    lines.append(f"### Combined measured set")
-    lines.append("")
-    lines.append(f"**{total_changes} verdict changes across "
+    lines.append(f"**{total_changes} cross-lineage verdict changes across "
                  f"{len(pinned_paths) + len(supp_paths)} measured structures** "
                  f"({len(pinned_paths)} v24-pinned + {len(supp_paths)} supplementary).")
     lines.append("")
-    lines.append("## Law-status changes (verdict-neutral)")
-    lines.append("")
-    lines.append(f"{len(law_change_rows)} law rows changed status across both "
-                 f"cohorts:")
+    lines.append(f"{len(law_change_rows)} cross-lineage law rows changed status:")
     lines.append("")
     lines.append("| Target | Law | Old status | New status | Observed old -> new | Sample old -> new |")
     lines.append("|---|---|---|---|---|---|")
@@ -807,15 +971,12 @@ def main() -> int:
         smp = f"{d['sample_old']} -> {d['sample_new']}"
         lines.append(f"| {t} | {d['law']} | {d['old_status']} | {d['new_status']} | {obs} | {smp} |")
     lines.append("")
-    if supp_rows:
-        lines.append("## Predicted-cohort measurement scopes (supplementary)")
+    if base_supp_rows:
+        lines.append("## Predicted-cohort measurement scopes (supplementary, attributed comparison)")
         lines.append("")
-        cols_sup = []
-        for (t, o, n, deltas, _c) in supp_rows:
-            cols_sup.append((t, o, n))
-        lines.append("| Target | Coverage old -> new | LAW-110 sample old -> new | LAW-130 sample old -> new | LAW-155 observed/sample old -> new | LAW-200 observed/sample old -> new |")
+        lines.append("| Target | Coverage base -> new | LAW-110 sample base -> new | LAW-130 sample base -> new | LAW-155 observed/sample base -> new | LAW-200 observed/sample base -> new |")
         lines.append("|---|---|---|---|---|---|")
-        for (t, o, n) in cols_sup:
+        for (t, o, n, deltas, _c) in base_supp_rows:
             def cell(law_id, field):
                 oo = o["laws"].get(law_id, {}).get(field)
                 nn = n["laws"].get(law_id, {}).get(field)
@@ -825,7 +986,7 @@ def main() -> int:
                 f"{cell('LAW-110','sample_size')} | {cell('LAW-130','sample_size')} | "
                 f"{cell('LAW-155','observed')} / {cell('LAW-155','sample_size')} | "
                 f"{cell('LAW-200','observed')} / {cell('LAW-200','sample_size')} |")
-    lines.append("")
+        lines.append("")
     lines.append("## Interpretation constraints (unchanged from the frozen record)")
     lines.append("")
     lines.append("- Diagnostic-only; no validation of v24 calibration, "
@@ -850,9 +1011,12 @@ def main() -> int:
         fh.write(narrative)
 
     print("WROTE:", out_root)
-    print("verdict changes pinned:",
+    print("ATTRIBUTION verdict changes (base vs new): pinned",
+          len(vc_base), "supp:", len(vc_base_supp))
+    print("cross-lineage verdict changes (c78 vs new): pinned",
           len(verdict_changes_pinned), "supp:", len(verdict_changes_supp))
-    print("law status changes:", len(law_change_rows))
+    print("law status changes: attributed",
+          len(law_row_changes_base), "cross-lineage", len(law_change_rows))
     return 0
 
 
