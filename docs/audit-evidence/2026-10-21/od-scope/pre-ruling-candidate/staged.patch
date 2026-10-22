@@ -1,0 +1,3825 @@
+diff --git a/backend/tests/test_law_registry.py b/backend/tests/test_law_registry.py
+index 91c7d34..14a24ce 100644
+--- a/backend/tests/test_law_registry.py
++++ b/backend/tests/test_law_registry.py
+@@ -24,7 +24,7 @@ SHA256_FILE = REPO / "governance" / "law_registry.sha256"
+ MEASUREMENTS = REPO / "backend" / "tos" / "engine" / "tier1_measurements.py"
+ 
+ # Recorded content hash of governance/law_registry.yaml (WP-8 requirement).
+-REGISTRY_SHA256 = "d53a2a506f4ddff8e7210489afc55bea60e137e2f516c3192b1e3fa5ade1d7ae"
++REGISTRY_SHA256 = "c09439cd2f0f4103a1c794839846f40fa45e46337481684380152ff4feaff098"
+ 
+ yaml = pytest.importorskip("yaml", reason="PyYAML comes from requirements-dev.txt")
+ 
+diff --git a/backend/tests/test_od_scope.py b/backend/tests/test_od_scope.py
+new file mode 100644
+index 0000000..a366a03
+--- /dev/null
++++ b/backend/tests/test_od_scope.py
+@@ -0,0 +1,165 @@
++"""OD-03/04/20 scope and coverage regression tests.
++
++These tests pin the reviewed scope only: LAW-130, LAW-155 and LAW-200 use
++the pLDDT >= 70 atom core for predicted structures. LAW-110 deliberately
++remains all-residue because the canonical register does not authorize a
++pLDDT scope for it. Experimental structures retain all atoms.
++"""
++import sys
++import os
++
++import numpy as np
++
++sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
++
++from tos.engine.adjudicator import AdjudicationInput, adjudicate_laws
++from tos.engine.tier1_measurements import Tier1Measurements
++from tos.ingestion.processor import Atom, ConfidenceProfile, Structure
++from tos.governance.station_sop import LAW_CANON
++
++
++def _atom(name, pos, seq, b_iso, chain="A", res_name="ALA"):
++    return Atom(
++        atom_name=name, element=name[0], pos=np.array(pos, dtype=float),
++        res_name=res_name, res_seq=seq, chain_id=chain,
++        insertion_code="", b_iso=b_iso,
++    )
++
++
++def _core_atoms(seq, count, b_iso):
++    base = [seq * 3, 0, 0]
++    atoms = [
++        _atom("N", base, seq, b_iso),
++        _atom("CA", [base[0] + 1, 0, 0], seq, b_iso),
++        _atom("C", [base[0] + 2, 0, 0], seq, b_iso),
++        _atom("CB", [base[0] + 0.5, 1, 0], seq, b_iso),
++    ]
++    if seq == 10:
++        atoms[2] = _atom("C", [100, 0, 0], seq, b_iso)
++    return atoms
++
++
++def _low_atoms(seq, count, b_iso):
++    base = [seq * 3, 0, 0]
++    names = ["N", "CA", "C", "O", "CB", "CG", "CD", "CE", "CZ",
++             "OH", "NH1", "NH2"]
++    return [
++        _atom(names[i], [base[0] + i * 0.5, 2, 0], seq, b_iso)
++        for i in range(count)
++    ]
++
++
++def _structure(core_count, low_count, low_atoms_per_residue=4,
++               experimental=False):
++    atoms = []
++    for seq in range(1, core_count + 1):
++        atoms.extend(_core_atoms(seq, 4, 90.0))
++    for seq in range(core_count + 1, core_count + low_count + 1):
++        atoms.extend(_low_atoms(seq, low_atoms_per_residue, 20.0))
++    method = "xray" if experimental else "predicted"
++    return Structure(
++        atoms=atoms, audit_id="TEST",
++        confidence=ConfidenceProfile([], experimental, method),
++    )
++
++
++def _all_passing():
++    return {
++        lid: {
++            "observed": LAW_CANON[lid]["threshold"] * 0.5,
++            "deviation": "0.0", "sample": 100, "status": "PASS",
++        }
++        for lid in LAW_CANON
++    }
++
++
++def test_core_scope_is_40_of_64_atoms_for_predicted():
++    struct = _structure(10, 6)
++    results, coverage, _ = Tier1Measurements.run_full_audit(struct)
++
++    assert coverage == 62.5
++    assert results["LAW-105"]["residue_coverage"] == 62.5
++    assert results["LAW-105"]["atom_coverage"] == 62.5
++    assert results["LAW-105"]["sample_core_atoms"] == 40
++    assert results["LAW-105"]["sample_atoms"] == 64
++    for lid in ("LAW-130", "LAW-155", "LAW-200"):
++        assert results[lid]["sample"] == 40
++
++
++def test_experimental_scope_retains_all_atoms():
++    struct = _structure(10, 6, experimental=True)
++    results, coverage, _ = Tier1Measurements.run_full_audit(struct)
++
++    assert coverage == 100.0
++    assert results["LAW-105"]["atom_coverage"] == 100.0
++    assert results["LAW-105"]["sample_core_atoms"] == 64
++    for lid in ("LAW-130", "LAW-155", "LAW-200"):
++        assert results[lid]["sample"] == 64
++
++
++def test_law_110_remains_all_residue_scoped():
++    struct = _structure(10, 6)
++    results, _, _ = Tier1Measurements.run_full_audit(struct)
++
++    assert results["LAW-110"]["sample"] == 15
++    assert results["LAW-110"]["observed"] == 1
++
++
++def test_atom_coverage_gate_can_fail_while_residue_coverage_passes():
++    struct = _structure(12, 4, low_atoms_per_residue=12)
++    results, coverage, _ = Tier1Measurements.run_full_audit(struct)
++
++    assert results["LAW-105"]["residue_coverage"] == 75.0
++    assert results["LAW-105"]["status"] == "PASS"
++    assert coverage == 50.0
++    assert results["LAW-105"]["atom_coverage"] == 50.0
++
++    adjudication = adjudicate_laws(AdjudicationInput(
++        raw_measurements=results, coverage=coverage,
++        is_experimental=False, method_type="predicted",
++        architecture="NONE",
++    ))
++    assert adjudication.verdict == "INDETERMINATE"
++
++
++def test_empty_core_is_not_measured_not_pass():
++    struct = _structure(0, 4)
++    results, coverage, _ = Tier1Measurements.run_full_audit(struct)
++
++    assert coverage == 0.0
++    for lid in ("LAW-130", "LAW-155", "LAW-200"):
++        assert results[lid]["status"] == "NOT_MEASURED"
++        assert results[lid]["observed"] is None
++        assert results[lid]["sample"] == 0
++
++
++def test_heuristic_veto_cannot_veto_verdict():
++    measurements = _all_passing()
++    measurements["LAW-155"] = {
++        "observed": 0.1, "deviation": "999", "sample": 10, "status": "VETO",
++    }
++    adjudication = adjudicate_laws(AdjudicationInput(
++        raw_measurements=measurements, coverage=100.0,
++        is_experimental=False, method_type="predicted",
++        architecture="NONE",
++    ))
++    row = next(r for r in adjudication.law_rows if r["law_id"] == "LAW-155")
++    assert row["status"] == "FAIL (Advisory)"
++    assert row["method"] == "heuristic"
++    assert adjudication.verdict == "PASS"
++
++
++def test_law_130_is_still_deterministic():
++    measurements = _all_passing()
++    measurements["LAW-130"] = {
++        "observed": 99.0, "deviation": "999", "sample": 10, "status": "VETO",
++    }
++    adjudication = adjudicate_laws(AdjudicationInput(
++        raw_measurements=measurements, coverage=100.0,
++        is_experimental=False, method_type="predicted",
++        architecture="NONE",
++    ))
++    row = next(r for r in adjudication.law_rows if r["law_id"] == "LAW-130")
++    assert row["status"] == "VETO"
++    assert row["method"] == "deterministic"
++    assert adjudication.verdict == "VETO"
+diff --git a/backend/tos/engine/adjudicator.py b/backend/tos/engine/adjudicator.py
+index ba8fe59..fca2412 100644
+--- a/backend/tos/engine/adjudicator.py
++++ b/backend/tos/engine/adjudicator.py
+@@ -146,7 +146,7 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
+ 
+         # PIL-CAL-03: Advisory laws cannot VETO — normalize status
+         raw_status = m.get("status", "FAIL")
+-        if method == "advisory_experimental" and raw_status == "VETO":
++        if method in ("advisory_experimental", "heuristic") and raw_status == "VETO":
+             raw_status = "FAIL (Advisory)"
+ 
+         row = {
+diff --git a/backend/tos/engine/tier1_measurements.py b/backend/tos/engine/tier1_measurements.py
+index df46b09..190fda2 100644
+--- a/backend/tos/engine/tier1_measurements.py
++++ b/backend/tos/engine/tier1_measurements.py
+@@ -69,9 +69,10 @@ class Tier1Measurements:
+                 res_map[k] = {
+                     "_name": a.res_name, "_chain": a.chain_id,
+                     "_seq": a.res_seq, "_icode": a.insertion_code,
+-                    "_conf_acc": [], "_atoms": {}
++                    "_conf_acc": [], "_atoms": {}, "_atom_records": []
+                 }
+             res_map[k]["_atoms"][a.atom_name] = a.pos
++            res_map[k]["_atom_records"].append(a)
+             res_map[k]["_conf_acc"].append(a.b_iso)
+         for r in res_map.values():
+             r["_conf"] = float(np.mean(r["_conf_acc"]))
+@@ -86,7 +87,16 @@ class Tier1Measurements:
+         method = getattr(structure.confidence, "method", "predicted")
+         is_experimental = (method != "predicted")
+         core = residues if is_experimental else [r for r in residues if r["_conf"] >= 70]
+-        coverage = 100.0 if is_experimental else (len(core) / len(residues) * 100)
++        residue_coverage = (
++            100.0 if is_experimental else (len(core) / len(residues) * 100)
++        )
++        core_atoms = [a for r in core for a in r["_atom_records"]]
++        total_atoms = sum(len(r["_atom_records"]) for r in residues)
++        atom_coverage = (
++            100.0 if is_experimental
++            else (len(core_atoms) / total_atoms * 100 if total_atoms else 0.0)
++        )
++        core_coords = np.array([a.pos for a in core_atoms])
+ 
+         results = {}
+ 
+@@ -120,9 +130,15 @@ class Tier1Measurements:
+         # LAW-105: Reliability Coverage
+         # ═══════════════════════════════════════════════════════════
+         results["LAW-105"] = {
+-            "observed": round(coverage, 2),
+-            "status": "PASS" if coverage >= 70.0 else "FAIL",
+-            "sample": len(residues)
++            "observed": round(residue_coverage, 2),
++            "status": "PASS" if residue_coverage >= 70.0 else "FAIL",
++            "sample": len(residues),
++            "residue_coverage": round(residue_coverage, 2),
++            "atom_coverage": round(atom_coverage, 2),
++            "coverage_basis": "residues",
++            "gate_basis": "atoms",
++            "sample_atoms": total_atoms,
++            "sample_core_atoms": len(core_atoms)
+         }
+ 
+         # ═══════════════════════════════════════════════════════════
+@@ -233,14 +249,13 @@ class Tier1Measurements:
+         # ═══════════════════════════════════════════════════════════
+         clash = 0
+         clash_pairs = []  # Phase A.5: inline residue-pair capture
+-        all_coords = np.array([a.pos for a in structure.atoms])
+-        if len(all_coords) > 1:
++        if len(core_coords) > 1:
+             try:
+                 from scipy.spatial import cKDTree
+-                tree = cKDTree(all_coords)
++                tree = cKDTree(core_coords)
+                 pairs = tree.query_pairs(r=1.5)
+                 for ii, jj in pairs:
+-                    ai, aj = structure.atoms[ii], structure.atoms[jj]
++                    ai, aj = core_atoms[ii], core_atoms[jj]
+                     if ai.res_seq == aj.res_seq and ai.chain_id == aj.chain_id:
+                         continue
+                     if ai.chain_id == aj.chain_id and abs(ai.res_seq - aj.res_seq) <= 1:
+@@ -255,14 +270,22 @@ class Tier1Measurements:
+                 pass
+         # Deduplicate and sort pairs
+         unique_pairs = sorted(set(clash_pairs), key=lambda p: (p[0].split(":")[0], int(p[0].split(":")[1]), p[1].split(":")[0], int(p[1].split(":")[1])))
+-        clash_score = (clash / len(all_coords)) * 1000 if len(all_coords) > 0 else 0.0
+-        results["LAW-130"] = {
+-            "observed": round(clash_score, 2),
+-            "status": "PASS" if clash_score < LAW_CANON["LAW-130"]["threshold"] else "VETO",
+-            "sample": len(all_coords),
+-            "granularity": GRANULARITY_RESIDUE_PAIR,
+-            "failing_residue_pairs": unique_pairs
+-        }
++        if len(core_coords) == 0:
++            results["LAW-130"] = {
++                "observed": None, "status": "NOT_MEASURED", "sample": 0,
++                "granularity": GRANULARITY_RESIDUE_PAIR,
++                "failing_residue_pairs": [],
++                "reason": "no atomic coordinates in the pLDDT core"
++            }
++        else:
++            clash_score = (clash / len(core_coords)) * 1000
++            results["LAW-130"] = {
++                "observed": round(clash_score, 2),
++                "status": "PASS" if clash_score < LAW_CANON["LAW-130"]["threshold"] else "VETO",
++                "sample": len(core_coords),
++                "granularity": GRANULARITY_RESIDUE_PAIR,
++                "failing_residue_pairs": unique_pairs
++            }
+ 
+         # ═══════════════════════════════════════════════════════════
+         # LAW-170: Residue Identity
+@@ -525,25 +548,27 @@ class Tier1Measurements:
+         # Threshold: 2.0 from station_sop.py (operator >=)
+         # ═══════════════════════════════════════════════════════════
+         voxel_size = 2.0
+-        n_residues = len(residues)
+-        if len(all_coords) > 0 and n_residues > 0:
+-            bbox_min = np.min(all_coords, axis=0)
+-            # Quantize each atom position into a voxel index
++        n_residues = len(core)
++        if len(core_coords) > 0 and n_residues > 0:
++            bbox_min = np.min(core_coords, axis=0)
++            # Quantize each core atom position into a voxel index
+             voxel_indices = set()
+-            for pos in all_coords:
++            for pos in core_coords:
+                 ix = int(np.floor((pos[0] - bbox_min[0]) / voxel_size))
+                 iy = int(np.floor((pos[1] - bbox_min[1]) / voxel_size))
+                 iz = int(np.floor((pos[2] - bbox_min[2]) / voxel_size))
+                 voxel_indices.add((ix, iy, iz))
+             voxels_per_residue = len(voxel_indices) / n_residues
++            results["LAW-155"] = {
++                "observed": round(voxels_per_residue, 2),
++                "status": "PASS" if voxels_per_residue >= LAW_CANON["LAW-155"]["threshold"] else "VETO",
++                "sample": len(core_coords)
++            }
+         else:
+-            voxels_per_residue = 0.0
+-
+-        results["LAW-155"] = {
+-            "observed": round(voxels_per_residue, 2),
+-            "status": "PASS" if voxels_per_residue >= LAW_CANON["LAW-155"]["threshold"] else "VETO",
+-            "sample": len(all_coords)
+-        }
++            results["LAW-155"] = {
++                "observed": None, "status": "NOT_MEASURED", "sample": 0,
++                "reason": "no atomic coordinates in the pLDDT core"
++            }
+         # ═══════════════════════════════════════════════════════════
+         # LAW-200: Packing Quality (Module 1.2.6 — heuristic)
+         # Computes bounding box volume / number of atoms.
+@@ -551,24 +576,26 @@ class Tier1Measurements:
+         # Exploded/sparse structures: >> 300 Å³/atom.
+         # Threshold: 300.0 Å³/atom from station_sop.py
+         # ═══════════════════════════════════════════════════════════
+-        if len(all_coords) > 0:
+-            bbox_min = np.min(all_coords, axis=0)
+-            bbox_max = np.max(all_coords, axis=0)
++        if len(core_coords) > 0:
++            bbox_min = np.min(core_coords, axis=0)
++            bbox_max = np.max(core_coords, axis=0)
+             bbox_dims = bbox_max - bbox_min
+-            # Clamp dimensions to minimum 1.0Å to avoid zero volume for planar/linear structures
++            # Clamp dimensions to minimum 1.0A. to avoid zero volume for planar/linear structures
+             bbox_dims = np.maximum(bbox_dims, 1.0)
+             bbox_volume = float(bbox_dims[0] * bbox_dims[1] * bbox_dims[2])
+-            vol_per_atom = bbox_volume / len(all_coords)
++            vol_per_atom = bbox_volume / len(core_coords)
++            results["LAW-200"] = {
++                "observed": round(vol_per_atom, 2),
++                "status": "PASS" if vol_per_atom <= LAW_CANON["LAW-200"]["threshold"] else "VETO",
++                "sample": len(core_coords)
++            }
+         else:
+-            vol_per_atom = 0.0
+-
+-        results["LAW-200"] = {
+-            "observed": round(vol_per_atom, 2),
+-            "status": "PASS" if vol_per_atom <= LAW_CANON["LAW-200"]["threshold"] else "VETO",
+-            "sample": len(all_coords)
+-        }
++            results["LAW-200"] = {
++                "observed": None, "status": "NOT_MEASURED", "sample": 0,
++                "reason": "no atomic coordinates in the pLDDT core"
++            }
+ 
+-        return results, coverage, False
++        return results, atom_coverage, False
+ 
+     @staticmethod
+     def compute_structural_characterization(structure):
+diff --git a/backend/tos/forensic_artifacts/confidence_viz.py b/backend/tos/forensic_artifacts/confidence_viz.py
+index 8b4d8d7..17fe359 100644
+--- a/backend/tos/forensic_artifacts/confidence_viz.py
++++ b/backend/tos/forensic_artifacts/confidence_viz.py
+@@ -1,6 +1,11 @@
+ """
+-Confidence Visualization Module v3
+-Institutional-grade pLDDT distribution bar for PDF embedding.
++Coverage Visualization Module v4
++Atom-coverage bar for PDF embedding.
++
++This function deliberately does NOT draw a pLDDT histogram: the only value
++available here is the aggregate atom-coverage percentage. Synthetic bin
++proportions would be indistinguishable from measured data. Per-residue
++pLDDT is rendered separately from measured B-factors by residue_heatmap.py.
+ """
+ import io
+ import matplotlib
+@@ -11,77 +16,52 @@ import matplotlib.patches as mpatches
+ 
+ def generate_confidence_bar(coverage_pct: float, det_passed: int, det_total: int) -> bytes:
+     """
+-    Full-width pLDDT bin histogram with percentages inside segments.
+-    Returns PNG bytes for PDF embedding.
++    Full-width atom-coverage bar with the single 70% gate.
++
++    Returns PNG bytes for PDF embedding. The bar segments are measured
++    quantities only: atoms in the pLDDT >= 70 core and atoms below it.
+     """
+     fig, ax = plt.subplots(figsize=(10, 1.6))
+     fig.patch.set_facecolor('white')
+ 
+-    bins = [
+-        ("Very High (>=90)",  "#0050A0", 90, 100),
+-        ("High (70-90)",      "#4DA6FF", 70,  90),
+-        ("Medium (50-70)",    "#FFB84D", 50,  70),
+-        ("Low (<50)",         "#CC2200",  0,  50),
+-    ]
++    covered = min(max(float(coverage_pct), 0.0), 100.0)
++    below = 100.0 - covered
+ 
+-    if coverage_pct >= 90:
+-        fracs = [coverage_pct * 0.85, coverage_pct * 0.15,
+-                 (100 - coverage_pct) * 0.6, (100 - coverage_pct) * 0.4]
+-    elif coverage_pct >= 70:
+-        fracs = [coverage_pct * 0.55, coverage_pct * 0.45,
+-                 (100 - coverage_pct) * 0.5, (100 - coverage_pct) * 0.5]
+-    elif coverage_pct >= 50:
+-        fracs = [coverage_pct * 0.1, coverage_pct * 0.3,
+-                 coverage_pct * 0.6, 100 - coverage_pct]
+-    else:
+-        fracs = [0.0, coverage_pct * 0.15,
+-                 coverage_pct * 0.85, 100 - coverage_pct]
++    colors = ['#2E7D32', '#D32F2F'] if covered >= 70.0 else ['#D32F2F', '#9E9E9E']
++    ax.barh(0, covered, height=0.55, color=colors[0],
++            edgecolor='white', linewidth=1.5)
++    ax.barh(0, below, left=covered, height=0.55, color=colors[1],
++            edgecolor='white', linewidth=1.5)
+ 
+-    total = sum(fracs)
+-    if total > 0:
+-        fracs = [f / total * 100 for f in fracs]
+-    else:
+-        fracs = [0, 0, 0, 100]
+-
+-    left = 0.0
+-    for (label, color, lo, hi), frac in zip(bins, fracs):
+-        if frac < 0.3:
+-            left += frac
+-            continue
+-        ax.barh(0, frac, left=left, height=0.55,
+-                color=color, edgecolor='white', linewidth=1.5)
+-        if frac >= 3:
+-            ax.text(left + frac / 2, 0,
+-                    "%.0f%%" % frac,
+-                    ha='center', va='center',
+-                    fontsize=10, fontweight='bold', color='white',
+-                    clip_on=True)
+-        left += frac
++    for start, width in ((0.0, covered), (covered, below)):
++        if width >= 3:
++            ax.text(start + width / 2, 0, "%.0f%%" % width,
++                    ha='center', va='center', fontsize=10,
++                    fontweight='bold', color='white', clip_on=True)
+ 
+     ax.axvline(x=70, color='#D32F2F', linestyle='--',
+                linewidth=2.0, zorder=5)
+-    ax.text(70, 0.38, '70% Threshold',
++    ax.text(70, 0.38, '70% Gate',
+             fontsize=8, color='#D32F2F', va='center',
+             ha='center', fontweight='bold',
+             bbox=dict(boxstyle='round,pad=0.2', facecolor='white',
+                       edgecolor='#D32F2F', alpha=0.9))
+ 
+-    cov_color = '#2E7D32' if coverage_pct >= 70 else '#D32F2F'
+-    cov_label = 'SUFFICIENT' if coverage_pct >= 70 else (
+-        'MARGINAL' if coverage_pct >= 50 else 'INSUFFICIENT')
+-    ax.text(101, 0, '%.1f%%\n%s' % (coverage_pct, cov_label),
++    cov_color = '#2E7D32' if covered >= 70 else '#D32F2F'
++    cov_label = 'SUFFICIENT' if covered >= 70 else 'INSUFFICIENT'
++    ax.text(101, 0, '%.1f%%\n%s' % (covered, cov_label),
+             ha='left', va='center', fontsize=9,
+             fontweight='bold', color=cov_color,
+             linespacing=1.4)
+ 
+     legend_patches = [
+-        mpatches.Patch(color=c, label=lbl)
+-        for lbl, c, _, _ in bins
++        mpatches.Patch(color=colors[0], label='pLDDT >= 70 core atoms'),
++        mpatches.Patch(color=colors[1], label='atoms below 70'),
+     ]
+     ax.legend(handles=legend_patches,
+               loc='upper center',
+               bbox_to_anchor=(0.42, -0.25),
+-              ncol=4, fontsize=8, frameon=False,
++              ncol=2, fontsize=8, frameon=False,
+               handlelength=1.5, handletextpad=0.5,
+               columnspacing=1.5)
+ 
+@@ -89,7 +69,7 @@ def generate_confidence_bar(coverage_pct: float, det_passed: int, det_total: int
+     ax.set_ylim(-0.5, 0.65)
+     ax.axis('off')
+ 
+-    plt.title('pLDDT Confidence Distribution',
++    plt.title('Measured Atom Coverage in pLDDT >= 70 Core',
+               fontsize=11, fontweight='bold', loc='left', pad=8)
+     plt.tight_layout(pad=0.4)
+ 
+diff --git a/backend/tos/forensic_artifacts/pdf_generator.py b/backend/tos/forensic_artifacts/pdf_generator.py
+index d42d6ce..c5c3aae 100755
+--- a/backend/tos/forensic_artifacts/pdf_generator.py
++++ b/backend/tos/forensic_artifacts/pdf_generator.py
+@@ -54,7 +54,7 @@ class ToscaniniDossier(FPDF):
+         self.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+         self.set_font("Helvetica", "B", 11)
+         self.cell(badge_width, 10,
+-                  f"Deterministic Score: {score}/100   |   Coverage: {coverage}%",
++                  f"Deterministic Score: {score}/100   |   Atom Coverage: {coverage}%",
+                   border=0, ln=True, align="C", fill=True)
+         self.ln(6)
+ 
+@@ -109,14 +109,14 @@ def _extract_ca_atoms(pdb_b64):
+                         bfactor = float(line[60:66])
+                         confidences.append(bfactor)
+                     except (ValueError, IndexError):
+-                        confidences.append(50.0)
++                        confidences.append(0.0)
+     except Exception:
+         pass
+     return coords, confidences
+ 
+ 
+ 
+-def _find_low_regions(confidences, threshold=50.0, min_length=3):
++def _find_low_regions(confidences, threshold=70.0, min_length=3):
+     """Find contiguous stretches of residues below threshold. Returns 1-indexed tuples."""
+     regions, in_r, start = [], False, 0
+     for i, s in enumerate(confidences):
+@@ -184,8 +184,6 @@ def generate_v21_dossier(payload):
+ 
+         if cov_val >= 70:
+             cov_sub, cov_col = "SUFFICIENT", PDF_COLORS["PASS"]
+-        elif cov_val >= 50:
+-            cov_sub, cov_col = "MARGINAL", PDF_COLORS["ALERT"]
+         else:
+             cov_sub, cov_col = "INSUFFICIENT", PDF_COLORS["INDETERMINATE"]
+ 
+@@ -205,7 +203,7 @@ def generate_v21_dossier(payload):
+ 
+         cards = [
+             ("DETERMINISTIC COMPLIANCE", "%d / %d" % (det_pass, det_total_v), comp_sub, comp_col),
+-            ("RELIABILITY COVERAGE",     "%.1f%%" % cov_val,                  cov_sub,  cov_col),
++            ("ATOM COVERAGE",            "%.1f%%" % cov_val,                  cov_sub,  cov_col),
+             ("PRIORITIZATION INDEX",     "%s%%" % str(pri_val),               pri_sub,  pri_col),
+         ]
+ 
+@@ -252,7 +250,7 @@ def generate_v21_dossier(payload):
+         pdf.set_y(card_y + card_total_h + 7)
+         pdf.set_x(PDF_LAYOUT["MARGIN_LEFT"])
+ 
+-        # FULL-WIDTH pLDDT CONFIDENCE BAR
++        # FULL-WIDTH MEASURED ATOM-COVERAGE BAR
+         try:
+             bar_png = generate_confidence_bar(
+                 coverage, v.get('det_passed', 0), v.get('det_total', 12)
+@@ -267,7 +265,7 @@ def generate_v21_dossier(payload):
+             pdf.ln(5)
+         except Exception:
+             pdf.set_font("Helvetica", "I", 8)
+-            pdf.cell(190, 6, "[Confidence distribution unavailable]",
++            pdf.cell(190, 6, "[Atom-coverage bar unavailable]",
+                      ln=True, align="C")
+             pdf.ln(2)
+ 
+@@ -282,9 +280,9 @@ def generate_v21_dossier(payload):
+ 
+         # ═══ REGULATOR FIX #1: Coverage failure high-contrast warning ═══
+         if coverage < LAW_105_THRESHOLD:
+-            pdf.red_banner(f"ADJUDICATION SUSPENDED -- Evidence Scope Below Threshold (LAW-105: {coverage}%)")
++            pdf.red_banner(f"ADJUDICATION SUSPENDED -- Atom Coverage Below Threshold (OD-04: {coverage}%)")
+             pdf.set_font("Helvetica", "I", 8)
+-            pdf.multi_cell(w, 4, "The engine cannot certify structural compliance when reliability "
++            pdf.multi_cell(w, 4, "The engine cannot certify structural compliance when atom "
+                            "coverage falls below the 70% epistemic threshold. This is not a declaration "
+                            "of failure -- it reflects insufficient high-confidence coordinate data to "
+                            "support deterministic governance.")
+@@ -302,11 +300,11 @@ def generate_v21_dossier(payload):
+         pdf.set_font("Helvetica", "", 8)
+ 
+         pdf.set_font("Helvetica", "B", 8); pdf.write(5, "PASS: "); pdf.set_font("Helvetica", "", 8)
+-        pdf.write(5, f"Physically compliant. All deterministic invariants satisfied. Coverage >= {LAW_105_THRESHOLD}%.\n")
++        pdf.write(5, f"Physically compliant. All deterministic invariants satisfied. Atom coverage >= {LAW_105_THRESHOLD}%.\n")
+         pdf.set_font("Helvetica", "B", 8); pdf.write(5, "VETO: "); pdf.set_font("Helvetica", "", 8)
+         pdf.write(5, "Physically incompatible. Non-negotiable invariant violation detected.\n")
+         pdf.set_font("Helvetica", "B", 8); pdf.write(5, "INDETERMINATE: "); pdf.set_font("Helvetica", "", 8)
+-        pdf.write(5, "Epistemic insufficiency. Coverage < 70% or low-confidence data. Not a failure declaration.\n")
++        pdf.write(5, "Epistemic insufficiency. Atom coverage < 70% or low-confidence data. Not a failure declaration.\n")
+ 
+         # ═══ REGULATOR FIX #2: Modality jurisdiction statement ═══
+         pdf.ln(4)
+@@ -330,7 +328,7 @@ def generate_v21_dossier(payload):
+         pdf.set_font("Helvetica", "B", 8)
+         pdf.set_text_color(*PDF_COLORS["ALERT"])
+         # CANONICAL ADJUDICATION HIERARCHY - DO NOT DUPLICATE ANYWHERE
+-        pdf.multi_cell(w, 4, f"Adjudication Hierarchy: Coverage gate (LAW-105 >= {LAW_105_THRESHOLD}%) precedes deterministic incompatibility checks. If coverage is insufficient, verdict is INDETERMINATE regardless of individual law compliance. This reflects epistemic insufficiency, not structural failure.")
++        pdf.multi_cell(w, 4, f"Adjudication Hierarchy: Atom coverage gate (OD-04 >= {LAW_105_THRESHOLD}%) precedes deterministic incompatibility checks. If atom coverage is insufficient, verdict is INDETERMINATE regardless of individual law compliance. This reflects epistemic insufficiency, not structural failure.")
+         pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+         pdf.ln(2)
+         pdf.set_font("Helvetica", "B", 8)
+@@ -472,7 +470,7 @@ def generate_v21_dossier(payload):
+                 pdf.set_text_color(*PDF_COLORS["TEXT_MUTED"])
+                 _atom_msg = "Atoms plotted: %d CA | Colored by pLDDT/B-factor" % len(ca_coords)
+                 pdf.cell(w, 5, _atom_msg, ln=True, align="C")
+-                pdf.cell(w, 5, "Blue (>=90) | Light Blue (70-90) | Orange (50-70) | Red (<50)", ln=True, align="C")
++                pdf.cell(w, 5, "Blue (>=90) | Light Blue (70-90) | Red (<70)", ln=True, align="C")
+                 pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+             except Exception:
+                 pdf.set_font("Helvetica", "I", 9)
+@@ -510,13 +508,12 @@ def generate_v21_dossier(payload):
+                 pdf.set_font("Helvetica", "", 7)
+                 pdf.set_text_color(*PDF_COLORS["TEXT_MUTED"])
+                 n_total = len(ca_confidences)
+-                n_low = sum(1 for s in ca_confidences if s < 50)
+-                n_med = sum(1 for s in ca_confidences if 50 <= s < 70)
++                n_low = sum(1 for s in ca_confidences if s < 70)
+                 n_high = sum(1 for s in ca_confidences if 70 <= s < 90)
+                 n_vhigh = sum(1 for s in ca_confidences if s >= 90)
+-                pdf.cell(w, 4, "Very High %d (%.0f%%) | High %d (%.0f%%) | Medium %d (%.0f%%) | Low %d (%.0f%%)" % (
++                pdf.cell(w, 4, "Very High %d (%.0f%%) | High %d (%.0f%%) | Low %d (%.0f%%)" % (
+                     n_vhigh, n_vhigh/n_total*100, n_high, n_high/n_total*100,
+-                    n_med, n_med/n_total*100, n_low, n_low/n_total*100), ln=True, align="C")
++                    n_low, n_low/n_total*100), ln=True, align="C")
+                 if n_low > 0:
+                     low_regions = _find_low_regions(ca_confidences)
+                     if low_regions:
+@@ -553,7 +550,7 @@ def generate_v21_dossier(payload):
+             if coverage < LAW_105_THRESHOLD:
+                 pdf.set_font("Helvetica", "I", 9)
+                 pdf.set_text_color(*PDF_COLORS["VETO"])
+-                pdf.multi_cell(w, 6, f"Secondary structure not computable: reliability coverage below {LAW_105_THRESHOLD}% "
++                pdf.multi_cell(w, 6, f"Secondary structure not computable: atom coverage below {LAW_105_THRESHOLD}% "
+                                f"(observed: {coverage}%). Insufficient high-confidence coordinates for "
+                                "phi/psi-based assignment.")
+                 pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+@@ -586,7 +583,7 @@ def generate_v21_dossier(payload):
+             pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+             if coverage < LAW_105_THRESHOLD:
+                 pdf.multi_cell(w, 5,
+-                    "This structure has insufficient reliability coverage (%.1f%%) and is not yet "
++                    "This structure has insufficient atom coverage (%.1f%%) and is not yet "
+                     "suitable for drug discovery without refinement. The following physics-first "
+                     "methods are recommended to improve structural quality." % coverage)
+             else:
+@@ -821,7 +818,7 @@ def generate_v21_dossier(payload):
+             pdf.multi_cell(w, 5,
+                 "Run Rosetta Fast Relax on flagged regions, then re-upload the refined PDB "
+                 "to Toscanini for re-validation. After recommended refinement, this model is "
+-                "expected to reach sufficient reliability coverage and become suitable for "
++                "expected to reach sufficient atom coverage and become suitable for "
+                 "virtual screening and lead optimization.")
+             pdf.ln(3)
+ 
+@@ -863,7 +860,7 @@ def generate_v21_dossier(payload):
+         if s6_val == 0.0 or s6_val == 0:
+             pdf.set_font("Helvetica", "I", 7)
+             pdf.set_text_color(*PDF_COLORS["VETO"])
+-            pdf.multi_cell(w, 4, f"Note: S6 = 0.0 because coverage gate (LAW-105) failed. When reliability coverage < {LAW_105_THRESHOLD}%, the prioritization index is zeroed regardless of individual law compliance. This is by design: epistemic insufficiency prevents meaningful prioritization scoring.")
++            pdf.multi_cell(w, 4, f"Note: S6 = 0.0 because the atom coverage gate (OD-04) failed. When atom coverage < {LAW_105_THRESHOLD}%, the prioritization index is zeroed regardless of individual law compliance. This is by design: epistemic insufficiency prevents meaningful prioritization scoring.")
+             pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+             pdf.set_font("Helvetica", "", 8)
+         pdf.ln(3)
+diff --git a/backend/tos/forensic_artifacts/residue_heatmap.py b/backend/tos/forensic_artifacts/residue_heatmap.py
+index 430efdf..798a18a 100644
+--- a/backend/tos/forensic_artifacts/residue_heatmap.py
++++ b/backend/tos/forensic_artifacts/residue_heatmap.py
+@@ -11,14 +11,12 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
+ from matplotlib.patches import Patch
+ 
+ BAND_COLORS = {
+-    "Very High": "#0066CC", "High": "#4DA6FF",
+-    "Medium": "#FFB84D", "Low": "#CC0000",
++    "Very High": "#0066CC", "High": "#4DA6FF", "Low": "#CC0000",
+ }
+ CMAP = ListedColormap([
+-    BAND_COLORS["Low"], BAND_COLORS["Medium"],
+-    BAND_COLORS["High"], BAND_COLORS["Very High"],
++    BAND_COLORS["Low"], BAND_COLORS["High"], BAND_COLORS["Very High"],
+ ])
+-NORM = BoundaryNorm([0, 50, 70, 90, 100], CMAP.N)
++NORM = BoundaryNorm([0, 70, 90, 100], CMAP.N)
+ 
+ 
+ def generate_residue_heatmap_png(plddt_scores, title="Per-Residue Confidence (pLDDT)",
+@@ -54,7 +52,7 @@ def generate_residue_heatmap_png(plddt_scores, title="Per-Residue Confidence (pL
+     # Trace
+     ax_t.fill_between(res_ids, scores, alpha=0.06, color="#1A1A1A")
+     ax_t.plot(res_ids, scores, linewidth=0.6, color="#1A1A1A", alpha=0.85)
+-    for th in [50, 70, 90]:
++    for th in [70, 90]:
+         ax_t.axhline(y=th, linewidth=0.4, linestyle="--", color="#E0E0E0", zorder=0)
+         ax_t.text(n + 0.8, th, str(th), fontsize=5, color="#999", va="center")
+     ax_t.set_xlim(0.5, n + 0.5)
+@@ -71,7 +69,7 @@ def generate_residue_heatmap_png(plddt_scores, title="Per-Residue Confidence (pL
+ 
+     legend = [Patch(facecolor=BAND_COLORS[k], label=k) for k in BAND_COLORS]
+     ax_t.legend(handles=legend, loc="upper right", fontsize=5.5,
+-                frameon=True, framealpha=0.9, edgecolor="#E0E0E0", ncol=4)
++                frameon=True, framealpha=0.9, edgecolor="#E0E0E0", ncol=3)
+     fig.subplots_adjust(left=0.06, right=0.95, top=0.88, bottom=0.22, hspace=0.05)
+ 
+     buf = io.BytesIO()
+diff --git a/backend/tos/forensic_artifacts/structure_viz.py b/backend/tos/forensic_artifacts/structure_viz.py
+index 3aeef0b..02fdec8 100644
+--- a/backend/tos/forensic_artifacts/structure_viz.py
++++ b/backend/tos/forensic_artifacts/structure_viz.py
+@@ -36,8 +36,6 @@ def generate_structure_render(coords: list, confidences: list, title: str = "Str
+             colors.append('#0066CC')  # Dark blue - very high confidence
+         elif conf >= 70:
+             colors.append('#4DA6FF')  # Light blue - high confidence
+-        elif conf >= 50:
+-            colors.append('#FFB84D')  # Orange - medium confidence
+         else:
+             colors.append('#CC0000')  # Red - low confidence
+     
+@@ -58,8 +56,7 @@ def generate_structure_render(coords: list, confidences: list, title: str = "Str
+     legend_elements = [
+         Patch(facecolor='#0066CC', label='Very High (≥90)'),
+         Patch(facecolor='#4DA6FF', label='High (70-90)'),
+-        Patch(facecolor='#FFB84D', label='Medium (50-70)'),
+-        Patch(facecolor='#CC0000', label='Low (<50)')
++        Patch(facecolor='#CC0000', label='Low (<70)')
+     ]
+     ax.legend(handles=legend_elements, loc='upper right', fontsize=8)
+     
+diff --git a/backend/tos/glossary/tier1/law_155.py b/backend/tos/glossary/tier1/law_155.py
+index 18552bd..c69e325 100755
+--- a/backend/tos/glossary/tier1/law_155.py
++++ b/backend/tos/glossary/tier1/law_155.py
+@@ -1 +1 @@
+-EXPLANATION = {"title": "Voxel Occupancy", "principle": "Structures show an average of at least 2.0 occupied grid voxels per residue.", "rationale": "The pinned code computes a heuristic voxel-occupancy score over an atomic grid. It is an occupancy-density heuristic, NOT a deterministic atoms-cannot-overlap rule (WP-8 owner decision: pinned code is the authority). Heuristic failures do not by themselves trigger VETO."}
++EXPLANATION = {"title": "Voxel Occupancy", "principle": "Structures show an average of at least 2.0 occupied grid voxels per residue.", "rationale": "The pinned code computes a heuristic voxel-occupancy score over the pLDDT >= 70 core atomic grid. It is an occupancy-density heuristic, NOT a deterministic atoms-cannot-overlap rule (WP-8 owner decision: pinned code is the authority). Heuristic failures do not by themselves trigger VETO."}
+diff --git a/backend/tos/glossary/tier1/law_155_steric.py b/backend/tos/glossary/tier1/law_155_steric.py
+index 095c2f9..b10662f 100755
+--- a/backend/tos/glossary/tier1/law_155_steric.py
++++ b/backend/tos/glossary/tier1/law_155_steric.py
+@@ -1 +1 @@
+-EXPLANATION = {"title": "Voxel Occupancy", "principle": "Structures show an average of at least 2.0 occupied grid voxels per residue.", "rationale": "WP-8: rewritten from the incorrect deterministic no-overlap (Pauli exclusion) description. The pinned LAW-155 measures a heuristic voxel-occupancy score (threshold 2.0 V on the atomic grid); it does not measure interatomic overlap (that is LAW-130 Clashscore)."}
++EXPLANATION = {"title": "Voxel Occupancy", "principle": "Structures show an average of at least 2.0 occupied grid voxels per residue.", "rationale": "WP-8: rewritten from the incorrect deterministic no-overlap (Pauli exclusion) description. The pinned LAW-155 measures a heuristic voxel-occupancy score (threshold 2.0 V on the pLDDT >= 70 core atomic grid); it does not measure interatomic overlap (that is LAW-130 Clashscore)."}
+diff --git a/backend/tos/glossary/tier1/law_200.py b/backend/tos/glossary/tier1/law_200.py
+index 77b3532..3e16d45 100755
+--- a/backend/tos/glossary/tier1/law_200.py
++++ b/backend/tos/glossary/tier1/law_200.py
+@@ -1 +1 @@
+-EXPLANATION = {"title": "Packing Quality", "principle": "Bounding-box volume per atom stays at or below 300 cubic Angstroms per atom.", "rationale": "The pinned code computes a heuristic packing-density score: structure bounding-box volume divided by atom count. It is NOT a binding-cavity volume rule (WP-8: previous text described pocket-collapse physics the code does not measure)."}
++EXPLANATION = {"title": "Packing Quality", "principle": "Bounding-box volume per atom stays at or below 300 cubic Angstroms per atom.", "rationale": "The pinned code computes a heuristic packing-density score: pLDDT >= 70 core bounding-box volume divided by core atom count. It is NOT a binding-cavity volume rule (WP-8: previous text described pocket-collapse physics the code does not measure)."}
+diff --git a/backend/tos/glossary/tier1/law_200_cavity.py b/backend/tos/glossary/tier1/law_200_cavity.py
+index ddfc790..f439d45 100755
+--- a/backend/tos/glossary/tier1/law_200_cavity.py
++++ b/backend/tos/glossary/tier1/law_200_cavity.py
+@@ -1 +1 @@
+-EXPLANATION = {"title": "Packing Quality", "principle": "Bounding-box volume per atom stays at or below 300 cubic Angstroms per atom.", "rationale": "WP-8: rewritten from the incorrect cavity-collapse description. The pinned LAW-200 is a heuristic bounding-box-volume-per-atom score (threshold 300 A^3/atom); it does not measure binding-pocket volume."}
++EXPLANATION = {"title": "Packing Quality", "principle": "Bounding-box volume per atom stays at or below 300 cubic Angstroms per atom.", "rationale": "WP-8: rewritten from the incorrect cavity-collapse description. The pinned LAW-200 is a heuristic pLDDT >= 70 core bounding-box-volume-per-core-atom score (threshold 300 A^3/atom); it does not measure binding-pocket volume."}
+diff --git a/backend/tos/governance/station_sop.py b/backend/tos/governance/station_sop.py
+index b5371b0..d62eec9 100644
+--- a/backend/tos/governance/station_sop.py
++++ b/backend/tos/governance/station_sop.py
+@@ -52,7 +52,7 @@ LAW_CANON = {
+     "LAW-110": {"title": "Backbone Gap", "threshold": 2.0, "unit": "Å", "operator": "<=", "scope": "sequential pairs", "type": "Scalar"},
+     "LAW-120": {"title": "Bond Angle", "threshold": 18.0, "unit": "°", "operator": "<=", "scope": "core residues", "type": "RMSD"},
+     "LAW-125": {"title": "Ramachandran", "threshold": 5.0, "unit": "%", "operator": "<=", "scope": "core residues", "type": "Percentage"},
+-    "LAW-130": {"title": "Clashscore", "threshold": 20.0, "unit": "clashes/1000 atoms", "operator": "<=", "scope": "total atoms", "type": "Rate"},
++    "LAW-130": {"title": "Clashscore", "threshold": 20.0, "unit": "clashes/1000 atoms", "operator": "<=", "scope": "core atoms", "type": "Rate"},
+     "LAW-135": {"title": "Omega Planarity", "threshold": 3.0, "unit": "%", "operator": "<=", "scope": "core residues", "type": "Percentage"},
+     "LAW-145": {"title": "Chirality", "threshold": 0.0, "unit": "count", "operator": "=", "scope": "core residues", "type": "Count"},
+     "LAW-150": {"title": "Rotamer Audit", "threshold": 20.0, "unit": "%", "operator": "<=", "scope": "core residues", "type": "Percentage"},
+@@ -60,8 +60,8 @@ LAW_CANON = {
+     "LAW-170": {"title": "Residue Identity", "threshold": 0.0, "unit": "count", "operator": "=", "scope": "total residues", "type": "Count"},
+     "LAW-182": {"title": "Hydrophobic Burial", "threshold": 0.3, "unit": "ratio", "operator": ">=", "scope": "hydrophobic core", "type": "Rate"},
+     "LAW-195": {"title": "Disulfide Geometry", "threshold": 0.20, "unit": "Å", "operator": "<=", "scope": "cys pairs", "type": "Scalar"},
+-    "LAW-155": {"title": "Voxel Occupancy", "threshold": 2.0, "unit": "V", "operator": ">=", "scope": "atomic grid", "type": "Scalar"},
+-    "LAW-200": {"title": "Packing Quality", "threshold": 300.0, "unit": "Å³/atom", "operator": "<=", "scope": "bounding box", "type": "Rate"}
++    "LAW-155": {"title": "Voxel Occupancy", "threshold": 2.0, "unit": "V", "operator": ">=", "scope": "core atomic grid", "type": "Scalar"},
++    "LAW-200": {"title": "Packing Quality", "threshold": 300.0, "unit": "Å³/atom", "operator": "<=", "scope": "core bounding box", "type": "Rate"}
+ }
+ 
+ LAW_METHOD_CLASSIFICATIONS = {lid: "deterministic" if lid not in ["LAW-155", "LAW-182", "LAW-200"] else "heuristic" for lid in LAW_CANON}
+diff --git a/control-atlas-saas/.github/workflows/deploy.yml b/control-atlas-saas/.github/workflows/deploy.yml
+deleted file mode 100755
+index 838627b..0000000
+--- a/control-atlas-saas/.github/workflows/deploy.yml
++++ /dev/null
+@@ -1,37 +0,0 @@
+-name: Deploy Toscanini to EC2
+-
+-on:
+-  push:
+-    branches:
+-      - main
+-
+-jobs:
+-  deploy:
+-    runs-on: ubuntu-latest
+-
+-    steps:
+-      - name: Checkout repository
+-        uses: actions/checkout@v4
+-
+-      - name: Deploy to EC2
+-        uses: appleboy/ssh-action@v1.0.3
+-        with:
+-          host: ${{ secrets.EC2_HOST }}
+-          username: ${{ secrets.EC2_USER }}
+-          key: ${{ secrets.EC2_SSH_KEY }}
+-          script: |
+-            set -e
+-            cd ~/deployments/toscanini-demo/control-atlas-saas
+-            
+-            echo "🧼 Enforcing clean Git state"
+-            git fetch origin
+-            git clean -fd
+-            git reset --hard origin/main
+-
+-            echo "🔨 Rebuilding v9.5 Ledger (No Cache)"
+-            docker compose down
+-            docker compose build --no-cache
+-            docker compose up -d
+-            
+-            echo "🧹 Cleaning up unused layers"
+-            docker image prune -f
+diff --git a/control-atlas-saas/.gitignore b/control-atlas-saas/.gitignore
+deleted file mode 100755
+index 80df7c4..0000000
+--- a/control-atlas-saas/.gitignore
++++ /dev/null
+@@ -1,5 +0,0 @@
+-.env
+-__pycache__/
+-*.pyc
+-nkg/*.jsonl
+-.DS_Store
+diff --git a/control-atlas-saas/=3.11 b/control-atlas-saas/=3.11
+deleted file mode 100755
+index e69de29..0000000
+diff --git a/control-atlas-saas/SAAS_HANDOFF.md b/control-atlas-saas/SAAS_HANDOFF.md
+deleted file mode 100755
+index e3beb95..0000000
+--- a/control-atlas-saas/SAAS_HANDOFF.md
++++ /dev/null
+@@ -1,70 +0,0 @@
+-# 🛡️ TOSCANINI (FALSIFY.BIO) SOVEREIGN HANDOFF: v21.0.4
+-
+-## 1. System Identity & Mission
+-*   **Project Name:** Toscanini (Product: Falsify.bio).
+-*   **Mission:** Forensic Falsification-as-a-Service (FaaS). We provide an industrial **Refusal Engine** that vetoes "Biological Hallucinations" produced by AI generators.
+-*   **Core Axiom:** "The filter is more valuable than the generator." We do not predict success; we provide deterministic physical and chemical vetoes to prevent wasted synthesis spend.
+-*   **Target Grade:** **Schrödinger-Class Credibility**. Every artifact is procurement-ready and auditable.
+-
+-## 2. The 21-Pillar Sovereign Manifest
+-The system is built upon 21 non-negotiable pillars. Every update must satisfy this manifest:
+-1.  **Dual-Engine Visualizer:** PASS (Cartoon) / VETO (Stick-Autopsy). Format-aware (PDB/CIF).
+-2.  **Diagnostic Ledger:** Verbatim Law ID, Title, Principle, and Measurement.
+-3.  **Chemical Canon:** 10 Tier-1 Invariants + Context-Aware Bond Registry.
+-4.  **Discovery Console:** Unified "Find Targets" search resolving to AFDB v6/ESM.
+-5.  **Industrial Acquisition:** v6-aware fetch with masked headers & CIF fallback.
+-6.  **ESM Atlas Integration:** Hosted Meta API for zero-latency folding.
+-7.  **Epistemic Duality Tooltips:** (i) help buttons explaining Physical vs. ML Confidence.
+-8.  **Voxelized Physics:** $O(N)$ Spatial-grid clash detection (LAW-155-L).
+-9.  **Backbone Continuity:** LAW-160 gap detection with failure anchors.
+-10. **Forensic Inspection Engine:** 🔍 Inspect button with Red Wireframe Sphere zoom.
+-11. **PhD Narrative Engine:** 1,000-token deep-dives via Apex Hierarchy.
+-12. **Nature-Grade PDF:** 4-to-7 page Fixed Dossier (Executive, Engineering, Diagrams, Annex).
+-13. **Immutable Ingestion:** Frozen `StructureObject` coordinate contract.
+-14. **Notary Seal:** SHA-256 coordinate hashing + REMARK 900 headers.
+-15. **Zero-Button Automation:** Ingest on-click and drop-to-audit.
+-16. **NKG Intelligence Sidebar:** Real-time stats from `piu_moat.jsonl`.
+-17. **Visual Symmetry:** Centered dual-view topological projections in PDF.
+-18. **Architecture Design Lab:** (Tier-2) 7 categories (Linear, Multivalent, Metal, etc.).
+-19. **Unified Artifact Parity:** PDF mirrors UI interpretations and scores perfectly.
+-20. **Program Lifecycle:** Non-skippable state machine (S0–S7).
+-21. **Cross-Tier Causal Probability:** Refinement-Tax Bayesian math.
+-
+-## 3. Directory Architecture (Flattened Package Standard)
+-Located at: `~/control-atlas/control-atlas-saas`
+-*   `backend/main.py`: FastAPI entry point (The Brain).
+-*   `backend/tos/`: Sovereign logic namespace.
+-    *   `tos/governance/program_schema.py`: State machine & Hash-chaining logic.
+-    *   `tos/engine/tier1_measurements.py`: Voxelized physics.
+-    *   `tos/engine/tier3_predict.py`: Bayesian probability engine.
+-    *   `tos/forensic_artifacts/pdf_generator.py`: FPDF2 Dossier engine.
+-    *   `tos/enrichment/`: narrative provider removed (H-1, ported Round 17).
+-    *   `tos/saas_engine/selector.py`: Geometric architecture derivation.
+-*   `dashboard/dashboard.py`: Streamlit-based "Pipeline Console" UI.
+-*   `nkg/piu_moat.jsonl`: Persistent failure moat.
+-
+-## 4. The Intelligence Layer (Deterministic Offline)
+-H-1 (accepted ruling, ported Round 17): the external narrative provider,
+-its model cascade and its credential were removed from the tree.
+-Certificates render a deterministic inline summary; the deterministic
+-verdict is authoritative.
+-
+-## 5. Current State: v21.0.4 "Institutional Memory Lock"
+-*   **Persistence:** `ProgramRepository` allows continuing work via `program_id`.
+-*   **Causality:** Every architecture decision is hash-chained to the previous state.
+-*   **Derivation:** Physics now **derives** the architecture category from the voxel span.
+-*   **Compliance:** PDF auto-page-breaking is fixed; legal scope guardrails are present.
+-
+-## 6. Strategic Probability Math (The Lock)
+-$P = (P_{base} + P_{phys} + P_{ml} - Tax) \times Weight_{Derivation}$
+-*   $P_{base}$: 0.15 (Historical baseline).
+-*   $P_{phys}$: 0.25 (Tier-1 boost).
+-*   $Tax$: 0.25 (Refinement penalty for T1 violation).
+-*   $P_{ml}$: (pLDDT / 100) * 0.40.
+-
+-## 7. Immediate Roadmap: Toward S8 (Recursive Memory)
+-*   **Refinement:** Moving from in-memory `ProgramRepository` to Redis/PostgreSQL for multi-worker support.
+-*   **Expansion:** Implementing S8 (Recursive Loop) where wet-lab failures can be uploaded to update the NKG.
+-*   **Dossier:** Restoring the "1,000-token Rejection Rationale" to Page 6 of the PDF.
+-
+-**The Conductor is ready. Resume v21.0.4 and maintain the 21 Pillars.** 🛡️🔬🚀
+diff --git a/control-atlas-saas/_legacy/laws/MDI_LAW_LIBRARY.md b/control-atlas-saas/_legacy/laws/MDI_LAW_LIBRARY.md
+deleted file mode 100755
+index 59b2b86..0000000
+--- a/control-atlas-saas/_legacy/laws/MDI_LAW_LIBRARY.md
++++ /dev/null
+@@ -1,213 +0,0 @@
+-# 🛡️ Sovereign Sieve — Master Law Library (MDI Constitution)
+-
+-**Version:** v9.2.0  
+-**Authority:** Sovereign Conductor  
+-**Status:** Constitutional Source of Truth (Human-Readable)
+-
+-This document mirrors `backend/app/core/mdi_codex.json`.
+-No interpretation, ranking, or pruning is performed here.
+-
+----
+-
+-## TOPOLOGICAL LAWS
+-
+-- **LAW-001 — Format Protocol**  
+-  Threshold: `.cif mandatory`  
+-  Note: Only mmCIF preserves forensic metadata.
+-
+-- **LAW-102 — Proline Pivot Sovereignty**  
+-  Threshold: Δω < 12°  
+-  Note: Forcing proline hinges destroys backbone sovereignty.
+-
+-- **LAW-104 — Geometric Sovereignty**  
+-  Threshold: > 0.4 Å violation  
+-  Note: Atoms cannot phase through protein backbones.
+-
+-- **LAW-105 — Manifold Collapse**  
+-  Threshold: < 2.0 Å clearance  
+-  Note: Target–Generator converged on non-physical geometry.
+-
+-- **LAW-111 — Globular Veto**  
+-  Threshold: Linear only  
+-  Note: Globular folds collide with target shoulders.
+-
+-- **LAW-112 — Proline Hinge Sovereignty**  
+-  Threshold: P_cons > 0.85  
+-  Note: Non-conserved proline kinks are structural artifacts.
+-
+-- **LAW-114 — Rigidity Mandate**  
+-  Threshold: ≥ 4 Prolines  
+-  Note: Flexible linkers cause scaffold collapse.
+-
+-- **LAW-118 — Steric Tail Paradox**  
+-  Threshold: No Ser-tails  
+-  Note: Serine tails become steric poison in rigid needles.
+-
+-- **LAW-121 — Proline Hinge Constraint**  
+-  Threshold: > 4 residues  
+-  Note: Loops without pivots prevent induced fit.
+-
+-- **LAW-122 — Proline Hinge Violation**  
+-  Threshold: 0 Pro mid-helix  
+-  Note: Proline mid-helix creates a structural hernia.
+-
+-- **LAW-126 — Allosteric Lever Integrity**  
+-  Threshold: D*RMSD < 15  
+-  Note: Long lever arms exceed binding energy.
+-
+-- **LAW-134 — Topology Mismatch**  
+-  Threshold: Axial Entry only  
+-  Note: Sheet topologies collide laterally.
+-
+-- **LAW-135 — PD-L1 Standoff Minimum**  
+-  Threshold: ≥ 5 Prolines  
+-  Note: Low standoff causes flat docking.
+-
+-- **LAW-136.1 — 8P Geometric Resonance**  
+-  Threshold: 8 Prolines  
+-  Note: Optimal PD-L1 pocket penetration.
+-
+-- **LAW-138 — Manifold Exit Veto**  
+-  Threshold: RMSD < 2.2 Å  
+-  Note: Rejects target spine breakage.
+-
+-- **LAW-143 — Diffusion Smoothing**  
+-  Threshold: Variance > 0.1 Å  
+-  Note: Detects generator prior collapse.
+-
+-- **LAW-148 — Disorder Engine**  
+-  Threshold: < 5 consecutive P  
+-  Note: Excessive proline creates noodles.
+-
+-- **LAW-149.1 — Helical Prop Mandate**  
+-  Threshold: pLDDT > 80  
+-  Note: Helical spacers must be rigid.
+-
+-- **LAW-151 — Lever Paradox**  
+-  Threshold: ≤ 30 aa  
+-  Note: Long props act as destructive levers.
+-
+-- **LAW-154 — Target Integrity**  
+-  Threshold: RMSD < 1.5 Å  
+-  Note: Target must remain rigid.
+-
+-- **LAW-155 — Steric Clash**  
+-  Threshold: ≥ 2.5 Å  
+-  Note: Hard physical veto.
+-
+-- **LAW-158 — Target Deformation**  
+-  Threshold: RMSD < 3.5 Å  
+-  Note: Rejects forced unfolding.
+-
+-- **LAW-165.3 — Helical Pitch Audit**  
+-  Threshold: 3.4–3.8 res/turn  
+-  Note: Rejects stretched helices.
+-
+-- **LAW-174 — Backbone Tortuosity**  
+-  Threshold: Δ < 90°  
+-  Note: Rejects non-canonical kinks.
+-
+-- **LAW-192 — Elastic Deformation**  
+-  Threshold: RMSD < 2.5 Å  
+-  Note: Target spine resistance.
+-
+----
+-
+-## KINETIC LAWS
+-
+-- **LAW-106 — Kinetic Drift Floor**  
+-  Threshold: < −15k kJ/mol  
+-  Note: Binding well too shallow.
+-
+-- **LAW-125.1 — Cis-Proline Energy Tax**  
+-  Threshold: < 5.0 kcal  
+-  Note: Folding bottleneck.
+-
+-- **LAW-131 — Chassis Stress Index**  
+-  Threshold: CSI < 1.5  
+-  Note: Strained chassis rejected.
+-
+-- **LAW-132 — Desolvation Penalty**  
+-  Threshold: Partner Dist < 4.0 Å  
+-  Note: Naked charge burial.
+-
+-- **LAW-133 — Entropy Paradox**  
+-  Threshold: Linker < 8 aa  
+-  Note: Flexibility causes collapse.
+-
+-- **LAW-136.2 — Distal Lever Paradox**  
+-  Threshold: D/H < 4.8  
+-  Note: Distal amplification instability.
+-
+-- **LAW-136.3 — Allosteric Lever Paradox**  
+-  Threshold: RMSF < 0.8 Å  
+-  Note: Floppy levers waste energy.
+-
+-- **LAW-142.2 — Kinetic Hysteresis**  
+-  Threshold: Ea ≤ 18.5 kcal  
+-  Note: Prevents stall-binding.
+-
+-- **LAW-142.3 — Excessive Overpacking**  
+-  Threshold: Rho < 550  
+-  Note: Crushed atoms indicate artifacts.
+-
+-- **LAW-145 — Mechanical Lever Paradox**  
+-  Threshold: Ratio > 3.0  
+-  Note: Sweeping warheads.
+-
+-- **LAW-155.1 — Minimization Mandate**  
+-  Threshold: > 80% Retention  
+-  Note: Must survive Amber relaxation.
+-
+-- **LAW-156 — Distal Anchor Pivot**  
+-  Threshold: rho-loss < 15%  
+-  Note: Secondary foot stability.
+-
+-- **LAW-165.1 — Hydration Wedge**  
+-  Threshold: 0 waters / 1ns  
+-  Note: Entropic noise binding.
+-
+-- **LAW-166 — Hydration Wedge Gate**  
+-  Threshold: < 3 waters / 500 ps  
+-  Note: True solvent exclusion.
+-
+-- **LAW-185 — Kinetic Re-Entry**  
+-  Threshold: < 2 breaks / 10ns  
+-  Note: Self-healing requirement.
+-
+-- **LAW-195 — Contact Healing**  
+-  Threshold: > 80% Recovery  
+-  Note: Thermal resilience.
+-
+----
+-
+-## CHEMICAL LAWS
+-
+-- **LAW-115.1 — Ionic Spine Requirement**  
+-- **LAW-115.2 — Aggregation Horizon**  
+-- **LAW-125.2 — Grease Limit**  
+-- **LAW-142.4 — Water Displacement**  
+-- **LAW-165.2 — Desolvation Friction**  
+-- **LAW-170 — Aggregation Risk**  
+-- **LAW-171 — Grease Limit**  
+-- **LAW-175.2 — pI-Solubility Gate**  
+-- **LAW-182 — Hydrophobic Burial**
+-
+----
+-
+-## INDUSTRIAL LAWS
+-
+-- **LAW-152 — Score-Decoupling**  
+-- **LAW-153 — Avidity Ceiling**  
+-- **LAW-160 — Motif-RMSD Anchor**  
+-- **LAW-161 — Weak Anchor**  
+-- **LAW-162 — H-Bond Coherency**  
+-- **LAW-180 — Synthesis Complexity**  
+-- **LAW-181 — Epitope Invariance**  
+-- **LAW-188.2 — Entropic Penalty**  
+-- **LAW-190 — Covalent Lever**  
+-- **LAW-191 — Chain Multiplicity**
+-
+----
+-
+-**End of Constitutional Record**
+diff --git a/control-atlas-saas/backend/Dockerfile b/control-atlas-saas/backend/Dockerfile
+deleted file mode 100755
+index 9e25657..0000000
+--- a/control-atlas-saas/backend/Dockerfile
++++ /dev/null
+@@ -1,12 +0,0 @@
+-FROM python:3.11-slim
+-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+-WORKDIR /app
+-ENV PYTHONPATH=/app
+-COPY requirements.txt .
+-RUN pip install --no-cache-dir -r requirements.txt
+-COPY . /app
+-# Ensure all sub-packages are recognized
+-RUN find tos -type d -exec touch {}/__init__.py \;
+-EXPOSE 8000
+-# ENTRYPOINT BACK TO ROOT main.py
+-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+diff --git a/control-atlas-saas/backend/__init__.py b/control-atlas-saas/backend/__init__.py
+deleted file mode 100755
+index e69de29..0000000
+diff --git a/control-atlas-saas/backend/main.py b/control-atlas-saas/backend/main.py
+deleted file mode 100644
+index fcf89e9..0000000
+--- a/control-atlas-saas/backend/main.py
++++ /dev/null
+@@ -1,124 +0,0 @@
+-import sys
+-import os
+-from pathlib import Path
+-
+-# Force the current directory into sys.path
+-BASE_DIR = Path(__file__).resolve().parent
+-sys.path.insert(0, str(BASE_DIR))
+-
+-from fastapi import FastAPI, UploadFile, File, Form
+-from fastapi.responses import StreamingResponse
+-from fastapi.middleware.cors import CORSMiddleware
+-import base64, json, re
+-
+-# PROTECTED NAMESPACE IMPORTS
+-import tos.ingestion.processor as processor_mod
+-import tos.engine.tier1_measurements as measurements_mod
+-import tos.router.intelligence as router_mod
+-import tos.export.sealer as sealer_mod
+-import tos.forensic_artifacts.pdf_generator as pdf_mod
+-import tos.glossary.law_glossary as glossary_mod
+-import tos.glossary.epistemic_definitions as epistemic_mod
+-import tos.generation.dispatcher as dispatcher_mod
+-import tos.discovery.resolver as discovery_mod
+-import tos.governance.program_schema as program_schema_mod
+-
+-app = FastAPI(); app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+-program_repository = program_schema_mod.ProgramRepository()
+-
+-@app.get("/health")
+-def health(): return {"status": "ALIVE"}
+-
+-@app.get("/stats")
+-def stats():
+-    count = 0
+-    path = Path("/app/nkg/piu_moat.jsonl")
+-    if path.exists():
+-        with open(path, 'r') as f: count = sum(1 for _ in f)
+-    return {"unique_pius": count}
+-
+-@app.post("/search")
+-async def search(query: str = Form(...)): 
+-    return discovery_mod.DiscoveryResolver.resolve(query)
+-
+-def advance_program_state(structure, source_label: str, plddt: float):
+-    program = program_repository.upsert(structure.audit_id)
+-    return program_schema_mod.advance_program(
+-        program=program,
+-        structure=structure,
+-        acquisition_source=source_label,
+-        folding_source=source_label,
+-        plddt=plddt,
+-    )
+-
+-
+-@app.post("/ingest")
+-async def ingest(mode: str = Form(...), candidate_id: str = Form(...), file: UploadFile = File(None), sequence: str = Form(None)):
+-    try:
+-        content, label, ext = None, "Unknown", "pdb"
+-        if mode == "Upload" and file:
+-            content = await file.read(); label = "User Upload"; ext = file.filename.split(".")[-1].lower()
+-        else:
+-            content, label, ext = dispatcher_mod.GenerationDispatcher.acquire(candidate_id, sequence)
+-
+-        if not content: return {"verdict": "ERROR", "details": label}
+-
+-        structure = processor_mod.IngestionProcessor.run(content, f"origin.{ext}", label)
+-        all_atoms = structure.atoms + structure.ligands
+-        coord_hash = sealer_mod.ForensicSealer.generate_hash(sealer_mod.ForensicSealer.canonical_serialize(all_atoms))
+-        
+-        s155, m155, a155 = measurements_mod.Tier1Measurements.check_law_155_L(structure)
+-        s160, m160, a160 = measurements_mod.Tier1Measurements.check_law_160(structure)
+-        results = []
+-        for lid in glossary_mod.list_all_law_ids():
+-            st, me, an = ("PASS", "Verified Invariant", {})
+-            if lid == "LAW-155": st, me, an = s155, m155, a155
+-            elif lid == "LAW-160": st, me, an = s160, m160, a160
+-            expl = glossary_mod.get_law_explanation(lid)
+-            results.append({"law_id": lid, "status": st, "measurement": me, "anchor": an, "title": expl['title'], "principle": expl['principle'], "rationale": expl['rationale']})
+-        
+-        verdict = "VETO" if any(r["status"] in {"FAIL", "VETO"} for r in results) else "PASS"
+-        phys_score = 20 if verdict == "VETO" else 100
+-        conf_display = round(structure.confidence.mean_plddt, 1) if hasattr(structure, 'confidence') else "N/A"
+-
+-        program_record = advance_program_state(structure, label, float(conf_display) if conf_display != "N/A" else 0.0)
+-        
+-        # H-1 (accepted ruling, ported Round 17): the external narrative
+-        # provider and its compiler were removed. This legacy app's
+-        # certificate renders a deterministic inline summary instead;
+-        # the deterministic verdict is authoritative.
+-        rat = (f"Audit of {label} returns {verdict} at {phys_score}% "
+-               f"physical integrity. Deterministic engines hold exclusive "
+-               f"authority; this summary is advisory only.")
+-        sealed = sealer_mod.ForensicSealer.seal_structure(content, structure.audit_id, verdict, coord_hash, ext)
+-        pdf_b = pdf_mod.generate_v14_certificate(structure.audit_id, verdict, phys_score, label, rat, results, structure.atoms)
+-
+-        return {
+-            "verdict": verdict, "score": phys_score, "conf": conf_display, "sig": structure.audit_id, 
+-            "laws": results, "routing": router_mod.IntelligenceRouter().decide(structure, verdict), 
+-            "narrative": rat, "pdf_b64": base64.b64encode(pdf_b).decode(), "pdb_b64": base64.b64encode(sealed.encode()).decode(), "ext": ext,
+-            "provenance": {"source": label, "mode": mode},
+-            "definitions": epistemic_mod.DEFINITIONS,
+-            "program": {
+-                "program_id": program_record.program_id,
+-                "state": program_record.current_state.value if program_record.current_state else None,
+-                "veto": program_record.veto,
+-                "hash_chain": program_record.hash_chain,
+-                "architecture": program_record.architecture.__dict__ if program_record.architecture else None,
+-                "tier3": program_record.tier3_breakdown,
+-            },
+-        }
+-    except Exception as e: return {"verdict": "ERROR", "details": str(e)}
+-
+-
+-@app.get("/programs/{program_id}/dossier")
+-def get_dossier(program_id: str):
+-    program = program_repository.get(program_id)
+-    if not program:
+-        return {"error": "Program not found"}
+-    pdf_bytes = pdf_mod.generate_dossier(program)
+-    return StreamingResponse(
+-        iter([pdf_bytes]),
+-        media_type="application/pdf",
+-        headers={"Content-Disposition": f"inline; filename={program_id}_dossier.pdf"},
+-    )
+diff --git a/control-atlas-saas/backend/requirements.txt b/control-atlas-saas/backend/requirements.txt
+deleted file mode 100755
+index ac48254..0000000
+--- a/control-atlas-saas/backend/requirements.txt
++++ /dev/null
+@@ -1,8 +0,0 @@
+-fastapi
+-uvicorn
+-python-multipart
+-biopython
+-numpy
+-PyYAML
+-fpdf2
+-requests
+diff --git a/control-atlas-saas/backend/tos/__init__.py b/control-atlas-saas/backend/tos/__init__.py
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/control-atlas-saas/backend/tos/discovery/__init__.py b/control-atlas-saas/backend/tos/discovery/__init__.py
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/control-atlas-saas/backend/tos/discovery/resolver.py b/control-atlas-saas/backend/tos/discovery/resolver.py
+deleted file mode 100644
+index 461a005..0000000
+--- a/control-atlas-saas/backend/tos/discovery/resolver.py
++++ /dev/null
+@@ -1,40 +0,0 @@
+-import requests, re
+-
+-class DiscoveryResolver:
+-    UNIPROT_SEARCH_URL = "https://rest.uniprot.org/uniprotkb/search?query={}&format=json&size=15"
+-
+-    @staticmethod
+-    def resolve(query: str):
+-        query = query.strip()
+-        candidates = []
+-
+-        # 1. ACCESSION MATCH (Direct to AFDB)
+-        acc_match = re.search(r"([A-Z0-9]{6,10})", query.upper())
+-        if acc_match:
+-            uid = acc_match.group(1)
+-            candidates.append({
+-                "id": f"AFDB:{uid}:F1", "label": f"📦 AlphaFold DB Primary ({uid})",
+-                "source": "AFDB", "type": "Evidence", "hint": "Canonical structural evidence"
+-            })
+-
+-        # 2. SEMANTIC SEARCH (UniProt Matches)
+-        try:
+-            resp = requests.get(DiscoveryResolver.UNIPROT_SEARCH_URL.format(query), timeout=5)
+-            if resp.status_code == 200:
+-                for entry in resp.json().get('results', []):
+-                    uid = entry['primaryAccession']
+-                    name = entry.get('proteinDescription', {}).get('recommendedName', {}).get('fullName', {}).get('value', 'Unknown')
+-                    if any(c['id'].split(":")[1] == uid for c in candidates): continue
+-                    candidates.append({
+-                        "id": f"AFDB:{uid}:F1", "label": f"📦 {name} ({uid})",
+-                        "source": "AFDB", "type": "Evidence", "hint": "High-fidelity evidence"
+-                    })
+-        except: pass
+-
+-        # 3. HOSTED INFERENCE (ESM Atlas - Working Meta API)
+-        candidates.append({
+-            "id": "ESMATLAS:OnDemand", "label": "🔬 ESM Atlas Fast Fold (Hosted Meta API)",
+-            "source": "ESMAtlas", "type": "Inference", "hint": "Instant generation via Meta cloud"
+-        })
+-
+-        return candidates
+diff --git a/control-atlas-saas/backend/tos/engine/__init__.py b/control-atlas-saas/backend/tos/engine/__init__.py
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/control-atlas-saas/backend/tos/engine/chemistry_registry.py b/control-atlas-saas/backend/tos/engine/chemistry_registry.py
+deleted file mode 100644
+index 190c657..0000000
+--- a/control-atlas-saas/backend/tos/engine/chemistry_registry.py
++++ /dev/null
+@@ -1,14 +0,0 @@
+-GLOBAL_WINDOWS = {("C","C"):(1.2,1.75),("C","N"):(1.2,1.65),("C","O"):(1.1,1.6),("C","S"):(1.6,1.95),("N","O"):(1.1,1.55),("P","O"):(1.4,1.75)}
+-CONTEXT_WINDOWS = {
+-    ("S","S"): {"allowed":["CYS"], "win":(1.85,2.25)},
+-    ("ZN","N"): {"allowed":["HIS","CYS"], "win":(1.8,2.35)},
+-    ("ZN","O"): {"allowed":["ASP","GLU","HOH"], "win":(1.8,2.35)},
+-    ("MG","O"): {"allowed":["ASP","GLU","HOH","ATP","ADP"], "win":(1.8,2.45)}
+-}
+-def is_contextually_bonded(a1, a2, d):
+-    p = tuple(sorted([a1.element.upper(), a2.element.upper()]))
+-    if p in CONTEXT_WINDOWS:
+-        r = CONTEXT_WINDOWS[p]
+-        if a1.res_name.upper() in r["allowed"] or a2.res_name.upper() in r["allowed"]:
+-            return r["win"][0] <= d <= r["win"][1]
+-    return GLOBAL_WINDOWS[p][0] <= d <= GLOBAL_WINDOWS[p][1] if p in GLOBAL_WINDOWS else False
+diff --git a/control-atlas-saas/backend/tos/engine/tier1_laws.py b/control-atlas-saas/backend/tos/engine/tier1_laws.py
+deleted file mode 100755
+index 92865b9..0000000
+--- a/control-atlas-saas/backend/tos/engine/tier1_laws.py
++++ /dev/null
+@@ -1,11 +0,0 @@
+-import math
+-class Tier1Laws:
+-    def _law_155(self, atoms):
+-        min_d = 999.0
+-        for i in range(len(atoms)):
+-            for j in range(i + 1, len(atoms)):
+-                a, b = atoms[i], atoms[j]
+-                if a["chain"] == b["chain"] and abs(a["res_seq"] - b["res_seq"]) <= 1: continue
+-                d = math.dist(a["pos"], b["pos"])
+-                min_d = min(min_d, d)
+-        return ("VETO" if min_d < 2.5 else "PASS"), f"{min_d:.2f}A"
+diff --git a/control-atlas-saas/backend/tos/engine/tier1_measurements.py b/control-atlas-saas/backend/tos/engine/tier1_measurements.py
+deleted file mode 100644
+index 7da1305..0000000
+--- a/control-atlas-saas/backend/tos/engine/tier1_measurements.py
++++ /dev/null
+@@ -1,68 +0,0 @@
+-import numpy as np
+-from typing import Tuple, Dict
+-from .chemistry_registry import is_contextually_bonded
+-
+-class Tier1Measurements:
+-    @staticmethod
+-    def check_law_155_L(structure, threshold: float = 2.0) -> Tuple[str, str, Dict]:
+-        """
+-        LAW-155-L: Voxel-Accelerated Steric Clash (Exact O(N)).
+-        Prunes pairs using a spatial grid and inspects only neighboring voxels.
+-        """
+-        all_atoms = structure.atoms + structure.ligands
+-        if not all_atoms:
+-            return "PASS", "No atoms.", {}
+-
+-        grid: Dict[Tuple[int, int, int], list[int]] = {}
+-        voxel_size = max(threshold * 1.5, 2.5)
+-        coords = np.array([a.pos for a in all_atoms])
+-        threshold_sq = threshold * threshold
+-
+-        for idx in range(len(all_atoms)):
+-            v_coord = tuple((coords[idx] // voxel_size).astype(int))
+-            grid.setdefault(v_coord, []).append(idx)
+-
+-        neighbor_offsets = [(dx, dy, dz) for dx in (-1, 0, 1) for dy in (-1, 0, 1) for dz in (-1, 0, 1)]
+-
+-        for v_coord, atom_indices in grid.items():
+-            for dx, dy, dz in neighbor_offsets:
+-                neighbor_v = (v_coord[0] + dx, v_coord[1] + dy, v_coord[2] + dz)
+-                neighbor_indices = grid.get(neighbor_v)
+-                if not neighbor_indices:
+-                    continue
+-
+-                for i in atom_indices:
+-                    for j in neighbor_indices:
+-                        if i >= j:
+-                            continue
+-
+-                        a1, a2 = all_atoms[i], all_atoms[j]
+-                        diff = coords[i] - coords[j]
+-                        d_sq = float(np.dot(diff, diff))
+-
+-                        if d_sq >= threshold_sq:
+-                            continue
+-
+-                        d = np.sqrt(d_sq)
+-                        if a1.chain == a2.chain and abs(a1.res_seq - a2.res_seq) <= 1 and d < 1.65:
+-                            continue
+-                        if is_contextually_bonded(a1, a2, d):
+-                            continue
+-                        if a1.chain == a2.chain and a1.res_seq == a2.res_seq:
+-                            continue
+-
+-                        anchor = {"chain": a1.chain, "res_seq": a1.res_seq, "pos": a1.pos}
+-                        return "VETO", f"Clash: {a1.chain}:{a1.res_name}{a1.res_seq} @ {d:.2f}A", anchor
+-
+-        return "PASS", f"Verified {len(all_atoms)} atoms via Spatial Grid.", {}
+-
+-    @staticmethod
+-    def check_law_160(structure, threshold: float = 4.5) -> Tuple[str, str, Dict]:
+-        cas = [a for a in structure.atoms if a.atom_name == "CA"]
+-        for i in range(len(cas) - 1):
+-            c1, c2 = cas[i], cas[i+1]
+-            if c1.chain == c2.chain:
+-                d = np.linalg.norm(np.array(c1.pos) - np.array(c2.pos))
+-                if d > threshold:
+-                    return "FAIL", f"Torn chain {c1.res_seq}-{c2.res_seq} @ {d:.2f}A", {"chain": c1.chain, "res_seq": c1.res_seq, "pos": c1.pos}
+-        return "PASS", "Backbone continuity verified.", {}
+diff --git a/control-atlas-saas/backend/tos/engine/tier3_predict.py b/control-atlas-saas/backend/tos/engine/tier3_predict.py
+deleted file mode 100644
+index 36585af..0000000
+--- a/control-atlas-saas/backend/tos/engine/tier3_predict.py
++++ /dev/null
+@@ -1,38 +0,0 @@
+-"""Bayesian probability engine for cross-tier causal probability."""
+-
+-from __future__ import annotations
+-
+-from dataclasses import dataclass
+-from typing import Dict
+-
+-
+-@dataclass(frozen=True)
+-class ProbabilityInputs:
+-    plddt: float
+-    physical_boost: float = 0.25
+-    base_probability: float = 0.15
+-    refinement_tax: float = 0.25
+-    derivation_weight: float = 1.0
+-
+-
+-def compute_probability(inputs: ProbabilityInputs) -> float:
+-    """Compute the strategic probability lock described in v21.0.4."""
+-    p_ml = (inputs.plddt / 100.0) * 0.40
+-    probability = (inputs.base_probability + inputs.physical_boost + p_ml - inputs.refinement_tax)
+-    return max(0.0, min(1.0, probability * inputs.derivation_weight))
+-
+-
+-def compute_probability_breakdown(inputs: ProbabilityInputs) -> Dict[str, float]:
+-    """Return full probability breakdown for auditability."""
+-    p_ml = (inputs.plddt / 100.0) * 0.40
+-    pre_weight = inputs.base_probability + inputs.physical_boost + p_ml - inputs.refinement_tax
+-    probability = max(0.0, min(1.0, pre_weight * inputs.derivation_weight))
+-    return {
+-        "p_base": inputs.base_probability,
+-        "p_phys": inputs.physical_boost,
+-        "p_ml": p_ml,
+-        "tax": inputs.refinement_tax,
+-        "weight_derivation": inputs.derivation_weight,
+-        "pre_weight": pre_weight,
+-        "probability": probability,
+-    }
+diff --git a/control-atlas-saas/backend/tos/enrichment/__init__.py b/control-atlas-saas/backend/tos/enrichment/__init__.py
+deleted file mode 100755
+index e69de29..0000000
+diff --git a/control-atlas-saas/backend/tos/export/__init__.py b/control-atlas-saas/backend/tos/export/__init__.py
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/control-atlas-saas/backend/tos/export/sealer.py b/control-atlas-saas/backend/tos/export/sealer.py
+deleted file mode 100644
+index 6383d92..0000000
+--- a/control-atlas-saas/backend/tos/export/sealer.py
++++ /dev/null
+@@ -1,29 +0,0 @@
+-import hashlib
+-
+-class ForensicSealer:
+-    @staticmethod
+-    def canonical_serialize(atoms_list) -> str:
+-        sorted_atoms = sorted(atoms_list, key=lambda a: (a.chain, a.res_seq, a.atom_name))
+-        return "".join([f"{a.chain}{a.res_seq}{a.atom_name}{a.pos[0]:.3f}{a.pos[1]:.3f}{a.pos[2]:.3f}" 
+-                        for a in sorted_atoms])
+-
+-    @staticmethod
+-    def generate_hash(canonical_str: str) -> str:
+-        return hashlib.sha256(canonical_str.encode()).hexdigest()
+-
+-    @staticmethod
+-    def seal_structure(content_bytes: bytes, audit_id: str, verdict: str, coord_hash: str, ext: str) -> str:
+-        """Sovereign Sealing: Handles PDB (REMARK) and CIF (Comment) safely."""
+-        # Safe decoding for metadata injection
+-        body = content_bytes.decode('utf-8', errors='ignore')
+-        
+-        prefix = "REMARK" if ext.lower() == "pdb" else "#"
+-        header = [
+-            f"{prefix} 900 TOSCANINI FORENSIC SEAL v14.2",
+-            f"{prefix} 900 AUDIT_ID: {audit_id}",
+-            f"{prefix} 901 VERDICT: {verdict}",
+-            f"{prefix} 902 COORD_HASH: {coord_hash}",
+-            f"{prefix} 903 STATUS: NOTARIZED_SOVEREIGN",
+-            f"{prefix} 903 " + ("="*30)
+-        ]
+-        return "\n".join(header) + "\n" + body
+diff --git a/control-atlas-saas/backend/tos/forensic_artifacts/__init__.py b/control-atlas-saas/backend/tos/forensic_artifacts/__init__.py
+deleted file mode 100755
+index e69de29..0000000
+diff --git a/control-atlas-saas/backend/tos/forensic_artifacts/pdf_generator.py b/control-atlas-saas/backend/tos/forensic_artifacts/pdf_generator.py
+deleted file mode 100755
+index 3f04844..0000000
+--- a/control-atlas-saas/backend/tos/forensic_artifacts/pdf_generator.py
++++ /dev/null
+@@ -1,350 +0,0 @@
+-from __future__ import annotations
+-
+-from datetime import datetime, timezone
+-from typing import Dict, Iterable, List, Optional
+-
+-from fpdf import FPDF
+-import numpy as np
+-
+-
+-class DossierPDF(FPDF):
+-    def __init__(self, program) -> None:
+-        super().__init__(orientation="P", unit="mm", format="A4")
+-        self.program = program
+-        self.set_auto_page_break(auto=True, margin=15)
+-
+-    def header(self) -> None:
+-        self.set_font("helvetica", "B", 11)
+-        self.set_text_color(15, 32, 56)
+-        self.cell(0, 6, "Toscanini Forensic Refusal Dossier", ln=True)
+-        self.set_font("helvetica", "", 8)
+-        notary = self.program.notary_seal or "UNSEALED"
+-        self.set_text_color(90, 90, 90)
+-        self.cell(0, 4, f"Program: {self.program.program_id} | Notary: {notary}", ln=True)
+-        self.set_draw_color(200, 200, 200)
+-        self.line(10, self.get_y() + 1, 200, self.get_y() + 1)
+-        self.ln(4)
+-
+-    def footer(self) -> None:
+-        self.set_y(-12)
+-        self.set_font("helvetica", "I", 8)
+-        self.set_text_color(120, 120, 120)
+-        self.cell(0, 5, f"Page {self.page_no()} / {{nb}}", align="C")
+-
+-
+-def _truncate(text: str, max_chars: int) -> tuple[str, bool]:
+-    if len(text) <= max_chars:
+-        return text, False
+-    return text[: max_chars - 3].rstrip() + "...", True
+-
+-
+-def _collect_ca_positions(program) -> List[tuple[float, float, float]]:
+-    if not program.structure:
+-        return []
+-    ca_positions = [a.pos for a in program.structure.atoms if a.atom_name == "CA"]
+-    return ca_positions
+-
+-
+-def _draw_projection(pdf: FPDF, coords: List[tuple[float, float, float]], box, axes=(0, 1)) -> None:
+-    x0, y0, w, h = box
+-    pdf.rect(x0, y0, w, h)
+-    if len(coords) < 2:
+-        pdf.set_xy(x0, y0 + h / 2)
+-        pdf.set_font("helvetica", "I", 8)
+-        pdf.cell(w, 4, "No CA data", align="C")
+-        return
+-    arr = np.array(coords)
+-    xs = arr[:, axes[0]]
+-    ys = arr[:, axes[1]]
+-    min_x, max_x = float(np.min(xs)), float(np.max(xs))
+-    min_y, max_y = float(np.min(ys)), float(np.max(ys))
+-    span_x = max(max_x - min_x, 1e-3)
+-    span_y = max(max_y - min_y, 1e-3)
+-    scale = min((w - 6) / span_x, (h - 6) / span_y)
+-    offset_x = x0 + 3
+-    offset_y = y0 + 3
+-    pdf.set_draw_color(60, 100, 140)
+-    for i in range(len(coords) - 1):
+-        x1 = offset_x + (xs[i] - min_x) * scale
+-        y1 = offset_y + (ys[i] - min_y) * scale
+-        x2 = offset_x + (xs[i + 1] - min_x) * scale
+-        y2 = offset_y + (ys[i + 1] - min_y) * scale
+-        pdf.line(x1, y1, x2, y2)
+-
+-
+-def _ledger_rows(program) -> List[Dict[str, object]]:
+-    return program.tier1_ledger or []
+-
+-
+-def _nkg_count(program) -> int:
+-    for event in program.events:
+-        if event.state.value == "S6_FORENSIC_AGGREGATION":
+-            return int(event.payload.get("nkg_count", 0))
+-    return 0
+-
+-
+-def _probability_label(program) -> str:
+-    probability = program.tier3_breakdown.get("probability")
+-    if probability is None:
+-        return "N/A"
+-    return f"{probability * 100:.1f}%"
+-
+-
+-def generate_dossier(program) -> bytes:
+-    pdf = DossierPDF(program)
+-    pdf.alias_nb_pages()
+-
+-    verdict = "VETO" if program.veto else "PASS"
+-    ingestion_date = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+-    notary_seal = program.notary_seal or "UNSEALED"
+-    tier3_probability = _probability_label(program)
+-    architecture = program.architecture.category if program.architecture else "UNASSIGNED"
+-    nkg_count = _nkg_count(program)
+-
+-    # Page 1: Executive Summary
+-    pdf.add_page()
+-    pdf.set_font("helvetica", "B", 18)
+-    pdf.set_text_color(10, 10, 10)
+-    pdf.cell(0, 10, "Toscanini Forensic Refusal Dossier", ln=True, align="C")
+-    pdf.ln(2)
+-    pdf.set_font("helvetica", "", 10)
+-    pdf.cell(0, 6, f"Program ID: {program.program_id}", ln=True)
+-    pdf.cell(0, 6, f"Ingestion Date: {ingestion_date}", ln=True)
+-    pdf.cell(0, 6, f"Notary Seal: {notary_seal}", ln=True)
+-    pdf.ln(4)
+-    pdf.set_font("helvetica", "B", 24)
+-    pdf.set_text_color(160, 0, 0 if verdict == "VETO" else 90)
+-    pdf.cell(0, 12, f"FINAL VERDICT: {verdict}", ln=True, align="C")
+-    pdf.set_text_color(0, 0, 0)
+-    pdf.ln(2)
+-    pdf.set_font("helvetica", "", 11)
+-    executive_rationale = (
+-        "The sovereign refusal engine evaluated structural invariants, voxelized steric clashes, and "
+-        "contextual bonding constraints. The final verdict reflects Tier-1 physical feasibility and the "
+-        "cross-tier causal probability lock."
+-    )
+-    pdf.multi_cell(0, 6, executive_rationale)
+-    pdf.ln(2)
+-    pdf.set_font("helvetica", "B", 11)
+-    pdf.cell(0, 6, "Key Statistics", ln=True)
+-    pdf.set_font("helvetica", "", 10)
+-    pdf.cell(0, 6, f"Tier-3 Probability: {tier3_probability}", ln=True)
+-    pdf.cell(0, 6, f"Derived Architecture: {architecture}", ln=True)
+-    pdf.cell(0, 6, f"NKG Failure Moat Entries: {nkg_count}", ln=True)
+-
+-    # Page 2: Engineering Overview
+-    pdf.add_page()
+-    pdf.set_font("helvetica", "B", 14)
+-    pdf.cell(0, 8, "Engineering Overview: Dual-Engine Visualizer", ln=True)
+-    pdf.set_font("helvetica", "", 9)
+-    pdf.multi_cell(
+-        0,
+-        5,
+-        "Dual projections illustrate PASS (Cartoon) and VETO (Stick-Autopsy) renderings. "
+-        "Topological symmetry is centered to maintain visual parity.",
+-    )
+-    ca_positions = _collect_ca_positions(program)
+-    box_y = pdf.get_y() + 4
+-    box_w = 85
+-    box_h = 70
+-    pdf.set_font("helvetica", "B", 10)
+-    pdf.cell(box_w, 5, "PASS (Cartoon)", ln=0, align="C")
+-    pdf.cell(0, 5, "VETO (Stick-Autopsy)", ln=1, align="C")
+-    _draw_projection(pdf, ca_positions, (15, box_y + 6, box_w, box_h), axes=(0, 1))
+-    _draw_projection(pdf, ca_positions, (110, box_y + 6, box_w, box_h), axes=(2, 1))
+-    pdf.set_y(box_y + box_h + 12)
+-    pdf.set_font("helvetica", "I", 8)
+-    pdf.cell(0, 5, "Centered projections preserve visual symmetry across the dossier.", ln=True, align="C")
+-
+-    # Pages 3-4: Diagnostic Ledger
+-    pdf.add_page()
+-    pdf.set_font("helvetica", "B", 14)
+-    pdf.cell(0, 8, "Diagnostic Ledger", ln=True)
+-    pdf.set_font("helvetica", "", 9)
+-    pdf.cell(0, 6, "Law ID | Title | Principle | Measurement | Status", ln=True)
+-    pdf.ln(2)
+-    for entry in _ledger_rows(program):
+-        status = entry.get("status", "PASS")
+-        fill = status in {"FAIL", "VETO"}
+-        if fill:
+-            pdf.set_fill_color(255, 230, 230)
+-        else:
+-            pdf.set_fill_color(240, 240, 240)
+-        pdf.set_font("helvetica", "B", 9)
+-        pdf.cell(0, 6, f"{entry.get('law_id')} [{status}]", ln=True, fill=True)
+-        pdf.set_font("helvetica", "", 8)
+-        pdf.multi_cell(0, 4, f"{entry.get('title')} | {entry.get('principle')}")
+-        pdf.multi_cell(0, 4, f"Measurement: {entry.get('measurement')}")
+-        anchor = entry.get("anchor") or {}
+-        if anchor:
+-            pdf.set_text_color(140, 0, 0)
+-            pdf.multi_cell(0, 4, f"Violation Anchor: {anchor}")
+-            pdf.set_text_color(0, 0, 0)
+-        pdf.ln(1)
+-        if pdf.get_y() > 250:
+-            pdf.add_page()
+-            pdf.set_font("helvetica", "B", 14)
+-            pdf.cell(0, 8, "Diagnostic Ledger (cont.)", ln=True)
+-
+-    # Page 5: Architecture & Probability Breakdown
+-    pdf.add_page()
+-    pdf.set_font("helvetica", "B", 14)
+-    pdf.cell(0, 8, "Architecture & Probability Breakdown", ln=True)
+-    pdf.set_font("helvetica", "", 10)
+-    if program.architecture:
+-        pdf.multi_cell(
+-            0,
+-            5,
+-            f"Derived Category: {program.architecture.category}\nRationale: {program.architecture.rationale}\n"
+-            f"Voxel Span: {program.architecture.voxel_span}\n"
+-            f"Symmetry Score: {program.architecture.symmetry_score}\n"
+-            f"Clash-Free Volume: {program.architecture.clash_free_volume}",
+-        )
+-    else:
+-        pdf.multi_cell(0, 5, "Architecture derivation unavailable.")
+-    pdf.ln(2)
+-    pdf.set_font("helvetica", "B", 11)
+-    pdf.cell(0, 6, "Tier-3 Probability Math", ln=True)
+-    pdf.set_font("helvetica", "", 10)
+-    if program.tier3_breakdown:
+-        for key, label in [
+-            ("p_base", "P_base"),
+-            ("p_phys", "P_phys"),
+-            ("p_ml", "P_ml"),
+-            ("tax", "Tax"),
+-            ("weight_derivation", "Weight_Derivation"),
+-            ("probability", "Final P"),
+-        ]:
+-            value = program.tier3_breakdown.get(key, 0.0)
+-            pdf.cell(0, 6, f"{label}: {value:.4f}", ln=True)
+-    else:
+-        pdf.cell(0, 6, "Tier-3 probability breakdown unavailable.", ln=True)
+-    pdf.ln(2)
+-    pdf.set_font("helvetica", "B", 11)
+-    pdf.cell(0, 6, "Epistemic Duality Narrative", ln=True)
+-    pdf.set_font("helvetica", "", 9)
+-    pdf.multi_cell(
+-        0,
+-        5,
+-        "Physical confidence reflects deterministic invariant compliance, while ML confidence represents "
+-        "model-derived structural plausibility. Both are required for Schrödinger-Class credibility.",
+-    )
+-
+-    # Page 6: PhD-Grade Rejection Rationale
+-    pdf.add_page()
+-    pdf.set_font("helvetica", "B", 14)
+-    pdf.cell(0, 8, "PhD-Grade Rationale", ln=True)
+-    pdf.set_font("helvetica", "", 10)
+-    rationale = (
+-        "This dossier provides a full forensic audit of the submitted structure. The Tier-1 voxelized physics "
+-        "engine enforces steric exclusion and backbone continuity with deterministic spatial hashing. "
+-        "Any violation of LAW-155-L triggers a sovereign veto, preventing downstream synthesis waste. "
+-        "The architecture derivation stage evaluates voxel span, symmetry, and clash-free volume to assign "
+-        "a Tier-2 category and inform causal weighting. The Tier-3 Bayesian scoring engine integrates "
+-        "historical baselines, physical boosts, ML confidence, and refinement tax to quantify overall success "
+-        "probability. Where a veto is present, the narrative highlights the specific steric overlap and "
+-        "explains why the geometry violates fundamental chemical constraints. Where no veto exists, the "
+-        "report documents the physics compliance and substantiates the Schrödinger-Class threshold with "
+-        "auditable probability breakdowns."
+-    )
+-    rationale, truncated = _truncate(rationale, 4200)
+-    pdf.multi_cell(0, 5, rationale)
+-    if truncated:
+-        pdf.set_text_color(180, 0, 0)
+-        pdf.set_font("helvetica", "I", 9)
+-        pdf.cell(0, 5, "Warning: Narrative truncated to fit the dossier page.", ln=True)
+-        pdf.set_text_color(0, 0, 0)
+-
+-    # Page 7: Annex (optional)
+-    if program.hash_chain:
+-        pdf.add_page()
+-        pdf.set_font("helvetica", "B", 14)
+-        pdf.cell(0, 8, "Annex: Notary & Hash Chain", ln=True)
+-        pdf.set_font("helvetica", "", 9)
+-        pdf.multi_cell(
+-            0,
+-            5,
+-            "REMARK 900 TOSCANINI FORENSIC SEAL\n"
+-            f"AUDIT_ID: {program.program_id}\n"
+-            f"VERDICT: {verdict}\n"
+-            f"COORD_HASH: {notary_seal}\n"
+-            "STATUS: NOTARIZED_SOVEREIGN",
+-        )
+-        pdf.ln(2)
+-        pdf.set_font("helvetica", "B", 10)
+-        pdf.cell(0, 6, "Hash Chain Proof", ln=True)
+-        pdf.set_font("helvetica", "", 8)
+-        for chain_hash in program.hash_chain:
+-            pdf.multi_cell(0, 4, chain_hash)
+-
+-    return pdf.output(dest="S").encode("latin-1")
+-
+-
+-def generate_v14_certificate(sig, verdict, score, gen, rationale, results, atoms):
+-    pdf = FPDF()
+-    pdf.set_auto_page_break(True)
+-    pdf.add_page()
+-    pdf.set_font("helvetica", "B", 18)
+-    pdf.cell(0, 15, "TOSCANINI FORENSIC NOTARY CERTIFICATE", ln=True, align="C")
+-
+-    color = (180, 0, 0) if verdict == "VETO" else (0, 100, 0)
+-    pdf.set_fill_color(245, 245, 245)
+-    pdf.set_text_color(*color)
+-    pdf.set_font("helvetica", "B", 14)
+-    pdf.cell(0, 12, f"DECISION: {verdict} / PHYSICAL INTEGRITY: {score}%", ln=True, align="C", fill=True)
+-    pdf.set_text_color(0)
+-    pdf.ln(5)
+-
+-    pdf.set_font("helvetica", "B", 11)
+-    pdf.cell(0, 8, "EXECUTIVE BIOPHYSICAL SYNTHESIS", ln=True)
+-    pdf.set_font("helvetica", "", 10)
+-    pdf.multi_cell(0, 5, str(rationale).encode("ascii", "ignore").decode())
+-
+-    pdf.ln(5)
+-    pdf.set_fill_color(230, 240, 250)
+-    pdf.set_font("helvetica", "B", 10)
+-    pdf.cell(0, 8, "TECHNICAL METRIC INTERPRETATION", ln=True, fill=True)
+-    pdf.set_font("helvetica", "", 9)
+-    interp = (
+-        "Physical Score: Confirms adherence to invariant laws of atomic exclusion. "
+-        "ML Confidence (pLDDT): Represents the predicted C-alpha local distance difference test. "
+-        "Scores < 70 indicate regions where tertiary side-chain packing is speculative and docking is high-risk."
+-    )
+-    pdf.multi_cell(0, 4, interp)
+-
+-    ca = [a.pos for a in atoms if (a.atom_name if hasattr(a, "atom_name") else a.get("atom")) == "CA"]
+-    if len(ca) > 4:
+-        pdf.ln(5)
+-        coords = np.array(ca)
+-        xs, ys = coords[:, 0], coords[:, 1]
+-        mx, my, span = np.min(xs), np.min(ys), max(1, np.max(xs) - np.min(xs))
+-        scale, bx, by = 60 / span, 30, pdf.get_y() + 10
+-        pdf.set_draw_color(150, 150, 150)
+-        pdf.set_line_width(0.8)
+-        for i in range(len(ca) - 1):
+-            pdf.line(
+-                bx + (ca[i][0] - mx) * scale,
+-                by + (ca[i][1] - my) * scale,
+-                bx + (ca[i + 1][0] - mx) * scale,
+-                by + (ca[i + 1][1] - my) * scale,
+-            )
+-        bx2 = 120
+-        pdf.set_draw_color(100, 120, 140)
+-        for i in range(len(ca) - 1):
+-            pdf.line(
+-                bx2 + (ca[i][2] - mx) * scale,
+-                by + (ca[i][1] - my) * scale,
+-                bx2 + (ca[i + 1][2] - mx) * scale,
+-                by + (ca[i + 1][1] - my) * scale,
+-            )
+-
+-    pdf.add_page()
+-    pdf.set_font("helvetica", "B", 16)
+-    pdf.cell(0, 15, "TECHNICAL ANNEX (10-LAW CANON)", ln=True)
+-    for l in results:
+-        pdf.set_font("helvetica", "B", 9)
+-        pdf.cell(0, 6, f"{l['law_id']}: {l['title']} [{l['status']}]", ln=True)
+-        pdf.set_font("helvetica", "", 8)
+-        pdf.multi_cell(0, 4, f"Observed: {l['measurement']}\nPrinciple: {l['principle']}")
+-        pdf.ln(2)
+-    return pdf.output()
+diff --git a/control-atlas-saas/backend/tos/generation/__init__.py b/control-atlas-saas/backend/tos/generation/__init__.py
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/control-atlas-saas/backend/tos/generation/dispatcher.py b/control-atlas-saas/backend/tos/generation/dispatcher.py
+deleted file mode 100644
+index 61710ec..0000000
+--- a/control-atlas-saas/backend/tos/generation/dispatcher.py
++++ /dev/null
+@@ -1,33 +0,0 @@
+-import requests
+-
+-class GenerationDispatcher:
+-    AFDB_VERSIONS = ["v4", "v6", "v5"] # v4 is often more stable for canonicals like Insulin
+-    HEADERS = {"User-Agent": "Mozilla/5.0", "Accept": "*/*"}
+-
+-    @staticmethod
+-    def acquire(candidate_id: str, sequence: str = None):
+-        # --- PATH 1: AlphaFold DB (Evidence) ---
+-        if candidate_id.startswith("AFDB"):
+-            parts = candidate_id.split(":")
+-            uid, isoform = parts[1], parts[2][1:]
+-            
+-            for ver in GenerationDispatcher.AFDB_VERSIONS:
+-                for ext in ["pdb", "cif"]:
+-                    url = f"https://alphafold.ebi.ac.uk/files/AF-{uid}-F{isoform}-model_{ver}.{ext}"
+-                    try:
+-                        res = requests.get(url, headers=GenerationDispatcher.HEADERS, timeout=8)
+-                        if res.status_code == 200: return res.content, f"AlphaFold DB {ver}", ext
+-                    except: continue
+-            return None, "Evidence not found in AFDB (Check Accession ID)", "pdb"
+-
+-        # --- PATH 2: ESM Atlas (Hosted Inference) ---
+-        elif candidate_id.startswith("ESMATLAS"):
+-            if not sequence: return None, "Please provide a sequence for the Meta API", "pdb"
+-            try:
+-                res = requests.post("https://api.esmatlas.com/foldSequence/v1/pdb/", 
+-                                   data=sequence.strip(), headers={"Content-Type": "text/plain"}, timeout=30)
+-                if res.status_code == 200: return res.content, "ESM Atlas (Meta Cloud)", "pdb"
+-                return None, f"Meta API Error: {res.status_code}", "pdb"
+-            except: return None, "Meta Cloud unreachable (Timeout)", "pdb"
+-
+-        return None, "Invalid Protocol", "pdb"
+diff --git a/control-atlas-saas/backend/tos/glossary/__init__.py b/control-atlas-saas/backend/tos/glossary/__init__.py
+deleted file mode 100755
+index e69de29..0000000
+diff --git a/control-atlas-saas/backend/tos/glossary/epistemic_definitions.py b/control-atlas-saas/backend/tos/glossary/epistemic_definitions.py
+deleted file mode 100644
+index 337c780..0000000
+--- a/control-atlas-saas/backend/tos/glossary/epistemic_definitions.py
++++ /dev/null
+@@ -1,14 +0,0 @@
+-DEFINITIONS = {
+-    "PHYSICAL_SCORE": {
+-        "title": "Physical Integrity Score (Invariant)",
+-        "explanation": "Derived from deterministic Euclidean geometry. It measures if the atoms 'fit' in 3D space without violating the Pauli Exclusion Principle (steric clashes) or covalent bond geometry. A 100% score means the structure is chemically permissible."
+-    },
+-    "CONFIDENCE_SCORE": {
+-        "title": "ML Confidence (pLDDT)",
+-        "explanation": "Calculated via the 'Predicted Local Distance Difference Test' (pLDDT). The model (AlphaFold/ESMFold) uses a dedicated head to predict the per-residue lDDT-Cα score. A score of 54.8% indicates the model predicts the backbone is likely correct, but side-chain orientations and local tertiary 'packing' are speculative. For Drug Discovery, scores <70 in binding pockets render docking simulations unreliable."
+-    },
+-    "ROUTING_BANNER": {
+-        "title": "Forensic Routing",
+-        "explanation": "A 'Physically Valid but Low Confidence' structure is a high-risk synthesis candidate. It obeys physics, but lacks the evidential support required for high-stakes Pharma spend."
+-    }
+-}
+diff --git a/control-atlas-saas/backend/tos/glossary/law_glossary.py b/control-atlas-saas/backend/tos/glossary/law_glossary.py
+deleted file mode 100755
+index bf79c38..0000000
+--- a/control-atlas-saas/backend/tos/glossary/law_glossary.py
++++ /dev/null
+@@ -1,14 +0,0 @@
+-CANON = {
+-    "LAW-120": {"title": "Peptide Bond Sanity", "principle": "Covalent bond length (1.33A).", "rationale": "Peptide bonds are resonance hybrids. Violations indicate quantum impossibility."},
+-    "LAW-155": {"title": "Steric Clash Prohibition", "principle": "Atoms cannot overlap.", "rationale": "The Pauli exclusion principle forbids electron cloud overlap. Non-bonded atoms < 2.0A create physically impossible geometry."},
+-    "LAW-160": {"title": "Backbone Continuity", "principle": "Consistent C-alpha spacing (~3.8A).", "rationale": "Deviations > 4.5A indicate a torn or hallucinated chain."},
+-    "LAW-182": {"title": "Hydrophobic Burial", "principle": "Non-polar residues must be buried.", "rationale": "Surface hydrophobic patches lead to immediate aggregation."},
+-    "LAW-190": {"title": "Ring Planarity", "principle": "Aromatic rings must remain flat.", "rationale": "Delocalized pi-bonding enforces planarity."},
+-    "LAW-195": {"title": "Disulfide Geometry", "principle": "S-S distance approx 2.05A.", "rationale": "Incorrect geometry traps designs in non-functional states."},
+-    "LAW-200": {"title": "Cavity Collapse", "principle": "Functional pockets must exist.", "rationale": "Pocket collapse renders the design dead."},
+-    "LAW-210": {"title": "Helix Crossing", "principle": "Canonical packing angles.", "rationale": "Ridges-into-grooves packing geometry constraints."},
+-    "LAW-220": {"title": "Beta Strand Registry", "principle": "Precise H-bond alignment.", "rationale": "Beta-sheet stability requires spatial registry."},
+-    "LAW-230": {"title": "Atomic Valence", "principle": "Quantum valid coordination.", "rationale": "Atoms have fixed coordination numbers."}
+-}
+-def list_all_law_ids(): return list(CANON.keys())
+-def get_law_explanation(lid): return CANON.get(lid, {"title": lid, "principle": "N/A", "rationale": "N/A"})
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/__init__.py b/control-atlas-saas/backend/tos/glossary/tier1/__init__.py
+deleted file mode 100755
+index e69de29..0000000
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_120.py b/control-atlas-saas/backend/tos/glossary/tier1/law_120.py
+deleted file mode 100755
+index f04c79f..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_120.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Peptide Bond Sanity", "principle": "Covalent bond length (1.33A).", "rationale": "Peptide bonds are resonance hybrids. Lengths outside the 1.13A-1.53A range violate quantum mechanics."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_120_bond.py b/control-atlas-saas/backend/tos/glossary/tier1/law_120_bond.py
+deleted file mode 100755
+index e7774b8..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_120_bond.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Peptide Bond Sanity", "principle": "Covalent peptide bonds have fixed chemical lengths (1.33A).", "rationale": "The peptide bond is a resonance hybrid (1.33A). Lengths outside 1.13A-1.53A range violate quantum mechanics."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_155.py b/control-atlas-saas/backend/tos/glossary/tier1/law_155.py
+deleted file mode 100755
+index 191a1b1..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_155.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Steric Clash Prohibition", "principle": "Atoms cannot overlap.", "rationale": "The Pauli exclusion principle forbids electron cloud overlap. Non-bonded atoms approaching closer than 2.0A create physically impossible geometry."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_155_steric.py b/control-atlas-saas/backend/tos/glossary/tier1/law_155_steric.py
+deleted file mode 100755
+index cb6292d..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_155_steric.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Steric Clash Prohibition", "principle": "Atoms cannot overlap overlapping space.", "rationale": "The Pauli exclusion principle forbids electron cloud overlap. Non-bonded atoms approaching closer than 2.5A create physically impossible geometry."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_160.py b/control-atlas-saas/backend/tos/glossary/tier1/law_160.py
+deleted file mode 100755
+index f992393..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_160.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Backbone Continuity", "principle": "Consistent Cα–Cα spacing (~3.8A).", "rationale": "Deviations > 4.5A indicate a torn or hallucinated chain, physically impossible in a continuous polymer."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_160_backbone.py b/control-atlas-saas/backend/tos/glossary/tier1/law_160_backbone.py
+deleted file mode 100755
+index c6d7041..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_160_backbone.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Backbone Continuity", "principle": "Backbones must maintain consistent spacing (~3.8A).", "rationale": "Resonance stabilization and planarity constraints fix the Ca-Ca distance. Deviations indicate a torn protein chain physically severed at the peptide bond."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_182.py b/control-atlas-saas/backend/tos/glossary/tier1/law_182.py
+deleted file mode 100755
+index c30b212..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_182.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Hydrophobic Burial", "principle": "Non-polar residues must be buried.", "rationale": "The hydrophobic effect drives folding. Surface-exposed hydrophobic patches lead to immediate aggregation."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_182_hydrophobic.py b/control-atlas-saas/backend/tos/glossary/tier1/law_182_hydrophobic.py
+deleted file mode 100755
+index b1fa1be..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_182_hydrophobic.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Hydrophobic Burial", "principle": "Core residues must be sequestered from solvent.", "rationale": "The hydrophobic effect is the dominant driving force in folding. >30% surface exposure triggers VETO as the design is unstable."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_190.py b/control-atlas-saas/backend/tos/glossary/tier1/law_190.py
+deleted file mode 100755
+index 2a086a1..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_190.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Ring Planarity", "principle": "Aromatic rings must remain flat.", "rationale": "Delocalized pi-bonding enforces planarity. Non-planar rings indicate optimization failure."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_190_ring.py b/control-atlas-saas/backend/tos/glossary/tier1/law_190_ring.py
+deleted file mode 100755
+index 475fc2a..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_190_ring.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Ring Planarity", "principle": "Aromatic rings must remain geometrically flat.", "rationale": "Delocalized pi-bonding enforces planarity. Non-planar rings indicate a catastrophic optimization failure."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_195.py b/control-atlas-saas/backend/tos/glossary/tier1/law_195.py
+deleted file mode 100755
+index 8e929c0..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_195.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Disulfide Geometry", "principle": "S–S distance ≈ 2.05A.", "rationale": "Incorrect geometry prevents proper folding and traps the design in non-functional states."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_195_disulfide.py b/control-atlas-saas/backend/tos/glossary/tier1/law_195_disulfide.py
+deleted file mode 100755
+index d422796..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_195_disulfide.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Disulfide Bond Geometry", "principle": "Covalent S-S crosslinks require precise 2.05A spacing.", "rationale": "Incorrect S-S geometry prevents proper folding and traps the design in non-functional states."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_200.py b/control-atlas-saas/backend/tos/glossary/tier1/law_200.py
+deleted file mode 100755
+index 20fc52c..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_200.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Cavity Collapse", "principle": "Functional pockets must exist.", "rationale": "Binding requires defined cavities. Pocket collapse renders the design dead."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_200_cavity.py b/control-atlas-saas/backend/tos/glossary/tier1/law_200_cavity.py
+deleted file mode 100755
+index 467344d..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_200_cavity.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Cavity Collapse", "principle": "Functional binding pockets must maintain minimum volume.", "rationale": "Binding requires defined cavities (~150A^3). Pocket collapse renders the design functionally dead."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_210.py b/control-atlas-saas/backend/tos/glossary/tier1/law_210.py
+deleted file mode 100755
+index 577a8fb..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_210.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Helix Crossing", "principle": "Canonical packing angles.", "rationale": "Ridges-into-grooves packing geometry constrains crossing angles."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_210_helix.py b/control-atlas-saas/backend/tos/glossary/tier1/law_210_helix.py
+deleted file mode 100755
+index 125fcc2..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_210_helix.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Helix-Helix Crossing", "principle": "Alpha-helices must pack at allowed ridges-into-grooves angles.", "rationale": "Deviations from canonical crossing angles indicate impossible secondary structure packing."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_220.py b/control-atlas-saas/backend/tos/glossary/tier1/law_220.py
+deleted file mode 100755
+index 1f70aa4..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_220.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Beta Strand Registry", "principle": "Precise H-bond alignment.", "rationale": "Beta-sheet stability requires spatial registry. Shifts destroy the network."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_220_strand.py b/control-atlas-saas/backend/tos/glossary/tier1/law_220_strand.py
+deleted file mode 100755
+index e1d3a61..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_220_strand.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Beta Strand Registry", "principle": "Beta-sheets require precise H-bond alignment.", "rationale": "Registry shifts destroy the H-bond network, causing the sheet to unfold in solution."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_230.py b/control-atlas-saas/backend/tos/glossary/tier1/law_230.py
+deleted file mode 100755
+index d42e58b..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_230.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Atomic Valence", "principle": "Quantum valid coordination.", "rationale": "Atoms have fixed coordination numbers based on electron configuration."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier1/law_230_valence.py b/control-atlas-saas/backend/tos/glossary/tier1/law_230_valence.py
+deleted file mode 100755
+index 045fb2e..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier1/law_230_valence.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Atomic Valence Consistency", "principle": "Atoms must satisfy quantum valence rules (C=4, N=3, O=2).", "rationale": "Impossible coordination numbers indicate a total breakdown of chemical logic."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_152.py b/control-atlas-saas/backend/tos/glossary/tier2/law_152.py
+deleted file mode 100755
+index aff039e..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_152.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "LAW-152", "principle": "Heuristic Advisory", "rationale": "Empirical signal used for decision support."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_152_binding.py b/control-atlas-saas/backend/tos/glossary/tier2/law_152_binding.py
+deleted file mode 100755
+index 050969e..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_152_binding.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Binding Energy Estimate", "tier": "CALIBRATED", "cutoff": "ΔG < -10 kcal/mol", "summary": "Estimated free energy predicts interface stability", "rationale": "Binding free energy (ΔG) quantifies stability. Stable interfaces require ΔG < -10 kcal/mol."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_162.py b/control-atlas-saas/backend/tos/glossary/tier2/law_162.py
+deleted file mode 100755
+index 7920fd7..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_162.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Interface Saturation", "principle": "Binding requires donor-acceptor handshake.", "rationale": "Stable interfaces exhibit >=3 H-bonds per 1000A^2. Sparse interfaces are unlikely to bind in solution."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_162_interface.py b/control-atlas-saas/backend/tos/glossary/tier2/law_162_interface.py
+deleted file mode 100755
+index 17a523a..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_162_interface.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Interface Saturation", "tier": "ADVISORY", "cutoff": "≥3 H-bonds", "summary": "Stable interfaces require extensive hydrogen bonding", "rationale": "Stable interfaces typically exhibit ≥3 hydrogen bonds per 1000Å². <3 H-bonds → high dissociation risk."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_170.py b/control-atlas-saas/backend/tos/glossary/tier2/law_170.py
+deleted file mode 100755
+index 540d5c0..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_170.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "pI Balance", "principle": "Near-neutral pI causes aggregation.", "rationale": "At pH=pI, proteins lack repulsion and turn into industrial sludge."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_170_pi.py b/control-atlas-saas/backend/tos/glossary/tier2/law_170_pi.py
+deleted file mode 100755
+index 0854a08..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_170_pi.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Isoelectric Point (pI) Balance", "tier": "ADVISORY", "cutoff": "pI 6-8", "summary": "Proteins with pI near neutral pH often precipitate", "rationale": "At pH = pI, proteins have zero net charge and lack repulsion, turning into industrial sludge."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_175.py b/control-atlas-saas/backend/tos/glossary/tier2/law_175.py
+deleted file mode 100755
+index ac34e85..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_175.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "LAW-175", "principle": "Heuristic Advisory", "rationale": "Empirical signal used for decision support."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_175_aggregation.py b/control-atlas-saas/backend/tos/glossary/tier2/law_175_aggregation.py
+deleted file mode 100755
+index 7482a0f..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_175_aggregation.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Aggregation Propensity", "tier": "CALIBRATED", "cutoff": ">5% APR", "summary": "Detects aggregation-prone regions in sequence", "rationale": "TANGO/Zyggregator detect regions correlating with inclusion body formation."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_180.py b/control-atlas-saas/backend/tos/glossary/tier2/law_180.py
+deleted file mode 100755
+index 8e40b99..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_180.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "LAW-180", "principle": "Heuristic Advisory", "rationale": "Empirical signal used for decision support."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_180_synthesis.py b/control-atlas-saas/backend/tos/glossary/tier2/law_180_synthesis.py
+deleted file mode 100755
+index f0c8fb1..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_180_synthesis.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Synthesis Feasibility Tax", "tier": "ADVISORY", "cutoff": "Complexity score", "summary": "Assesses manufacturability based on sequence", "rationale": "Rare codons and multiple cysteines increase synthesis cost and failure rate."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_240.py b/control-atlas-saas/backend/tos/glossary/tier2/law_240.py
+deleted file mode 100755
+index 7f1e466..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_240.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "LAW-240", "principle": "Heuristic Advisory", "rationale": "Empirical signal used for decision support."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_240_flexibility.py b/control-atlas-saas/backend/tos/glossary/tier2/law_240_flexibility.py
+deleted file mode 100755
+index e2aedb9..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_240_flexibility.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Conformational Entropy", "tier": "ADVISORY", "cutoff": "Variance", "summary": "Assesses rigidity/flexibility balance", "rationale": "Excessive flexibility indicates disordered regions that may not bind ligands effectively."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_250.py b/control-atlas-saas/backend/tos/glossary/tier2/law_250.py
+deleted file mode 100755
+index 5f6100b..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_250.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "LAW-250", "principle": "Heuristic Advisory", "rationale": "Empirical signal used for decision support."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_250_charge.py b/control-atlas-saas/backend/tos/glossary/tier2/law_250_charge.py
+deleted file mode 100755
+index d51790c..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_250_charge.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Surface Charge Patches", "tier": "ADVISORY", "cutoff": ">500Å²", "summary": "Extreme charge clustering can cause non-specific binding", "rationale": "Large contiguous charged surface patches cause aggregation via charge-charge interactions."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_260.py b/control-atlas-saas/backend/tos/glossary/tier2/law_260.py
+deleted file mode 100755
+index 4c1216d..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_260.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "LAW-260", "principle": "Heuristic Advisory", "rationale": "Empirical signal used for decision support."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_260_hotspot.py b/control-atlas-saas/backend/tos/glossary/tier2/law_260_hotspot.py
+deleted file mode 100755
+index 3ec0148..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_260_hotspot.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Binding Hotspot Dispersion", "tier": "ADVISORY", "cutoff": "15Å radius", "summary": "Binding energy should cluster spatially", "rationale": "Effective interfaces have 'hotspot' residues that cluster spatially for synergistic binding."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_270.py b/control-atlas-saas/backend/tos/glossary/tier2/law_270.py
+deleted file mode 100755
+index 5a76005..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_270.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "LAW-270", "principle": "Heuristic Advisory", "rationale": "Empirical signal used for decision support."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_270_glycosylation.py b/control-atlas-saas/backend/tos/glossary/tier2/law_270_glycosylation.py
+deleted file mode 100755
+index 2bc64af..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_270_glycosylation.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Glycosylation Site Risk", "tier": "ADVISORY", "cutoff": "N-X-S/T", "summary": "Detects sequons that cause expression problems", "rationale": "N-X-S/T sequons (X≠P) can cause unwanted glycosylation or aggregation in bacteria."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_280.py b/control-atlas-saas/backend/tos/glossary/tier2/law_280.py
+deleted file mode 100755
+index 3064cd3..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_280.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "LAW-280", "principle": "Heuristic Advisory", "rationale": "Empirical signal used for decision support."}
+diff --git a/control-atlas-saas/backend/tos/glossary/tier2/law_280_manufacturing.py b/control-atlas-saas/backend/tos/glossary/tier2/law_280_manufacturing.py
+deleted file mode 100755
+index 770b0b6..0000000
+--- a/control-atlas-saas/backend/tos/glossary/tier2/law_280_manufacturing.py
++++ /dev/null
+@@ -1 +0,0 @@
+-EXPLANATION = {"title": "Manufacturing Complexity", "tier": "ADVISORY", "cutoff": "Combined risk", "summary": "Holistic assessment of manufacturing challenges", "rationale": "Combines expression, purification, and stability into a single risk score."}
+diff --git a/control-atlas-saas/backend/tos/governance/program_schema.py b/control-atlas-saas/backend/tos/governance/program_schema.py
+deleted file mode 100644
+index 5a4ff25..0000000
+--- a/control-atlas-saas/backend/tos/governance/program_schema.py
++++ /dev/null
+@@ -1,250 +0,0 @@
+-"""Program lifecycle and causality chain utilities for Toscanini v21.0.4."""
+-
+-from __future__ import annotations
+-
+-from dataclasses import dataclass, field
+-from datetime import datetime, timezone
+-from enum import Enum
+-import hashlib
+-import json
+-from pathlib import Path
+-from typing import Dict, List, Optional
+-
+-from tos.engine import tier1_measurements
+-from tos.engine.tier3_predict import ProbabilityInputs, compute_probability_breakdown
+-from tos.export.sealer import ForensicSealer
+-from tos.glossary import law_glossary
+-from tos.saas_engine.selector import ArchitectureDecision, derive_architecture
+-
+-
+-class ProgramState(str, Enum):
+-    S0_INGESTED = "S0_INGESTED"
+-    S1_ACQUISITION_COMPLETE = "S1_ACQUISITION_COMPLETE"
+-    S2_FOLDING_COMPLETE = "S2_FOLDING_COMPLETE"
+-    S3_TIER1_COMPLETE = "S3_TIER1_COMPLETE"
+-    S4_ARCHITECTURE_DERIVED = "S4_ARCHITECTURE_DERIVED"
+-    S5_TIER3_COMPLETE = "S5_TIER3_COMPLETE"
+-    S6_FORENSIC_AGGREGATION = "S6_FORENSIC_AGGREGATION"
+-    S7_DOSSIER_READY = "S7_DOSSIER_READY"
+-
+-
+-STATE_SEQUENCE = [
+-    ProgramState.S0_INGESTED,
+-    ProgramState.S1_ACQUISITION_COMPLETE,
+-    ProgramState.S2_FOLDING_COMPLETE,
+-    ProgramState.S3_TIER1_COMPLETE,
+-    ProgramState.S4_ARCHITECTURE_DERIVED,
+-    ProgramState.S5_TIER3_COMPLETE,
+-    ProgramState.S6_FORENSIC_AGGREGATION,
+-    ProgramState.S7_DOSSIER_READY,
+-]
+-
+-
+-@dataclass(frozen=True)
+-class ProgramEvent:
+-    state: ProgramState
+-    payload: Dict[str, object]
+-    previous_hash: str
+-    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+-
+-    def chain_hash(self) -> str:
+-        content = {
+-            "state": self.state,
+-            "payload": self.payload,
+-            "previous_hash": self.previous_hash,
+-            "created_at": self.created_at,
+-        }
+-        encoded = json.dumps(content, sort_keys=True, default=str).encode("utf-8")
+-        return hashlib.sha256(encoded).hexdigest()
+-
+-
+-@dataclass
+-class ProgramRecord:
+-    program_id: str
+-    events: List[ProgramEvent] = field(default_factory=list)
+-    structure: Optional[object] = None
+-    notary_seal: Optional[str] = None
+-    tier1_ledger: List[Dict[str, object]] = field(default_factory=list)
+-    architecture: Optional[ArchitectureDecision] = None
+-    tier3_breakdown: Dict[str, float] = field(default_factory=dict)
+-    veto: bool = False
+-    hash_chain: List[str] = field(default_factory=list)
+-
+-    @property
+-    def current_state(self) -> Optional[ProgramState]:
+-        if not self.events:
+-            return None
+-        return self.events[-1].state
+-
+-    def add_event(self, state: ProgramState, payload: Dict[str, object]) -> ProgramEvent:
+-        previous_hash = self.events[-1].chain_hash() if self.events else "GENESIS"
+-        event = ProgramEvent(state=state, payload=payload, previous_hash=previous_hash)
+-        self.events.append(event)
+-        self.hash_chain.append(event.chain_hash())
+-        return event
+-
+-    def validate_chain(self) -> bool:
+-        previous_hash = "GENESIS"
+-        for event in self.events:
+-            if event.previous_hash != previous_hash:
+-                return False
+-            previous_hash = event.chain_hash()
+-        return True
+-
+-    def require_next_state(self, state: ProgramState) -> None:
+-        expected_index = 0 if self.current_state is None else STATE_SEQUENCE.index(self.current_state) + 1
+-        if expected_index >= len(STATE_SEQUENCE) or STATE_SEQUENCE[expected_index] != state:
+-            raise ValueError(f"Non-skippable state violation: expected {STATE_SEQUENCE[expected_index].value}")
+-
+-
+-class ProgramRepository:
+-    """In-memory repository for program lifecycle tracking."""
+-
+-    def __init__(self) -> None:
+-        self._records: Dict[str, ProgramRecord] = {}
+-
+-    def upsert(self, program_id: str) -> ProgramRecord:
+-        if program_id not in self._records:
+-            self._records[program_id] = ProgramRecord(program_id=program_id)
+-        record = self._records[program_id]
+-        if record.events and not record.validate_chain():
+-            raise ValueError("Program hash chain integrity failure.")
+-        return record
+-
+-    def get(self, program_id: str) -> Optional[ProgramRecord]:
+-        record = self._records.get(program_id)
+-        if record and not record.validate_chain():
+-            raise ValueError("Program hash chain integrity failure.")
+-        return record
+-
+-    def list_programs(self) -> List[ProgramRecord]:
+-        return list(self._records.values())
+-
+-
+-def _compute_voxel_span(structure) -> tuple[float, float, float]:
+-    positions = [a.pos for a in structure.atoms + structure.ligands]
+-    xs = [p[0] for p in positions]
+-    ys = [p[1] for p in positions]
+-    zs = [p[2] for p in positions]
+-    return (max(xs) - min(xs), max(ys) - min(ys), max(zs) - min(zs))
+-
+-
+-def _symmetry_score(voxel_span: tuple[float, float, float]) -> float:
+-    max_dim = max(voxel_span)
+-    min_dim = max(min(voxel_span), 1e-6)
+-    return min_dim / max_dim
+-
+-
+-def _clash_free_volume(voxel_span: tuple[float, float, float]) -> float:
+-    x, y, z = voxel_span
+-    return float(x * y * z)
+-
+-
+-def advance_program(
+-    program: ProgramRecord,
+-    structure,
+-    acquisition_source: str,
+-    folding_source: str,
+-    plddt: float,
+-) -> ProgramRecord:
+-    """Advance a program deterministically through the full sovereign pipeline."""
+-
+-    if program.current_state is None:
+-        program.require_next_state(ProgramState.S0_INGESTED)
+-        coord_hash = ForensicSealer.generate_hash(ForensicSealer.canonical_serialize(structure.atoms + structure.ligands))
+-        program.structure = structure
+-        program.notary_seal = coord_hash
+-        program.add_event(ProgramState.S0_INGESTED, {"notary_seal": coord_hash})
+-
+-    if program.current_state == ProgramState.S0_INGESTED:
+-        program.require_next_state(ProgramState.S1_ACQUISITION_COMPLETE)
+-        program.add_event(ProgramState.S1_ACQUISITION_COMPLETE, {"source": acquisition_source})
+-
+-    if program.current_state == ProgramState.S1_ACQUISITION_COMPLETE:
+-        program.require_next_state(ProgramState.S2_FOLDING_COMPLETE)
+-        program.add_event(ProgramState.S2_FOLDING_COMPLETE, {"folding_source": folding_source})
+-
+-    if program.current_state == ProgramState.S2_FOLDING_COMPLETE:
+-        program.require_next_state(ProgramState.S3_TIER1_COMPLETE)
+-        s155, m155, a155 = tier1_measurements.Tier1Measurements.check_law_155_L(structure)
+-        s160, m160, a160 = tier1_measurements.Tier1Measurements.check_law_160(structure)
+-        ledger: List[Dict[str, object]] = []
+-        for law_id in law_glossary.list_all_law_ids():
+-            status, measurement, anchor = ("PASS", "Verified Invariant", {})
+-            if law_id == "LAW-155":
+-                status, measurement, anchor = s155, m155, a155
+-            elif law_id == "LAW-160":
+-                status, measurement, anchor = s160, m160, a160
+-            explanation = law_glossary.get_law_explanation(law_id)
+-            ledger.append(
+-                {
+-                    "law_id": law_id,
+-                    "status": status,
+-                    "measurement": measurement,
+-                    "anchor": anchor,
+-                    "title": explanation["title"],
+-                    "principle": explanation["principle"],
+-                }
+-            )
+-        program.tier1_ledger = ledger
+-        program.veto = any(l["status"] in {"FAIL", "VETO"} for l in ledger)
+-        program.add_event(ProgramState.S3_TIER1_COMPLETE, {"veto": program.veto, "ledger_count": len(ledger)})
+-        if program.veto:
+-            return program
+-
+-    if program.current_state == ProgramState.S3_TIER1_COMPLETE:
+-        program.require_next_state(ProgramState.S4_ARCHITECTURE_DERIVED)
+-        voxel_span = _compute_voxel_span(structure)
+-        symmetry = _symmetry_score(voxel_span)
+-        clash_free_volume = _clash_free_volume(voxel_span)
+-        program.architecture = derive_architecture(
+-            voxel_span=voxel_span,
+-            symmetry_score=symmetry,
+-            clash_free_volume=clash_free_volume,
+-        )
+-        program.add_event(
+-            ProgramState.S4_ARCHITECTURE_DERIVED,
+-            {
+-                "category": program.architecture.category,
+-                "voxel_span": voxel_span,
+-                "symmetry_score": symmetry,
+-                "clash_free_volume": clash_free_volume,
+-            },
+-        )
+-
+-    if program.current_state == ProgramState.S4_ARCHITECTURE_DERIVED:
+-        program.require_next_state(ProgramState.S5_TIER3_COMPLETE)
+-        weight_by_category = {
+-            "Linear": 0.95,
+-            "Multivalent": 1.15,
+-            "Metal": 1.05,
+-            "Helical": 1.0,
+-            "Sheet": 0.98,
+-            "Compact": 1.1,
+-            "Extended": 0.92,
+-        }
+-        derivation_weight = weight_by_category.get(program.architecture.category, 1.0)
+-        inputs = ProbabilityInputs(
+-            plddt=plddt,
+-            physical_boost=0.25,
+-            base_probability=0.15,
+-            refinement_tax=0.25,
+-            derivation_weight=derivation_weight,
+-        )
+-        program.tier3_breakdown = compute_probability_breakdown(inputs)
+-        program.add_event(ProgramState.S5_TIER3_COMPLETE, program.tier3_breakdown)
+-
+-    if program.current_state == ProgramState.S5_TIER3_COMPLETE:
+-        program.require_next_state(ProgramState.S6_FORENSIC_AGGREGATION)
+-        nkg_path = Path("/app/nkg/piu_moat.jsonl")
+-        nkg_count = 0
+-        if nkg_path.exists():
+-            with nkg_path.open("r", encoding="utf-8") as handle:
+-                nkg_count = sum(1 for _ in handle)
+-        program.add_event(ProgramState.S6_FORENSIC_AGGREGATION, {"nkg_count": nkg_count})
+-
+-    if program.current_state == ProgramState.S6_FORENSIC_AGGREGATION:
+-        program.require_next_state(ProgramState.S7_DOSSIER_READY)
+-        program.add_event(ProgramState.S7_DOSSIER_READY, {"ready": True})
+-
+-    return program
+diff --git a/control-atlas-saas/backend/tos/ingestion/__init__.py b/control-atlas-saas/backend/tos/ingestion/__init__.py
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/control-atlas-saas/backend/tos/ingestion/processor.py b/control-atlas-saas/backend/tos/ingestion/processor.py
+deleted file mode 100644
+index fab155c..0000000
+--- a/control-atlas-saas/backend/tos/ingestion/processor.py
++++ /dev/null
+@@ -1,35 +0,0 @@
+-import hashlib, os, tempfile, numpy as np
+-from Bio.PDB import PDBParser, MMCIFParser
+-from tos.ingestion.structure_object import StructureObject, Atom, ConfidenceSidecar
+-
+-class IngestionProcessor:
+-    @staticmethod
+-    def run(content: bytes, filename: str, gen: str) -> StructureObject:
+-        ext = filename.split(".")[-1].lower()
+-        if ext not in ["pdb", "cif"]: ext = "pdb"
+-        with tempfile.NamedTemporaryFile(suffix=f".{ext}", mode='wb', delete=False) as tf:
+-            tf.write(content); t_path = tf.name
+-        parser = PDBParser(QUIET=True) if ext=="pdb" else MMCIFParser(QUIET=True)
+-        struct = parser.get_structure("CLAIM", t_path); os.remove(t_path)
+-        atoms, ligands, plddts = [], [], []
+-        model = struct[0]
+-        for chain in model:
+-            for residue in chain:
+-                is_lig = residue.get_id()[0].strip() != ""
+-                for atom in residue:
+-                    if atom.get_altloc() not in [" ", "A"]: continue
+-                    if atom.element == "H": continue
+-                    val = float(atom.get_bfactor())
+-                    plddts.append(val)
+-                    a_obj = Atom(residue.get_resname(), residue.get_id()[1], chain.id, atom.get_name(), atom.element, tuple(float(x) for x in atom.get_coord()), val)
+-                    if is_lig: ligands.append(a_obj)
+-                    else: atoms.append(a_obj)
+-        p_arr = np.array(plddts)
+-        mean_p = float(np.mean(p_arr)) if len(p_arr) > 0 else 0.0
+-        is_placeholder = len(p_arr) > 0 and (np.all(p_arr == 0) or np.all(p_arr == 100.0) or np.all(p_arr == 1.0))
+-        if len(p_arr) == 0: sidecar = ConfidenceSidecar(0.0, "ABSENT", "NONE", False)
+-        elif is_placeholder: sidecar = ConfidenceSidecar(mean_p, "PLACEHOLDER", "BFACTOR_STATIC", False)
+-        else:
+-            if 0 < mean_p <= 1.0: mean_p *= 100
+-            sidecar = ConfidenceSidecar(mean_p, "MEASURED", "BFACTOR_COLUMN", (mean_p < 70.0))
+-        return StructureObject(hashlib.sha256(content).hexdigest()[:16], gen, ext.upper(), tuple(atoms), tuple(ligands), sidecar)
+diff --git a/control-atlas-saas/backend/tos/ingestion/structure_object.py b/control-atlas-saas/backend/tos/ingestion/structure_object.py
+deleted file mode 100644
+index 7c7f316..0000000
+--- a/control-atlas-saas/backend/tos/ingestion/structure_object.py
++++ /dev/null
+@@ -1,38 +0,0 @@
+-from dataclasses import dataclass, field
+-from typing import Tuple, Dict, Any, Optional
+-import numpy as np
+-import hashlib
+-
+-@dataclass(frozen=True)
+-class Atom:
+-    res_name: str
+-    res_seq: int
+-    chain: str
+-    atom_name: str
+-    element: str
+-    pos: Tuple[float, float, float]
+-    plddt: Optional[float] = None
+-
+-@dataclass(frozen=True)
+-class ConfidenceSidecar:
+-    mean_plddt: float
+-    status: str      # MEASURED, ABSENT, or PLACEHOLDER
+-    source: str      # BFACTOR_COLUMN, MA_QA_METRIC, etc.
+-    is_low: bool
+-
+-@dataclass(frozen=True)
+-class StructureObject:
+-    audit_id: str
+-    source_model: str
+-    source_format: str
+-    atoms: Tuple[Atom, ...]
+-    ligands: Tuple[Atom, ...]
+-    confidence: ConfidenceSidecar
+-    metadata: Dict[str, Any] = field(default_factory=dict)
+-
+-    def get_coordinate_hash(self) -> str:
+-        all_content = sorted(list(self.atoms) + list(self.ligands), 
+-                             key=lambda a: (a.chain, a.res_seq, a.atom_name))
+-        coord_string = "".join([f"{a.chain}{a.res_seq}{a.atom_name}{a.pos[0]:.3f}{a.pos[1]:.3f}{a.pos[2]:.3f}" 
+-                               for a in all_content])
+-        return hashlib.sha256(coord_string.encode()).hexdigest()
+diff --git a/control-atlas-saas/backend/tos/router/__init__.py b/control-atlas-saas/backend/tos/router/__init__.py
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/control-atlas-saas/backend/tos/router/config.yaml b/control-atlas-saas/backend/tos/router/config.yaml
+deleted file mode 100644
+index 2aa58b3..0000000
+--- a/control-atlas-saas/backend/tos/router/config.yaml
++++ /dev/null
+@@ -1,6 +0,0 @@
+-version: "1.0.0"
+-thresholds:
+-  low_plddt: 70.0
+-  critical_pae: 10.0
+-metadata:
+-  ligand_confidence_policy: "ignored"  # Ligand pLDDT does not affect routing
+diff --git a/control-atlas-saas/backend/tos/router/intelligence.py b/control-atlas-saas/backend/tos/router/intelligence.py
+deleted file mode 100644
+index b8b522f..0000000
+--- a/control-atlas-saas/backend/tos/router/intelligence.py
++++ /dev/null
+@@ -1,36 +0,0 @@
+-import yaml
+-import os
+-from ingestion.structure_object import StructureObject
+-
+-class IntelligenceRouter:
+-    def __init__(self):
+-        config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+-        with open(config_path, 'r') as f:
+-            self.config = yaml.safe_load(f)
+-
+-    def decide(self, structure: StructureObject, tier1_verdict: str) -> dict:
+-        t = self.config['thresholds']
+-        
+-        if tier1_verdict == "VETO":
+-            return {
+-                "state": "NON-REAL",
+-                "color": "red",
+-                "banner": "❌ Physical Impossibility Detected",
+-                "recommendation": "Structure violates invariant physical laws. Reject immediately."
+-            }
+-        
+-        # Routing logic: Only uses Protein pLDDT (Ligand confidence ignored per policy)
+-        if structure.confidence.mean_plddt < t['low_plddt']:
+-            return {
+-                "state": "REAL_BUT_UNCERTAIN",
+-                "color": "orange",
+-                "banner": f"🟡 Physically Valid · Low Confidence ({structure.confidence.mean_plddt:.1f}%)",
+-                "recommendation": f"Valid geometry but high ML uncertainty. Escalate to AF3 or Chai-1."
+-            }
+-            
+-        return {
+-            "state": "REAL_AND_VALID",
+-            "color": "green",
+-            "banner": f"🟢 Physically Real · High Confidence ({structure.confidence.mean_plddt:.1f}%)",
+-            "recommendation": "Structure is physically sound and high-confidence. Safe for engineering."
+-        }
+diff --git a/control-atlas-saas/backend/tos/saas_engine/selector.py b/control-atlas-saas/backend/tos/saas_engine/selector.py
+deleted file mode 100644
+index bb5094d..0000000
+--- a/control-atlas-saas/backend/tos/saas_engine/selector.py
++++ /dev/null
+@@ -1,58 +0,0 @@
+-"""Geometric architecture derivation for Tier-2 architecture lab."""
+-
+-from __future__ import annotations
+-
+-from dataclasses import dataclass
+-from typing import Optional, Tuple
+-
+-
+-@dataclass(frozen=True)
+-class ArchitectureDecision:
+-    category: str
+-    voxel_span: Tuple[float, float, float]
+-    rationale: str
+-    symmetry_score: Optional[float] = None
+-    clash_free_volume: Optional[float] = None
+-
+-
+-def derive_architecture(
+-    voxel_span: Tuple[float, float, float],
+-    symmetry_score: Optional[float] = None,
+-    clash_free_volume: Optional[float] = None,
+-) -> ArchitectureDecision:
+-    """Derive architecture category from voxel span and spatial metadata.
+-
+-    Categories: Linear, Multivalent, Metal, Helical, Sheet, Compact, Extended.
+-    """
+-    x, y, z = voxel_span
+-    max_dim = max(voxel_span)
+-    min_dim = min(voxel_span)
+-    if symmetry_score is not None and symmetry_score >= 0.85 and max_dim <= 50:
+-        category = "Compact"
+-        rationale = "High symmetry with bounded span indicates a compact topology."
+-    elif clash_free_volume is not None and clash_free_volume >= 150_000 and x >= 55 and y >= 55:
+-        category = "Multivalent"
+-        rationale = "Large clash-free volume and broad footprint imply multivalent architecture."
+-    elif max_dim <= 40:
+-        category = "Compact"
+-        rationale = "Voxel span is tightly bounded across all axes."
+-    elif max_dim / max(min_dim, 1.0) >= 3:
+-        category = "Linear"
+-        rationale = "One axis dominates the voxel span, indicating a linear architecture."
+-    elif z >= 60:
+-        category = "Extended"
+-        rationale = "Strong extension along the z-axis suggests an extended scaffold."
+-    elif x >= 55 and y >= 55:
+-        category = "Multivalent"
+-        rationale = "Broad footprint across two axes implies multivalent topology."
+-    elif min_dim <= 15:
+-        category = "Metal"
+-        rationale = "Tight core thickness indicates metal-binding compactness."
+-    elif y >= 45:
+-        category = "Sheet"
+-        rationale = "Broad planar span suggests sheet-dominant topology."
+-    else:
+-        category = "Helical"
+-        rationale = "Balanced dimensions imply helical bundle geometry."
+-
+-    return ArchitectureDecision(category=category, voxel_span=voxel_span, rationale=rationale)
+diff --git a/control-atlas-saas/config/init.sql b/control-atlas-saas/config/init.sql
+deleted file mode 100755
+index 4578faa..0000000
+--- a/control-atlas-saas/config/init.sql
++++ /dev/null
+@@ -1,8 +0,0 @@
+--- Initial database setup for Sovereign Sieve
+-CREATE TABLE IF NOT EXISTS users (
+-    id SERIAL PRIMARY KEY,
+-    email VARCHAR(255) UNIQUE NOT NULL,
+-    hashed_password VARCHAR(255) NOT NULL,
+-    tier VARCHAR(50) DEFAULT 'free',
+-    credits_remaining INTEGER DEFAULT 10
+-);
+diff --git a/control-atlas-saas/dashboard/Dockerfile b/control-atlas-saas/dashboard/Dockerfile
+deleted file mode 100755
+index e226d9e..0000000
+--- a/control-atlas-saas/dashboard/Dockerfile
++++ /dev/null
+@@ -1,5 +0,0 @@
+-FROM python:3.11-bookworm
+-WORKDIR /app
+-RUN pip install --no-cache-dir streamlit requests
+-COPY . .
+-CMD ["streamlit", "run", "dashboard.py", "--server.port=8501", "--server.address", "0.0.0.0"]
+diff --git a/control-atlas-saas/dashboard/dashboard.py b/control-atlas-saas/dashboard/dashboard.py
+deleted file mode 100644
+index 0b8c9b0..0000000
+--- a/control-atlas-saas/dashboard/dashboard.py
++++ /dev/null
+@@ -1,212 +0,0 @@
+-import base64
+-import os
+-from typing import Dict, Optional
+-
+-import py3Dmol
+-import requests
+-import streamlit as st
+-from stmol import showmol
+-
+-
+-st.set_page_config(page_title="Toscanini Pipeline Console", layout="wide")
+-
+-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+-
+-if "audit_result" not in st.session_state:
+-    st.session_state.audit_result = None
+-if "program_cache" not in st.session_state:
+-    st.session_state.program_cache = {}
+-if "selected_anchor" not in st.session_state:
+-    st.session_state.selected_anchor = None
+-
+-
+-def fetch_stats() -> int:
+-    try:
+-        resp = requests.get(f"{BACKEND_URL}/stats", timeout=10)
+-        resp.raise_for_status()
+-        return int(resp.json().get("unique_pius", 0))
+-    except Exception:
+-        return 0
+-
+-
+-def ingest_structure(payload: Dict, files: Optional[Dict] = None) -> Optional[Dict]:
+-    try:
+-        response = requests.post(f"{BACKEND_URL}/ingest", data=payload, files=files, timeout=180)
+-        response.raise_for_status()
+-        return response.json()
+-    except Exception as exc:
+-        st.error(f"⚠️ Forensic ingest failed: {exc}")
+-        return None
+-
+-
+-def fetch_dossier(program_id: str) -> Optional[bytes]:
+-    try:
+-        response = requests.get(f"{BACKEND_URL}/programs/{program_id}/dossier", timeout=30)
+-        response.raise_for_status()
+-        return response.content
+-    except Exception as exc:
+-        st.error(f"⚠️ Dossier retrieval failed: {exc}")
+-        return None
+-
+-
+-def program_state_panel(program_data: Dict) -> None:
+-    st.subheader("Program Lifecycle (S0 → S7)")
+-    state = program_data.get("state")
+-    hash_chain = program_data.get("hash_chain") or []
+-    steps = [
+-        "S0_INGESTED",
+-        "S1_ACQUISITION_COMPLETE",
+-        "S2_FOLDING_COMPLETE",
+-        "S3_TIER1_COMPLETE",
+-        "S4_ARCHITECTURE_DERIVED",
+-        "S5_TIER3_COMPLETE",
+-        "S6_FORENSIC_AGGREGATION",
+-        "S7_DOSSIER_READY",
+-    ]
+-    cols = st.columns(4)
+-    for idx, step in enumerate(steps):
+-        col = cols[idx % 4]
+-        marker = "✅" if state and steps.index(step) <= steps.index(state) else "⬜"
+-        col.write(f"{marker} {step}")
+-    integrity = "OK" if hash_chain else "UNVERIFIED"
+-    st.caption(f"Hash-chain entries: {len(hash_chain)} | Integrity: {integrity}")
+-
+-
+-def render_viewer(pdb_bytes: bytes, fmt: str, verdict: str, anchor: Optional[Dict]) -> None:
+-    pdb_str = pdb_bytes.decode("utf-8", errors="ignore")
+-    view = py3Dmol.view(width=700, height=520)
+-    view.addModel(pdb_str, fmt)
+-    if verdict == "VETO":
+-        view.setStyle({}, {"stick": {"radius": 0.2}, "sphere": {"radius": 0.6, "color": "red"}})
+-    else:
+-        view.setStyle({}, {"cartoon": {"color": "spectrum"}})
+-    if anchor:
+-        pos = anchor.get("pos")
+-        if pos:
+-            view.addSphere({"center": {"x": pos[0], "y": pos[1], "z": pos[2]}, "radius": 3, "color": "red", "wireframe": True})
+-            view.zoomTo({"center": {"x": pos[0], "y": pos[1], "z": pos[2]}})
+-    view.zoomTo()
+-    view.setBackgroundColor("0x0b0f17")
+-    showmol(view, height=520, width=700)
+-
+-
+-def ledger_section(laws: list) -> None:
+-    st.subheader("Diagnostic Ledger")
+-    for law in laws:
+-        status = law.get("status", "PASS")
+-        icon = "✅" if status == "PASS" else "❌"
+-        with st.expander(f"{icon} {law.get('law_id')} — {law.get('title')}"):
+-            st.write(law.get("measurement"))
+-            if law.get("anchor"):
+-                if st.button("🔍 Forensic Zoom", key=f"anchor_{law.get('law_id')}"):
+-                    st.session_state.selected_anchor = law.get("anchor")
+-                    st.experimental_rerun()
+-            st.caption(f"Principle: {law.get('principle')}")
+-
+-
+-st.title("Toscanini — Forensic Falsification-as-a-Service")
+-st.caption("The filter is more valuable than the generator. Schrödinger-Class credibility, every time.")
+-
+-with st.sidebar:
+-    st.header("📉 NKG Intelligence")
+-    nkg_count = fetch_stats()
+-    st.metric("Failure Moat Entries", nkg_count)
+-    st.caption("Live count from piu_moat.jsonl")
+-
+-    st.divider()
+-    st.header("Sovereign Ingestion")
+-    existing_program = st.text_input("Load Existing Program ID")
+-    if existing_program:
+-        cached = st.session_state.program_cache.get(existing_program)
+-        if cached:
+-            st.session_state.audit_result = cached
+-            st.success(f"Loaded program {existing_program} from session cache.")
+-        else:
+-            st.warning("Program not in session cache. Ingest again or keep session active.")
+-
+-    afdb_id = st.text_input("AlphaFold DB ID", placeholder="AF-P12345-F1")
+-    uploaded_file = st.file_uploader("Upload PDB/CIF", type=["pdb", "cif"])
+-    run_audit = st.button("Ingest & Run Full Audit")
+-
+-    if run_audit:
+-        payload = {"mode": "Discovery", "candidate_id": afdb_id or "manual"}
+-        files = None
+-        if uploaded_file:
+-            payload["mode"] = "Upload"
+-            files = {"file": (uploaded_file.name, uploaded_file.getvalue())}
+-        result = ingest_structure(payload, files=files)
+-        if result:
+-            st.session_state.audit_result = result
+-            program_id = result.get("program", {}).get("program_id")
+-            if program_id:
+-                st.session_state.program_cache[program_id] = result
+-
+-
+-if st.session_state.audit_result:
+-    result = st.session_state.audit_result
+-    if result.get("verdict") == "ERROR":
+-        st.error(result.get("details"))
+-    else:
+-        program = result.get("program", {})
+-        verdict = result.get("verdict")
+-        prob = program.get("tier3", {}).get("probability", 0.0)
+-
+-        st.subheader("Program Continuity")
+-        st.write(f"Program ID: `{program.get('program_id')}`")
+-
+-        program_state_panel(program)
+-
+-        banner_color = "🟩" if verdict == "PASS" else "🟥"
+-        st.markdown(
+-            f"### {banner_color} FINAL VERDICT: **{verdict}** — Schrödinger-Class Badge",
+-        )
+-        st.metric("Tier-3 Probability", f"{prob * 100:.2f}%")
+-
+-        col_left, col_right = st.columns([1, 1])
+-        with col_left:
+-            st.subheader("Architecture Category")
+-            arch = program.get("architecture") or {}
+-            st.write(f"**{arch.get('category', 'UNASSIGNED')}**")
+-            st.caption(arch.get("rationale", "No rationale recorded."))
+-
+-            st.subheader("Tier-3 Probability Breakdown")
+-            breakdown = program.get("tier3") or {}
+-            st.progress(min(max(prob, 0.0), 1.0))
+-            st.json(
+-                {
+-                    "P_base": breakdown.get("p_base"),
+-                    "P_phys": breakdown.get("p_phys"),
+-                    "P_ml": breakdown.get("p_ml"),
+-                    "Tax": breakdown.get("tax"),
+-                    "Weight_Derivation": breakdown.get("weight_derivation"),
+-                    "Final_P": breakdown.get("probability"),
+-                }
+-            )
+-
+-        with col_right:
+-            st.subheader("Dual-Engine Visualizer")
+-            if result.get("pdb_b64"):
+-                pdb_bytes = base64.b64decode(result.get("pdb_b64"))
+-                render_viewer(pdb_bytes, result.get("ext", "pdb"), verdict, st.session_state.selected_anchor)
+-            else:
+-                st.warning("No structure data available for visualization.")
+-
+-        ledger_section(result.get("laws", []))
+-
+-        st.subheader("Dossier Delivery")
+-        dossier_bytes = None
+-        if program.get("program_id"):
+-            if st.button("Download Nature-Grade Dossier"):
+-                dossier_bytes = fetch_dossier(program["program_id"])
+-            if dossier_bytes:
+-                st.download_button(
+-                    "Save PDF",
+-                    dossier_bytes,
+-                    file_name=f"{program['program_id']}_dossier.pdf",
+-                    mime="application/pdf",
+-                )
+-                pdf_b64 = base64.b64encode(dossier_bytes).decode("utf-8")
+-                st.components.v1.html(
+-                    f"<iframe src='data:application/pdf;base64,{pdf_b64}' width='100%' height='500'></iframe>",
+-                    height=520,
+-                )
+diff --git a/control-atlas-saas/diagnostic_output.txt b/control-atlas-saas/diagnostic_output.txt
+deleted file mode 100755
+index 60c3bfe..0000000
+--- a/control-atlas-saas/diagnostic_output.txt
++++ /dev/null
+@@ -1 +0,0 @@
+-/home/prateekm1/diagnostic.sh: line 1: [paste: command not found
+diff --git a/control-atlas-saas/docker-compose.yml b/control-atlas-saas/docker-compose.yml
+deleted file mode 100755
+index 2cdb2b7..0000000
+--- a/control-atlas-saas/docker-compose.yml
++++ /dev/null
+@@ -1,29 +0,0 @@
+-services:
+-  brain:
+-    build: ./backend
+-    container_name: brain
+-    environment:
+-      - PYTHONPATH=/app
+-    ports: ["8000:8000"]
+-    volumes: ["./nkg:/app/nkg"]
+-    networks:
+-      sovereign_net:
+-        aliases:
+-          - brain
+-    restart: always
+-
+-  face:
+-    build: ./dashboard
+-    container_name: face
+-    environment:
+-      - BACKEND_URL=http://brain:8000
+-    ports: ["8502:8501"]
+-    depends_on:
+-      - brain
+-    networks:
+-      - sovereign_net
+-    restart: always
+-
+-networks:
+-  sovereign_net:
+-    driver: bridge
+diff --git a/control-atlas-saas/test_sieve.sh b/control-atlas-saas/test_sieve.sh
+deleted file mode 100755
+index 232a898..0000000
+--- a/control-atlas-saas/test_sieve.sh
++++ /dev/null
+@@ -1,41 +0,0 @@
+-#!/bin/bash
+-API_URL="http://localhost:8000"
+-EMAIL="test@example.com"
+-PASSWORD="physics_is_law"
+-
+-echo "👤 Logging in..."
+-TOKEN=$(curl -s -X POST "$API_URL/auth/login" -F "username=$EMAIL" -F "password=$PASSWORD" | grep -oP '(?<="access_token":")[^"]*')
+-
+-echo -e "\n🧬 4. Uploading VALID minimal CIF..."
+-cat > valid_test.cif << 'CIF'
+-data_test
+-_entry.id test
+-loop_
+-_atom_site.group_PDB
+-_atom_site.id
+-_atom_site.type_symbol
+-_atom_site.label_atom_id
+-_atom_site.label_comp_id
+-_atom_site.label_asym_id
+-_atom_site.label_seq_id
+-_atom_site.Cartn_x
+-_atom_site.Cartn_y
+-_atom_site.Cartn_z
+-_atom_site.occupancy
+-_atom_site.B_iso_or_equiv
+-ATOM 1 N N ALA A 1 27.340 24.430 2.614 1.00 9.67
+-ATOM 2 CA CA ALA A 1 28.100 25.600 3.100 1.00 9.67
+-ATOM 3 N N ALA B 1 35.340 30.430 8.614 1.00 9.67
+-ATOM 4 CA CA ALA B 1 36.100 31.600 9.100 1.00 9.67
+-CIF
+-
+-JOB_ID=$(curl -s -X POST "$API_URL/jobs/upload" \
+-     -H "Authorization: Bearer $TOKEN" \
+-     -F "target_chain=A" \
+-     -F "binder_chain=B" \
+-     -F "file=@valid_test.cif" | grep -oP '(?<="job_id":")[^"]*')
+-
+-echo "Job ID: $JOB_ID"
+-echo "⏳ Waiting 5s..."
+-sleep 5
+-curl -s -X GET "$API_URL/jobs/status/$JOB_ID" -H "Authorization: Bearer $TOKEN"
+diff --git a/docs/audit-evidence/2026-10-21/od-scope/C5-verdict-change.md b/docs/audit-evidence/2026-10-21/od-scope/C5-verdict-change.md
+new file mode 100644
+index 0000000..5eef834
+--- /dev/null
++++ b/docs/audit-evidence/2026-10-21/od-scope/C5-verdict-change.md
+@@ -0,0 +1,65 @@
++# C5 verdict-change evidence: candidate status
++
++Recorded: 2026-10-21T20:41:00Z
++Status: **NOT RUN on this candidate.**
++
++## Why the old C5 evidence is not reused
++
++The published branch `engine/od-scope-v25` carries
++`evidence/engine/c5/v24-pinned-old-c78.json`,
++`v24-pinned-new-od-scope.json`, and related files. They compare the
++superseded `c78` lineage against a working tree, not `main` against this
++candidate. They also embed absolute local temporary paths and an
++`outdir` that is not reproducible from the repository. They are preserved
++as historical evidence only.
++
++## Required comparison
++
++- Old: `main` @ `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`
++- New: the commit containing this note
++- Method: detached Git worktrees at the exact SHAs; one common driver;
++  `PYTHONPATH=<worktree>/backend`; no working-tree comparison.
++- Inputs: v24 `coordinate_manifest.json` bytes verified against
++  `9722c3e45d316ff58ed326df074eec138b81ceb520191a492088cc0ddef63762`.
++- Binding: v24 `run_manifest.json` bytes verified against
++  `f602351f4844531d409cfc256939508103e3c2d4f57fe21d7f77c34494aa4036`.
++- Output: per-target old/new verdict, changed law rows, sample counts,
++  coverage bases, and raw-measurement digests.
++- Evidence: repo-relative paths only; exact commands; environment; input
++  and output SHA-256; no local absolute paths.
++- Failure states: the 10 unavailable v24 predictions remain explicit
++  failures; they must not be replaced or counted as PASS.
++
++## Cohort reality
++
++The v24 manifest has 50 targets. Only 40 coordinate files were acquired
++and byte-verified; 10 AlphaFold `model_v4` URLs returned HTTP 404:
++
++`AF-O15111-F1`, `AF-P00533-F1`, `AF-P02768-F1`, `AF-P04637-F1`,
++`AF-P0DTC2-F1`, `AF-P10636-F1`, `AF-P21802-F1`, `AF-P62988-F1`,
++`AF-P68871-F1`, and `AF-Q9Y6K9-F1`.
++
++A separate 9-target AlphaFold v6 supplementary set exists on the old
++branch. It is not the pinned v24 cohort and must be reported separately.
++No v25 calibration or held-out evaluation is authorized.
++
++## Acceptance for the C5 artifact
++
++1. Both engine SHAs are recorded in full.
++2. Every coordinate file is byte-verified before measurement.
++3. The 40/50 v24 availability and the 10 explicit failures are reported.
++4. The old/new comparison uses identical thresholds and ingestion.
++5. Every changed verdict has a reproducible raw-measurement file and
++   digest.
++6. Experimental structures show no pLDDT scope change; any predicted
++   structure shows law rows with explicit atom counts.
++7. The artifact contains no absolute local paths.
++8. The artifact is committed with the candidate, not before it.
++
++## Expected shape (not a result)
++
++The old C5 report found 0/40 verdict changes for the v24 experimental
++cohort, because experimental structures retain all atoms. It also found
++heuristic `LAW-182`/`LAW-200` raw VETOs becoming advisory failures. Those
++historical observations are not a prediction for this candidate; the new
++harness must produce its own results.
+diff --git a/docs/audit-evidence/2026-10-21/od-scope/conflict-od-03-04-20.md b/docs/audit-evidence/2026-10-21/od-scope/conflict-od-03-04-20.md
+new file mode 100644
+index 0000000..1a06209
+--- /dev/null
++++ b/docs/audit-evidence/2026-10-21/od-scope/conflict-od-03-04-20.md
+@@ -0,0 +1,85 @@
++# OD-03 / OD-04 / OD-20 conflict record
++
++Recorded: 2026-10-21T20:41:00Z
++Status: OPEN. This candidate does not resolve the conflict.
++
++## Canonical register
++
++`docs/decisions/OWNER_DECISIONS.md:81`:
++
++> OD-03 | pLDDT is advisory only for LAW-130 and LAW-200; it does not
++> independently create a favorable verdict. Retire LAW-155 from enforced
++> semantics. No new pLDDT threshold is authorized. | AUDITOR-DECIDED
++> 2026-10-20 | NOT started. LAW-155 retirement is a law-semantic change
++> (hash-locked); it requires its own reviewed patch and hash re-pin, outside
++> this round's authorized scope.
++
++`docs/decisions/OWNER_DECISIONS.md:82`:
++
++> OD-04 | Apply the OD-03 decision to disordered proteins. Do not invent a
++> disorder threshold or let low-confidence/missing measurements create a
++> favorable result. Record unmeasurable mandatory evidence truthfully and
++> propagate the appropriate `NOT_MEASURED`/`INDETERMINATE` state. |
++> AUDITOR-DECIDED 2026-10-20 | NOT started (follows OD-03 implementation).
++
++`docs/decisions/OWNER_DECISIONS.md:98`:
++
++> OD-20 | Keep NMR separate from resolution-based X-ray/cryo-EM strata. Do
++> not pool NMR into a resolution-derived threshold. Require an explicit
++> ensemble/model-selection and measurement policy first; otherwise valid
++> NMR observations remain exploratory only. | AUDITOR-DECIDED 2026-10-20 |
++> NOT started.
++
++## Historical local clarification
++
++Published branch: `engine/od-scope-v25` at
++`97d62a89f0efb2917e80a82808a930d34af7f492`.
++Path: `evidence/engine/owner-clarification-od-03-04-20.md`.
++Blob: `f5f87920599170658695dba29f841106a4c1dfd0`.
++
++The note says, in substance:
++
++- apply the `>= 70` pLDDT core scope to `LAW-110`, `LAW-130`, `LAW-155`, and
++  `LAW-200`;
++- keep `LAW-155` in the enforced set;
++- evaluate the `50` structure v25 cohort to show the change is an
++  improvement;
++- treat the OD-03/04/20 scope as authorized for that candidate.
++
++That note is preserved as historical evidence. It is not an amendment to
++`OWNER_DECISIONS.md`; no owner decision in the canonical register was
++rewritten.
++
++## Material differences
++
++| Item | Canonical register | Historical local clarification | This candidate |
++|---|---|---|---|
++| pLDDT role for LAW-130/200 | advisory only | deterministic core filter | core filter, but only as measurement scope; no new favorable rule |
++| LAW-155 | retire from enforced semantics | keep enforced | keep; raw VETO normalized to advisory failure |
++| New >=70 threshold | not authorized | authorized | reuses the pre-existing 70 reliability boundary, no new threshold value |
++| LAW-110 | no pLDDT scope authorized | core scope authorized | **not** core-filtered; remains all-residue |
++| Final authority | owner register | local note | review candidate only; register untouched |
++
++## Why this candidate is still reviewable
++
++The candidate does not claim the conflict is resolved. It:
++
++- changes only the measurement scope needed for the named audit task;
++- preserves the canonical register byte-for-byte;
++- keeps `LAW-155` enforceable while preventing a heuristic failure from
++  producing a final VETO;
++- refuses to core-filter `LAW-110` without explicit authorization;
++- records the deviation from the historical clarification;
++- keeps the candidate unmerged until the owner adjudicates.
++
++## Required adjudication
++
++Before merge, the owner must record which of the following governs:
++
++1. Canonical OD-03/04/20, in which case the core-scope patch and
++   `LAW-155` retention need rework; or
++2. An explicit amendment that authorizes the core scope for
++   `LAW-110/130/155/200` and sets the future of `LAW-155`.
++
++Until then, this branch is a review artifact, not an accepted policy
++change.
+diff --git a/docs/audit-evidence/2026-10-21/od-scope/hash-locks-after.txt b/docs/audit-evidence/2026-10-21/od-scope/hash-locks-after.txt
+new file mode 100644
+index 0000000..b39674e
+--- /dev/null
++++ b/docs/audit-evidence/2026-10-21/od-scope/hash-locks-after.txt
+@@ -0,0 +1,9 @@
++recorded_at_utc = 2026-10-21T20:41:00Z
++candidate = working tree on review/od-scope-v25 (not yet committed)
++law_canon_hash = 6a9cd4b4349b81de (unchanged)
++modality_matrix_hash = ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4 (unchanged)
++law_registry_sha256 = c09439cd2f0f4103a1c794839846f40fa45e46337481684380152ff4feaff098 (deliberate re-pin)
++law_semantic_sha256 = ABSENT (not added on this lineage)
++law_semantic_test = ABSENT (not added on this lineage)
++registry_pin_location = governance/law_registry.sha256
++registry_test_constant = backend/tests/test_law_registry.py::REGISTRY_SHA256
+diff --git a/docs/audit-evidence/2026-10-21/od-scope/hash-locks-before.txt b/docs/audit-evidence/2026-10-21/od-scope/hash-locks-before.txt
+new file mode 100644
+index 0000000..c5f16b6
+--- /dev/null
++++ b/docs/audit-evidence/2026-10-21/od-scope/hash-locks-before.txt
+@@ -0,0 +1,8 @@
++recorded_at_utc = 2026-10-21T20:41:00Z
++baseline = main @ 63da0e347002ed9b77071ff1ed0cefda7c0ce88a
++law_canon_hash = 6a9cd4b4349b81de
++modality_matrix_hash = ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4
++law_registry_sha256 = d53a2a506f4ddff8e7210489afc55bea60e137e2f516c3192b1e3fa5ade1d7ae
++law_semantic_sha256 = ABSENT_ON_MAIN
++law_semantic_test = ABSENT_ON_MAIN
++canon_and_matrix_verified_by = backend/tests/test_law_registry.py, backend/tests/test_modality_matrix.py
+diff --git a/docs/audit-evidence/2026-10-21/od-scope/preflight.json b/docs/audit-evidence/2026-10-21/od-scope/preflight.json
+new file mode 100644
+index 0000000..91135f4
+--- /dev/null
++++ b/docs/audit-evidence/2026-10-21/od-scope/preflight.json
+@@ -0,0 +1,116 @@
++{
++  "schema": "od-scope-preflight/v1",
++  "recorded_at_utc": "2026-10-21T20:41:00Z",
++  "branch": "review/od-scope-v25",
++  "base_ref": "main",
++  "base_sha": "63da0e347002ed9b77071ff1ed0cefda7c0ce88a",
++  "candidate_commit": null,
++  "worktree": "temporary clean worktree; path omitted from evidence",
++  "scope": [
++    "OD-03",
++    "OD-04",
++    "OD-20"
++  ],
++  "hard_stop_acknowledged": [
++    "no merge to main",
++    "no deployment",
++    "no pull request against the divergent base",
++    "no v25 calibration or held-out evaluation",
++    "no threshold, operator, cohort, or golden-artifact change outside this patch",
++    "no edit to docs/decisions/OWNER_DECISIONS.md",
++    "no force-push; published engine/od-scope-v25 remains at 97d62a89f0efb2917e80a82808a930d34af7f492"
++  ],
++  "governing_documents": [
++    {
++      "path": "AGENTS.md",
++      "bytes": 4021,
++      "sha256": "5e320939a11135a0d8aed5caa231df6aeaf633d724fcb4dba97b5909e51420b4",
++      "git_blob": "85767237399ffb30f3e45894d9dfbe6f4240584f"
++    },
++    {
++      "path": "constitution.md",
++      "bytes": 622,
++      "sha256": "cfdd5ba3babda31513b55894a49597fbfb18c2e870535a068c8b0ea423c53ce8",
++      "git_blob": "211ad2c5d4b40059d9f3f03de12e0701f9235bc7"
++    },
++    {
++      "path": "ENGINEERING_CONSTITUTION.md",
++      "bytes": 20572,
++      "sha256": "e0f256f78f2c1256228c4286311cba15800dcd5a6c8005583508ee66d27983f5",
++      "git_blob": "b6bb35e84956d84a8c9d9e65734c212baf3ed075"
++    },
++    {
++      "path": "docs/coder/BRIEF.md",
++      "bytes": 3671,
++      "sha256": "8f07edfbba9d3e57de623e242125e942369bc5d60df5805343b26b9048c52e07",
++      "git_blob": "052a84ca829d321dc0841a4b1c8702145dcbf6b5"
++    },
++    {
++      "path": "docs/decisions/OWNER_DECISIONS.md",
++      "bytes": 72329,
++      "sha256": "59ccd5e84176a8a610c8c234cbb95fec4734478cc1f35668599ad2e3aef3172a",
++      "git_blob": "12906bf5997a3e2c6b5c41e5d5c60fee14613274"
++    },
++    {
++      "path": "docs/P0_STATUS.md",
++      "bytes": 35347,
++      "sha256": "3f129dd18b9e5cf8888b763158cda42de270a8429a48ed7cc9a3aa675e810e0f",
++      "git_blob": "a31517abbc046c495930ba19ef7aeaf8bb72f2d0"
++    }
++  ],
++  "policy_pins": {
++    "law_canon_hash": "6a9cd4b4349b81de",
++    "modality_matrix_hash": "ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4",
++    "law_registry_sha256_before": "d53a2a506f4ddff8e7210489afc55bea60e137e2f516c3192b1e3fa5ade1d7ae",
++    "law_registry_sha256_after": "c09439cd2f0f4103a1c794839846f40fa45e46337481684380152ff4feaff098",
++    "law_semantic_pin_present_on_main": false,
++    "law_semantic_pin_note": "main has no governance/law_semantic.sha256 or backend/tests/test_law_semantic_hash.py; this patch does not add that science-line feature"
++  },
++  "scope_decisions": {
++    "core_plddt_gte_70": [
++      "LAW-130",
++      "LAW-155",
++      "LAW-200"
++    ],
++    "all_residues_unchanged": [
++      "LAW-110"
++    ],
++    "experimental_structures": "all parsed atoms retained; no pLDDT core filter",
++    "coverage_gate": "atom coverage (pLDDT >= 70 core atoms / all parsed atoms) drives PASS-vs-INDETERMINATE; LAW-105 still reports parsed-residue coverage",
++    "LAW-155": "not retired in this patch; raw heuristic VETO is retained and normalized to FAIL (Advisory) by the adjudicator",
++    "LAW-130_comparator": "still '<' at threshold 20.0; the separate fix/law-130-clash-boundary branch is not part of this candidate"
++  },
++  "prior_evidence": {
++    "branch": "engine/od-scope-v25",
++    "tip": "97d62a89f0efb2917e80a82808a930d34af7f492",
++    "preflight_blob": "e9a27b3c2407433fd2ca6d255f77221cb5826b77",
++    "reading_note_blob": "c386ecb208430d71d19324fbee3d9791d6c6dac2",
++    "owner_clarification_blob": "f5f87920599170658695dba29f841106a4c1dfd0",
++    "disposition": "preserved on the published branch; not reused as this candidate's baseline or as an amendment to the canonical register"
++  },
++  "timing": {
++    "governing_hashes_verified_at_utc": "2026-10-21T20:29:12Z",
++    "first_reconstruction_edit_at_utc": "2026-10-21T20:34:08Z",
++    "preflight_recorded_at_utc": "2026-10-21T20:41:00Z",
++    "disclosure": "The reconstruction code was edited before this note was written; the earlier branch's preflight was not reused because the base lineage changed. The candidate commit is the reviewed record, and this timing is disclosed rather than backdated."
++  },
++  "environment": {
++    "os": "win32",
++    "python": "3.11",
++    "test_command": "PYTHONUTF8=1; PYTHONPATH=<fcntl-shim>;backend; python -m pytest backend/tests -q",
++    "baseline_result": "378 passed, 5 skipped",
++    "post_edit_result": "385 passed, 5 skipped (36.97s)"
++  },
++  "acceptance_criteria": [
++    "LAW-130, LAW-155 and LAW-200 consume core atoms for predicted structures",
++    "experimental structures retain all parsed atoms",
++    "LAW-110 remains all-residue scoped",
++    "atom coverage drives the global gate and is reported separately from residue coverage",
++    "empty core yields NOT_MEASURED, never PASS",
++    "heuristic VETO cannot produce a VETO verdict",
++    "deterministic LAW-130 VETO still produces a VETO verdict",
++    "registry pin and hash-lock test match",
++    "full backend suite green on the candidate commit",
++    "canonical conflict is explicit and unresolved"
++  ]
++}
+diff --git a/docs/audit-evidence/2026-10-21/od-scope/reading-note.md b/docs/audit-evidence/2026-10-21/od-scope/reading-note.md
+new file mode 100644
+index 0000000..67fadc5
+--- /dev/null
++++ b/docs/audit-evidence/2026-10-21/od-scope/reading-note.md
+@@ -0,0 +1,197 @@
++# OD-03/04/20 review reading note
++
++Recorded: 2026-10-21T20:41:00Z
++Branch: `review/od-scope-v25`
++Base: `main` at `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`
++Candidate: see the commit containing this note
++
++## Status
++
++This is a review candidate. It is not merged, deployed, or calibrated. No
++pull request is opened against the divergent base. The published
++`engine/od-scope-v25` branch at `97d62a89f0efb2917e80a82808a930d34af7f492`
++is preserved as historical evidence and was not force-pushed.
++
++## Governing documents read
++
++All six documents were read in full. Hashes were re-verified after checking
++out `main`.
++
++| Document | Bytes | SHA-256 | Git blob |
++|---|---:|---|---|
++| `AGENTS.md` | 4021 | `5e320939a11135a0d8aed5caa231df6aeaf633d724fcb4dba97b5909e51420b4` | `85767237399ffb30f3e45894d9dfbe6f4240584f` |
++| `constitution.md` | 622 | `cfdd5ba3babda31513b55894a49597fbfb18c2e870535a068c8b0ea423c53ce8` | `211ad2c5d4b40059d9f3f03de12e0701f9235bc7` |
++| `ENGINEERING_CONSTITUTION.md` | 20572 | `e0f256f78f2c1256228c4286311cba15800dcd5a6c8005583508ee66d27983f5` | `b6bb35e84956d84a8c9d9e65734c212baf3ed075` |
++| `docs/coder/BRIEF.md` | 3671 | `8f07edfbba9d3e57de623e242125e942369bc5d60df5805343b26b9048c52e07` | `052a84ca829d321dc0841a4b1c8702145dcbf6b5` |
++| `docs/decisions/OWNER_DECISIONS.md` | 72329 | `59ccd5e84176a8a610c8c234cbb95fec4734478cc1f35668599ad2e3aef3172a` | `12906bf5997a3e2c6b5c41e5d5c60fee14613274` |
++| `docs/P0_STATUS.md` | 35347 | `3f129dd18b9e5cf8888b763158cda42de270a8429a48ed7cc9a3aa675e810e0f` | `a31517abbc046c495930ba19ef7aeaf8bb72f2d0` |
++
++Relevant rules applied:
++
++- `ENGINEERING_CONSTITUTION.md:24-30`: read the documents in full, record
++  hashes, and attach a machine-readable preflight.
++- `ENGINEERING_CONSTITUTION.md:49-50`: every authoritative result has
++  provenance; missing or incomplete measurements are explicit non-success
++  states, never fabricated PASS/VETO/zero values.
++- `ENGINEERING_CONSTITUTION.md:56`: conflicts between canon, registries,
++  glossaries, tests, and handoffs remain explicit until deliberately
++  resolved.
++- `ENGINEERING_CONSTITUTION.md:136`: an undocumented scientific-semantic
++  change blocks release.
++- `ENGINEERING_CONSTITUTION.md:158-161`: evidence includes the preflight,
++  exact baseline SHA, changed-file manifest, and patch hash.
++
++## Canonical conflict
++
++`docs/decisions/OWNER_DECISIONS.md:81` (OD-03) says:
++
++> pLDDT is advisory only for LAW-130 and LAW-200; it does not independently
++> create a favorable verdict. Retire LAW-155 from enforced semantics. No new
++> pLDDT threshold is authorized.
++
++`docs/decisions/OWNER_DECISIONS.md:82` (OD-04) says:
++
++> Apply the OD-03 decision to disordered proteins. Do not invent a disorder
++> threshold or let low-confidence/missing measurements create a favorable
++> result. Record unmeasurable mandatory evidence truthfully and propagate
++> the appropriate `NOT_MEASURED`/`INDETERMINATE` state.
++
++`docs/decisions/OWNER_DECISIONS.md:98` (OD-20) keeps NMR separate from
++resolution-based X-ray/cryo-EM strata and requires an explicit
++ensemble/model-selection policy before NMR observations become
++authoritative.
++
++The historical local note
++`engine/od-scope-v25:evidence/engine/owner-clarification-od-03-04-20.md`
++says the opposite in material respects: it authorizes a `>= 70` pLDDT core
++for LAW-110/130/155/200, keeps LAW-155, and calls the v25 candidate ready.
++It is preserved on the published branch at blob
++`f5f87920599170658695dba29f841106a4c1dfd0`. It is **not** an amendment to
++`OWNER_DECISIONS.md`, and this branch does not edit the register.
++
++### How this candidate handles the conflict
++
++- It implements core-atom scope for `LAW-130`, `LAW-155`, and `LAW-200`,
++  because those are the laws the audit task names.
++- It does **not** retire `LAW-155`. The raw heuristic result remains
++  `VETO` where the old engine emitted it; the adjudicator normalizes
++  heuristic failures to `FAIL (Advisory)` so they cannot create a final
++  VETO. This is a status-semantics repair, not a law retirement.
++- It does **not** invent a disorder threshold. The 70 boundary is the
++  pre-existing reliability boundary already used by the engine and the
++  historical clarification; this patch does not change it.
++- It does **not** let low confidence create a favorable result. Empty core
++  is `NOT_MEASURED`, and the global gate uses atom coverage.
++- It deliberately does **not** apply the core filter to `LAW-110`. The
++  canonical register does not authorize pLDDT scope for that law, and the
++  historical clarification does authorize it. The narrower reading is
++  chosen to avoid leaking OD scope into an unrelated deterministic law.
++  This is a documented narrowing, not a claim that the conflict is
++  resolved.
++
++The conflict remains open for owner adjudication. This candidate cannot be
++merged until that adjudication is recorded.
++
++## What changed
++
++### Engine
++
++`backend/tos/engine/tier1_measurements.py`
++
++- `_extract` retains the parsed `Atom` records per residue (all parsed
++  atoms, including alternate conformers; no occupancy or altloc selection
++  was added on this lineage).
++- Computes both `residue_coverage` (existing meaning) and `atom_coverage`
++  (`core atoms / all parsed atoms`).
++- `LAW-105` keeps residue coverage as `observed`, reports `atom_coverage`,
++  `coverage_basis: "residues"`, `gate_basis: "atoms"`, and atom counts.
++- `LAW-130`, `LAW-155`, and `LAW-200` now use core coordinates for
++  predicted structures. Experimental structures use all parsed atoms.
++- Empty core returns `observed: null`, `status: "NOT_MEASURED"`, `sample: 0`.
++- The returned global coverage is now atom coverage, so a structure with
++  residue coverage >= 70% but atom coverage < 70% cannot receive a
++  favorable verdict.
++- `LAW-130` keeps the existing `<` comparator at threshold `20.0`. The
++  separate `fix/law-130-clash-boundary` branch is not folded in.
++- `LAW-110` is unchanged: it remains all sequential parsed residues.
++
++### Adjudicator
++
++`backend/tos/engine/adjudicator.py`
++
++- A raw heuristic `VETO` is downgraded to `FAIL (Advisory)`, alongside the
++  existing `advisory_experimental` handling. Heuristic rows retain
++  `method: "heuristic"` and cannot drive a final VETO. Deterministic
++  `LAW-130` VETO is unchanged.
++
++### Governance
++
++- `backend/tos/governance/station_sop.py`: scope labels for `LAW-130`,
++  `LAW-155`, and `LAW-200` now say core atoms / core atomic grid / core
++  bounding box. Thresholds, operators, IDs, and canon hash are unchanged.
++- `governance/law_registry.yaml`: the same scope/measure updates, plus
++  `LAW-105` now states that it reports parsed-residue coverage while the
++  global gate uses atom coverage.
++- `governance/law_registry.sha256`:
++  `d53a2a506f4ddff8e7210489afc55bea60e137e2f516c3192b1e3fa5ade1d7ae`
++  -> `c09439cd2f0f4103a1c794839846f40fa45e46337481684380152ff4feaff098`.
++- `backend/tests/test_law_registry.py` carries the new pin.
++
++### Artifacts
++
++- `backend/tos/forensic_artifacts/confidence_viz.py`: the chart is now a
++  measured atom-coverage bar, split at the 70% gate. It no longer draws a
++  synthetic pLDDT distribution. The title and docstring state the basis.
++- `backend/tos/forensic_artifacts/pdf_generator.py`: atom-coverage badge,
++  0.0 unknown-confidence fallback, 70-only low-region threshold, no
++  `MARGINAL` 50-70 band, and atom-coverage wording in the OD-04 banner and
++  hierarchy.
++- `backend/tos/forensic_artifacts/structure_viz.py` and
++  `residue_heatmap.py`: remove the legacy 50-70 medium band so the 70 gate
++  is the only low/high boundary.
++
++### Tests
++
++- `backend/tests/test_od_scope.py` pins:
++  - 40/64 core atoms for a mixed predicted structure;
++  - 64/64 atoms for the equivalent experimental structure;
++  - `LAW-110` remains all-residue and still detects a boundary gap that a
++    core-only reading would miss;
++  - residue coverage 75% with atom coverage 50% yields
++    `INDETERMINATE`;
++  - empty core yields `NOT_MEASURED`;
++  - heuristic `LAW-155` VETO becomes `FAIL (Advisory)` and the verdict is
++    `PASS`;
++  - deterministic `LAW-130` VETO still yields a VETO.
++
++## Evidence status
++
++- Baseline (main): `378 passed, 5 skipped`.
++- Post-edit full suite: see `test-summary.json` after the candidate commit.
++- C5: not run on this candidate. The old C5 files were generated against
++  the superseded `c78` lineage and contain local absolute paths; they are
++  historical evidence only. The replacement harness must compare exact
++  `main` and candidate SHAs in detached worktrees and record input hashes,
++  output digests, and the v24 data gap.
++- Calibration runner: `main` has no runner. No science-line runner or
++  v25 calibration was imported or executed.
++
++## Timing disclosure
++
++The governing hashes were verified at `2026-10-21T20:29:12Z`. The first
++reconstruction edit was at `2026-10-21T20:34:08Z`. This note and the
++preflight were recorded at `2026-10-21T20:41:00Z`, after that first edit.
++The earlier branch's preflight was not reused because the base lineage
++changed. The timing is disclosed rather than backdated; the candidate
++commit is the reviewed record.
++
++## Open items before merge
++
++1. Owner adjudication of OD-03/04/20, including whether `LAW-110` should be
++   core-scoped and whether `LAW-155` should be retired.
++2. Reproducible C5 verdict-change evidence on the exact candidate SHA,
++   including the 10 unavailable v24 predictions.
++3. Decision on calibration-runner ownership; no runner exists on `main`.
++4. Review of the separate LAW-130 `<`/KDTree-failure branch; it is not part
++   of this candidate.
++5. Full CI and hash-lock verification on the final head.
+diff --git a/docs/audit-evidence/2026-10-21/od-scope/semantic-diff.md b/docs/audit-evidence/2026-10-21/od-scope/semantic-diff.md
+new file mode 100644
+index 0000000..7b5aea2
+--- /dev/null
++++ b/docs/audit-evidence/2026-10-21/od-scope/semantic-diff.md
+@@ -0,0 +1,86 @@
++# Policy and semantic diff record
++
++Recorded: 2026-10-21T20:41:00Z
++Baseline: `main` @ `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`
++
++## Hash locks
++
++| Lock | Baseline `main` | Candidate | Status |
++|---|---|---|---|
++| `LAW_CANON_HASH` (`station_sop.py`) | `6a9cd4b4349b81de` | `6a9cd4b4349b81de` | unchanged |
++| Modality matrix hash | `ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4` | same | unchanged |
++| `governance/law_registry.sha256` | `d53a2a506f4ddff8e7210489afc55bea60e137e2f516c3192b1e3fa5ade1d7ae` | `c09439cd2f0f4103a1c794839846f40fa45e46337481684380152ff4feaff098` | intentionally re-pinned |
++| `governance/law_semantic.sha256` | absent on `main` | absent | not added |
++
++`main` has no semantic-hash mechanism, no `governance/law_semantic.sha256`,
++and no `backend/tests/test_law_semantic_hash.py`. This patch does not add
++that science-line feature.
++
++The published `engine/od-scope-v25` lineage carried a semantic pin
++`3f49a7b5605e17dcf26bcd114713ad651cdc2279d684f1c681943eefa0f4379a` ->
++`4532a073225e98cb0094d7301591e9fe4d830b07169e670c9eb7d0deab561bbe`
++in its large `360373d` patch, and a registry pin of
++`7e3b42d59feeca5501001f702eab7d6af0a83f6855c5d3ec2e474840c0f23e93`.
++Those values describe a different tree and a much larger semantic change.
++They are not copied into this candidate.
++
++## Registry changes
++
++The registry pin changes because the machine-readable policy text changes.
++The change is limited to:
++
++| Law | Field | Before | After |
++|---|---|---|---|
++| LAW-105 | `measures` | residue coverage governs the PASS/INDETERMINATE gate | parsed-residue coverage is reported; the global gate uses atom coverage |
++| LAW-130 | `scope` | `total atoms` | `core atoms` |
++| LAW-130 | `measures` | clashes per 1000 atoms, all atoms | clashes per 1000 core atoms; experimental uses all selected atoms |
++| LAW-155 | `scope` | `atomic grid` | `core atomic grid` |
++| LAW-155 | `measures` | voxels per residue over an atomic grid | voxels per core residue over the core atomic grid |
++| LAW-200 | `scope` | `bounding box` | `core bounding box` |
++| LAW-200 | `measures` | bounding-box volume / atom count | core bounding-box volume / core atom count |
++
++No threshold value, operator, law ID, unit, or type changed. The canon hash
++covers the `LAW_CANON` table; it is unchanged because scope strings are not
++part of that table's hash input.
++
++## Engine semantics
++
++1. `LAW-105.observed` remains parsed-residue coverage. It is not silently
++   redefined as atom coverage.
++2. The returned global coverage changes from residue coverage to atom
++   coverage. This is the OD-04 gate; a 75% residue / 50% atom structure is
++   `INDETERMINATE`.
++3. `LAW-130`, `LAW-155`, and `LAW-200` use core atoms for predicted
++   structures. Experimental structures use all parsed atoms.
++4. Empty core is `NOT_MEASURED`, not `PASS` and not a zero-valued
++   measurement.
++5. `LAW-110` is unchanged and remains all-residue. It is not core-filtered.
++6. `LAW-130` remains `< 20.0` (strict). The `<=` / KDTree-failure fix is a
++   separate branch and is not part of this semantic state.
++7. A raw heuristic `VETO` is normalized to `FAIL (Advisory)` and cannot
++   produce a final VETO. This is a status-semantics repair, not a law
++   retirement or threshold change.
++
++## Why the registry re-pin is legitimate
++
++The registry text is part of the policy surface. Leaving the old pin would
++make the hash-lock test pass against stale text and would hide a
++scientific-semantic change. The new pin is computed over the exact new
++`governance/law_registry.yaml` bytes:
++
++```powershell
++(Get-FileHash governance/law_registry.yaml -Algorithm SHA256).Hash.ToLower()
++```
++
++The test constant and `governance/law_registry.sha256` carry the same
++value. This is a deliberate policy change, recorded here and in the
++canonical conflict record; it is not a hash bypass.
++
++## Reproduce the lock check
++
++```powershell
++$env:PYTHONPATH = "backend"
++python -m pytest backend/tests/test_law_registry.py -q
++python -c "from tos.governance.station_sop import LAW_CANON_HASH; print(LAW_CANON_HASH)"
++python -c "import tos.governance.modality_matrix as m; print(m.compute_matrix_hash())"
++```
+diff --git a/docs/audit-evidence/2026-10-21/od-scope/test-summary.json b/docs/audit-evidence/2026-10-21/od-scope/test-summary.json
+new file mode 100644
+index 0000000..46e12e7
+--- /dev/null
++++ b/docs/audit-evidence/2026-10-21/od-scope/test-summary.json
+@@ -0,0 +1,61 @@
++{
++  "schema": "od-scope-test-summary/v1",
++  "recorded_at_utc": "2026-10-21T20:44:26Z",
++  "branch": "review/od-scope-v25",
++  "base_sha": "63da0e347002ed9b77071ff1ed0cefda7c0ce88a",
++  "candidate_commit": null,
++  "tested_source_patch_object": "6b0833990113780900febbb9654123dfba5af770",
++  "tested_source_scope": "git diff --cached --binary -- backend governance at the time of the run; documentation/evidence bytes are excluded",
++  "commit_status": "not committed; explicit owner authorization is required before creating the review commit",
++  "command": "PYTHONUTF8=1; PYTHONPATH=<fcntl-shim>;backend; python -m pytest backend/tests -q --disable-warnings --maxfail=1",
++  "result": {
++    "passed": 385,
++    "failed": 0,
++    "errors": 0,
++    "skipped": 5,
++    "warnings": 1058,
++    "duration_seconds": 36.97,
++    "exit_code": 0
++  },
++  "baseline": {
++    "base_sha": "63da0e347002ed9b77071ff1ed0cefda7c0ce88a",
++    "passed": 378,
++    "skipped": 5,
++    "duration_seconds": 40.43
++  },
++  "targeted_suite": {
++    "files": [
++      "backend/tests/test_od_scope.py",
++      "backend/tests/test_law_registry.py",
++      "backend/tests/test_law_155.py",
++      "backend/tests/test_law_200.py",
++      "backend/tests/test_law_182.py",
++      "backend/tests/test_adjudicator.py"
++    ],
++    "passed": 89,
++    "failed": 0,
++    "duration_seconds": 2.32
++  },
++  "visual_smoke": {
++    "functions": [
++      "generate_confidence_bar(62.5, 8, 10)",
++      "generate_confidence_bar(50.0, 8, 10)",
++      "generate_deterministic_gauge(9, 10)",
++      "generate_residue_heatmap_png([90, 80, 20, 95])"
++    ],
++    "output": "all returned valid PNG signatures; byte lengths 25069, 24641, 16060, 28060",
++    "status": "PASS"
++  },
++  "environment": {
++    "os": "win32",
++    "python": "3.11",
++    "fcntl_shim": "local Windows no-op shim, not committed",
++    "utf8": true
++  },
++  "notes": [
++    "The Windows fcntl shim is a test-runner accommodation only and is not part of the candidate.",
++    "PDF generation was syntax/compile checked and the confidence/heatmap primitives were smoke-tested; no golden artifact was regenerated.",
++    "C5 is not run; see C5-verdict-change.md.",
++    "The old branch evidence and calibration runs were not imported."
++  ]
++}
+diff --git a/governance/law_registry.sha256 b/governance/law_registry.sha256
+index bd194cc..e7aa168 100644
+--- a/governance/law_registry.sha256
++++ b/governance/law_registry.sha256
+@@ -1 +1 @@
+-d53a2a506f4ddff8e7210489afc55bea60e137e2f516c3192b1e3fa5ade1d7ae
++c09439cd2f0f4103a1c794839846f40fa45e46337481684380152ff4feaff098
+\ No newline at end of file
+diff --git a/governance/law_registry.yaml b/governance/law_registry.yaml
+index bd1bb19..2e3aad0 100644
+--- a/governance/law_registry.yaml
++++ b/governance/law_registry.yaml
+@@ -59,9 +59,10 @@ laws:
+     scope: total residues
+     type: Percentage
+     measures: >
+-      Percentage of residues passing the reliability filter: mean B-factor /
+-      pLDDT >= 70 for predicted structures; 100% for experimental structures.
+-      Governs the PASS vs INDETERMINATE coverage gate.
++      Percentage of parsed residues passing the reliability filter: mean
++      B-factor / pLDDT >= 70 for predicted structures; 100% for experimental
++      structures. Reports residue coverage; the global PASS vs INDETERMINATE
++      gate uses atom coverage (OD-04), also reported by the engine.
+     implementation: "backend/tos/engine/tier1_measurements.py::Tier1Measurements.run_full_audit (LAW-105 block)"
+     test: {file: backend/tests/test_math_migration.py, dedicated: false}
+     cited_in: [TRUST_MATRIX_v22.5.3.md]
+@@ -122,11 +123,12 @@ laws:
+     threshold: 20.0
+     units: "clashes/1000 atoms"
+     operator: "<="
+-    scope: total atoms
++    scope: core atoms
+     type: Rate
+     measures: >
+-      Number of non-bonded steric clashes per 1000 atoms (atom pairs closer
+-      than their combined van der Waals radii allow).
++      Number of non-bonded steric clashes within the pLDDT >= 70 core per
++      1000 core atoms (atom pairs closer than their combined van der Waals
++      radii allow); experimental structures use all selected atoms.
+     implementation: "backend/tos/engine/tier1_measurements.py::Tier1Measurements.run_full_audit (LAW-130 block)"
+     test: {file: backend/tests/test_math_migration.py, dedicated: false}
+     cited_in: []
+@@ -186,11 +188,12 @@ laws:
+     threshold: 2.0
+     units: V
+     operator: ">="
+-    scope: atomic grid
++    scope: core atomic grid
+     type: Scalar
+     measures: >
+       Heuristic voxel-occupancy score: average number of occupied grid
+-      voxels per residue over an atomic occupancy grid. This is an
++      voxels per core residue over the pLDDT >= 70 core atomic occupancy
++      grid; experimental structures use all selected atoms. This is an
+       occupancy-density heuristic — it is NOT a deterministic
+       atoms-cannot-overlap rule (owner decision, brief §4.1: the pinned
+       code is the authority). Heuristic failures do not by themselves
+@@ -272,11 +275,12 @@ laws:
+     threshold: 300.0
+     units: "Å³/atom"
+     operator: "<="
+-    scope: bounding box
++    scope: core bounding box
+     type: Rate
+     measures: >
+-      Heuristic packing density: structure bounding-box volume divided by
+-      atom count, in cubic Angstroms per atom. Sparse packing suggests an
++      Heuristic packing density: pLDDT >= 70 core bounding-box volume
++      divided by core atom count, in cubic Angstroms per atom; experimental
++      structures use all selected atoms. Sparse packing suggests an
+       implausibly expanded model. NOT a binding-cavity volume rule (owner
+       decision, brief §4.1 applies: code is the authority).
+     implementation: "backend/tos/engine/tier1_measurements.py::Tier1Measurements.run_full_audit (LAW-200 block)"

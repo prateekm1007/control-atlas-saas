@@ -64,9 +64,17 @@ LAW_CANON = {
     "LAW-200": {"title": "Packing Quality", "threshold": 300.0, "unit": "Å³/atom", "operator": "<=", "scope": "bounding box", "type": "Rate"}
 }
 
-LAW_METHOD_CLASSIFICATIONS = {lid: "deterministic" if lid not in ["LAW-155", "LAW-182", "LAW-200"] else "heuristic" for lid in LAW_CANON}
+RETIRED_LAWS = {"LAW-155"}
+LAW_METHOD_CLASSIFICATIONS = {
+    lid: (
+        "retired" if lid in RETIRED_LAWS
+        else ("deterministic" if lid not in ["LAW-182", "LAW-200"] else "heuristic")
+    )
+    for lid in LAW_CANON
+}
 DETERMINISTIC_LAWS = sorted([l for l, m in LAW_METHOD_CLASSIFICATIONS.items() if m == "deterministic"])
 HEURISTIC_LAWS = sorted([l for l, m in LAW_METHOD_CLASSIFICATIONS.items() if m == "heuristic"])
+RETIRED_ENFORCED_LAWS = sorted([l for l, m in LAW_METHOD_CLASSIFICATIONS.items() if m == "retired"])
 TOTAL_LAWS, DETERMINISTIC_COUNT, HEURISTIC_COUNT = len(LAW_CANON), len(DETERMINISTIC_LAWS), len(HEURISTIC_LAWS)
 
 LAW_CATEGORIES = {lid: "geometric" if lid not in ["LAW-145", "LAW-150", "LAW-170", "LAW-182", "LAW-195"] else "chemical" for lid in LAW_CANON}

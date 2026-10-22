@@ -7,7 +7,7 @@ Every verdict is reproducible and hash-anchored to the exact physics that
 produced it.
 
 - **Runtime source of truth:** `backend/tos/governance/station_sop.py`
-  (`LAW_CANON`) — protected by canon hash `6a9cd4b4349b81de`.
+  (`LAW_CANON`) — protected by canon hash `f24ec581b3e04732`.
 - **Law documentation:** `governance/law_registry.yaml` (WP-8 registry;
   glossary text derives from it).
 - **Version:** see `STATION_METADATA["version"]` in `station_sop.py`.
@@ -130,7 +130,7 @@ cd backend && python -m pytest tests -q
 The suite is green with zero failures and zero errors; every skipped
 test carries a reason string. CI (`.github/workflows/toscanini-gate.yml`)
 runs the suite plus a pinned gitleaks secret scan and verifies the canon
-(`6a9cd4b4349b81de`) and matrix
+(`f24ec581b3e04732`) and matrix
 (`ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4`)
 hashes on every run.
 

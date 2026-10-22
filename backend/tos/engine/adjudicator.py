@@ -24,6 +24,7 @@ from tos.governance.station_sop import (
     DETERMINISTIC_COUNT,
     HEURISTIC_COUNT,
     LAW_METHOD_CLASSIFICATIONS,
+    RETIRED_LAWS,
     ARCHITECTURE_WEIGHTS,
 )
 from tos.governance.modality_matrix import resolve_method
@@ -73,6 +74,7 @@ class AdjudicationResult:
     law_rows: list = field(default_factory=list)
     failing_deterministic: list = field(default_factory=list)
     verdict: str = "INDETERMINATE"
+    verdict_reason: Optional[str] = None
     deterministic_score: int = 0
     advisory_score: int = 0
     det_passed: int = 0
@@ -105,6 +107,10 @@ def _compute_verdict(res_t1: list[dict], coverage: float) -> str:
         if r["method"] == "deterministic" and r["status"] in ("FAIL", "VETO"):
             return "VETO"
 
+    for r in res_t1:
+        if r["method"] == "deterministic" and r["status"] in ("NOT_MEASURED", "MEASUREMENT_FAILED"):
+            return "INDETERMINATE"
+
     return "PASS"
 
 
@@ -131,41 +137,50 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
     # ── Stage 3: Law Classification Loop ─────────────────────────────────
     for lid in sorted(LAW_CANON.keys()):
         m = inp.raw_measurements.get(
-            lid, {"observed": 0, "deviation": "0.0", "sample": 0, "status": "FAIL"}
+            lid,
+            {"observed": None, "deviation": None, "sample": 0, "status": "NOT_MEASURED"},
         )
         method = LAW_METHOD_CLASSIFICATIONS.get(lid, "unknown")
 
-        # PIL-CAL-03: Modality-Aware Enforcement Matrix (v22.5.3)
-        # Delegated to modality_matrix.json — see modality_matrix.py for loader.
-        method = resolve_method(
-            law_id=lid,
-            is_experimental=inp.is_experimental,
-            method_type=inp.method_type,
-            default_method=method,
-        )
+        # OD-03: LAW-155 is retained for traceability but retired from
+        # enforced semantics. No modality rule may reactivate it.
+        if lid in RETIRED_LAWS:
+            method = "retired"
+        else:
+            # PIL-CAL-03: Modality-Aware Enforcement Matrix (v22.5.3)
+            # Delegated to modality_matrix.json — see modality_matrix.py for loader.
+            method = resolve_method(
+                law_id=lid,
+                is_experimental=inp.is_experimental,
+                method_type=inp.method_type,
+                default_method=method,
+            )
 
-        # PIL-CAL-03: Advisory laws cannot VETO — normalize status
-        raw_status = m.get("status", "FAIL")
-        if method == "advisory_experimental" and raw_status == "VETO":
-            raw_status = "FAIL (Advisory)"
+        # PIL-CAL-03: Advisory/heuristic laws cannot issue a VETO.
+        raw_status = m.get("status", "NOT_MEASURED")
+        if method == "retired":
+            display_status = "RETIRED"
+        elif method in ("advisory_experimental", "heuristic") and raw_status == "VETO":
+            display_status = "FAIL (Advisory)"
+        else:
+            display_status = raw_status
 
         row = {
-            "law_id": lid, "title": LAW_CANON[lid]["title"], "status": raw_status,
-            "method": method,
-            "observed": m.get("observed", 0), "threshold": LAW_CANON[lid]["threshold"],
+            "law_id": lid, "title": LAW_CANON[lid]["title"], "status": display_status,
+            "raw_status": raw_status, "method": method,
+            "enforced": method != "retired",
+            "observed": m.get("observed"), "threshold": LAW_CANON[lid]["threshold"],
             "operator": LAW_CANON[lid]["operator"], "units": LAW_CANON[lid]["unit"],
-            "deviation": m.get("deviation", "0.0"), "sample_size": m.get("sample", 0),
+            "deviation": m.get("deviation"), "sample_size": m.get("sample", 0),
             "scope": LAW_CANON[lid]["scope"], "principle": LAW_CANON[lid].get("principle", "N/A")
         }
         # Phase A.5: Propagate residue-level diagnostics if present
-        if "granularity" in m:
-            row["granularity"] = m["granularity"]
-        if "failing_residues" in m:
-            row["failing_residues"] = m["failing_residues"]
-        if "failing_residue_pairs" in m:
-            row["failing_residue_pairs"] = m["failing_residue_pairs"]
+        for key in ("granularity", "failing_residues", "failing_residue_pairs",
+                    "reason", "plddt_advisory"):
+            if key in m:
+                row[key] = m[key]
         res_t1.append(row)
-        if m.get("status", "FAIL") in ("FAIL", "VETO") and row["method"] == "deterministic":
+        if raw_status in ("FAIL", "VETO") and row["method"] == "deterministic":
             failing_det.append(f"{lid}: {LAW_CANON[lid]['title']}")
 
     # ── Stage 4: Scoring ─────────────────────────────────────────────────
@@ -196,10 +211,28 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
         p_score = int(s6_final * w_arch * (1.0 - m_s8) * 100)
         suppression = None
 
+    if inp.coverage < cov_threshold:
+        verdict_reason = (
+            f"LAW-105 residue coverage {round(inp.coverage, 2)}% is below "
+            f"the {cov_threshold}% minimum"
+        )
+    elif verdict == "VETO":
+        verdict_reason = "Deterministic violation: " + "; ".join(failing_det)
+    elif verdict == "INDETERMINATE":
+        unavailable = [
+            r["law_id"] for r in res_t1
+            if r["method"] == "deterministic"
+            and r["status"] in ("NOT_MEASURED", "MEASUREMENT_FAILED")
+        ]
+        verdict_reason = "Mandatory deterministic measurement unavailable: " + ", ".join(unavailable)
+    else:
+        verdict_reason = None
+
     return AdjudicationResult(
         law_rows=res_t1,
         failing_deterministic=failing_det,
         verdict=verdict,
+        verdict_reason=verdict_reason,
         deterministic_score=det_score,
         advisory_score=adv_score,
         det_passed=det_passed,

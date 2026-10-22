@@ -1,0 +1,89 @@
+{
+  "recorded_utc": "2026-10-21T21:13:45Z",
+  "phase": "iteration-2",
+  "objective": "Rework the OD-scope review candidate under the canonical OD-03/04/09/10/14/16/17/18/19/20 rulings and publish reproducible evidence.",
+  "repository": {
+    "root": ".",
+    "branch": "review/od-scope-v25",
+    "head": "63da0e347002ed9b77071ff1ed0cefda7c0ce88a",
+    "base": "63da0e347002ed9b77071ff1ed0cefda7c0ce88a"
+  },
+  "governing_sources": {
+    "AGENTS.md": {
+      "blob": "85767237399ffb30f3e45894d9dfbe6f4240584f",
+      "sha256": "5e320939a11135a0d8aed5caa231df6aeaf633d724fcb4dba97b5909e51420b4"
+    },
+    "constitution.md": {
+      "blob": "211ad2c5d4b40059d9f3f03de12e0701f9235bc7",
+      "sha256": "cfdd5ba3babda31513b55894a49597fbfb18c2e870535a068c8b0ea423c53ce8"
+    },
+    "ENGINEERING_CONSTITUTION.md": {
+      "blob": "b6bb35e84956d84a8c9d9e65734c212baf3ed075",
+      "sha256": "e0f256f78f2c1256228c4286311cba15800dcd5a6c8005583508ee66d27983f5"
+    },
+    "docs/coder/BRIEF.md": {
+      "blob": "052a84ca829d321dc0841a4b1c8702145dcbf6b5",
+      "sha256": "8f07edfbba9d3e57de623e242125e942369bc5d60df5805343b26b9048c52e07"
+    },
+    "docs/decisions/OWNER_DECISIONS.md": {
+      "blob": "12906bf5997a3e2c6b5c41e5d5c60fee14613274",
+      "sha256": "59ccd5e84176a8a610c8c234cbb95fec4734478cc1f35668599ad2e3aef3172a"
+    },
+    "docs/P0_STATUS.md": {
+      "blob": "a31517abbc046c495930ba19ef7aeaf8bb72f2d0",
+      "sha256": "3f129dd18b9e5cf8888b763158cda42de270a8429a48ed7cc9a3aa675e810e0f"
+    }
+  },
+  "active_decisions": [
+    "OD-01",
+    "OD-02",
+    "OD-03",
+    "OD-04",
+    "OD-05",
+    "OD-09",
+    "OD-10",
+    "OD-13",
+    "OD-14",
+    "OD-16",
+    "OD-17",
+    "OD-18",
+    "OD-19",
+    "OD-20",
+    "A-01",
+    "A-04"
+  ],
+  "remote_state": {
+    "heads_observed": 15,
+    "main": "63da0e347002ed9b77071ff1ed0cefda7c0ce88a",
+    "engine/od-scope-v25": "97d62a89f0efb2917e80a82808a930d34af7f492",
+    "fix/law-130-clash-boundary": "5c216a882972d56f20be5ddae22bf0557465fdbd",
+    "docs/owner-decisions": null,
+    "review/od-scope-v25": null
+  },
+  "governance_discrepancy": "AGENTS.md names docs/owner-decisions as the canonical register location, but that ref is absent from the live remote. The local docs/decisions/OWNER_DECISIONS.md is available but is not declared canonical; no register edit is authorized.",
+  "working_state": {
+    "index": "pre-ruling staged candidate: 105 files",
+    "worktree_relative_to_index": "clean",
+    "new_evidence": "untracked iteration-2 evidence directory",
+    "delivery_commit": null
+  },
+  "pre_ruling_export": {
+    "directory": "docs/audit-evidence/2026-10-21/od-scope/pre-ruling-candidate",
+    "staged_patch_bytes": 181295,
+    "unstaged_patch_bytes": 0,
+    "full_patch_object": "44efa2c397cad9ce86fc5e2f676e3a040c1d0324",
+    "source_only_patch_object": "6b0833990113780900febbb9654123dfba5af770",
+    "note": "f5c74b7 and 6b08339 are local tree/patch identifiers, not commits."
+  },
+  "ruling_record": "docs/audit-evidence/2026-10-21/od-scope/iteration-2/owner-ruling-2026-10-21.md",
+  "authorized_work": [
+    "LAW-130 uses the canonical <= operator and explicit NOT_MEASURED/MEASUREMENT_FAILED states.",
+    "LAW-105 remains residue-coverage and total-residue scoped; atom coverage is not the gate.",
+    "LAW-110 remains all-residue in original order.",
+    "LAW-155 is retired from enforced semantics while retaining its ID.",
+    "LAW-130 and LAW-200 may report pLDDT only as advisory metadata.",
+    "Calibration evaluator, split validation, and runner boundary defects are fixed; no calibration run is performed."
+  ],
+  "first_edit_utc": "2026-10-21T21:13:45Z",
+  "next_step": "Revert the rejected core-scope/atom-coverage changes and implement the authorized engine semantics with tests."
+}

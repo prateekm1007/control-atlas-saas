@@ -252,7 +252,7 @@ def generate_v21_dossier(payload):
         pdf.set_y(card_y + card_total_h + 7)
         pdf.set_x(PDF_LAYOUT["MARGIN_LEFT"])
 
-        # FULL-WIDTH pLDDT CONFIDENCE BAR
+        # FULL-WIDTH RELIABILITY-COVERAGE BAR (LAW-105 residue coverage)
         try:
             bar_png = generate_confidence_bar(
                 coverage, v.get('det_passed', 0), v.get('det_total', 12)
@@ -267,7 +267,7 @@ def generate_v21_dossier(payload):
             pdf.ln(5)
         except Exception:
             pdf.set_font("Helvetica", "I", 8)
-            pdf.cell(190, 6, "[Confidence distribution unavailable]",
+            pdf.cell(190, 6, "[Reliability-coverage bar unavailable]",
                      ln=True, align="C")
             pdf.ln(2)
 
@@ -337,11 +337,37 @@ def generate_v21_dossier(payload):
         pdf.set_text_color(*PDF_COLORS["ALERT"])
 
         det_laws = [l for l in laws if l.get('method') == 'deterministic']
-        violations = [l for l in det_laws if l['status'] != 'PASS']
+        unmeasured = [l for l in det_laws
+                      if l['status'] in ('NOT_MEASURED', 'MEASUREMENT_FAILED')]
+        violations = [l for l in det_laws if l['status'] in ('FAIL', 'VETO')]
         passes = [l for l in det_laws if l['status'] == 'PASS']
 
         headers = ["ID", "Metric", "Class", "Observed", "Threshold", "Status"]
         widths = [15, 50, 30, 35, 35, 25]
+
+        if unmeasured:
+            pdf.set_font("Helvetica", "B", 9)
+            pdf.set_text_color(*PDF_COLORS["ALERT"])
+            pdf.cell(w, 8, f"EPISTEMIC GAP: {len(unmeasured)} DETERMINISTIC MEASUREMENT(S) UNAVAILABLE", ln=True)
+            pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+            pdf.set_font("Helvetica", "B", 8)
+            pdf.set_fill_color(*PDF_COLORS["BG_ADV_TABLE"])
+            for i, h in enumerate(headers):
+                pdf.cell(widths[i], 8, h, 1, 0, "C", True)
+            pdf.ln(8)
+            pdf.set_font("Helvetica", "", 7)
+            for l in unmeasured:
+                for i, field in enumerate([l['law_id'], l['title'], "Deterministic",
+                                           "N/A", f"{l['operator']} {l['threshold']}", l['status']]):
+                    pdf.cell(widths[i], 7, pdf.safe(field), 1, 0, "C" if i != 1 else "L")
+                pdf.ln(7)
+            pdf.ln(3)
+            pdf.set_font("Helvetica", "I", 7)
+            pdf.set_text_color(*PDF_COLORS["TEXT_SUBTLE"])
+            pdf.multi_cell(w, 4, "Unavailable mandatory evidence is not a violation and is not substituted "
+                           "with zeroes or PASS. The verdict is INDETERMINATE until these measurements are available.")
+            pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+            pdf.ln(3)
 
         if violations:
             pdf.set_font("Helvetica", "B", 9)
@@ -355,8 +381,9 @@ def generate_v21_dossier(payload):
             pdf.ln(8)
             pdf.set_font("Helvetica", "", 7)
             for l in violations:
+                observed = "N/A" if l.get('observed') is None else str(l['observed'])
                 for i, field in enumerate([l['law_id'], l['title'], "Deterministic",
-                                           str(l['observed']), f"{l['operator']} {l['threshold']}", l['status']]):
+                                           observed, f"{l['operator']} {l['threshold']}", l['status']]):
                     pdf.cell(widths[i], 7, pdf.safe(field), 1, 0, "C" if i != 1 else "L")
                 pdf.ln(7)
             pdf.ln(5)
@@ -387,7 +414,12 @@ def generate_v21_dossier(payload):
         pdf.ln(3)
         pdf.set_font("Helvetica", "I", 7)
         pdf.set_text_color(*PDF_COLORS["TEXT_SUBTLE"])
-        pdf.cell(w, 5, "All deterministic coordinate measurements within thresholds.", ln=True)
+        if violations:
+            pdf.cell(w, 5, "Deterministic compliance has violations; passing measurements are listed above.", ln=True)
+        elif unmeasured:
+            pdf.cell(w, 5, "Deterministic compliance is indeterminate: mandatory evidence is unavailable.", ln=True)
+        else:
+            pdf.cell(w, 5, "All deterministic coordinate measurements within thresholds.", ln=True)
         pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
         # ═══ REGULATOR FIX #3: LAW-100 inline footnote ═══
         pdf.ln(3)
@@ -430,10 +462,13 @@ def generate_v21_dossier(payload):
         pdf.ln(8)
         pdf.set_font("Helvetica", "", 7)
         for l in adv_laws:
-            cls = "Advisory" if "advisory" in l.get('method', '') else "Heuristic"
+            method = l.get('method', '')
+            cls = ("Retired" if method == "retired"
+                   else ("Advisory" if "advisory" in method else "Heuristic"))
             display_status = l['status'] if l['status'] != 'VETO' else 'FAIL'
+            observed = "N/A" if l.get('observed') is None else str(l['observed'])
             for i, field in enumerate([l['law_id'], l['title'], cls,
-                                       str(l['observed']), f"{l['operator']} {l['threshold']}", display_status]):
+                                       observed, f"{l['operator']} {l['threshold']}", display_status]):
                 pdf.cell(widths[i], 7, pdf.safe(field), 1, 0, "C" if i != 1 else "L")
             pdf.ln(7)
 

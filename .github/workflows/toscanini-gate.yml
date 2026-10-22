@@ -55,7 +55,7 @@ jobs:
           from tos.governance.modality_matrix import compute_matrix_hash
           c = compute_canon_hash()
           m = compute_matrix_hash()
-          assert c == '6a9cd4b4349b81de', f'Canon drifted: {c}'
+          assert c == 'f24ec581b3e04732', f'Canon drifted: {c}'
           assert m == 'ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4', f'Matrix drifted: {m}'
           print(f'Canon:  {c}')
           print(f'Matrix: {m[:16]}...')

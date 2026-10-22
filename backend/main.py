@@ -165,13 +165,15 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
 
     payload = _sanitize_for_json({
         "verdict": {
-            "binary": verdict, "deterministic_score": det_score, "advisory_score": adv_score,
+            "binary": verdict, "reason": adj_result.verdict_reason,
+            "deterministic_score": det_score, "advisory_score": adv_score,
             "physical_score": det_score, "confidence_score": conf_val, 
             "det_passed": det_passed, "det_total": DETERMINISTIC_COUNT,
             "det_score_normalized": adj_result.det_score_normalized,
             "det_passed_normalized": adj_result.det_passed_normalized, 
             "heur_passed": heur_passed, "heur_total": HEURISTIC_COUNT, 
-            "coverage_pct": round(coverage, 2), "suppression_reason": suppression
+            "coverage_pct": round(coverage, 2), "coverage_basis": "residues",
+            "suppression_reason": suppression
         },
         "governance": {
             # WP-5: full SHA-256 of the canonical coordinate hash (64 hex chars).

@@ -78,6 +78,18 @@ class Tier1Measurements:
         return sorted(res_map.values(), key=lambda x: (x["_chain"], x["_seq"], x["_icode"]))
 
     @staticmethod
+    def _plddt_advisory(residues, is_experimental):
+        if is_experimental or not residues:
+            return None
+        scores = [r["_conf"] for r in residues]
+        above = sum(1 for s in scores if s >= 70.0)
+        return {
+            "mean_plddt": round(float(np.mean(scores)), 2),
+            "fraction_at_or_above_70": round(above / len(scores) * 100, 2),
+            "policy": "advisory only; does not affect status or verdict",
+        }
+
+    @staticmethod
     def run_full_audit(structure, user_intent="NONE"):
         residues = Tier1Measurements._extract(structure)
         if not residues:
@@ -234,6 +246,7 @@ class Tier1Measurements:
         clash = 0
         clash_pairs = []  # Phase A.5: inline residue-pair capture
         all_coords = np.array([a.pos for a in structure.atoms])
+        neighbor_search_error = None
         if len(all_coords) > 1:
             try:
                 from scipy.spatial import cKDTree
@@ -251,18 +264,37 @@ class Tier1Measurements:
                     r2 = f"{aj.chain_id}:{aj.res_seq}"
                     pair = tuple(sorted([r1, r2], key=lambda x: (x.split(":")[0], int(x.split(":")[1]))))
                     clash_pairs.append(pair)
-            except Exception:
-                pass
+            except Exception as exc:
+                neighbor_search_error = f"{type(exc).__name__}: {exc}"
         # Deduplicate and sort pairs
         unique_pairs = sorted(set(clash_pairs), key=lambda p: (p[0].split(":")[0], int(p[0].split(":")[1]), p[1].split(":")[0], int(p[1].split(":")[1])))
-        clash_score = (clash / len(all_coords)) * 1000 if len(all_coords) > 0 else 0.0
-        results["LAW-130"] = {
-            "observed": round(clash_score, 2),
-            "status": "PASS" if clash_score < LAW_CANON["LAW-130"]["threshold"] else "VETO",
-            "sample": len(all_coords),
-            "granularity": GRANULARITY_RESIDUE_PAIR,
-            "failing_residue_pairs": unique_pairs
-        }
+        if len(all_coords) == 0:
+            results["LAW-130"] = {
+                "observed": None, "status": "NOT_MEASURED", "sample": 0,
+                "granularity": GRANULARITY_RESIDUE_PAIR,
+                "failing_residue_pairs": [],
+                "reason": "no atomic coordinates available",
+                "plddt_advisory": Tier1Measurements._plddt_advisory(residues, is_experimental),
+            }
+        elif neighbor_search_error is not None:
+            results["LAW-130"] = {
+                "observed": None, "status": "MEASUREMENT_FAILED", "sample": len(all_coords),
+                "granularity": GRANULARITY_RESIDUE_PAIR,
+                "failing_residue_pairs": [],
+                "reason": f"neighbor search failed: {neighbor_search_error}",
+                "plddt_advisory": Tier1Measurements._plddt_advisory(residues, is_experimental),
+            }
+        else:
+            clash_score = (clash / len(all_coords)) * 1000
+            threshold = LAW_CANON["LAW-130"]["threshold"]
+            results["LAW-130"] = {
+                "observed": round(clash_score, 2),
+                "status": "PASS" if clash_score <= threshold else "VETO",
+                "sample": len(all_coords),
+                "granularity": GRANULARITY_RESIDUE_PAIR,
+                "failing_residue_pairs": unique_pairs,
+                "plddt_advisory": Tier1Measurements._plddt_advisory(residues, is_experimental),
+            }
 
         # ═══════════════════════════════════════════════════════════
         # LAW-170: Residue Identity
@@ -536,14 +568,16 @@ class Tier1Measurements:
                 iz = int(np.floor((pos[2] - bbox_min[2]) / voxel_size))
                 voxel_indices.add((ix, iy, iz))
             voxels_per_residue = len(voxel_indices) / n_residues
+            results["LAW-155"] = {
+                "observed": round(voxels_per_residue, 2),
+                "status": "PASS" if voxels_per_residue >= LAW_CANON["LAW-155"]["threshold"] else "VETO",
+                "sample": len(all_coords)
+            }
         else:
-            voxels_per_residue = 0.0
-
-        results["LAW-155"] = {
-            "observed": round(voxels_per_residue, 2),
-            "status": "PASS" if voxels_per_residue >= LAW_CANON["LAW-155"]["threshold"] else "VETO",
-            "sample": len(all_coords)
-        }
+            results["LAW-155"] = {
+                "observed": None, "status": "NOT_MEASURED", "sample": 0,
+                "reason": "no atomic coordinates available"
+            }
         # ═══════════════════════════════════════════════════════════
         # LAW-200: Packing Quality (Module 1.2.6 — heuristic)
         # Computes bounding box volume / number of atoms.
@@ -559,14 +593,18 @@ class Tier1Measurements:
             bbox_dims = np.maximum(bbox_dims, 1.0)
             bbox_volume = float(bbox_dims[0] * bbox_dims[1] * bbox_dims[2])
             vol_per_atom = bbox_volume / len(all_coords)
+            results["LAW-200"] = {
+                "observed": round(vol_per_atom, 2),
+                "status": "PASS" if vol_per_atom <= LAW_CANON["LAW-200"]["threshold"] else "VETO",
+                "sample": len(all_coords),
+                "plddt_advisory": Tier1Measurements._plddt_advisory(residues, is_experimental),
+            }
         else:
-            vol_per_atom = 0.0
-
-        results["LAW-200"] = {
-            "observed": round(vol_per_atom, 2),
-            "status": "PASS" if vol_per_atom <= LAW_CANON["LAW-200"]["threshold"] else "VETO",
-            "sample": len(all_coords)
-        }
+            results["LAW-200"] = {
+                "observed": None, "status": "NOT_MEASURED", "sample": 0,
+                "reason": "no atomic coordinates available",
+                "plddt_advisory": Tier1Measurements._plddt_advisory(residues, is_experimental),
+            }
 
         return results, coverage, False
 

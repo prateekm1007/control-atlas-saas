@@ -24,6 +24,8 @@ class Governance(BaseModel):
 
 class AdjudicationVerdict(BaseModel):
     binary: Literal["PASS", "VETO", "INDETERMINATE"]
+    reason: Optional[str] = None
+    coverage_basis: Optional[str] = None
     deterministic_score: int = Field(..., ge=0, le=100)
     advisory_score: int = Field(..., ge=0, le=100)
     physical_score: int = Field(..., ge=0, le=100)
@@ -46,11 +48,11 @@ class PhysicsMeasurement(BaseModel):
     title: str
     status: str
     method: str
-    observed: float
+    observed: Optional[float] = None
     threshold: float
     operator: str
     units: str
-    deviation: str
+    deviation: Optional[str] = None
     sample_size: int = Field(..., ge=0)
     scope: str
     principle: str = "N/A"

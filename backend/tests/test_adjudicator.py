@@ -69,11 +69,12 @@ class TestAdjudicateBasicVerdicts:
         result = adjudicate_laws(inp)
         assert result.verdict == "PASS"
 
-    def test_empty_measurements_returns_veto(self):
-        """No measurements → all laws default to FAIL → VETO."""
+    def test_empty_measurements_returns_indeterminate(self):
+        """Missing mandatory evidence is unmeasured, not an invented VETO."""
         inp = _make_input(measurements={}, coverage=100.0)
         result = adjudicate_laws(inp)
-        assert result.verdict == "VETO"
+        assert result.verdict == "INDETERMINATE"
+        assert "Mandatory deterministic measurement unavailable" in result.verdict_reason
 
     def test_low_coverage_returns_indeterminate(self):
         inp = _make_input(measurements=_all_passing_measurements(), coverage=5.0)

@@ -43,7 +43,7 @@ class TestSchemaMatchesLiveResponse:
     def test_governance_fingerprint_validates(self, sample_data):
         fp_data = sample_data["governance"]["governance_fingerprint"]
         fp = GovernanceFingerprint(**fp_data)
-        assert fp.canon_hash == "6a9cd4b4349b81de"
+        assert fp.canon_hash == "f24ec581b3e04732"
         assert len(fp.matrix_hash) == 64
         assert fp.policy_ref == "PIL-CAL-03"
 
