@@ -27,6 +27,35 @@ It was corrected seconds later by force-push of the initiating review branch to
 and `main` were never force-pushed. No other users consumed the branch in that
 window. Recorded on `+x` force-push transparency for any session.
 
+## 2b. Push-log reconciliation (2026-10-22)
+
+The EC-18/EC-24 checker's governance run on `e2cd17d` (run 39779457004)
+reported the round-26 tip UNDECLARED: no push-log rows existed for any push
+of this review branch (the branch was born with the wrong head disclosed in
+section 2, and none of its pushes were logged). The push-log repair is
+appended in the push it describes, per the log's two-phase protocol:
+
+- P-082 / P-083 (RECONSTRUCTED legacy `push` rows): the branch-creation
+  mistake (`97d62a8`) and the force-correction to the audited base
+  (`63da0e3`), timestamps bound by the workflow runs they fired.
+- P-084 (`push-reconcile`): the `e2cd17d` audit-package push, verified
+  against the live ref at write time; run citations
+  39779457004 / 39779457093 bound to that exact head.
+- P-085-INTENT: the terminal intent for the repair push itself
+  (DEFERRED two-phase; its CONFIRM lands with the branch's next
+  legitimate push).
+
+The remaining 22 governance findings on `e2cd17d` are the pre-existing
+dead-ref set: CONFIRM/RECONCILE rows for branches pruned post-merge
+(repair/round19-mainline-acceptance and the round-19/20 era branches); the
+checker fails closed on any deleted ref, and voiding consumed intents is
+rejected by the checker's own pairing rules. The identical set failed the
+base-commit run 39677508627 on 2026-10-21, before any round-26 code
+existed. They are disclosed, not repaired: resurrecting pruned refs or
+editing the checker/workflow is outside the round-26 mandate (OD-16).
+
+Detail and run tables: `push-log-reconciliation-2026-10-22.md`.
+
 ## 3. What was ported (and why)
 
 | Area | On the delivered branch | Candidate port | Rationale |

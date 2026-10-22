@@ -583,3 +583,61 @@
   pushed again, P-081-CONFIRM records the remote-verified tip after that
   push returns. Until then the tip pushed by this INTENT is disclosed as
   PENDING by the evidence-sequence checker - the designed, truthful state.
+## 2026-10-21T21:16:46Z | P-082 | push | branch=review/od-scope-v25-2026-10-22 sha=97d62a89f0efb2917e80a82808a930d34af7f492 credential=OWNER-PAT-1 | RECONSTRUCTED
+
+- RECONSTRUCTED (row written 2026-10-22T12:49Z while repairing the push-log gap
+  the EC-18/EC-24 checker reported on candidate e2cd17d0f9c5231c489c42b8dd90d74055d1f648; no log row was appended
+  for this ref at push time).
+- The first push that created the round-26 review branch carried the delivery
+  branch tip 97d62a89f0efb2917e80a82808a930d34af7f492 in error (a refspec push issued with the wrong
+  worktree HEAD seconds after branch creation; see the round-26 port rationale,
+  section 2). Its only remote trace is workflow run 39677471359 (Toscanini
+  Stability Gate, success) which fired on the transient ref state.
+- Superseded seconds later by the corrected push recorded as P-083; the
+  corrected state is the branch's controlling lineage.
+
+## 2026-10-21T21:17:01Z | P-083 | push | branch=review/od-scope-v25-2026-10-22 sha=63da0e347002ed9b77071ff1ed0cefda7c0ce88a credential=OWNER-PAT-1 | RECONSTRUCTED
+
+- RECONSTRUCTED (same repair cycle as P-082; written 2026-10-22T12:49Z, never
+  backdated: the timestamp above is the workflow-run creation time this push
+  fired).
+- The force push corrected the branch to the audited review base 63da0e347002ed9b77071ff1ed0cefda7c0ce88a
+  (the force was required because the ref had seconds earlier been created
+  with the wrong head by P-082; no other ref was touched; main and the
+  frozen delivery branch were never force-pushed).
+- Push provenance: workflow runs 39677508732 (Toscanini Stability Gate,
+  success) and 39677508627 (governance acceptance, concluded failure; its
+  failure set is the disclosed pre-existing dead-ref set documented in
+  docs/audit/2026-10-22_od_port_candidate/push-log-reconciliation-2026-10-22.md)
+  both ran on this exact head.
+
+## 2026-10-22T12:49:00Z | P-084 | push-reconcile | branch=review/od-scope-v25-2026-10-22 remote_sha=e2cd17d0f9c5231c489c42b8dd90d74055d1f648 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas refs/heads/review/od-scope-v25-2026-10-22 -> e2cd17d0f9c5231c489c42b8dd90d74055d1f648 (re-verified 2026-10-22T12:49:00Z); workflow runs bound to this push: governance-acceptance run 39779457004 (concluded failure), stability-gate run 39779457093 (concluded success)" | RECONSTRUCTED
+
+- The push of e2cd17d0f9c5231c489c42b8dd90d74055d1f648 (the round-26 audit package: three-engine C5 evidence
+  regeneration under the base-vs-head attribution design, port rationale,
+  OD-20 conflict record, OD-14 dossier) was issued without appending its log
+  rows first; this reconcile records that push from live remote state and
+  from the workflow runs it produced, never backdated (the row time above is
+  the row's own write time; the push itself is bound to 2026-10-22T12:34:27Z
+  by the two workflow-run creation timestamps cited in the evidence field).
+- The governance-acceptance run on this exact head concluded failure because
+  the head was undeclared; the rows appended in the push declared by
+  P-085-INTENT repair that specific gap. The stability-gate run on this
+  exact head concluded success.
+
+## 2026-10-22T12:49:00Z | P-085-INTENT | push-intent | branch=review/od-scope-v25-2026-10-22 head_at_intent=DEFERRED expected_remote_tip_before_push=e2cd17d0f9c5231c489c42b8dd90d74055d1f648 credential=OWNER-PAT-1 authorized_by="standing push-log protocol (PUSH_LOG.md header): an entry is appended in the same push it describes, with the ref-update confirmation verified post-hoc via ls-remote and recorded in the round report; round-26 scope discipline (no governance or checker changes, no merge, no calibration) per the OD-16 hard stop"
+
+- This push carries: PUSH_LOG rows P-082, P-083, P-084, P-085-INTENT (the
+  branch push-history reconciliation), the governance run record
+  (docs/audit/2026-10-22_od_port_candidate/push-log-reconciliation-2026-10-22.md),
+  and a port-rationale subsection documenting the same reconciliation. No
+  source, checker, governance, registry, or test content is modified; the
+  C5 evidence states and engine behavior of e2cd17d0f9c5231c489c42b8dd90d74055d1f648 are unchanged by
+  this push.
+- Two-phase disclosure: head_at_intent is DEFERRED per the two-phase schema;
+  the tip this push creates is recorded by P-085-CONFIRM on the branch's
+  next legitimate push, which reports the live remote tip after this push
+  returns (never backdated); until then this intent's state is PENDING, the
+  designed truthful state.
+- ID selection: P-082..P-085 verified unused across the published log (the
+  highest previously used identifier is P-081-INTENT).
