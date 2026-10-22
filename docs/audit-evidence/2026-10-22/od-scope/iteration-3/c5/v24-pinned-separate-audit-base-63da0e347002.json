@@ -1,0 +1,292 @@
+{
+ "backend": "git materialization of engine rev 63da0e347002",
+ "excluded_targets": {},
+ "label": "base-63da0e347002",
+ "scope_note": "OD-18 separate audit set; not included in the primary counts.",
+ "targets": {
+  "1DDL": {
+   "advisory_score": 100,
+   "atoms": 4385,
+   "bytes": 441369,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 9,
+   "det_total": 10,
+   "deterministic_score": 75,
+   "failing_deterministic": [
+    "LAW-170: Residue Identity"
+   ],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.92,
+     "reason": null,
+     "sample_size": 2183,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 560,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 559,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 16.42,
+     "reason": null,
+     "sample_size": 1650,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 4.04,
+     "reason": null,
+     "sample_size": 545,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.68,
+     "reason": null,
+     "sample_size": 4385,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 548,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 530,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 18.22,
+     "reason": null,
+     "sample_size": 472,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.96,
+     "reason": null,
+     "sample_size": 4385,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.9,
+     "reason": null,
+     "sample_size": 548,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 9,
+     "reason": null,
+     "sample_size": 560,
+     "status": "VETO",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.414,
+     "reason": null,
+     "sample_size": 255,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 96.39,
+     "reason": null,
+     "sample_size": 4385,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 2.7,
+   "sha256": "352e1d667bfabde81ddcada73592b0952725a907dd5a154d2e175227c49decd3",
+   "verdict": "VETO"
+  },
+  "1I0T": {
+   "advisory_score": 100,
+   "atoms": 240,
+   "bytes": 49572,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 9,
+   "det_total": 10,
+   "deterministic_score": 75,
+   "failing_deterministic": [
+    "LAW-170: Residue Identity"
+   ],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 12,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 11,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 240,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 14.5,
+     "reason": null,
+     "sample_size": 240,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 12,
+     "reason": null,
+     "sample_size": 12,
+     "status": "VETO",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 1.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 28.97,
+     "reason": null,
+     "sample_size": 240,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 0.6,
+   "sha256": "d1349a882000fc684600ebc2695d25333dfe5325504bc597aaa022213662ff6b",
+   "verdict": "VETO"
+  }
+ }
+}

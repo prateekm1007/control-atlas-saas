@@ -1,0 +1,292 @@
+{
+ "backend": "git materialization of engine rev 3029e21196de",
+ "excluded_targets": {},
+ "label": "new-candidate-3029e21196de",
+ "scope_note": "OD-18 separate audit set; not included in the primary counts.",
+ "targets": {
+  "1DDL": {
+   "advisory_score": 100,
+   "atoms": 4385,
+   "bytes": 441369,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 8,
+   "det_total": 10,
+   "deterministic_score": 66,
+   "failing_deterministic": [
+    "LAW-170: Residue Identity"
+   ],
+   "heur_passed": 2,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 2183,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 560,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 548,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 2.16,
+     "reason": null,
+     "sample_size": 1647,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 4.04,
+     "reason": null,
+     "sample_size": 545,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.68,
+     "reason": null,
+     "sample_size": 4385,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 548,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 530,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 18.22,
+     "reason": null,
+     "sample_size": 472,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "retired",
+     "observed": 5.96,
+     "reason": null,
+     "sample_size": 4385,
+     "status": "RETIRED",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.9,
+     "reason": null,
+     "sample_size": 548,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 9,
+     "reason": null,
+     "sample_size": 560,
+     "status": "VETO",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.414,
+     "reason": null,
+     "sample_size": 255,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": null,
+     "reason": "no disulfide pairs were detected",
+     "sample_size": 0,
+     "status": "NOT_APPLICABLE",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 96.39,
+     "reason": null,
+     "sample_size": 4385,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 2.7,
+   "sha256": "352e1d667bfabde81ddcada73592b0952725a907dd5a154d2e175227c49decd3",
+   "verdict": "VETO"
+  },
+  "1I0T": {
+   "advisory_score": 50,
+   "atoms": 240,
+   "bytes": 49572,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 2,
+   "det_total": 10,
+   "deterministic_score": 16,
+   "failing_deterministic": [
+    "LAW-170: Residue Identity"
+   ],
+   "heur_passed": 1,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": null,
+     "reason": "no measurable covalent bonds in the eligible residues",
+     "sample_size": 0,
+     "status": "NOT_MEASURED",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 12,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": null,
+     "reason": "no eligible sequential C-N pairs with both atoms present",
+     "sample_size": 0,
+     "status": "NOT_MEASURED",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": null,
+     "reason": "no measurable backbone bond angles in the eligible residues",
+     "sample_size": 0,
+     "status": "NOT_MEASURED",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": null,
+     "reason": "no eligible sequential residue triples with measurable phi/psi",
+     "sample_size": 0,
+     "status": "NOT_MEASURED",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 240,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": null,
+     "reason": "no measurable sequential peptide bonds",
+     "sample_size": 0,
+     "status": "NOT_MEASURED",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": null,
+     "reason": "no chiral residue had N, CA, C, and CB coordinates",
+     "sample_size": 0,
+     "status": "NOT_MEASURED",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": null,
+     "reason": "no eligible residue types with a chi1 rotamer",
+     "sample_size": 0,
+     "status": "NOT_APPLICABLE",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "retired",
+     "observed": 14.5,
+     "reason": null,
+     "sample_size": 240,
+     "status": "RETIRED",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": null,
+     "reason": "no eligible sequential CA pairs with both coordinates present",
+     "sample_size": 0,
+     "status": "NOT_MEASURED",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 12,
+     "reason": null,
+     "sample_size": 12,
+     "status": "VETO",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": null,
+     "reason": "no hydrophobic residues are present",
+     "sample_size": 0,
+     "status": "NOT_APPLICABLE",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": null,
+     "reason": "no cysteine residues are present",
+     "sample_size": 0,
+     "status": "NOT_APPLICABLE",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 28.97,
+     "reason": null,
+     "sample_size": 240,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 0.6,
+   "sha256": "d1349a882000fc684600ebc2695d25333dfe5325504bc597aaa022213662ff6b",
+   "verdict": "VETO"
+  }
+ }
+}

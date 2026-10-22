@@ -4,7 +4,9 @@ Recorded: 2026-10-22T13:28:53Z
 Branch: `review/od-scope-v25`
 Base: `63da0e347002ed9b77071ff1ed0cefda7c0ce88a`
 Parent / preserved delivery candidate: `9412e943014df6804e34c670d9cc9496e1f34c9c`
-Final candidate SHA: pending the evidence commit that carries this file.
+Code candidate SHA: `3029e21196dedd7cecd3927598639c9bd1a22e6c`.
+Final evidence/archive candidate SHA: pending the evidence commit (the
+engine tested here remains the code candidate above).
 
 ## Scope
 

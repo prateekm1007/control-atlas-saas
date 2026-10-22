@@ -583,3 +583,38 @@
   pushed again, P-081-CONFIRM records the remote-verified tip after that
   push returns. Until then the tip pushed by this INTENT is disclosed as
   PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-22T13:43:02Z | P-082 | push-reconcile | branch=review/od-scope-v25 remote_sha=9412e943014df6804e34c670d9cc9496e1f34c9c credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/review/od-scope-v25 -> 9412e943014df6804e34c670d9cc9496e1f34c9c (re-verified 2026-10-22T13:42:16Z; the live ref was also captured in docs/audit-evidence/2026-10-22/od-scope/iteration-3/remote-heads-before-push.txt; main verified untouched at 63da0e347002ed9b77071ff1ed0cefda7c0ce88a; this reconstructs the branch state before the terminal intent because the branch's prior push predates its branch-scoped log records; no INTENT or CI-success claim is manufactured, and no Actions query was performed)"
+
+- Post-hoc reconciliation for the already-existing branch tip. The prior
+  push of 9412e943014df6804e34c670d9cc9496e1f34c9c is established by
+  the fresh live-ref observation above; no attempt is made to claim a
+  pre-push intent that does not exist. This record is the newest
+  CONFIRM/RECONCILE state for `review/od-scope-v25` before P-083-INTENT,
+  so the terminal intent can truthfully declare the same pre-push tip.
+- No run citations are asserted here. The evidence establishes branch
+  state only; CI success on 9412e943014df6804e34c670d9cc9496e1f34c9c is
+  neither claimed nor inferred.
+
+## 2026-10-22T13:43:03Z | P-083-INTENT | push-intent | branch=review/od-scope-v25 head_at_intent=DEFERRED expected_remote_tip_before_push=9412e943014df6804e34c670d9cc9496e1f34c9c credential=OWNER-PAT-1 authorized_by="owner directions recorded 2026-10-22 in docs/audit-evidence/2026-10-22/od-scope/iteration-3/owner-ruling-2026-10-22.md: apply the OD-scope rulings, preserve the reviewed history, produce the exact-base C5 diagnostic archive, verify the final candidate, push only this reviewed branch under the two-phase protocol, perform no merge/deployment/v25 calibration/held-out work, and stop"
+
+- This push carries: P-082 (branch-state reconciliation), this INTENT,
+  the curated C5 diagnostic archive under
+  `docs/audit-evidence/2026-10-22/od-scope/iteration-3/c5/`, and the
+  fresh pre-push remote-head evidence. It introduces no source, test,
+  workflow, or scientific-content changes beyond those evidence
+  documents; the engine candidate remains
+  `3029e21196dedd7cecd3927598639c9bd1a22e6c`.
+- C5 scope disclosure: v24 40/50 acquired and verified, with 1I0T and
+  1DDL held out as the OD-18 separate audit set and 38 used for the
+  primary counts; supplementary current-AlphaFold 9 acquired, with
+  P0DTC2 excluded under OD-11, P62988 unavailable, and 8 analyzed. The
+  archive contains base-vs-candidate data only; no c78 comparison or
+  c78 artifact is included.
+- ID selection: P-082 and P-083 were verified unused across the
+  published log; the highest previously used identifier is P-081.
+- head_at_intent is DEFERRED per the two-phase schema; the introducing
+  commit is the exact archive candidate. If this branch is pushed again,
+  P-083-CONFIRM records the remote-verified tip after that push returns.
+  Until then the tip pushed by this INTENT is disclosed as PENDING by
+  the evidence-sequence checker - the designed, truthful state.
