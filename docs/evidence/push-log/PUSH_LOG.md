@@ -652,3 +652,23 @@
   pushed again, P-086-CONFIRM records the remote-verified tip after that
   push returns. Until then the tip pushed by this INTENT is disclosed as
   PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-22T19:38:00Z | P-087 | intent-reconcile | voids=P-086-INTENT branch=review/od-scope-v25 credential=OWNER-PAT-1 evidence="the P-086-INTENT resolved to 459dd55 (its introducing commit), which the C5 reproducibility-spec push superseded; redeclared as P-088-INTENT on this exact candidate per the checker's exact-candidate rule"
+
+- Truthful void record: P-086-INTENT's content is preserved unchanged in the
+  log; only its pairing obligation is discharged.
+
+## 2026-10-22T19:38:01Z | P-088-INTENT | push-intent | branch=review/od-scope-v25 head_at_intent=DEFERRED expected_remote_tip_before_push=e71cec36d8189125b74568343a80fff1eb9637cd credential=OWNER-PAT-1 authorized_by="owner directions recorded 2026-10-22 for iteration 4 (focused engine/geometry/confidence/evaluator/runner corrections, reproducible C5 provenance, append-only push-log reconciliation, and no merge/deploy/calibration before the full exact-candidate gate loop is complete; OD-16 remains in force)"
+
+- This push carries the iteration-4 corrections, the P-083-CONFIRM completion,
+  the P-084/P-085 push-not-proven records, the P-086 void and this
+  redeclaration, the C5 reproducibility specification, and the regenerated
+  SHA256SUMS digest rows. The engine under test remains the exact code
+  candidate named in the iteration-4 reading note; no source, test, or
+  workflow content is modified beyond those corrections.
+- ID selection: P-087 and P-088 were verified unused across the published log.
+- head_at_intent is DEFERRED per the two-phase schema; the introducing commit
+  is the exact archive candidate. If this branch is pushed again, P-088-CONFIRM
+  records the remote-verified tip after that push returns. Until then the tip
+  pushed by this INTENT is disclosed as PENDING by the evidence-sequence
+  checker - the designed, truthful state.
