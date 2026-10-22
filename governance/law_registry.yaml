@@ -43,10 +43,9 @@ laws:
     type: Percentage
     measures: >
       Percentage of covalent bonds whose length deviates more than 4 sigma
-      from Engh-Huber ideals (predicted mode), or the RMS z-score (RMSZ,
-      experimental mode), across core residues.
+      from Engh-Huber ideals, across all core residues in every modality.
     implementation: "backend/tos/engine/tier1_measurements.py::Tier1Measurements.run_full_audit (LAW-100 block)"
-    test: {file: backend/tests/test_math_migration.py, dedicated: false}
+    test: {file: backend/tests/test_od_scope.py, dedicated: false}
     cited_in: [TRUST_MATRIX_v22.5.3.md, "station_sop.py calibration notes (Engh & Huber 1991)"]
 
   - id: LAW-105

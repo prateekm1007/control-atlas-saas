@@ -16,6 +16,7 @@ All modality logic delegated to modality_matrix.py.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -28,6 +29,11 @@ from tos.governance.station_sop import (
     ARCHITECTURE_WEIGHTS,
 )
 from tos.governance.modality_matrix import resolve_method
+
+
+MEASURED_STATUSES = frozenset({"PASS", "FAIL", "VETO"})
+MISSING_STATUSES = frozenset({"NOT_MEASURED", "MEASUREMENT_FAILED"})
+VALID_STATUSES = MEASURED_STATUSES | MISSING_STATUSES | {"NOT_APPLICABLE"}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -114,6 +120,63 @@ def _compute_verdict(res_t1: list[dict], coverage: float) -> str:
     return "PASS"
 
 
+def _normalize_measurement(m: dict) -> tuple[str, object, int, Optional[str]]:
+    """Fail closed on unknown or internally inconsistent measurement rows."""
+    raw_status = m.get("status", "NOT_MEASURED")
+    status = str(raw_status).strip().upper() if isinstance(raw_status, str) else "INVALID"
+    observed = m.get("observed")
+    try:
+        sample = int(m.get("sample", 0))
+    except (TypeError, ValueError):
+        return "MEASUREMENT_FAILED", None, 0, "sample size is not an integer"
+    if sample < 0:
+        return "MEASUREMENT_FAILED", None, 0, "sample size is negative"
+
+    if status not in VALID_STATUSES:
+        return "MEASUREMENT_FAILED", None, sample, f"unknown measurement status {raw_status!r}"
+
+    if status in MEASURED_STATUSES and (observed is None or sample == 0):
+        return (
+            "MEASUREMENT_FAILED",
+            None,
+            sample,
+            "measured status claimed without a numeric observation and positive sample",
+        )
+
+    if status in MEASURED_STATUSES:
+        try:
+            finite_observation = math.isfinite(float(observed))
+        except (TypeError, ValueError):
+            finite_observation = False
+        if not finite_observation:
+            return (
+                "MEASUREMENT_FAILED",
+                None,
+                sample,
+                "measured status carries a non-finite or non-numeric observation",
+            )
+
+    if status == "NOT_APPLICABLE":
+        if observed is not None or sample != 0:
+            return (
+                "MEASUREMENT_FAILED",
+                None,
+                sample,
+                "NOT_APPLICABLE must not carry an observation or nonzero sample",
+            )
+        return status, None, 0, None
+
+    if status in MISSING_STATUSES and observed is not None:
+        return (
+            "MEASUREMENT_FAILED",
+            None,
+            sample,
+            "missing-evidence status carried a numeric observation",
+        )
+
+    return status, observed, sample, None
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # CORE ADJUDICATION (Stages 3 + 4)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -158,20 +221,21 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
 
         # PIL-CAL-03: Advisory/heuristic laws cannot issue a VETO.
         raw_status = m.get("status", "NOT_MEASURED")
+        normalized, observed, sample, normalization_error = _normalize_measurement(m)
         if method == "retired":
             display_status = "RETIRED"
-        elif method in ("advisory_experimental", "heuristic") and raw_status == "VETO":
+        elif method in ("advisory_experimental", "heuristic") and normalized == "VETO":
             display_status = "FAIL (Advisory)"
         else:
-            display_status = raw_status
+            display_status = normalized
 
         row = {
             "law_id": lid, "title": LAW_CANON[lid]["title"], "status": display_status,
             "raw_status": raw_status, "method": method,
             "enforced": method != "retired",
-            "observed": m.get("observed"), "threshold": LAW_CANON[lid]["threshold"],
+            "observed": observed, "threshold": LAW_CANON[lid]["threshold"],
             "operator": LAW_CANON[lid]["operator"], "units": LAW_CANON[lid]["unit"],
-            "deviation": m.get("deviation"), "sample_size": m.get("sample", 0),
+            "deviation": m.get("deviation"), "sample_size": sample,
             "scope": LAW_CANON[lid]["scope"], "principle": LAW_CANON[lid].get("principle", "N/A")
         }
         # Phase A.5: Propagate residue-level diagnostics if present
@@ -179,8 +243,13 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
                     "reason", "plddt_advisory"):
             if key in m:
                 row[key] = m[key]
+        if normalization_error is not None:
+            prior_reason = row.get("reason")
+            row["reason"] = (
+                f"{prior_reason}; {normalization_error}" if prior_reason else normalization_error
+            )
         res_t1.append(row)
-        if raw_status in ("FAIL", "VETO") and row["method"] == "deterministic":
+        if display_status in ("FAIL", "VETO") and row["method"] == "deterministic":
             failing_det.append(f"{lid}: {LAW_CANON[lid]['title']}")
 
     # ── Stage 4: Scoring ─────────────────────────────────────────────────

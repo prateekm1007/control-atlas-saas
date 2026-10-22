@@ -10,25 +10,40 @@ Input contract (JSON)::
     {
       "policy_binding": {
         "code_sha": "<40 or 64 hex>",
-        "law_semantic_hash": "<64 hex>"
+        "canon_hash": "<16 hex>",
+        "law_semantic_hash": "<64 hex>",
+        "modality_matrix_sha256": "<64 hex>",
+        "law_registry_sha256": "<64 hex>"
+      },
+      "run_inputs": {
+        "run_manifest_sha256": "<64 hex>",
+        "coordinate_manifest_sha256": "<64 hex>",
+        "calibration_results_sha256": "<64 hex>"
       },
       "cases": [
         {
           "structure_id": "1ABC",
           "label": "acceptable" | "defective",
+          "label_source": "wwpdb-validation" | "perturbed-by-construction"
+                          | "known-defective-deposit",
+          "label_evidence_sha256": "<64 hex>",
+          "cohort": "A" | "B1" | "B2",
           "strata": {"modality": "x_ray", "resolution_band": "medium"},
           "verdict": "PASS" | "VETO" | "INDETERMINATE",
           "blocking_laws": ["LAW-110"],
           "indeterminate_causes": ["LAW-120"],
           "not_applicable": ["LAW-195"],
-          "not_measured": ["LAW-120"]
+          "not_measured": ["LAW-120"],
+          "measurement_failed": ["LAW-130"]
         }
       ]
     }
 
 Validation is fail-closed: duplicate IDs, unknown labels/verdicts, unknown
-law IDs, retired laws used as veto causes, and inconsistent cause lists are
-errors, not silently ignored data.
+law IDs, retired laws used as veto causes, missing label provenance,
+unverifiable policy identities, and inconsistent cause lists are errors,
+not silently ignored data. `NOT_MEASURED` and `MEASUREMENT_FAILED` are
+distinct states and both count as missing evidence; neither is a pass.
 """
 from __future__ import annotations
 
@@ -42,9 +57,11 @@ from typing import Iterable
 
 from tos.governance.station_sop import (
     LAW_CANON,
+    LAW_CANON_HASH,
     LAW_METHOD_CLASSIFICATIONS,
     RETIRED_LAWS,
 )
+from tos.governance.modality_matrix import compute_matrix_hash
 
 DEFAULT_ALPHA = 0.05
 
@@ -59,8 +76,20 @@ VALID_COHORTS = {"A", "B1", "B2"}
 VALID_MODALITIES = {"x_ray", "cryo_em", "nmr", "predicted"}
 VALID_RESOLUTION_BANDS = {"ultra_high", "medium", "low", "na"}
 SPLIT_NAMES = ("calibration", "validation", "held_out")
+COHORT_LABELS = {
+    "A": ("acceptable", "wwpdb-validation"),
+    "B1": ("defective", "perturbed-by-construction"),
+    "B2": ("defective", "known-defective-deposit"),
+}
+HEX16 = re.compile(r"^[0-9a-f]{16}$")
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
+STRUCTURE_ID = re.compile(r"^[A-Z0-9][A-Z0-9_-]{2,24}$")
+RUN_INPUT_FILES = {
+    "run_manifest_sha256": "run_manifest.json",
+    "coordinate_manifest_sha256": "coordinate_manifest.json",
+    "calibration_results_sha256": "calibration_results.json",
+}
 
 
 class EvaluationInputError(ValueError):
@@ -74,22 +103,93 @@ def _require(condition: bool, message: str) -> None:
 
 def _hex(value, length: int, field: str) -> None:
     _require(isinstance(value, str), f"{field} must be a string")
-    pattern = HEX40 if length == 40 else HEX64
+    pattern = {16: HEX16, 40: HEX40, 64: HEX64}[length]
     _require(bool(pattern.fullmatch(value.lower())), f"{field} must be {length} hex chars")
 
 
+def _normalize_structure_id(value) -> str:
+    _require(isinstance(value, str), "case.structure_id must be non-empty")
+    sid = value.strip().upper()
+    _require(bool(sid), "case.structure_id must be non-empty")
+    _require(bool(STRUCTURE_ID.fullmatch(sid)),
+             f"{sid}: structure_id contains unsupported characters")
+    return sid
+
+
 def _validate_law_list(case: dict, field: str, allowed: set[str]) -> list[str]:
+    sid = case["structure_id"]
     value = case.get(field, [])
-    _require(isinstance(value, list), f"{case.get('structure_id')}: {field} must be a list")
-    _require(len(value) == len(set(value)), f"{case.get('structure_id')}: {field} has duplicates")
+    _require(isinstance(value, list), f"{sid}: {field} must be a list")
+    _require(len(value) == len(set(value)), f"{sid}: {field} has duplicates")
     for law_id in value:
-        _require(isinstance(law_id, str), f"{case.get('structure_id')}: {field} entries must be strings")
-        _require(law_id in allowed, f"{case.get('structure_id')}: unknown law {law_id!r} in {field}")
+        _require(isinstance(law_id, str), f"{sid}: {field} entries must be strings")
+        _require(law_id in allowed, f"{sid}: unknown law {law_id!r} in {field}")
     return value
 
 
+def _validate_label_provenance(case: dict) -> None:
+    sid = case["structure_id"]
+    label = case["label"]
+    cohort = case.get("cohort")
+    _require(cohort in VALID_COHORTS, f"{sid}: invalid or missing cohort")
+    expected_label, expected_source = COHORT_LABELS[cohort]
+    _require(label == expected_label,
+             f"{sid}: cohort {cohort} requires label {expected_label!r}")
+    source = case.get("label_source")
+    _require(source in VALID_LABEL_SOURCES,
+             f"{sid}: invalid or missing label_source")
+    _require(source == expected_source,
+             f"{sid}: cohort {cohort} requires label_source {expected_source!r}")
+    _hex(case.get("label_evidence_sha256"), 64,
+         f"{sid}.label_evidence_sha256")
+    if cohort == "B1":
+        ref = case.get("defect_manifest_ref")
+        _require(isinstance(ref, str) and ref.strip(),
+                 f"{sid}: B1 requires defect_manifest_ref")
+
+
+def _validate_policy_binding(payload: dict) -> dict:
+    binding = payload.get("policy_binding")
+    _require(isinstance(binding, dict), "policy_binding is required")
+    code_sha = binding.get("code_sha")
+    _require(isinstance(code_sha, str), "policy_binding.code_sha is required")
+    code_sha = code_sha.lower()
+    _require(bool(HEX40.fullmatch(code_sha) or HEX64.fullmatch(code_sha)),
+             "policy_binding.code_sha must be a full 40- or 64-hex commit")
+    binding["code_sha"] = code_sha
+    for field, length in (
+        ("canon_hash", 16),
+        ("law_semantic_hash", 64),
+        ("modality_matrix_sha256", 64),
+        ("law_registry_sha256", 64),
+    ):
+        _hex(binding.get(field), length, f"policy_binding.{field}")
+        binding[field] = binding[field].lower()
+
+    run_inputs = payload.get("run_inputs")
+    _require(isinstance(run_inputs, dict), "run_inputs is required")
+    for field in RUN_INPUT_FILES:
+        _hex(run_inputs.get(field), 64, f"run_inputs.{field}")
+        run_inputs[field] = run_inputs[field].lower()
+    return binding
+
+
+def _validate_policy_identity(binding: dict) -> None:
+    _require(binding["canon_hash"] == LAW_CANON_HASH,
+             "policy_binding.canon_hash does not match the running engine")
+    _require(binding["modality_matrix_sha256"] == compute_matrix_hash(),
+             "policy_binding.modality_matrix_sha256 does not match the running engine")
+    _require(binding["law_semantic_hash"] == _law_semantic_hash(),
+             "policy_binding.law_semantic_hash does not match the running engine")
+    registry = Path(__file__).resolve().parents[2] / "governance" / "law_registry.yaml"
+    _require(registry.is_file(), "governance/law_registry.yaml is missing")
+    _require(binding["law_registry_sha256"] == _file_sha256(registry),
+             "policy_binding.law_registry_sha256 does not match the live registry")
+
+
 def validate_cases(cases: Iterable[dict], require_policy: bool = False,
-                   payload: dict | None = None) -> list[dict]:
+                   payload: dict | None = None,
+                   require_label_provenance: bool = False) -> list[dict]:
     """Validate a case list and return it as a list. Never repairs data."""
     _require(isinstance(cases, (list, tuple)), "cases must be a list")
     cases = list(cases)
@@ -97,20 +197,15 @@ def validate_cases(cases: Iterable[dict], require_policy: bool = False,
 
     if require_policy:
         _require(isinstance(payload, dict), "payload must be an object")
-        binding = payload.get("policy_binding")
-        _require(isinstance(binding, dict), "policy_binding is required")
-        _require(isinstance(binding.get("code_sha"), str), "policy_binding.code_sha is required")
-        code_sha = binding["code_sha"].lower()
-        _require(bool(HEX40.fullmatch(code_sha) or HEX64.fullmatch(code_sha)),
-                 "policy_binding.code_sha must be a full 40- or 64-hex commit")
-        _hex(binding.get("law_semantic_hash"), 64, "policy_binding.law_semantic_hash")
+        _validate_policy_binding(payload)
+        _validate_policy_identity(payload["policy_binding"])
 
     seen_ids: set[str] = set()
+    active_laws = set(LAW_CANON) - RETIRED_LAWS
     for case in cases:
         _require(isinstance(case, dict), "each case must be an object")
-        sid = case.get("structure_id")
-        _require(isinstance(sid, str) and sid.strip(), "case.structure_id must be non-empty")
-        sid = sid.strip()
+        sid = _normalize_structure_id(case.get("structure_id"))
+        case["structure_id"] = sid
         _require(sid not in seen_ids, f"duplicate structure_id: {sid}")
         seen_ids.add(sid)
 
@@ -118,6 +213,8 @@ def validate_cases(cases: Iterable[dict], require_policy: bool = False,
         _require(label in VALID_LABELS, f"{sid}: invalid label {label!r}")
         verdict = case.get("verdict")
         _require(verdict in VALID_VERDICTS, f"{sid}: invalid verdict {verdict!r}")
+        if require_label_provenance:
+            _validate_label_provenance(case)
 
         strata = case.get("strata", {})
         _require(isinstance(strata, dict), f"{sid}: strata must be an object")
@@ -128,16 +225,23 @@ def validate_cases(cases: Iterable[dict], require_policy: bool = False,
             _require(strata["resolution_band"] in VALID_RESOLUTION_BANDS,
                      f"{sid}: invalid strata.resolution_band")
 
-        active_laws = set(LAW_CANON) - RETIRED_LAWS
         blocking = _validate_law_list(case, "blocking_laws", active_laws)
         causes = _validate_law_list(case, "indeterminate_causes", active_laws)
-        not_measured = _validate_law_list(case, "not_measured", set(LAW_CANON) - RETIRED_LAWS)
-        not_applicable = _validate_law_list(case, "not_applicable", set(LAW_CANON))
+        not_measured = _validate_law_list(case, "not_measured", active_laws)
+        measurement_failed = _validate_law_list(case, "measurement_failed", active_laws)
+        not_applicable = _validate_law_list(case, "not_applicable", active_laws)
 
-        _require(not set(not_measured) & set(not_applicable),
-                 f"{sid}: a law cannot be both NOT_MEASURED and NOT_APPLICABLE")
-        _require(not set(blocking) & set(not_measured),
-                 f"{sid}: a blocking law cannot also be NOT_MEASURED")
+        missing = set(not_measured) | set(measurement_failed)
+        _require(len(not_measured) + len(measurement_failed) == len(missing),
+                 f"{sid}: a law cannot be both NOT_MEASURED and MEASUREMENT_FAILED")
+        _require(not set(missing) & set(not_applicable),
+                 f"{sid}: a law cannot be both missing and NOT_APPLICABLE")
+        _require(not set(blocking) & missing,
+                 f"{sid}: a blocking law cannot also be missing")
+        _require(not set(blocking) & set(not_applicable),
+                 f"{sid}: a blocking law cannot also be NOT_APPLICABLE")
+        _require(not set(causes) & set(not_applicable),
+                 f"{sid}: an indeterminate cause cannot be NOT_APPLICABLE")
 
         if verdict == "VETO":
             _require(blocking, f"{sid}: VETO requires at least one blocking law")
@@ -145,10 +249,15 @@ def validate_cases(cases: Iterable[dict], require_policy: bool = False,
             _require(not blocking, f"{sid}: blocking_laws are only valid for VETO")
 
         if verdict == "INDETERMINATE":
-            _require(set(causes) <= set(not_measured),
-                     f"{sid}: indeterminate causes must also be listed as NOT_MEASURED")
+            _require(causes, f"{sid}: INDETERMINATE requires at least one cause")
+            _require(set(causes) <= missing,
+                     f"{sid}: indeterminate causes must be listed as missing evidence")
         else:
             _require(not causes, f"{sid}: indeterminate_causes are only valid for INDETERMINATE")
+
+        if verdict == "PASS":
+            _require(not missing,
+                     f"{sid}: PASS is invalid while deterministic evidence is missing")
 
         for law_id in blocking + causes:
             _require(LAW_METHOD_CLASSIFICATIONS[law_id] == "deterministic",
@@ -239,12 +348,16 @@ def _per_law(cases: list[dict], alpha: float) -> dict:
     indeterminate_cases = [c for c in cases if c["verdict"] == "INDETERMINATE"]
     veto_counts: dict[str, int] = {}
     indet_counts: dict[str, int] = {}
+    failure_counts: dict[str, int] = {}
     for case in veto_cases:
         for law_id in case.get("blocking_laws", []):
             veto_counts[law_id] = veto_counts.get(law_id, 0) + 1
     for case in indeterminate_cases:
         for law_id in case.get("indeterminate_causes", []):
             indet_counts[law_id] = indet_counts.get(law_id, 0) + 1
+    for case in cases:
+        for law_id in case.get("measurement_failed", []):
+            failure_counts[law_id] = failure_counts.get(law_id, 0) + 1
 
     return {
         "veto_causes": {
@@ -262,6 +375,13 @@ def _per_law(cases: list[dict], alpha: float) -> dict:
             }
             for law_id, count in sorted(indet_counts.items())
         },
+        "measurement_failed_causes": {
+            law_id: {
+                "count": count,
+                "share_of_all_cases": wilson_interval(count, len(cases), alpha),
+            }
+            for law_id, count in sorted(failure_counts.items())
+        },
         "denominators": {
             "veto_cases": len(veto_cases),
             "indeterminate_cases": len(indeterminate_cases),
@@ -272,7 +392,10 @@ def _per_law(cases: list[dict], alpha: float) -> dict:
 
 def _missing_rate(cases: list[dict], alpha: float) -> dict:
     n_cases = len(cases)
-    any_missing = sum(1 for case in cases if case.get("not_measured"))
+    any_missing = sum(
+        1 for case in cases
+        if case.get("not_measured") or case.get("measurement_failed")
+    )
     active_laws = set(LAW_CANON) - RETIRED_LAWS
 
     per_law: dict[str, dict] = {}
@@ -281,12 +404,18 @@ def _missing_rate(cases: list[dict], alpha: float) -> dict:
     for law_id in sorted(active_laws):
         not_applicable = sum(1 for case in cases if law_id in case.get("not_applicable", []))
         eligible = n_cases - not_applicable
-        missing = sum(1 for case in cases if law_id in case.get("not_measured", []))
-        eligible = max(eligible, missing)
+        not_measured = sum(1 for case in cases if law_id in case.get("not_measured", []))
+        measurement_failed = sum(
+            1 for case in cases if law_id in case.get("measurement_failed", []))
+        missing = not_measured + measurement_failed
+        _require(missing <= eligible,
+                 f"{law_id}: missing count exceeds eligible opportunities")
         missing_opportunities += missing
         eligible_opportunities += eligible
         per_law[law_id] = {
-            "not_measured": missing,
+            "not_measured": not_measured,
+            "measurement_failed": measurement_failed,
+            "missing": missing,
             "eligible": eligible,
             "not_applicable": not_applicable,
             "rate": wilson_interval(missing, eligible, alpha),
@@ -294,8 +423,17 @@ def _missing_rate(cases: list[dict], alpha: float) -> dict:
 
     return {
         "cases_with_any_missing": wilson_interval(any_missing, n_cases, alpha),
+        "status_counts": {
+            "not_measured": sum(1 for case in cases if case.get("not_measured")),
+            "measurement_failed": sum(
+                1 for case in cases if case.get("measurement_failed")),
+        },
         "law_opportunities": {
             "missing": missing_opportunities,
+            "not_measured": sum(
+                count["not_measured"] for count in per_law.values()),
+            "measurement_failed": sum(
+                count["measurement_failed"] for count in per_law.values()),
             "eligible": eligible_opportunities,
             "rate": wilson_interval(missing_opportunities, eligible_opportunities, alpha),
         },
@@ -328,6 +466,9 @@ def evaluate(cases: list[dict], alpha: float = DEFAULT_ALPHA) -> dict:
     cases = validate_cases(cases, require_policy=False)
     summary = _summary(cases, alpha)
     return {
+        "report_type": "diagnostic",
+        "calibration_status": "not_approved",
+        "supports_threshold_validation": False,
         "n_cases": len(cases),
         "alpha": alpha,
         "confusion_matrix": summary["confusion_matrix"],
@@ -346,10 +487,89 @@ def evaluate(cases: list[dict], alpha: float = DEFAULT_ALPHA) -> dict:
     }
 
 
+SEQUENCE_ALPHABET = set("ACDEFGHIKLMNPQRSTVWYBXZJUO")
+IDENTITY_METHOD = "normalized-global-edit-identity"
+IDENTITY_TOOL = "calibration.evaluate"
+IDENTITY_TOOL_VERSION = "1.0.0"
+
+
+def _sequence_sha256(sequence: str) -> str:
+    return hashlib.sha256(sequence.encode("ascii")).hexdigest()
+
+
+def _bounded_edit_distance(a: str, b: str, max_errors: int) -> int | None:
+    if abs(len(a) - len(b)) > max_errors:
+        return None
+    if max_errors == 0:
+        return 0 if a == b else None
+    n, m = len(a), len(b)
+    infinity = max_errors + 1
+    prev = [infinity] * (m + 1)
+    for j in range(min(m, max_errors) + 1):
+        prev[j] = j
+    for i in range(1, n + 1):
+        current = [infinity] * (m + 1)
+        if i <= max_errors:
+            current[0] = i
+        lo = max(1, i - max_errors)
+        hi = min(m, i + max_errors)
+        row_min = infinity
+        for j in range(lo, hi + 1):
+            cost = 0 if a[i - 1] == b[j - 1] else 1
+            value = min(prev[j] + 1, current[j - 1] + 1, prev[j - 1] + cost)
+            current[j] = value
+            if value < row_min:
+                row_min = value
+        if row_min > max_errors:
+            return None
+        prev = current
+    distance = prev[m]
+    return distance if distance <= max_errors else None
+
+
+def _sequence_identity(a: str, b: str, threshold: float) -> float | None:
+    if a == b:
+        return 1.0
+    max_length = max(len(a), len(b))
+    max_errors = int(math.floor((1.0 - threshold) * max_length + 1e-9))
+    distance = _bounded_edit_distance(a, b, max_errors)
+    if distance is None:
+        return None
+    return round(1.0 - distance / max_length, 9)
+
+
+def _pair_results(entries_by_split: dict[str, list[dict]], threshold: float) -> tuple:
+    pairs = []
+    results = []
+    for left_index, left_name in enumerate(SPLIT_NAMES):
+        for right_name in SPLIT_NAMES[left_index + 1:]:
+            for left in entries_by_split[left_name]:
+                for right in entries_by_split[right_name]:
+                    pair = sorted((left["structure_id"], right["structure_id"]))
+                    pairs.append(pair)
+                    identity = _sequence_identity(
+                        left["_sequence"], right["_sequence"], threshold)
+                    if identity is None:
+                        identity = "below_threshold"
+                    results.append([pair[0], pair[1], identity])
+    pairs.sort()
+    results.sort(key=lambda row: (row[0], row[1]))
+    near = [
+        {"a": a, "b": b, "identity": identity}
+        for a, b, identity in results
+        if isinstance(identity, float) and identity >= threshold
+    ]
+    pair_digest = hashlib.sha256(
+        json.dumps(pairs, sort_keys=True).encode("utf-8")).hexdigest()
+    result_digest = hashlib.sha256(
+        json.dumps(results, sort_keys=True).encode("utf-8")).hexdigest()
+    return pair_digest, result_digest, near
+
+
 def validate_split_manifest(manifest: dict) -> dict:
-    """Validate a frozen split manifest (protocol v1, section 3)."""
+    """Validate a frozen split manifest and independently recompute leakage."""
     _require(isinstance(manifest, dict), "split manifest must be an object")
-    _require(manifest.get("schema_version") == "split-manifest/1.0.0",
+    _require(manifest.get("schema_version") == "split-manifest/1.1.0",
              "unsupported split manifest schema_version")
     _require(isinstance(manifest.get("protocol"), str) and manifest["protocol"].strip(),
              "split manifest protocol is required")
@@ -367,68 +587,133 @@ def validate_split_manifest(manifest: dict) -> dict:
         _require(isinstance(splits.get(name), list), f"splits.{name} must be a list")
         _require(splits[name], f"splits.{name} must not be empty")
 
+    exclusions = manifest.get("historical_exclusions", [])
+    _require(isinstance(exclusions, list) and all(
+        isinstance(item, str) and item.strip() for item in exclusions),
+        "historical_exclusions must be a list of structure IDs")
+    excluded = {item.strip().upper() for item in exclusions}
+
     seen: dict[str, str] = {}
+    seen_digests: dict[str, str] = {}
+    seen_sequences: dict[str, str] = {}
+    families: dict[str, set[str]] = {}
+    entries_by_split: dict[str, list[dict]] = {}
     summary: dict[str, int] = {}
     for split_name in SPLIT_NAMES:
         entries = splits[split_name]
         summary[split_name] = len(entries)
+        entries_by_split[split_name] = []
+        families[split_name] = set()
         for entry in entries:
             _require(isinstance(entry, dict), f"{split_name}: entry must be an object")
-            sid = entry.get("structure_id")
-            _require(isinstance(sid, str) and sid.strip(),
-                     f"{split_name}: structure_id is required")
-            sid = sid.strip()
+            sid = _normalize_structure_id(entry.get("structure_id"))
+            entry["structure_id"] = sid
+            _require(sid not in excluded,
+                     f"{sid}: appears in historical exclusions")
             _require(sid not in seen,
                      f"structure identity appears in more than one split: {sid} ({seen.get(sid)} and {split_name})")
             seen[sid] = split_name
+
             _require(entry.get("label") in VALID_LABELS,
                      f"{sid}: invalid label {entry.get('label')!r}")
             _require(entry.get("label_source") in VALID_LABEL_SOURCES,
                      f"{sid}: invalid label_source {entry.get('label_source')!r}")
-            cohort = entry.get("cohort")
-            _require(cohort in VALID_COHORTS,
-                     f"{sid}: invalid cohort {cohort!r}")
-            expected_label_source = {
-                "A": "wwpdb-validation",
-                "B1": "perturbed-by-construction",
-                "B2": "known-defective-deposit",
-            }[cohort]
-            expected_label = "acceptable" if cohort == "A" else "defective"
-            _require(entry.get("label_source") == expected_label_source,
-                     f"{sid}: cohort {cohort} requires label_source "
-                     f"{expected_label_source!r}")
-            _require(entry.get("label") == expected_label,
-                     f"{sid}: cohort {cohort} requires label {expected_label!r}")
+            _validate_label_provenance(entry)
+            cohort = entry["cohort"]
+            if cohort == "B1":
+                _hex(entry.get("defect_manifest_sha256"), 64,
+                     f"{sid}.defect_manifest_sha256")
+
             strata = entry.get("strata")
             _require(isinstance(strata, dict), f"{sid}: strata is required")
             _require(strata.get("modality") in VALID_MODALITIES,
                      f"{sid}: invalid modalities")
             _require(strata.get("resolution_band") in VALID_RESOLUTION_BANDS,
                      f"{sid}: invalid resolution_band")
-            _hex(entry.get("coordinate_sha256"), 64, f"{sid}.coordinate_sha256")
-            if entry["cohort"] == "B1":
-                _require(isinstance(entry.get("defect_manifest_ref"), str)
-                         and entry["defect_manifest_ref"].strip(),
-                         f"{sid}: B1 requires defect_manifest_ref")
+            coordinate_digest = entry.get("coordinate_sha256")
+            _hex(coordinate_digest, 64, f"{sid}.coordinate_sha256")
+            coordinate_digest = coordinate_digest.lower()
+            _require(coordinate_digest not in seen_digests,
+                     f"{sid}: repeated coordinate digest also used by "
+                     f"{seen_digests.get(coordinate_digest)}")
+            seen_digests[coordinate_digest] = sid
+
+            sequence = entry.get("sequence")
+            _require(isinstance(sequence, str) and sequence,
+                     f"{sid}: sequence is required")
+            sequence = sequence.strip().upper()
+            _require(set(sequence) <= SEQUENCE_ALPHABET,
+                     f"{sid}: sequence contains unsupported residues")
+            _require(entry.get("sequence_sha256") == _sequence_sha256(sequence),
+                     f"{sid}: sequence_sha256 does not match sequence")
+            _require(sequence not in seen_sequences,
+                     f"{sid}: repeated sequence also used by "
+                     f"{seen_sequences.get(sequence)}")
+            seen_sequences[sequence] = sid
+            family = entry.get("family_id")
+            _require(isinstance(family, str) and family.strip(),
+                     f"{sid}: family_id is required")
+            families[split_name].add(family.strip())
+
+            entries_by_split[split_name].append({
+                **entry,
+                "_sequence": sequence,
+            })
+
+    for index, left_name in enumerate(SPLIT_NAMES):
+        for right_name in SPLIT_NAMES[index + 1:]:
+            overlap = families[left_name] & families[right_name]
+            _require(not overlap,
+                     f"family overlap between {left_name} and {right_name}: "
+                     f"{sorted(overlap)}")
 
     checks = manifest.get("overlap_checks")
     _require(isinstance(checks, dict), "overlap_checks is required")
-    _require(checks.get("identity_overlap_found") is False,
-             "identity_overlap_found must be false before freezing")
-    _require(checks.get("all_checks_passed") is True,
-             "all overlap checks must pass before freezing")
-    pairs = checks.get("near_identity_pairs")
-    _require(isinstance(pairs, list), "near_identity_pairs must be a list")
-    _require(not pairs, "near-identity pairs must be resolved before freezing")
-    threshold = checks.get("near_identity_threshold")
+    sequence_checks = checks.get("sequence_identity")
+    _require(isinstance(sequence_checks, dict),
+             "overlap_checks.sequence_identity is required")
+    _require(sequence_checks.get("method") == IDENTITY_METHOD,
+             "unsupported sequence identity method")
+    _require(sequence_checks.get("tool") == IDENTITY_TOOL,
+             "unsupported sequence identity tool")
+    _require(sequence_checks.get("tool_version") == IDENTITY_TOOL_VERSION,
+             "unsupported sequence identity tool_version")
+    threshold = sequence_checks.get("near_identity_threshold")
     _require(isinstance(threshold, (int, float)) and not isinstance(threshold, bool)
              and 0.9 <= threshold <= 1,
              "near_identity_threshold must be a proportion >= 0.9")
+    pair_digest, result_digest, near_pairs = _pair_results(
+        entries_by_split, float(threshold))
+    expected_pairs = (
+        len(entries_by_split["calibration"]) * len(entries_by_split["validation"])
+        + len(entries_by_split["calibration"]) * len(entries_by_split["held_out"])
+        + len(entries_by_split["validation"]) * len(entries_by_split["held_out"])
+    )
+    _require(sequence_checks.get("checked_pairs") == expected_pairs,
+             "sequence_identity.checked_pairs does not match recomputed pairs")
+    _require(sequence_checks.get("checked_pair_digest") == pair_digest,
+             "sequence_identity.checked_pair_digest does not match recomputed pairs")
+    _require(sequence_checks.get("result_digest") == result_digest,
+             "sequence_identity.result_digest does not match recomputed identity results")
+    _require(checks.get("near_identity_pairs") == near_pairs,
+             "near_identity_pairs does not match recomputed identity results")
+    _require(not near_pairs,
+             "near-identity pairs must be resolved before freezing")
+    _require(checks.get("identity_overlap_found") is False,
+             "identity_overlap_found must be false before freezing")
+    _require(checks.get("family_overlap_found") is False,
+             "family_overlap_found must be false before freezing")
+    _require(checks.get("all_checks_passed") is True,
+             "all overlap checks must pass before freezing")
 
     return {
         "split_counts": summary,
         "total_entries": sum(summary.values()),
         "overlap_checks_passed": True,
+        "checked_pairs": expected_pairs,
+        "near_identity_pair_count": len(near_pairs),
+        "checked_pair_digest": pair_digest,
+        "identity_result_digest": result_digest,
     }
 
 
@@ -436,13 +721,72 @@ def _file_sha256(path: Path) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def evaluate_file(path: Path, alpha: float = DEFAULT_ALPHA) -> dict:
+def _law_semantic_hash() -> str:
+    payload = {
+        "laws": {
+            law_id: {
+                "title": data["title"],
+                "threshold": data["threshold"],
+                "unit": data["unit"],
+                "operator": data["operator"],
+                "scope": data["scope"],
+                "type": data["type"],
+            }
+            for law_id, data in sorted(LAW_CANON.items())
+        },
+        "method_classifications": dict(sorted(LAW_METHOD_CLASSIFICATIONS.items())),
+    }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def _verify_run_inputs(run_inputs: dict, run_dir: Path,
+                       policy_binding: dict) -> None:
+    run_dir = Path(run_dir)
+    _require(run_dir.is_dir(), f"run directory does not exist: {run_dir}")
+    for field, filename in RUN_INPUT_FILES.items():
+        path = run_dir / filename
+        _require(path.is_file(), f"run input is missing: {filename}")
+        _require(_file_sha256(path) == run_inputs[field],
+                 f"run input digest mismatch: {filename}")
+
+    manifest = json.loads(
+        (run_dir / "run_manifest.json").read_text(encoding="utf-8"))
+    _require(isinstance(manifest, dict), "run manifest must be an object")
+    _require(manifest.get("code_sha") == policy_binding["code_sha"],
+             "run manifest code_sha does not match policy_binding.code_sha")
+    manifest_policy = manifest.get("policy_binding")
+    _require(isinstance(manifest_policy, dict),
+             "run manifest policy_binding is missing")
+    for field in ("canon_hash", "law_semantic_hash",
+                  "modality_matrix_sha256", "law_registry_sha256"):
+        _require(manifest_policy.get(field) == policy_binding[field],
+                 f"run manifest policy_binding.{field} does not match evaluation binding")
+
+    results = json.loads(
+        (run_dir / "calibration_results.json").read_text(encoding="utf-8"))
+    meta = results.get("meta") if isinstance(results, dict) else None
+    _require(isinstance(meta, dict), "calibration results meta is missing")
+    _require(meta.get("code_sha") == policy_binding["code_sha"],
+             "run results code_sha does not match policy_binding.code_sha")
+    _require(meta.get("policy_binding") == manifest_policy,
+             "run results policy_binding does not match the run manifest")
+
+
+def evaluate_file(path: Path, alpha: float = DEFAULT_ALPHA,
+                  run_dir: Path | None = None) -> dict:
     path = Path(path)
     data = json.loads(path.read_text(encoding="utf-8"))
     _require(isinstance(data, dict), "evaluation file must contain an object")
-    cases = validate_cases(data.get("cases"), require_policy=True, payload=data)
+    cases = validate_cases(
+        data.get("cases"), require_policy=True, payload=data,
+        require_label_provenance=True)
+    if run_dir is not None:
+        _verify_run_inputs(data["run_inputs"], run_dir, data["policy_binding"])
     report = evaluate(cases, alpha)
     report["policy_binding"] = data["policy_binding"]
+    report["run_inputs"] = data["run_inputs"]
+    report["run_inputs_verified"] = run_dir is not None
     report["input_file_sha256"] = _file_sha256(path)
     return report
 
@@ -451,6 +795,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("input", help="labeled cases JSON or split manifest JSON")
     parser.add_argument("--alpha", type=float, default=DEFAULT_ALPHA)
+    parser.add_argument("--run-dir", default=None,
+                        help="verify the three bound run-input file digests")
     parser.add_argument("--validate-split", action="store_true",
                         help="validate a frozen split manifest instead of cases")
     args = parser.parse_args(argv)
@@ -463,7 +809,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(summary, indent=2, sort_keys=True))
         return 0
 
-    report = evaluate_file(path, args.alpha)
+    report = evaluate_file(path, args.alpha, Path(args.run_dir) if args.run_dir else None)
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0
 

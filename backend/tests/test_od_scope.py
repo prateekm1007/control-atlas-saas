@@ -177,13 +177,17 @@ class TestLaw110Adjacency:
         atoms = _residue("A", 1, [0, 0, 0], [0, 5, 0])
         atoms += _residue("B", 2, [50, 0, 0], [1, 0, 0])
         results, _, _ = Tier1Measurements.run_full_audit(_structure(atoms))
-        assert results["LAW-110"]["observed"] == 0
+        assert results["LAW-110"]["status"] == "NOT_MEASURED"
+        assert results["LAW-110"]["observed"] is None
+        assert results["LAW-110"]["sample"] == 0
 
     def test_residue_gap_is_not_paired(self):
         atoms = _residue("A", 1, [0, 0, 0], [0, 5, 0])
         atoms += _residue("A", 3, [50, 0, 0], [1, 0, 0])
         results, _, _ = Tier1Measurements.run_full_audit(_structure(atoms))
-        assert results["LAW-110"]["observed"] == 0
+        assert results["LAW-110"]["status"] == "NOT_MEASURED"
+        assert results["LAW-110"]["observed"] is None
+        assert results["LAW-110"]["sample"] == 0
 
     def test_insertion_codes_remain_sequential(self):
         atoms = _residue("A", 1, [0, 0, 0], [0, 5, 0], icode="")
@@ -309,3 +313,68 @@ class TestMissingMeasurements:
         ))
         assert adjudication.verdict == "INDETERMINATE"
         assert "LAW-130" in adjudication.verdict_reason
+
+
+class TestLaw100CanonicalMetric:
+    def _bond_atoms(self, cb_distance=1.63):
+        atoms = [
+            _atom("N", [0.0, 0.0, 0.0], 1, 90.0),
+            _atom("CA", [1.458, 0.0, 0.0], 1, 90.0),
+            _atom("C", [2.004, 1.424, 0.0], 1, 90.0),
+            _atom("O", [2.445, 2.573, 0.0], 1, 90.0),
+            _atom("CB", [1.458, 0.0, cb_distance], 1, 90.0),
+        ]
+        return atoms
+
+    def test_experimental_uses_percentage_not_unregistered_rmsz(self):
+        struct = _structure(self._bond_atoms(), experimental=True)
+        results, _, _ = Tier1Measurements.run_full_audit(struct)
+        row = results["LAW-100"]
+        assert row["sample"] == 4
+        assert row["observed"] == 25.0
+        assert row["status"] == "VETO"
+
+    def test_law_100_threshold_is_canonical_percentage(self):
+        assert LAW_CANON["LAW-100"]["threshold"] == 5.0
+        assert LAW_CANON["LAW-100"]["operator"] == "<="
+        assert LAW_CANON["LAW-100"]["unit"] == "%"
+        assert LAW_CANON["LAW-100"]["type"] == "Percentage"
+
+    def test_no_bonds_is_not_measured(self):
+        struct = _structure([_atom("CA", [0.0, 0.0, 0.0], 1, 90.0)])
+        results, _, _ = Tier1Measurements.run_full_audit(struct)
+        row = results["LAW-100"]
+        assert row["status"] == "NOT_MEASURED"
+        assert row["observed"] is None
+        assert row["sample"] == 0
+
+
+class TestConfidenceContract:
+    def test_uses_profile_observations_and_source_metadata(self):
+        struct = Structure(
+            atoms=[_atom("CA", [0, 0, 0], 1, 10.0)],
+            audit_id="CONF",
+            confidence=ConfidenceProfile([71.5, 84.5], False, "predicted"),
+        )
+        source, mean, provenance = Tier1Measurements.detect_confidence_source(struct)
+        assert source == "pLDDT"
+        assert mean == 78.0
+        assert provenance == "predicted"
+        meta = Tier1Measurements.decompose_confidence(struct)
+        assert meta["schema_version"] == "confidence-meta/1.0.0"
+        assert meta["data_available"] is True
+        assert meta["observation_count"] == 2
+
+    def test_unavailable_confidence_is_explicit_not_hardcoded(self):
+        struct = Structure(
+            atoms=[], audit_id="EMPTY",
+            confidence=ConfidenceProfile([], False, "predicted"),
+        )
+        source, mean, provenance = Tier1Measurements.detect_confidence_source(struct)
+        assert source == "pLDDT"
+        assert mean is None
+        assert provenance == "predicted"
+        meta = Tier1Measurements.decompose_confidence(struct)
+        assert meta["mean"] is None
+        assert meta["data_available"] is False
+        assert meta["observation_count"] == 0

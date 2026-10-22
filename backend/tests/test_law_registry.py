@@ -13,6 +13,7 @@ Asserts:
   - the glossary describes the pinned measurements (no stale physics).
 """
 import hashlib
+import json
 import re
 from pathlib import Path
 
@@ -21,10 +22,12 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 REGISTRY = REPO / "governance" / "law_registry.yaml"
 SHA256_FILE = REPO / "governance" / "law_registry.sha256"
+SEMANTIC_SHA256_FILE = REPO / "governance" / "law_semantic.sha256"
 MEASUREMENTS = REPO / "backend" / "tos" / "engine" / "tier1_measurements.py"
 
 # Recorded content hash of governance/law_registry.yaml (WP-8 requirement).
-REGISTRY_SHA256 = "28e0966705ed97162a2e52228b71b311e7d1bede5d6343825db6a38363420125"
+REGISTRY_SHA256 = "81b57f4c68164522b6a27f810da33c2108c1af9682d018ba15c9b8a92a8d0123"
+LAW_SEMANTIC_SHA256 = "d2b3b8501b1c73f67e7839662f70b68596d3c1e25b51d824d6b8a78325816dd5"
 
 yaml = pytest.importorskip("yaml", reason="PyYAML comes from requirements-dev.txt")
 
@@ -98,6 +101,20 @@ class TestEnforcedEntriesHaveImplementationAndTests:
         assert indirect == KNOWN_DEDICATED_GAPS
 
 
+class TestLaw100CanonicalDescription:
+
+    def test_measures_percentage_only(self):
+        entry = ENTRIES["LAW-100"]
+        assert entry["threshold"] == 5.0
+        assert entry["units"] == "%"
+        assert entry["operator"] == "<="
+        assert entry["type"] == "Percentage"
+        assert "Percentage of covalent bonds" in entry["measures"]
+        assert "RMS z-score" not in entry["measures"]
+        assert "RMSZ" not in entry["measures"]
+        assert "experimental mode" not in entry["measures"]
+
+
 class TestContentHashRecorded:
 
     def test_sha256_file_matches_content(self):
@@ -108,6 +125,38 @@ class TestContentHashRecorded:
     def test_pinned_constant_matches_content(self):
         actual = hashlib.sha256(REGISTRY.read_bytes()).hexdigest()
         assert REGISTRY_SHA256 == actual
+
+
+class TestLawSemanticHash:
+
+    @staticmethod
+    def _expected_hash():
+        payload = {
+            "laws": {
+                law_id: {
+                    "title": data["title"],
+                    "threshold": data["threshold"],
+                    "unit": data["unit"],
+                    "operator": data["operator"],
+                    "scope": data["scope"],
+                    "type": data["type"],
+                }
+                for law_id, data in sorted(LAW_CANON.items())
+            },
+            "method_classifications": dict(sorted(LAW_METHOD_CLASSIFICATIONS.items())),
+        }
+        return hashlib.sha256(
+            json.dumps(payload, sort_keys=True).encode("utf-8")
+        ).hexdigest()
+
+    def test_semantic_hash_file_matches_independent_computation(self):
+        expected = self._expected_hash()
+        assert LAW_SEMANTIC_SHA256 == expected
+        assert SEMANTIC_SHA256_FILE.read_text(encoding="utf-8").strip() == expected
+
+    def test_runner_semantic_hash_matches_lock(self):
+        from calibration.runner import _law_semantic_hash
+        assert _law_semantic_hash() == self._expected_hash()
 
 
 class TestGlossaryMatchesPinnedPhysics:

@@ -7,10 +7,14 @@ enables open mode.
 
 Boundaries enforced here:
 
-* every coordinate file is hashed and pinned before measurement;
+* every coordinate file is hashed, and a supplied pin binds the exact bytes;
 * local files must match a supplied prior digest when one is provided;
-* AlphaFold acquisition is metadata-first and entity-exact; a moved or
-  ambiguous entity fails closed instead of being silently substituted;
+* AlphaFold acquisition is metadata-first and entity-exact; authoritative
+  inputs require an exact entity/version/URL/format/size/digest pin and are
+  never promoted to a newer runtime version; unpinned inputs are marked
+  non-authoritative diagnostics;
+* every redirect hop is validated before it is requested;
+* governance registry and law-semantic locks are verified before output;
 * existing run directories are never overwritten;
 * a dirty engine tree aborts the run before a directory is created;
 * incomplete acquisition or measurement produces a non-zero exit code.
@@ -29,7 +33,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import requests
 
@@ -48,14 +52,17 @@ from tos.governance.station_sop import (  # noqa: E402
 )
 from tos.governance.modality_matrix import compute_matrix_hash  # noqa: E402
 
-RUNNER_VERSION = "v25-runner/1.1.0"
+RUNNER_VERSION = "v25-runner/1.2.0"
 RCSB_URL = "https://files.rcsb.org/download/{pdb_id}.pdb"
 AFDB_API = "https://alphafold.ebi.ac.uk/api/prediction/{accession}"
 HTTP_TIMEOUT_S = 60
+MAX_REDIRECTS = 5
 MAX_STRUCTURE_BYTES = 50 * 1024 * 1024
 MIN_STRUCTURE_BYTES = 200
-USER_AGENT = "toscanini-calibration-runner/1.1 (diagnostic evidence run)"
+USER_AGENT = "toscanini-calibration-runner/1.2 (diagnostic evidence run)"
 ALLOWED_HOSTS = {"files.rcsb.org", "alphafold.ebi.ac.uk"}
+ALLOWED_PORTS = {None, 443}
+REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 PDB_ID = re.compile(r"^[0-9A-Za-z]{4}$")
 
@@ -125,10 +132,52 @@ def _law_semantic_hash() -> str:
     return _sha256(json.dumps(payload, sort_keys=True).encode("utf-8"))
 
 
+def _verify_policy_locks(registry_path: Path) -> dict:
+    governance = registry_path.parent
+    registry_lock_path = governance / "law_registry.sha256"
+    semantic_lock_path = governance / "law_semantic.sha256"
+    _require_file(registry_path, "law registry")
+    _require_file(registry_lock_path, "law registry lock")
+    _require_file(semantic_lock_path, "law semantic lock")
+    registry_lock = registry_lock_path.read_text(encoding="utf-8").strip().lower()
+    semantic_lock = semantic_lock_path.read_text(encoding="utf-8").strip().lower()
+    if not HEX64.fullmatch(registry_lock):
+        raise CalibrationRunError("law_registry.sha256 is not a 64-hex digest")
+    if not HEX64.fullmatch(semantic_lock):
+        raise CalibrationRunError("law_semantic.sha256 is not a 64-hex digest")
+    actual_registry = _sha256_file(registry_path)
+    actual_semantic = _law_semantic_hash()
+    if actual_registry != registry_lock:
+        raise CalibrationRunError(
+            "law registry digest does not match governance/law_registry.sha256")
+    if actual_semantic != semantic_lock:
+        raise CalibrationRunError(
+            "law semantic hash does not match governance/law_semantic.sha256")
+    return {
+        "law_registry_sha256": actual_registry,
+        "law_semantic_sha256": actual_semantic,
+        "registry_lock_verified": True,
+        "semantic_lock_verified": True,
+    }
+
+
+def _require_file(path: Path, label: str) -> None:
+    if not path.is_file():
+        raise CalibrationRunError(f"{label} is missing: {path}")
+
+
 def _assert_https(url: str) -> None:
     parsed = urlparse(url)
     if parsed.scheme != "https":
         raise AcquisitionError(f"non-HTTPS URL refused: {url}")
+    if parsed.username is not None or parsed.password is not None:
+        raise AcquisitionError(f"credentials in URL refused: {url}")
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise AcquisitionError(f"invalid port in URL: {url}") from exc
+    if port not in ALLOWED_PORTS:
+        raise AcquisitionError(f"port not allowed: {port}")
     if parsed.hostname not in ALLOWED_HOSTS:
         raise AcquisitionError(f"host not allowed: {parsed.hostname}")
 
@@ -136,31 +185,57 @@ def _assert_https(url: str) -> None:
 def _http_get(url: str, timeout: int = HTTP_TIMEOUT_S):
     return requests.get(
         url, timeout=timeout, headers={"User-Agent": USER_AGENT},
-        allow_redirects=True,
+        allow_redirects=False,
     )
 
 
-def _download(url: str, fetcher=None, min_bytes: int = MIN_STRUCTURE_BYTES) -> bytes:
-    _assert_https(url)
-    get = fetcher or _http_get
-    try:
-        response = get(url, timeout=HTTP_TIMEOUT_S)
-    except Exception as exc:
-        raise AcquisitionError(f"request failed: {type(exc).__name__}: {exc}") from exc
+def _redirect_target(response, current_url: str) -> str | None:
     status = getattr(response, "status_code", None)
-    if status != 200:
-        raise AcquisitionError(f"HTTP {status} from {url}")
-    final_url = getattr(response, "url", url) or url
-    _assert_https(final_url)
-    content = getattr(response, "content", b"")
-    if not isinstance(content, (bytes, bytearray)):
-        raise AcquisitionError("response body is not bytes")
-    content = bytes(content)
-    if len(content) > MAX_STRUCTURE_BYTES:
-        raise AcquisitionError(f"structure exceeds {MAX_STRUCTURE_BYTES} bytes")
-    if len(content) < min_bytes:
-        raise AcquisitionError(f"payload is implausibly small ({len(content)} bytes)")
-    return content
+    if status not in REDIRECT_STATUSES:
+        return None
+    headers = getattr(response, "headers", None) or {}
+    location = headers.get("Location") or headers.get("location")
+    if not location:
+        raise AcquisitionError(f"HTTP {status} redirect without Location")
+    return urljoin(current_url, location)
+
+
+def _download(url: str, fetcher=None, min_bytes: int = MIN_STRUCTURE_BYTES) -> bytes:
+    get = fetcher or _http_get
+    current_url = url
+    for hop in range(MAX_REDIRECTS + 1):
+        _assert_https(current_url)
+        try:
+            response = get(current_url, timeout=HTTP_TIMEOUT_S)
+        except Exception as exc:
+            raise AcquisitionError(
+                f"request failed: {type(exc).__name__}: {exc}") from exc
+        redirect = _redirect_target(response, current_url)
+        if redirect is not None:
+            if hop == MAX_REDIRECTS:
+                raise AcquisitionError(
+                    f"too many redirects (>{MAX_REDIRECTS}) for {url}")
+            _assert_https(redirect)
+            current_url = redirect
+            continue
+
+        status = getattr(response, "status_code", None)
+        if status != 200:
+            raise AcquisitionError(f"HTTP {status} from {current_url}")
+        final_url = getattr(response, "url", current_url) or current_url
+        _assert_https(final_url)
+        if urlparse(final_url).scheme != "https":
+            raise AcquisitionError(f"non-HTTPS final URL refused: {final_url}")
+        content = getattr(response, "content", b"")
+        if not isinstance(content, (bytes, bytearray)):
+            raise AcquisitionError("response body is not bytes")
+        content = bytes(content)
+        if len(content) > MAX_STRUCTURE_BYTES:
+            raise AcquisitionError(f"structure exceeds {MAX_STRUCTURE_BYTES} bytes")
+        if len(content) < min_bytes:
+            raise AcquisitionError(f"payload is implausibly small ({len(content)} bytes)")
+        return content
+    raise AcquisitionError(f"too many redirects (>{MAX_REDIRECTS}) for {url}")
 
 
 def detect_structure_format(content: bytes) -> str:
@@ -192,12 +267,24 @@ def normalize_accession(candidate_id: str) -> str:
     return clean
 
 
+def _afdb_entity_id(candidate_id: str) -> str:
+    clean = candidate_id.strip().upper()
+    if clean.startswith("AF-"):
+        match = re.fullmatch(r"AF-([A-Z0-9]+)-F(\d+)", clean)
+        if match:
+            return f"AF-{match.group(1)}-F{int(match.group(2))}"
+        return f"AF-{normalize_accession(clean)}-F1"
+    return f"AF-{normalize_accession(clean)}-F1"
+
+
 def _afdb_record(pdb_id: str) -> dict:
     accession = normalize_accession(pdb_id)
-    entity = f"AF-{accession}-F1"
+    entity = _afdb_entity_id(pdb_id)
     return {
         "pdb_id": pdb_id,
         "acquisition_status": "failed",
+        "authoritative": False,
+        "pinned": False,
         "source": None,
         "sha256": None,
         "bytes": None,
@@ -208,8 +295,56 @@ def _afdb_record(pdb_id: str) -> dict:
     }
 
 
-def _acquire_afdb(pdb_id: str, fetcher=None) -> tuple[dict, bytes | None]:
+def _validate_afdb_expectation(record: dict, expectation: dict | None) -> bool:
+    if expectation is None:
+        record["diagnostic_only"] = True
+        return True
+    required = ("entity_id", "version", "source_url", "format", "sha256", "bytes")
+    missing = [field for field in required if field not in expectation]
+    if missing:
+        record["detail"] = (
+            f"incomplete AlphaFold pin; missing {missing}"
+        )
+        return False
+    if expectation.get("entity_id") != record["requested_entity_id"]:
+        record["detail"] = (
+            f"entity pin {expectation.get('entity_id')!r} does not match "
+            f"requested entity {record['requested_entity_id']!r}"
+        )
+        return False
+    if not isinstance(expectation.get("version"), int) or isinstance(
+            expectation.get("version"), bool) or expectation["version"] < 1:
+        record["detail"] = "AlphaFold version pin must be a positive integer"
+        return False
+    if expectation.get("format") != "pdb":
+        record["detail"] = "AlphaFold pin must bind the PDB coordinate format"
+        return False
+    if not isinstance(expectation.get("bytes"), int) or expectation["bytes"] < 0:
+        record["detail"] = "AlphaFold byte pin must be a non-negative integer"
+        return False
+    if not isinstance(expectation.get("source_url"), str):
+        record["detail"] = "AlphaFold source_url pin must be a string"
+        return False
+    pinned_digest = expectation.get("sha256")
+    if not isinstance(pinned_digest, str) or not HEX64.fullmatch(pinned_digest.lower()):
+        record["detail"] = "AlphaFold digest pin must be 64 hex characters"
+        return False
+    try:
+        _assert_https(expectation["source_url"])
+    except AcquisitionError as exc:
+        record["detail"] = f"invalid AlphaFold source_url pin: {exc}"
+        return False
+    record["pinned"] = True
+    record["pinned_version"] = expectation["version"]
+    record["pinned_source_url"] = expectation["source_url"]
+    return True
+
+
+def _acquire_afdb(pdb_id: str, expectation: dict | None = None,
+                  fetcher=None) -> tuple[dict, bytes | None]:
     record = _afdb_record(pdb_id)
+    if not _validate_afdb_expectation(record, expectation):
+        return record, None
     accession = normalize_accession(pdb_id)
     entity = record["requested_entity_id"]
     try:
@@ -237,16 +372,44 @@ def _acquire_afdb(pdb_id: str, fetcher=None) -> tuple[dict, bytes | None]:
         return record, None
 
     try:
-        best = max(matches, key=lambda e: int(e.get("latestVersion", 0)))
-        latest_version = int(best.get("latestVersion", 0))
+        versions = {
+            entry["modelEntityId"]: int(entry.get("latestVersion", 0))
+            for entry in matches
+        }
     except (TypeError, ValueError):
         record["detail"] = "latestVersion is not an integer"
         return record, None
 
+    if record["pinned"]:
+        pinned_version = record["pinned_version"]
+        version_matches = [
+            entry for entry in matches
+            if int(entry.get("latestVersion", 0)) == pinned_version
+        ]
+        if not version_matches:
+            record["served_versions"] = versions
+            record["detail"] = (
+                f"pinned version {pinned_version} for {entity} is not served; "
+                "no runtime version promotion performed"
+            )
+            return record, None
+        if len(version_matches) != 1:
+            record["detail"] = "multiple API entries claim the pinned entity/version"
+            return record, None
+        best = version_matches[0]
+        latest_version = pinned_version
+    else:
+        try:
+            best = max(matches, key=lambda e: int(e.get("latestVersion", 0)))
+            latest_version = int(best.get("latestVersion", 0))
+        except (TypeError, ValueError):
+            record["detail"] = "latestVersion is not an integer"
+            return record, None
+
     fields = tuple(sorted(best))
     record.update({
         "selected_entity_id": best.get("modelEntityId"),
-        "latest_version": latest_version,
+        "selected_version": latest_version,
         "uniprot_accession": best.get("uniprotAccession", accession),
         "global_metric_value": best.get("globalMetricValue"),
         "fields_present": list(fields),
@@ -255,8 +418,22 @@ def _acquire_afdb(pdb_id: str, fetcher=None) -> tuple[dict, bytes | None]:
         if required not in best:
             record["detail"] = f"API entry lacks required field {required!r}"
             return record, None
-
-    source = best.get("pdbUrl") or best.get("cifUrl")
+    if str(best.get("uniprotAccession", "")).upper() != accession.upper():
+        record["detail"] = (
+            f"served accession {best.get('uniprotAccession')!r} does not match "
+            f"requested accession {accession!r}"
+        )
+        return record, None
+    if record["pinned"]:
+        if best.get("pdbUrl") != record["pinned_source_url"]:
+            record["detail"] = (
+                "pinned source_url is not the served PDB URL for the exact "
+                "entity/version"
+            )
+            return record, None
+        source = record["pinned_source_url"]
+    else:
+        source = best.get("pdbUrl") or best.get("cifUrl")
     if not source:
         record["detail"] = "API entry has neither pdbUrl nor cifUrl"
         return record, None
@@ -274,9 +451,26 @@ def _acquire_afdb(pdb_id: str, fetcher=None) -> tuple[dict, bytes | None]:
             "supports PDB only; no fabricated conversion performed"
         )
         return record, None
+    if record["pinned"]:
+        if len(content) != expectation["bytes"]:
+            record["source"] = source
+            record["detail"] = (
+                f"pinned byte length {expectation['bytes']} does not match "
+                f"served content {len(content)}"
+            )
+            return record, None
+        digest = _sha256(content)
+        if digest != expectation["sha256"].lower():
+            record["source"] = source
+            record["detail"] = (
+                f"pinned coordinate digest {expectation['sha256'].lower()} "
+                f"does not match served content {digest}"
+            )
+            return record, None
 
     record.update({
         "acquisition_status": "acquired",
+        "authoritative": bool(record["pinned"]),
         "source": source,
         "sha256": _sha256(content),
         "bytes": len(content),
@@ -288,6 +482,7 @@ def _acquire_afdb(pdb_id: str, fetcher=None) -> tuple[dict, bytes | None]:
 
 def _validate_expectation(record: dict, expectation: dict | None) -> bool:
     if expectation is None:
+        record["diagnostic_only"] = True
         return True
     if not isinstance(expectation, dict):
         record["detail"] = "invalid prior digest entry (not an object)"
@@ -296,6 +491,7 @@ def _validate_expectation(record: dict, expectation: dict | None) -> bool:
     if not isinstance(expected, str) or not HEX64.fullmatch(expected.lower()):
         record["detail"] = "invalid prior digest (sha256 must be 64 hex chars)"
         return False
+    record["pinned"] = True
     return True
 
 
@@ -306,6 +502,8 @@ def acquire_coordinates(pdb_id: str, source_dir: Path | None,
     record = {
         "pdb_id": pdb_id,
         "acquisition_status": "failed",
+        "authoritative": False,
+        "pinned": False,
         "source": None,
         "sha256": None,
         "bytes": None,
@@ -335,7 +533,8 @@ def acquire_coordinates(pdb_id: str, source_dir: Path | None,
         if content is None:
             record["detail"] = f"no local file {pdb_id}.pdb/.cif in {source_dir}"
     elif pdb_id.startswith("AF-"):
-        af_record, content = _acquire_afdb(pdb_id, fetcher=fetcher)
+        af_record, content = _acquire_afdb(
+            pdb_id, digest_expectation, fetcher=fetcher)
         if content is None:
             return af_record, None
         if digest_expectation is not None:
@@ -400,6 +599,7 @@ def acquire_coordinates(pdb_id: str, source_dir: Path | None,
 
     record.update({
         "acquisition_status": "acquired",
+        "authoritative": bool(record["pinned"]),
         "sha256": digest,
         "bytes": len(content),
         "format": fmt,
@@ -514,8 +714,13 @@ def run_calibration(dataset: dict, out_dir: Path,
             f"  {shown}"
         )
 
-    out_dir.mkdir(parents=True)
     registry_path = Path(__file__).resolve().parents[2] / "governance" / "law_registry.yaml"
+    policy_locks = _verify_policy_locks(registry_path)
+    try:
+        out_dir.mkdir(parents=True, exist_ok=False)
+    except FileExistsError as exc:
+        raise CalibrationRunError(
+            f"refusing to overwrite existing run directory: {out_dir}") from exc
     run_manifest = {
         "runner_version": RUNNER_VERSION,
         "run_type": "diagnostic",
@@ -528,10 +733,11 @@ def run_calibration(dataset: dict, out_dir: Path,
         "backend_version": STATION_METADATA["version"],
         "policy_binding": {
             "canon_hash": LAW_CANON_HASH,
-            "law_semantic_hash": _law_semantic_hash(),
+            "law_semantic_hash": policy_locks["law_semantic_sha256"],
             "modality_matrix_sha256": compute_matrix_hash(),
-            "law_registry_sha256": _sha256_file(registry_path) if registry_path.is_file() else None,
+            "law_registry_sha256": policy_locks["law_registry_sha256"],
         },
+        "policy_locks": policy_locks,
         "environment": {
             "python": platform.python_version(),
             "platform": platform.platform(),
@@ -609,6 +815,18 @@ def run_calibration(dataset: dict, out_dir: Path,
         1 for record in results.values()
         if record["measurement_status"] == "measured"
     )
+    not_measured = sum(
+        1 for record in results.values()
+        if record["measurement_status"] == "NOT_MEASURED"
+    )
+    measurement_failed = sum(
+        1 for record in results.values()
+        if record["measurement_status"] == "MEASUREMENT_FAILED"
+    )
+    unpinned = sum(
+        1 for record in results.values()
+        if record["acquisition"].get("diagnostic_only") is True
+    )
     complete = measured == len(ids) and not failures
     run_document = {
         "meta": {
@@ -619,7 +837,15 @@ def run_calibration(dataset: dict, out_dir: Path,
             "expected_targets": len(ids),
             "acquired": acquired,
             "measured": measured,
-            "acquisition_failures": len(failures),
+            "not_measured": not_measured,
+            "measurement_failed": measurement_failed,
+            "unpinned_diagnostic_targets": unpinned,
+            "failure_count": len(failures),
+            "acquisition_failures": sum(
+                1 for record in results.values()
+                if record["measurement_status"] == "NOT_MEASURED"
+            ),
+            "measurement_failures": measurement_failed,
             "run_status": "complete" if complete else "incomplete",
             "verdicts": _verdict_histogram(results),
             "failures": failures,

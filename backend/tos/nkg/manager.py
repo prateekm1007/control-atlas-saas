@@ -71,7 +71,8 @@ class NKGManager:
             return False
 
         phys = verdict.get("physical_score", 0)
-        conf = verdict.get("confidence_score", 0)
+        conf = verdict.get("confidence_score")
+        conf_display = "UNAVAILABLE" if conf is None else f"{conf}%"
         
         record = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -85,7 +86,7 @@ class NKGManager:
             "epi_index": tier3.get("probability", 0),
             "architecture": architecture.get("authoritative_category", "UNKNOWN"),
             "s8_tax_applied": AuditConstants.S8_VETO_TAX if v == "VETO" else 0.0,
-            "description": f"{v}: Phys={phys}%, Conf={conf}%, EPI={tier3.get('probability', 0)}%"
+            "description": f"{v}: Phys={phys}%, Conf={conf_display}, EPI={tier3.get('probability', 0)}%"
         }
         
         line = json.dumps(record) + "\n"

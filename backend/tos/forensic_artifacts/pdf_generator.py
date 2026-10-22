@@ -253,6 +253,11 @@ def generate_v21_dossier(payload):
         pdf.set_x(PDF_LAYOUT["MARGIN_LEFT"])
 
         # FULL-WIDTH RELIABILITY-COVERAGE BAR (LAW-105 residue coverage)
+        pdf.set_font("Helvetica", "B", 8)
+        pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
+        pdf.cell(w, 5, "MEASURED LAW-105 RESIDUE COVERAGE - NOT A pLDDT DISTRIBUTION",
+                 border=0, ln=True, align="C")
+        pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
         try:
             bar_png = generate_confidence_bar(
                 coverage, v.get('det_passed', 0), v.get('det_total', 12)
@@ -270,6 +275,23 @@ def generate_v21_dossier(payload):
             pdf.cell(190, 6, "[Reliability-coverage bar unavailable]",
                      ln=True, align="C")
             pdf.ln(2)
+
+        # Source-backed confidence disclosure (no substituted distribution)
+        pdf.set_font("Helvetica", "I", 8)
+        pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
+        if conf_meta.get("data_available") and conf_meta.get("mean") is not None:
+            conf_text = (
+                f"Confidence source: {conf_meta.get('source_type', 'unavailable')} "
+                f"(mean {conf_meta.get('mean')}, n={conf_meta.get('observation_count', 0)})"
+            )
+        else:
+            conf_text = (
+                f"Confidence source: {conf_meta.get('source_type', 'unavailable')}; "
+                "score unavailable - no distribution substituted"
+            )
+        pdf.cell(w, 5, conf_text, border=0, ln=True, align="C")
+        pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+        pdf.ln(2)
 
         # Obligation statement
         pdf.set_font("Helvetica", "B", 9)
@@ -425,9 +447,10 @@ def generate_v21_dossier(payload):
         pdf.ln(3)
         pdf.set_font("Helvetica", "I", 7)
         pdf.set_text_color(*PDF_COLORS["TEXT_SUBTLE"])
-        pdf.multi_cell(w, 4, "Note: LAW-100 (Bond Integrity RMSZ) is classified Deterministic for predicted structures "
-                       "and Advisory for experimental coordinate regimes, reflecting resolution-dependent uncertainty. "
-                       "See PIL-CAL-03 modality matrix for full classification rules.")
+        pdf.multi_cell(w, 4, "Note: LAW-100 (Bond Integrity) reports the canonical percentage of covalent bonds "
+                       "deviating more than 4 sigma from Engh-Huber ideals in every modality. Its enforcement "
+                       "classification may be advisory for experimental coordinate regimes per the PIL-CAL-03 "
+                       "modality matrix.")
         pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
 
         # ══════ PAGE 3: SECTION II - ADVISORY METRICS ══════

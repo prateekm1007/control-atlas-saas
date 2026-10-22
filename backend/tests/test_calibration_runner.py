@@ -16,11 +16,12 @@ def _pdb_bytes() -> bytes:
     return FIXTURE.read_bytes()
 
 
-def _response(url, content, status=200, final_url=None):
+def _response(url, content, status=200, final_url=None, headers=None):
     return SimpleNamespace(
         status_code=status,
         content=content,
         url=final_url or url,
+        headers=headers or {},
     )
 
 
@@ -118,6 +119,18 @@ def test_run_calibration_local_end_to_end(tmp_path, monkeypatch):
         assert hashlib.sha256((out / name).read_bytes()).hexdigest() == digest
 
 
+def test_policy_locks_are_verified_against_live_governance():
+    registry = Path(runner.__file__).resolve().parents[2] / "governance" / "law_registry.yaml"
+    locks = runner._verify_policy_locks(registry)
+    assert locks["registry_lock_verified"] is True
+    assert locks["semantic_lock_verified"] is True
+    assert locks["law_registry_sha256"] == hashlib.sha256(
+        registry.read_bytes()).hexdigest()
+
+    with pytest.raises(runner.CalibrationRunError, match="law registry"):
+        runner._verify_policy_locks(registry.with_name("missing.yaml"))
+
+
 def test_run_refuses_dirty_tree_before_creating_output(tmp_path, monkeypatch):
     monkeypatch.setattr(runner, "_engine_provenance", lambda: {
         "code_sha": "b" * 40,
@@ -203,7 +216,7 @@ def _afdb_entry(version, entity="AF-Q5VSL9-F1", **overrides):
     return entry
 
 
-def test_afdb_selects_highest_exact_entity_version():
+def test_unpinned_afdb_acquisition_is_diagnostic_only():
     metadata = json.dumps([_afdb_entry(3), _afdb_entry(5)]).encode()
     fetched = []
 
@@ -218,7 +231,9 @@ def test_afdb_selects_highest_exact_entity_version():
 
     assert record["acquisition_status"] == "acquired"
     assert record["selected_entity_id"] == "AF-Q5VSL9-F1"
-    assert record["latest_version"] == 5
+    assert record["selected_version"] == 5
+    assert record["authoritative"] is False
+    assert record["diagnostic_only"] is True
     assert record["source"].endswith("model_v5.pdb")
     assert record["format"] == "pdb"
     assert record["sha256"] == hashlib.sha256(_pdb_bytes()).hexdigest()
@@ -245,6 +260,41 @@ def test_afdb_fails_closed_on_entity_migration_and_404():
     assert "HTTP 404" in record["detail"]
 
 
+def _afdb_pin(version=4, entity="AF-Q5VSL9-F1", **overrides):
+    pin = {
+        "entity_id": entity,
+        "version": version,
+        "source_url": f"https://alphafold.ebi.ac.uk/files/{entity}-model_v{version}.pdb",
+        "format": "pdb",
+        "bytes": len(_pdb_bytes()),
+        "sha256": hashlib.sha256(_pdb_bytes()).hexdigest(),
+    }
+    pin.update(overrides)
+    return pin
+
+
+def test_pinned_afdb_requires_exact_version_without_promotion():
+    metadata = json.dumps([_afdb_entry(4), _afdb_entry(5)]).encode()
+
+    def fake_get(url, timeout=None):
+        if "api/prediction" in url:
+            return _response(url, metadata)
+        return _response(url, _pdb_bytes())
+
+    record, content = runner.acquire_coordinates(
+        "AF-Q5VSL9-F1", None, _afdb_pin(version=4), fetcher=fake_get)
+    assert content == _pdb_bytes()
+    assert record["selected_version"] == 4
+    assert record["authoritative"] is True
+    assert record["pinned"] is True
+
+    record, content = runner.acquire_coordinates(
+        "AF-Q5VSL9-F1", None, _afdb_pin(version=2), fetcher=fake_get)
+    assert content is None
+    assert record["authoritative"] is False
+    assert "no runtime version promotion" in record["detail"]
+
+
 def test_afdb_digest_pin_is_enforced():
     metadata = json.dumps([_afdb_entry(4)]).encode()
 
@@ -255,12 +305,28 @@ def test_afdb_digest_pin_is_enforced():
 
     record, content = runner.acquire_coordinates(
         "AF-Q5VSL9-F1", None,
-        {"sha256": "0" * 64},
+        _afdb_pin(sha256="0" * 64),
         fetcher=fake_get,
     )
     assert content is None
     assert record["acquisition_status"] == "failed"
-    assert "digest mismatch" in record["detail"]
+    assert record["authoritative"] is False
+    assert "pinned coordinate digest" in record["detail"]
+
+    record, content = runner.acquire_coordinates(
+        "AF-Q5VSL9-F1", None,
+        {"sha256": hashlib.sha256(_pdb_bytes()).hexdigest()},
+        fetcher=fake_get,
+    )
+    assert content is None
+    assert "incomplete AlphaFold pin" in record["detail"]
+
+    record, content = runner.acquire_coordinates(
+        "AF-Q5VSL9-F1", None, _afdb_pin(sha256="not-a-digest"),
+        fetcher=fake_get,
+    )
+    assert content is None
+    assert "64 hex" in record["detail"]
 
 
 def test_afdb_fails_closed_on_cif_only_and_non_https_source():
@@ -300,10 +366,40 @@ def test_afdb_fails_closed_on_cif_only_and_non_https_source():
     assert "non-HTTPS" in record["detail"]
 
 
-def test_http_redirect_to_disallowed_host_is_rejected():
+def test_http_final_url_to_disallowed_host_is_rejected():
     def fake_get(url, timeout=None):
         return _response(
             url, _pdb_bytes(), final_url="https://example.invalid/evil.pdb")
 
     with pytest.raises(runner.AcquisitionError, match="host not allowed"):
         runner._download("https://files.rcsb.org/download/1CRN.pdb", fetcher=fake_get)
+
+
+def test_every_redirect_hop_is_validated_before_request():
+    fetched = []
+
+    def fake_get(url, timeout=None):
+        fetched.append(url)
+        if url == "https://files.rcsb.org/download/1CRN.pdb":
+            return _response(
+                url, b"", status=302,
+                headers={"Location": "https://example.invalid/evil.pdb"})
+        raise AssertionError("forbidden redirect target was requested")
+
+    with pytest.raises(runner.AcquisitionError, match="host not allowed"):
+        runner._download("https://files.rcsb.org/download/1CRN.pdb", fetcher=fake_get)
+    assert fetched == ["https://files.rcsb.org/download/1CRN.pdb"]
+
+
+def test_redirect_loop_and_nonofficial_port_are_rejected():
+    def loop_get(url, timeout=None):
+        return _response(
+            url, b"", status=302,
+            headers={"Location": "https://files.rcsb.org/download/1CRN.pdb"})
+
+    with pytest.raises(runner.AcquisitionError, match="too many redirects"):
+        runner._download("https://files.rcsb.org/download/1CRN.pdb", fetcher=loop_get)
+
+    with pytest.raises(runner.AcquisitionError, match="port not allowed"):
+        runner._download("https://files.rcsb.org:8443/download/1CRN.pdb",
+                         fetcher=lambda url, timeout=None: _response(url, _pdb_bytes()))

@@ -181,6 +181,64 @@ class TestAdjudicateResultStructure:
         assert isinstance(result.strategic_math, StrategicMath)
 
 
+class TestMeasurementNormalization:
+
+    def test_measured_status_without_evidence_fails_closed(self):
+        m = _all_passing_measurements()
+        m["LAW-130"] = {
+            "observed": None, "deviation": None, "sample": 100, "status": "PASS"
+        }
+        result = adjudicate_laws(_make_input(measurements=m))
+        row = next(r for r in result.law_rows if r["law_id"] == "LAW-130")
+        assert row["status"] == "MEASUREMENT_FAILED"
+        assert row["observed"] is None
+        assert result.verdict == "INDETERMINATE"
+
+    def test_zero_sample_pass_fails_closed(self):
+        m = _all_passing_measurements()
+        m["LAW-145"] = {
+            "observed": 0, "deviation": "0", "sample": 0, "status": "PASS"
+        }
+        result = adjudicate_laws(_make_input(measurements=m))
+        row = next(r for r in result.law_rows if r["law_id"] == "LAW-145")
+        assert row["status"] == "MEASUREMENT_FAILED"
+        assert row["raw_status"] == "PASS"
+        assert result.verdict == "INDETERMINATE"
+
+    def test_unknown_status_fails_closed(self):
+        m = _all_passing_measurements()
+        m["LAW-160"] = {
+            "observed": 0, "deviation": "0", "sample": 100, "status": "OK"
+        }
+        result = adjudicate_laws(_make_input(measurements=m))
+        row = next(r for r in result.law_rows if r["law_id"] == "LAW-160")
+        assert row["status"] == "MEASUREMENT_FAILED"
+        assert "unknown measurement status" in row["reason"]
+        assert result.verdict == "INDETERMINATE"
+
+    def test_not_applicable_is_not_a_vacuous_pass_or_failure(self):
+        m = _all_passing_measurements()
+        m["LAW-195"] = {
+            "observed": None, "deviation": None, "sample": 0,
+            "status": "NOT_APPLICABLE", "reason": "no disulfide pairs were detected",
+        }
+        result = adjudicate_laws(_make_input(measurements=m))
+        row = next(r for r in result.law_rows if r["law_id"] == "LAW-195")
+        assert row["status"] == "NOT_APPLICABLE"
+        assert row["observed"] is None
+        assert result.verdict == "PASS"
+
+    def test_not_applicable_with_observation_fails_closed(self):
+        m = _all_passing_measurements()
+        m["LAW-195"] = {
+            "observed": 0.0, "deviation": "0", "sample": 1, "status": "NOT_APPLICABLE"
+        }
+        result = adjudicate_laws(_make_input(measurements=m))
+        row = next(r for r in result.law_rows if r["law_id"] == "LAW-195")
+        assert row["status"] == "MEASUREMENT_FAILED"
+        assert result.verdict == "INDETERMINATE"
+
+
 class TestComputeVerdict:
 
     def test_pass_with_no_failures(self):

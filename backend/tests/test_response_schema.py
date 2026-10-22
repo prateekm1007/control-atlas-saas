@@ -11,6 +11,7 @@ from tos.schemas.response_v1 import (
     GovernanceFingerprint,
     AdjudicationVerdict,
     PhysicsMeasurement,
+    ConfidenceMeta,
     Governance,
     Tier1,
 )
@@ -106,4 +107,48 @@ class TestSchemaRejectsBadData:
                 observed=1.0, threshold=5.0, operator="<=",
                 units="%", deviation="0.0", sample_size=100,
                 scope="core residues",
+            )
+
+    def test_rejects_unknown_measurement_status(self):
+        with pytest.raises(ValidationError):
+            PhysicsMeasurement(
+                law_id="LAW-100", title="Test", status="OK", method="deterministic",
+                observed=1.0, threshold=5.0, operator="<=", units="%",
+                sample_size=100, scope="core residues",
+            )
+
+    def test_rejects_measured_status_without_positive_sample(self):
+        with pytest.raises(ValidationError):
+            PhysicsMeasurement(
+                law_id="LAW-145", title="Test", status="PASS", method="deterministic",
+                observed=0.0, threshold=0.0, operator="<=", units="count",
+                sample_size=0, scope="core residues",
+            )
+
+    def test_rejects_missing_status_with_observation(self):
+        with pytest.raises(ValidationError):
+            PhysicsMeasurement(
+                law_id="LAW-195", title="Test", status="NOT_MEASURED",
+                method="deterministic", observed=0.0, threshold=0.2,
+                operator="<=", units="A", sample_size=0, scope="all residues",
+            )
+
+    def test_rejects_not_applicable_with_sample(self):
+        with pytest.raises(ValidationError):
+            PhysicsMeasurement(
+                law_id="LAW-195", title="Test", status="NOT_APPLICABLE",
+                method="deterministic", observed=None, threshold=0.2,
+                operator="<=", units="A", sample_size=1, scope="all residues",
+            )
+
+    def test_confidence_meta_unavailable_has_no_mean(self):
+        meta = ConfidenceMeta(
+            source_type="unavailable", provenance_method="predicted",
+            mean=None, data_available=False, observation_count=0,
+        )
+        assert meta.mean is None
+        with pytest.raises(ValidationError):
+            ConfidenceMeta(
+                source_type="unavailable", provenance_method="predicted",
+                mean=90.0, data_available=False, observation_count=0,
             )
