@@ -618,3 +618,37 @@
   P-083-CONFIRM records the remote-verified tip after that push returns.
   Until then the tip pushed by this INTENT is disclosed as PENDING by
   the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-22T19:12:11Z | P-083-CONFIRM | push-confirm | branch=review/od-scope-v25 remote_sha=e71cec36d8189125b74568343a80fff1eb9637cd credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/review/od-scope-v25 -> e71cec36d8189125b74568343a80fff1eb9637cd (re-verified 2026-10-22T19:12:11Z; main verified untouched at 63da0e347002ed9b77071ff1ed0cefda7c0ce88a; the push was an ordinary fast-forward 9412e94..e71cec3; no Actions run is asserted for this local confirmation, and CI success is not inferred from this entry)"
+
+- Two-phase completion for the push declared by P-083-INTENT. The remote-verified
+  tip is recorded here after the push returned and is never backdated.
+- This confirmation establishes the current branch state for the next terminal
+  INTENT. The CI status of the pushed candidate is reported separately by the
+  gate records and is not manufactured inside the push confirmation.
+
+## 2026-10-22T19:25:00Z | P-084 | push-not-proven | reclassifies=P-050 branch=repair/round19-mainline-acceptance remote_sha=f44bf4d93f8d69a4bd651396f383e8f3ad2b707a credential=OWNER-PAT-1 review_ref=docs/decisions/OWNER_DECISIONS.md#Part-12 evidence="searched 2026-10-22T19:25:00Z: refs/heads/repair/round19-mainline-acceptance is ABSENT on the live remote (git ls-remote returned no ref); P-050 is the recorded push-reconcile for the Round-19 follow-up push of f44bf4d93f8d69a4bd651396f383e8f3ad2b707a; no surviving push-event run with event=push on the exact head can be re-verified locally (no runs manifest or Actions token in this environment), and the retained Events-API window no longer covers the 2026-10-20T15:58Z reconciliation; commit existence is preserved in the local object store; push provenance is NOT PROVEN and is never counted as evidence for any declaration. Part 12.3 reconciled P-050 as the truthful follow-up-push record, but it does not itself prove branch-push provenance; the reclassification is append-only and does not edit P-050."
+
+- Honest reclassification. The missing remote ref is a fact, not a failure of
+  the original record: P-050 was truthful at its own timestamp. This record
+  discloses that the original push cannot be re-proven from surviving
+  machine-verifiable evidence, per schema v5 direction 3.
+
+## 2026-10-22T19:25:01Z | P-085 | push-not-proven | reclassifies=P-057 branch=docs/owner-decisions-r19 remote_sha=df98f5e3671055d67961d5b9d14495c5b037ce19 credential=OWNER-PAT-1 review_ref=docs/decisions/OWNER_DECISIONS.md#Part-12 evidence="searched 2026-10-22T19:25:01Z: refs/heads/docs/owner-decisions-r19 is ABSENT on the live remote (git ls-remote returned no ref); P-057 is the recorded push-reconcile for the Round-19 register-branch push of df98f5e3671055d67961d5b9d14495c5b037ce19; no surviving push-event run with event=push on the exact head can be re-verified locally, and the retained Events-API window no longer covers the 2026-10-20T15:58Z reconciliation; commit existence is preserved in the local object store; push provenance is NOT PROVEN and is never counted as evidence for any declaration. Part 12.3 reconciled P-057 as the truthful register-branch record, but it does not itself prove branch-push provenance; the reclassification is append-only and does not edit P-057."
+
+- Honest reclassification. The register-branch ref was pruned after its content
+  was carried into the reviewed path; this record discloses that the original
+  ref update cannot be re-proven from surviving machine-verifiable evidence.
+
+## 2026-10-22T19:25:02Z | P-086-INTENT | push-intent | branch=review/od-scope-v25 head_at_intent=DEFERRED expected_remote_tip_before_push=e71cec36d8189125b74568343a80fff1eb9637cd credential=OWNER-PAT-1 authorized_by="owner directions recorded 2026-10-22 for iteration 4 (focused engine/geometry/confidence/evaluator/runner corrections, reproducible C5 provenance, append-only push-log reconciliation, and no merge/deploy/calibration before the full exact-candidate gate loop is complete; OD-16 remains in force)"
+
+- This push carries the iteration-4 corrections, the P-083-CONFIRM completion
+  for the prior archive candidate, the P-084/P-085 push-not-proven records,
+  this INTENT, and the regenerated SHA256SUMS digest rows. The engine under
+  test remains the exact code candidate named in the iteration-4 reading note;
+  no source, test, or workflow content is modified beyond those corrections.
+- ID selection: P-084..P-086 were verified unused across the published log.
+- head_at_intent is DEFERRED per the two-phase schema; if this branch is
+  pushed again, P-086-CONFIRM records the remote-verified tip after that
+  push returns. Until then the tip pushed by this INTENT is disclosed as
+  PENDING by the evidence-sequence checker - the designed, truthful state.

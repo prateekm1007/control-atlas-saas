@@ -129,12 +129,28 @@ class TestLaw150:
         assert res["sample"] == 1
 
     def test_zero_chi1_is_outlier(self):
-        """Chi1 ≈ 0° → outside all wells → outlier."""
+        """A valid chi1 near 0° is outside all wells and remains an outlier."""
         atoms = _leu_with_chi1(0.0)
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
         res = results["LAW-150"]
+        assert res["status"] == "VETO"
         assert res["observed"] == 100.0
         assert res["sample"] == 1
+
+    def test_degenerate_chi1_is_not_a_rotamer_outlier(self):
+        atoms = [
+            _make_atom("N",  "N", [-0.5, 0.8, 0.0], res_name="LEU", res_seq=1),
+            _make_atom("CA", "C", [0.0, 0.0, 0.0],  res_name="LEU", res_seq=1),
+            _make_atom("C",  "C", [1.2, 0.7, 0.0],  res_name="LEU", res_seq=1),
+            _make_atom("O",  "O", [1.5, 1.5, 0.0],  res_name="LEU", res_seq=1),
+            _make_atom("CB", "C", [0.0, -1.53, 0.0], res_name="LEU", res_seq=1),
+            _make_atom("CG", "C", [0.0, -1.53, 0.0], res_name="LEU", res_seq=1),
+        ]
+        results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
+        res = results["LAW-150"]
+        assert res["status"] == "NOT_MEASURED"
+        assert res["observed"] is None
+        assert res["sample"] == 0
 
     def test_gly_ala_excluded(self):
         """GLY and ALA have no chi1 → excluded from audit."""

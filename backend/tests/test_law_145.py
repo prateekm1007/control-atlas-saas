@@ -229,3 +229,17 @@ class TestLaw145Degenerate:
         res = results["LAW-145"]
         assert res["status"] == "VETO"
         assert res["observed"] == 1
+
+    def test_degenerate_chirality_dihedral_is_not_successful_measurement(self):
+        atoms = [
+            _make_atom("N",  "N", [0.0, 0.0, 0.0], res_seq=1),
+            _make_atom("CA", "C", [0.0, 0.0, 0.0], res_seq=1),
+            _make_atom("C",  "C", [1.2, 0.7, 0.0], res_seq=1),
+            _make_atom("O",  "O", [1.5, 1.5, 0.0], res_seq=1),
+            _make_atom("CB", "C", [0.0, 1.0, -0.5], res_seq=1),
+        ]
+        results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
+        res = results["LAW-145"]
+        assert res["status"] == "NOT_MEASURED"
+        assert res["observed"] is None
+        assert res["sample"] == 0

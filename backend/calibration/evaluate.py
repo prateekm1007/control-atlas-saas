@@ -142,10 +142,14 @@ def _validate_label_provenance(case: dict) -> None:
              f"{sid}: cohort {cohort} requires label_source {expected_source!r}")
     _hex(case.get("label_evidence_sha256"), 64,
          f"{sid}.label_evidence_sha256")
+    _require(case.get("label_evidence_ref") and isinstance(case.get("label_evidence_ref"), str),
+             f"{sid}: label evidence reference is required for independent verification")
     if cohort == "B1":
         ref = case.get("defect_manifest_ref")
         _require(isinstance(ref, str) and ref.strip(),
                  f"{sid}: B1 requires defect_manifest_ref")
+        _hex(case.get("defect_manifest_sha256"), 64,
+             f"{sid}.defect_manifest_sha256")
 
 
 def _validate_policy_binding(payload: dict) -> dict:
@@ -592,6 +596,18 @@ def validate_split_manifest(manifest: dict) -> dict:
         isinstance(item, str) and item.strip() for item in exclusions),
         "historical_exclusions must be a list of structure IDs")
     excluded = {item.strip().upper() for item in exclusions}
+    exclusion_provenance = manifest.get("historical_exclusion_provenance")
+    _require(isinstance(exclusion_provenance, dict),
+             "historical_exclusion_provenance is required")
+    _require(exclusion_provenance.get("inventory_ref") and
+             isinstance(exclusion_provenance.get("inventory_sha256"), str),
+             "historical exclusion inventory reference and digest are required")
+    _hex(exclusion_provenance["inventory_sha256"], 64,
+         "historical_exclusion_provenance.inventory_sha256")
+    _require(
+        {item.strip().upper() for item in exclusion_provenance.get("excluded_structure_ids", [])}
+        == excluded,
+        "historical_exclusions do not match the verified exclusion inventory")
 
     seen: dict[str, str] = {}
     seen_digests: dict[str, str] = {}
@@ -646,6 +662,11 @@ def validate_split_manifest(manifest: dict) -> dict:
                      f"{sid}: sequence contains unsupported residues")
             _require(entry.get("sequence_sha256") == _sequence_sha256(sequence),
                      f"{sid}: sequence_sha256 does not match sequence")
+            _require(entry.get("sequence_source_ref") and
+                     entry.get("sequence_source_sha256"),
+                     f"{sid}: sequence source reference and digest are required")
+            _hex(entry["sequence_source_sha256"], 64,
+                 f"{sid}.sequence_source_sha256")
             _require(sequence not in seen_sequences,
                      f"{sid}: repeated sequence also used by "
                      f"{seen_sequences.get(sequence)}")
@@ -653,6 +674,11 @@ def validate_split_manifest(manifest: dict) -> dict:
             family = entry.get("family_id")
             _require(isinstance(family, str) and family.strip(),
                      f"{sid}: family_id is required")
+            _require(entry.get("family_source_ref") and
+                     entry.get("family_source_sha256"),
+                     f"{sid}: family source reference and digest are required")
+            _hex(entry["family_source_sha256"], 64,
+                 f"{sid}.family_source_sha256")
             families[split_name].add(family.strip())
 
             entries_by_split[split_name].append({
@@ -750,6 +776,18 @@ def _verify_run_inputs(run_inputs: dict, run_dir: Path,
         _require(_file_sha256(path) == run_inputs[field],
                  f"run input digest mismatch: {filename}")
 
+    integrity_path = run_dir / "run_integrity_manifest.json"
+    if integrity_path.is_file():
+        integrity = json.loads(integrity_path.read_text(encoding="utf-8"))
+        _require(isinstance(integrity, dict), "run integrity manifest must be an object")
+        integrity_policy = integrity.get("policy_binding")
+        _require(isinstance(integrity_policy, dict),
+                 "run integrity manifest policy_binding is missing")
+        for field in ("canon_hash", "law_semantic_hash",
+                      "modality_matrix_sha256", "law_registry_sha256"):
+            _require(integrity_policy.get(field) == policy_binding[field],
+                     f"run integrity manifest policy_binding.{field} mismatch")
+
     manifest = json.loads(
         (run_dir / "run_manifest.json").read_text(encoding="utf-8"))
     _require(isinstance(manifest, dict), "run manifest must be an object")
@@ -781,12 +819,13 @@ def evaluate_file(path: Path, alpha: float = DEFAULT_ALPHA,
     cases = validate_cases(
         data.get("cases"), require_policy=True, payload=data,
         require_label_provenance=True)
-    if run_dir is not None:
-        _verify_run_inputs(data["run_inputs"], run_dir, data["policy_binding"])
+    _require(run_dir is not None,
+             "file-based evaluation requires a run directory to verify the bound artifacts")
+    _verify_run_inputs(data["run_inputs"], run_dir, data["policy_binding"])
     report = evaluate(cases, alpha)
     report["policy_binding"] = data["policy_binding"]
     report["run_inputs"] = data["run_inputs"]
-    report["run_inputs_verified"] = run_dir is not None
+    report["run_inputs_verified"] = True
     report["input_file_sha256"] = _file_sha256(path)
     return report
 

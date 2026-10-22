@@ -133,6 +133,38 @@ class TestLaw120:
         assert LAW_CANON["LAW-120"]["unit"] == "°"
         assert LAW_CANON["LAW-120"]["type"] == "RMSD"
 
+    def test_degenerate_zero_length_vectors_are_not_angle_samples(self):
+        struct = Structure(
+            atoms=[
+                _make_atom("N", "N", [0.0, 0.0, 0.0]),
+                _make_atom("CA", "C", [0.0, 0.0, 0.0]),
+                _make_atom("C", "C", [1.0, 0.0, 0.0]),
+            ],
+            audit_id="DEGEN",
+            confidence=ConfidenceProfile([], False, "predicted"),
+        )
+        results, _, _ = Tier1Measurements.run_full_audit(struct)
+        assert results["LAW-120"] == {
+            "observed": None,
+            "status": "NOT_MEASURED",
+            "sample": 0,
+            "reason": "no measurable backbone bond angles in the eligible residues",
+        }
+
+    def test_valid_zero_degree_angle_is_still_a_measurement(self):
+        struct = Structure(
+            atoms=[
+                _make_atom("N", "N", [1.0, 0.0, 0.0]),
+                _make_atom("CA", "C", [0.0, 0.0, 0.0]),
+                _make_atom("C", "C", [2.0, 0.0, 0.0]),
+            ],
+            audit_id="ZERO-ANGLE",
+            confidence=ConfidenceProfile([], False, "predicted"),
+        )
+        results, _, _ = Tier1Measurements.run_full_audit(struct)
+        assert results["LAW-120"]["sample"] == 1
+        assert results["LAW-120"]["observed"] >= 0.0
+
     def test_empty_structure(self):
         """Empty structure should not crash."""
         struct = Structure(

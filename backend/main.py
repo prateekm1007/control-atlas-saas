@@ -194,7 +194,7 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
         "characterization": Tier1Measurements.compute_structural_characterization(structure),
         "confidence_meta": {
             "source_type": conf_source, "provenance_method": conf_prov,
-            **Tier1Measurements.decompose_confidence(structure)
+            **Tier1Measurements.decompose_confidence(structure),
         },
         "strategic_math": {
             "s6": s6_final, "w_arch": w_arch, "m_s8": m_s8, "architecture": t3_category

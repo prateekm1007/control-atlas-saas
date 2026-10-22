@@ -35,6 +35,18 @@ MEASURED_STATUSES = frozenset({"PASS", "FAIL", "VETO"})
 MISSING_STATUSES = frozenset({"NOT_MEASURED", "MEASUREMENT_FAILED"})
 VALID_STATUSES = MEASURED_STATUSES | MISSING_STATUSES | {"NOT_APPLICABLE"}
 
+APPPLICABILITY_EVIDENCE = {
+    "LAW-145": frozenset({"no chiral residue centres", "glycine-only eligible residues"}),
+    "LAW-150": frozenset({"no eligible residue types with a chi1 rotamer"}),
+    "LAW-195": frozenset(
+        {
+            "no cysteine residues are present",
+            "no disulfide pairs were detected",
+        }
+    ),
+    "LAW-182": frozenset({"no hydrophobic residues are present"}),
+}
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # DATA CONTRACTS
@@ -114,23 +126,74 @@ def _compute_verdict(res_t1: list[dict], coverage: float) -> str:
             return "VETO"
 
     for r in res_t1:
-        if r["method"] == "deterministic" and r["status"] in ("NOT_MEASURED", "MEASUREMENT_FAILED"):
+        if (
+            r["method"] == "deterministic"
+            and r["status"] in ("NOT_MEASURED", "MEASUREMENT_FAILED", "NOT_APPLICABLE")
+        ):
             return "INDETERMINATE"
 
     return "PASS"
 
 
-def _normalize_measurement(m: dict) -> tuple[str, object, int, Optional[str]]:
+def _normalize_sample(raw_sample) -> tuple[int, Optional[str]]:
+    """Strict sample-count normalization without boolean/fractional coercion."""
+    if isinstance(raw_sample, bool):
+        return 0, "sample size is a boolean, not an integer count"
+    if isinstance(raw_sample, int):
+        sample = raw_sample
+    elif isinstance(raw_sample, float) and raw_sample.is_integer():
+        sample = int(raw_sample)
+    else:
+        try:
+            sample = int(raw_sample)
+        except (TypeError, ValueError):
+            return 0, f"sample size {raw_sample!r} is not an integer count"
+        if raw_sample is not None and sample != raw_sample:
+            return 0, f"sample size {raw_sample!r} is not an integer count"
+    if sample < 0:
+        return 0, "sample size is negative"
+    return sample, None
+
+
+def _normalize_observation(raw_observed) -> tuple[object, Optional[str]]:
+    """Normalize numeric observations only after rejecting invalid values."""
+    if raw_observed is None:
+        return None, None
+    if isinstance(raw_observed, bool):
+        return None, "observation is a boolean, not a finite number"
+    if isinstance(raw_observed, (int, float)):
+        observed = float(raw_observed)
+    else:
+        try:
+            observed = float(raw_observed)
+        except (TypeError, ValueError):
+            return None, f"observation {raw_observed!r} is not a finite number"
+    if not math.isfinite(observed):
+        return None, f"observation {raw_observed!r} is not a finite number"
+    return observed, None
+
+
+def _applicability_reason(lid: str, m: dict) -> Optional[str]:
+    """Return a truthful reason when a law-specific NOT_APPLICABLE claim is valid."""
+    allowed = APPPLICABILITY_EVIDENCE.get(lid)
+    if allowed is None:
+        return None
+    reason = str(m.get("reason", "")).lower()
+    return m.get("reason") if any(marker in reason for marker in allowed) else None
+
+
+def _normalize_measurement(
+    m: dict, lid: Optional[str] = None, *, method: str = "deterministic"
+) -> tuple[str, object, int, Optional[str]]:
     """Fail closed on unknown or internally inconsistent measurement rows."""
     raw_status = m.get("status", "NOT_MEASURED")
     status = str(raw_status).strip().upper() if isinstance(raw_status, str) else "INVALID"
-    observed = m.get("observed")
-    try:
-        sample = int(m.get("sample", 0))
-    except (TypeError, ValueError):
-        return "MEASUREMENT_FAILED", None, 0, "sample size is not an integer"
-    if sample < 0:
-        return "MEASUREMENT_FAILED", None, 0, "sample size is negative"
+    observed, observed_error = _normalize_observation(m.get("observed"))
+    if observed_error:
+        return "MEASUREMENT_FAILED", None, 0, observed_error
+    sample, sample_error = _normalize_sample(m.get("sample", 0))
+    if sample_error:
+        return "MEASUREMENT_FAILED", None, 0, sample_error
 
     if status not in VALID_STATUSES:
         return "MEASUREMENT_FAILED", None, sample, f"unknown measurement status {raw_status!r}"
@@ -143,19 +206,6 @@ def _normalize_measurement(m: dict) -> tuple[str, object, int, Optional[str]]:
             "measured status claimed without a numeric observation and positive sample",
         )
 
-    if status in MEASURED_STATUSES:
-        try:
-            finite_observation = math.isfinite(float(observed))
-        except (TypeError, ValueError):
-            finite_observation = False
-        if not finite_observation:
-            return (
-                "MEASUREMENT_FAILED",
-                None,
-                sample,
-                "measured status carries a non-finite or non-numeric observation",
-            )
-
     if status == "NOT_APPLICABLE":
         if observed is not None or sample != 0:
             return (
@@ -164,6 +214,15 @@ def _normalize_measurement(m: dict) -> tuple[str, object, int, Optional[str]]:
                 sample,
                 "NOT_APPLICABLE must not carry an observation or nonzero sample",
             )
+        if lid and method == "deterministic":
+            reason = _applicability_reason(lid, m)
+            if reason is None:
+                return (
+                    "MEASUREMENT_FAILED",
+                    None,
+                    0,
+                    f"{lid} cannot prove NOT_APPLICABLE for this structure",
+                )
         return status, None, 0, None
 
     if status in MISSING_STATUSES and observed is not None:
@@ -221,7 +280,9 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
 
         # PIL-CAL-03: Advisory/heuristic laws cannot issue a VETO.
         raw_status = m.get("status", "NOT_MEASURED")
-        normalized, observed, sample, normalization_error = _normalize_measurement(m)
+        normalized, observed, sample, normalization_error = _normalize_measurement(
+            m, lid, method=method
+        )
         if method == "retired":
             display_status = "RETIRED"
         elif method in ("advisory_experimental", "heuristic") and normalized == "VETO":
@@ -245,9 +306,12 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
                 row[key] = m[key]
         if normalization_error is not None:
             prior_reason = row.get("reason")
-            row["reason"] = (
-                f"{prior_reason}; {normalization_error}" if prior_reason else normalization_error
-            )
+            if prior_reason == normalization_error:
+                row["reason"] = normalization_error
+            else:
+                row["reason"] = (
+                    f"{prior_reason}; {normalization_error}" if prior_reason else normalization_error
+                )
         res_t1.append(row)
         if display_status in ("FAIL", "VETO") and row["method"] == "deterministic":
             failing_det.append(f"{lid}: {LAW_CANON[lid]['title']}")
@@ -291,7 +355,7 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
         unavailable = [
             r["law_id"] for r in res_t1
             if r["method"] == "deterministic"
-            and r["status"] in ("NOT_MEASURED", "MEASUREMENT_FAILED")
+            and r["status"] in ("NOT_MEASURED", "MEASUREMENT_FAILED", "NOT_APPLICABLE")
         ]
         verdict_reason = "Mandatory deterministic measurement unavailable: " + ", ".join(unavailable)
     else:

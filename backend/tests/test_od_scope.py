@@ -371,10 +371,43 @@ class TestConfidenceContract:
             confidence=ConfidenceProfile([], False, "predicted"),
         )
         source, mean, provenance = Tier1Measurements.detect_confidence_source(struct)
-        assert source == "pLDDT"
+        assert source == "unavailable"
         assert mean is None
         assert provenance == "predicted"
         meta = Tier1Measurements.decompose_confidence(struct)
         assert meta["mean"] is None
         assert meta["data_available"] is False
         assert meta["observation_count"] == 0
+
+    def test_experimental_b_factors_are_not_plddt_or_generic_confidence(self):
+        struct = Structure(
+            atoms=[_atom("CA", [0, 0, 0], 1, 20.0)],
+            audit_id="BF",
+            confidence=ConfidenceProfile([20.0], True, "xray"),
+        )
+        source, mean, provenance = Tier1Measurements.detect_confidence_source(struct)
+        assert source == "B-factor"
+        assert mean is None
+        assert provenance == "xray"
+        meta = Tier1Measurements.decompose_confidence(struct)
+        assert meta["mean"] is None
+        assert meta["data_available"] is False
+        assert meta["b_factor_mean"] == 20.0
+        assert meta["b_factor_unit"] == "B-factor"
+        assert meta["b_factor_observation_count"] == 1
+
+    def test_predicted_plddt_mean_is_reported_without_b_factor_confusion(self):
+        struct = Structure(
+            atoms=[_atom("CA", [0, 0, 0], 1, 20.0)],
+            audit_id="PLDDT",
+            confidence=ConfidenceProfile([80.0], False, "predicted"),
+        )
+        source, mean, provenance = Tier1Measurements.detect_confidence_source(struct)
+        assert source == "pLDDT"
+        assert mean == 80.0
+        assert provenance == "predicted"
+        meta = Tier1Measurements.decompose_confidence(struct)
+        assert meta["mean"] == 80.0
+        assert meta["data_available"] is True
+        assert meta["observation_count"] == 1
+        assert meta.get("b_factor_mean") is None

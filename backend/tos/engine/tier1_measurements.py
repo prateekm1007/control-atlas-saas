@@ -16,7 +16,7 @@ Changes from pre-migration:
   - LAW-100 uses the canonical percentage-of-outliers threshold in every modality.
 """
 from .coord_math import (
-    distance, angle_deg, dihedral_deg,
+    distance, angle_deg_valid, dihedral_deg_valid,
     get_atom_pos, get_chains, get_sequential_residues,
     CHI1_ATOMS, NO_CHI1_RESIDUES
 )
@@ -204,7 +204,9 @@ class Tier1Measurements:
 
             # Intra-residue: N-CA-C
             if all(a in atoms for a in ["N", "CA", "C"]):
-                measured = angle_deg(atoms["N"], atoms["CA"], atoms["C"])
+                measured, angle_valid = angle_deg_valid(atoms["N"], atoms["CA"], atoms["C"])
+                if not angle_valid:
+                    continue
                 ideal = IDEAL_TABLE["N-CA-C"]
                 angle_sq_diffs.append((measured - ideal) ** 2)
 
@@ -214,13 +216,19 @@ class Tier1Measurements:
             if not Tier1Measurements._is_sequential(r1, r2):
                 continue
             if all(a in r1["_atoms"] for a in ["O", "C"]) and "N" in r2["_atoms"]:
-                measured = angle_deg(r1["_atoms"]["O"], r1["_atoms"]["C"], r2["_atoms"]["N"])
-                ideal = IDEAL_TABLE["O-C-N"]
-                angle_sq_diffs.append((measured - ideal) ** 2)
+                measured, angle_valid = angle_deg_valid(
+                    r1["_atoms"]["O"], r1["_atoms"]["C"], r2["_atoms"]["N"]
+                )
+                if angle_valid:
+                    ideal = IDEAL_TABLE["O-C-N"]
+                    angle_sq_diffs.append((measured - ideal) ** 2)
             if "CA" in r1["_atoms"] and "C" in r1["_atoms"] and "N" in r2["_atoms"]:
-                measured = angle_deg(r1["_atoms"]["CA"], r1["_atoms"]["C"], r2["_atoms"]["N"])
-                ideal = IDEAL_TABLE["CA-C-N"]
-                angle_sq_diffs.append((measured - ideal) ** 2)
+                measured, angle_valid = angle_deg_valid(
+                    r1["_atoms"]["CA"], r1["_atoms"]["C"], r2["_atoms"]["N"]
+                )
+                if angle_valid:
+                    ideal = IDEAL_TABLE["CA-C-N"]
+                    angle_sq_diffs.append((measured - ideal) ** 2)
 
         if not angle_sq_diffs:
             results["LAW-120"] = Tier1Measurements._not_measured(
@@ -250,19 +258,16 @@ class Tier1Measurements:
                     "N" not in n["_atoms"]):
                 continue
 
-            phi = dihedral_deg(
+            phi, phi_valid = dihedral_deg_valid(
                 p["_atoms"]["C"], c["_atoms"]["N"],
                 c["_atoms"]["CA"], c["_atoms"]["C"]
             )
-            psi = dihedral_deg(
+            psi, psi_valid = dihedral_deg_valid(
                 c["_atoms"]["N"], c["_atoms"]["CA"],
                 c["_atoms"]["C"], n["_atoms"]["N"]
             )
 
-            # dihedral_deg returns float (never None), but 0.0 on degenerate geometry.
-            # Only count if both are non-degenerate (non-zero or genuinely zero).
-            # In practice, real backbone dihedrals are never exactly 0.0 for both.
-            if phi == 0.0 and psi == 0.0:
+            if not (phi_valid and psi_valid):
                 continue
             rama_tot += 1
             if Tier1Measurements._is_rama_outlier(c["_name"], phi, psi):
@@ -378,12 +383,14 @@ class Tier1Measurements:
             atoms = r["_atoms"]
             if not all(a in atoms for a in ["N", "CA", "C", "CB"]):
                 continue
+            improper, improper_valid = dihedral_deg_valid(
+                atoms["N"], atoms["CA"], atoms["C"], atoms["CB"]
+            )
+            if not improper_valid:
+                continue
             chiral_checked += 1
             # Improper dihedral: N-CA-C-CB
             # L-amino acid → negative, D-amino acid → positive
-            improper = dihedral_deg(
-                atoms["N"], atoms["CA"], atoms["C"], atoms["CB"]
-            )
             # Genuine D-amino acid: improper between 0° and 90°
             # Values near ±180° indicate degenerate/coplanar geometry
             # (CB in the N-CA-C plane) — refinement artifact, not chirality error.
@@ -431,10 +438,12 @@ class Tier1Measurements:
             if not all(a in r2["_atoms"] for a in ["N", "CA"]):
                 continue
 
-            omega = dihedral_deg(
+            omega, omega_valid = dihedral_deg_valid(
                 r1["_atoms"]["CA"], r1["_atoms"]["C"],
                 r2["_atoms"]["N"], r2["_atoms"]["CA"]
             )
+            if not omega_valid:
+                continue
 
             omega_total += 1
             # Deviation from nearest planar ideal (0° cis or ±180° trans)
@@ -488,12 +497,14 @@ class Tier1Measurements:
             if not all(a in atoms for a in chi1_def):
                 continue
 
-            rot_total += 1
-            chi1 = dihedral_deg(
+            chi1, chi1_valid = dihedral_deg_valid(
                 atoms[chi1_def[0]], atoms[chi1_def[1]],
                 atoms[chi1_def[2]], atoms[chi1_def[3]]
             )
+            if not chi1_valid:
+                continue
 
+            rot_total += 1
             # Check if chi1 falls in any expected rotamer well
             abs_chi1 = abs(chi1)
             in_gauche_plus = (30.0 <= chi1 <= 90.0)
@@ -535,6 +546,19 @@ class Tier1Measurements:
             for i in range(len(chain_residues) - 1):
                 curr_res = chain_residues[i]
                 next_res = chain_residues[i + 1]
+                if not Tier1Measurements._is_sequential(
+                    {
+                        "_chain": chain_id,
+                        "_seq": curr_res[0],
+                        "_icode": curr_res[1],
+                    },
+                    {
+                        "_chain": chain_id,
+                        "_seq": next_res[0],
+                        "_icode": next_res[1],
+                    },
+                ):
+                    continue
                 p1 = get_atom_pos(structure.atoms, chain_id, curr_res[0], "CA", curr_res[1])
                 p2 = get_atom_pos(structure.atoms, chain_id, next_res[0], "CA", next_res[1])
                 if p1 is not None and p2 is not None:
@@ -724,28 +748,44 @@ class Tier1Measurements:
         }
 
     @staticmethod
-    def _confidence_observations(structure):
+    def _plddt_observations(structure):
         profile = getattr(structure, "confidence", None)
         values = list(getattr(profile, "_values", []) or [])
-        if not values:
-            values = [a.b_iso for a in getattr(structure, "atoms", [])]
         return [float(v) for v in values if v is not None]
+
+    @staticmethod
+    def _b_factor_observations(structure):
+        profile = getattr(structure, "confidence", None)
+        values = list(getattr(profile, "_bfactors", []) or [])
+        if values:
+            return [float(v) for v in values if v is not None]
+        if getattr(profile, "_values", []):
+            return []
+        return [a.b_iso for a in getattr(structure, "atoms", []) if a.b_iso is not None]
 
     @staticmethod
     def detect_confidence_source(structure):
         profile = getattr(structure, "confidence", None)
-        source = getattr(profile, "source_type", "unavailable")
         method = getattr(profile, "method", "unavailable")
-        values = Tier1Measurements._confidence_observations(structure)
-        mean = round(float(np.mean(values)), 2) if values else None
+        plddt_values = Tier1Measurements._plddt_observations(structure)
+        source = "pLDDT" if plddt_values else getattr(profile, "source_type", "unavailable")
+        mean = round(float(np.mean(plddt_values)), 2) if plddt_values else None
         return (source, mean, method)
 
     @staticmethod
     def decompose_confidence(structure):
-        values = Tier1Measurements._confidence_observations(structure)
-        return {
+        plddt_values = Tier1Measurements._plddt_observations(structure)
+        b_values = Tier1Measurements._b_factor_observations(structure)
+        mean = round(float(np.mean(plddt_values)), 2) if plddt_values else None
+        b_mean = round(float(np.mean(b_values)), 2) if b_values else None
+        meta = {
             "schema_version": "confidence-meta/1.0.0",
-            "mean": round(float(np.mean(values)), 2) if values else None,
-            "data_available": bool(values),
-            "observation_count": len(values),
+            "mean": mean,
+            "data_available": bool(plddt_values),
+            "observation_count": len(plddt_values),
         }
+        if b_mean is not None:
+            meta["b_factor_mean"] = b_mean
+            meta["b_factor_unit"] = "B-factor"
+            meta["b_factor_observation_count"] = len(b_values)
+        return meta

@@ -18,17 +18,22 @@ class Atom:
 
 class ConfidenceProfile:
     """Discriminates method-specific behaviors and carries structural metadata."""
-    def __init__(self, values: List[float], is_experimental: bool, 
+    def __init__(self, values: List[float], is_experimental: bool,
                  method: str = "predicted", resolution: Optional[float] = None):
         self.mean_plddt = float(np.mean(values)) if values else 0.0
         self.is_experimental = is_experimental
         self.method = method # xray, nmr, cryo_em, predicted
         self.resolution = resolution
-        self._values = values
+        self._values = [] if is_experimental else values
+        self._bfactors = list(values) if is_experimental else []
 
     @property
     def source_type(self) -> str:
-        return "B-factor" if self.is_experimental else "pLDDT"
+        if self._values:
+            return "pLDDT"
+        if self._bfactors:
+            return "B-factor"
+        return "unavailable"
 
 @dataclass
 class Structure:

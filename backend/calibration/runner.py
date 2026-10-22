@@ -487,6 +487,8 @@ def _validate_expectation(record: dict, expectation: dict | None) -> bool:
     if not isinstance(expectation, dict):
         record["detail"] = "invalid prior digest entry (not an object)"
         return False
+    if record.get("requested_entity_id"):
+        return _validate_afdb_expectation(record, expectation)
     expected = expectation.get("sha256")
     if not isinstance(expected, str) or not HEX64.fullmatch(expected.lower()):
         record["detail"] = "invalid prior digest (sha256 must be 64 hex chars)"
@@ -519,6 +521,34 @@ def acquire_coordinates(pdb_id: str, source_dir: Path | None,
         if not source_dir.is_dir():
             record["detail"] = f"source directory does not exist: {source_dir}"
             return record, None
+        if pdb_id.startswith("AF-"):
+            af_record, content = _acquire_afdb(
+                pdb_id, digest_expectation, fetcher=fetcher)
+            if content is None:
+                return af_record, None
+            if digest_expectation is not None:
+                expected = digest_expectation["sha256"].lower()
+                actual = hashlib.sha256(content).hexdigest()
+                if actual != expected:
+                    af_record.update({
+                        "acquisition_status": "failed",
+                        "detail": (
+                            f"coordinate digest mismatch: expected {expected}, "
+                            f"got {actual}"
+                        ),
+                    })
+                    return af_record, None
+                expected_bytes = digest_expectation.get("bytes")
+                if expected_bytes is not None and expected_bytes != len(content):
+                    af_record.update({
+                        "acquisition_status": "failed",
+                        "detail": (
+                            f"coordinate byte-length mismatch: expected "
+                            f"{expected_bytes}, got {len(content)}"
+                        ),
+                    })
+                    return af_record, None
+            return af_record, content
         for suffix in (".pdb", ".cif"):
             candidate = source_dir / f"{pdb_id}{suffix}"
             if candidate.is_file():

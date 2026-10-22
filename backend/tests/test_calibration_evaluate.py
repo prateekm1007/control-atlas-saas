@@ -26,6 +26,7 @@ def _case(sid, label, verdict, **overrides):
         "structure_id": sid,
         "label": label,
         "label_source": "wwpdb-validation" if cohort == "A" else "perturbed-by-construction",
+        "label_evidence_ref": f"labels/{sid}.json",
         "label_evidence_sha256": "e" * 64,
         "cohort": cohort,
         "strata": {"modality": "x_ray", "resolution_band": "medium"},
@@ -38,6 +39,7 @@ def _case(sid, label, verdict, **overrides):
     }
     if cohort == "B1":
         case["defect_manifest_ref"] = f"defects/{sid}.json"
+        case["defect_manifest_sha256"] = "d" * 64
     case.update(overrides)
     return case
 
@@ -224,9 +226,11 @@ def test_label_provenance_is_required_for_evidence_reports():
 
 def _split_entry(sid, cohort="A", label="acceptable", sequence=None, family=None):
     sequence = sequence or "ACDEFGHIKLMNPQRSTVWY"
+    family_id = family or f"family-{sid}"
     entry = {
         "structure_id": sid,
         "label_source": "wwpdb-validation" if cohort == "A" else "perturbed-by-construction",
+        "label_evidence_ref": f"labels/{sid}.json",
         "label_evidence_sha256": "e" * 64,
         "label": label,
         "cohort": cohort,
@@ -234,7 +238,11 @@ def _split_entry(sid, cohort="A", label="acceptable", sequence=None, family=None
         "coordinate_sha256": hashlib.sha256(sid.encode()).hexdigest(),
         "sequence": sequence,
         "sequence_sha256": _sequence_sha256(sequence),
-        "family_id": family or f"family-{sid}",
+        "sequence_source_ref": f"source/{sid}.fasta",
+        "sequence_source_sha256": "f" * 64,
+        "family_id": family_id,
+        "family_source_ref": "source/families.json",
+        "family_source_sha256": "f" * 64,
     }
     if cohort == "B1":
         entry["defect_manifest_ref"] = f"defects/{sid}.json"
@@ -253,6 +261,11 @@ def _manifest(sequences=None, near_pairs=None):
         "protocol": "backend/calibration/protocol/evaluation_protocol_v1.md",
         "created_utc": "2026-10-21T00:00:00Z",
         "historical_exclusions": ["7OLD"],
+        "historical_exclusion_provenance": {
+            "inventory_ref": "governance/historical_exclusions.json",
+            "inventory_sha256": "c" * 64,
+            "excluded_structure_ids": ["7OLD"],
+        },
         "policy_binding": {"code_sha": "a" * 40, "law_semantic_hash": "b" * 64},
         "splits": {
             "calibration": [_split_entry("1AAA", sequence=sequences["1AAA"])],
@@ -393,7 +406,7 @@ def test_split_manifest_rejects_repeated_digests_families_and_exclusions():
         validate_split_manifest(manifest)
 
 
-def test_evaluate_file_binds_policy_and_input_digest(tmp_path):
+def test_evaluate_file_requires_bound_run_inputs(tmp_path):
     payload = {
         "policy_binding": _policy_binding(),
         "run_inputs": _run_inputs(),
@@ -401,14 +414,8 @@ def test_evaluate_file_binds_policy_and_input_digest(tmp_path):
     }
     path = tmp_path / "cases.json"
     path.write_text(json.dumps(payload), encoding="utf-8")
-    report = evaluate_file(path)
-    assert report["policy_binding"] == payload["policy_binding"]
-    assert report["run_inputs"] == payload["run_inputs"]
-    assert report["run_inputs_verified"] is False
-    assert len(report["input_file_sha256"]) == 64
-    assert report["n_cases"] == 6
-    assert report["report_type"] == "diagnostic"
-    assert report["supports_threshold_validation"] is False
+    with pytest.raises(EvaluationInputError, match="run directory"):
+        evaluate_file(path)
 
 
 def test_evaluate_file_verifies_bound_run_inputs(tmp_path):

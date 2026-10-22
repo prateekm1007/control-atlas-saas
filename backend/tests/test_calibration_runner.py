@@ -403,3 +403,73 @@ def test_redirect_loop_and_nonofficial_port_are_rejected():
     with pytest.raises(runner.AcquisitionError, match="port not allowed"):
         runner._download("https://files.rcsb.org:8443/download/1CRN.pdb",
                          fetcher=lambda url, timeout=None: _response(url, _pdb_bytes()))
+
+
+def test_acquisition_failures_never_measure_and_report_incomplete(tmp_path, monkeypatch):
+    monkeypatch.setattr(runner, "_engine_provenance", _clean_provenance)
+    source = tmp_path / "structures"
+    source.mkdir()
+    source.joinpath("1CRN.pdb").write_bytes(_pdb_bytes())
+
+    document, code = runner.run_calibration(
+        {"xray": [{"pdb_id": "1CRN"}, {"pdb_id": "9ZZZ"}]},
+        tmp_path / "acquisition-fail", source_dir=source,
+    )
+    assert code == 1
+    assert document["summary"]["run_status"] == "incomplete"
+    assert document["targets"]["9ZZZ"]["verdict"] is None
+    assert document["targets"]["9ZZZ"]["measurement_status"] == "NOT_MEASURED"
+    assert document["targets"]["9ZZZ"]["laws"] is None
+
+
+def test_measurement_failures_do_not_produce_pass(tmp_path, monkeypatch):
+    monkeypatch.setattr(runner, "_engine_provenance", _clean_provenance)
+    monkeypatch.setattr(
+        runner,
+        "measure_target",
+        lambda content, mode: (_ for _ in ()).throw(ValueError("synthetic measurement failure")),
+    )
+    source = tmp_path / "structures"
+    source.mkdir()
+    source.joinpath("1CRN.pdb").write_bytes(_pdb_bytes())
+
+    document, code = runner.run_calibration(
+        {"xray": [{"pdb_id": "1CRN"}]},
+        tmp_path / "measurement-fail", source_dir=source,
+    )
+    assert code == 1
+    target = document["targets"]["1CRN"]
+    assert target["measurement_status"] == "MEASUREMENT_FAILED"
+    assert target["verdict"] is None
+    assert target["laws"] is None
+
+
+def test_policy_lock_failure_prevents_output_creation(tmp_path, monkeypatch):
+    monkeypatch.setattr(runner, "_engine_provenance", _clean_provenance)
+    monkeypatch.setattr(
+        runner,
+        "_verify_policy_locks",
+        lambda path: (_ for _ in ()).throw(runner.CalibrationRunError("policy lock failed")),
+    )
+    out = tmp_path / "locked"
+    with pytest.raises(runner.CalibrationRunError, match="policy lock failed"):
+        runner.run_calibration({"xray": [{"pdb_id": "1CRN"}]}, out)
+    assert not out.exists()
+
+
+def test_afdb_pin_requires_all_exact_fields(tmp_path, monkeypatch):
+    monkeypatch.setattr(runner, "_engine_provenance", _clean_provenance)
+    for bad_field in ("entity_id", "version", "source_url", "format", "sha256", "bytes"):
+        pin = _afdb_pin()
+        pin.pop(bad_field)
+        record, content = runner.acquire_coordinates(
+            "AF-Q5VSL9-F1", None, pin,
+            fetcher=lambda url, timeout=None: _response(url, b"[]"),
+        )
+        assert content is None
+        assert record["authoritative"] is False
+        if bad_field == "sha256":
+            assert "invalid prior digest" in record["detail"]
+        else:
+            assert "incomplete AlphaFold pin" in record["detail"]
+            assert bad_field in record["detail"]

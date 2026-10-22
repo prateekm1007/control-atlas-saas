@@ -29,7 +29,8 @@ def distance(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.linalg.norm(a - b))
 
 
-def angle_deg(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> float:
+def angle_deg(a: np.ndarray, b: np.ndarray, c: np.ndarray,
+              *, include_degenerate: bool = True) -> float:
     """
     Angle at vertex B formed by vectors BA and BC, in degrees.
 
@@ -58,8 +59,18 @@ def angle_deg(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> float:
     return float(np.degrees(np.arccos(cos_angle)))
 
 
+def angle_deg_valid(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> tuple[float, bool]:
+    """Return `(angle_deg, valid)` where degenerate vectors are not valid."""
+    angle = angle_deg(a, b, c)
+    ba = a - b
+    bc = c - b
+    valid = bool(np.linalg.norm(ba) >= 1e-10 and np.linalg.norm(bc) >= 1e-10)
+    return angle, valid
+
+
 def dihedral_deg(a: np.ndarray, b: np.ndarray,
-                 c: np.ndarray, d: np.ndarray) -> float:
+                 c: np.ndarray, d: np.ndarray,
+                 *, include_degenerate: bool = True) -> float:
     """
     Dihedral (torsion) angle defined by four points, in degrees.
 
@@ -106,6 +117,23 @@ def dihedral_deg(a: np.ndarray, b: np.ndarray,
     y = np.dot(m1, n2)
 
     return float(np.degrees(np.arctan2(-y, x)))
+
+
+def dihedral_deg_valid(a: np.ndarray, b: np.ndarray,
+                       c: np.ndarray, d: np.ndarray) -> tuple[float, bool]:
+    """Return `(dihedral_deg, valid)` where degenerate geometry is not valid."""
+    angle = dihedral_deg(a, b, c, d)
+    b1 = b - a
+    b2 = c - b
+    b3 = d - c
+    n1 = np.cross(b1, b2)
+    n2 = np.cross(b2, b3)
+    valid = bool(
+        np.linalg.norm(n1) >= 1e-10
+        and np.linalg.norm(n2) >= 1e-10
+        and np.linalg.norm(b2) >= 1e-10
+    )
+    return angle, valid
 
 
 def get_atom_pos(atoms, chain_id: str, res_seq: int,

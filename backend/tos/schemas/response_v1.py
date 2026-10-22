@@ -67,6 +67,7 @@ class PhysicsMeasurement(BaseModel):
     sample_size: int = Field(..., ge=0)
     scope: str
     principle: str = "N/A"
+    reason: Optional[str] = None
 
     @model_validator(mode="after")
     def measurement_evidence_is_consistent(self):
@@ -112,6 +113,9 @@ class ConfidenceMeta(BaseModel):
     mean: Optional[float] = None
     data_available: bool
     observation_count: int = Field(0, ge=0)
+    b_factor_mean: Optional[float] = None
+    b_factor_unit: Optional[str] = None
+    b_factor_observation_count: int = Field(0, ge=0)
 
     @model_validator(mode="after")
     def availability_matches_mean(self):
