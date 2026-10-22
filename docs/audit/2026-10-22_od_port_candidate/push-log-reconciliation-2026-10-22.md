@@ -39,9 +39,42 @@ push they describe, per the log's two-phase protocol.
 | 39830332863 | Governance Acceptance | 37698cd | push | failure (22 pre-existing dead-ref entries + terminal-intent binding failure carried over from the undeclared 9c4bb16 push) |
 | 39830332865 | Toscanini Stability Gate | 37698cd | push | success |
 
-The runs for THIS push's tip are recorded after it completes; their IDs are
-available in the workflow history of the tip that P-086-INTENT declares
-(this record was updated before those runs concluded).
+The runs for THIS push's tip (4d26041) are:
+
+| Run ID | Workflow | Head SHA | Event | Conclusion |
+|---|---|---|---|---|
+| 39838360885 | Governance Acceptance | 4d26041 | push | failure (22 pre-existing dead-ref entries + 1 P-085-CONFIRM citation defect, both below) |
+| 39838361003 | Toscanini Stability Gate | 4d26041 | push | success |
+
+## 7. Terminal state of the round-26 push-log (recorded, not claimed green)
+
+- The round is recorded as complete on the tip carrying P-086-CONFIRM /
+  P-087-INTENT (P-087-CONFIRM remains PENDING-disclosed for the branch's
+  next round). The checker's new-findings delta on the branch's own push
+  declarations is: P-084 classifies SUPPORTED-BY-ANCESTRY, P-086-INTENT was
+  fully BOUND on its own tip (introduced by the exact candidate; pre-push
+  tip 37698cd matched the newest recorded branch state; the push-event run
+  tied it to a genuine push event), and P-086-CONFIRM / P-087-INTENT
+  complete the pair with the same mechanics. P-085-CONFIRM classifies
+  SUPPORTED-BY-ANCESTRY (its recorded head sits on the branch's live
+  lineage) while carrying the citation defect of point 2 below.
+- Two findings remain on the governance run of 4d26041, both disclosed:
+  1. The 22 pre-existing dead-ref findings of section 4 (identical set on
+     the base-commit run of 2026-10-21; repair would require resurrecting
+     pruned refs or editing the checker - both outside the OD-16 mandate).
+  2. One citation defect introduced by this round inside P-085-CONFIRM: the
+     row's body cites the 2026-10-21 base-commit governance run
+     (39677508627, head 63da0e3) to document the pre-existing set, while the
+     row's own confirmed head is 37698cd; the checker verifies every run
+     cited inside a confirm row against that row's own head and fails
+     closed. The append-only rule forbids amending P-085-CONFIRM, and every
+     later push appends after it, so the finding persists on all later tips
+     of the branch; it is disclosed here and in the P-086-CONFIRM row, never
+     claimed as gate success, and its correction belongs to the branch's
+     next round, which may append (not amend) a corrected record.
+- No merge, deploy, calibration, held-out, threshold, cohort, or golden
+  change was made (OD-16). The C5 evidence files and engine behavior are
+  unchanged by any log-push in this round.
 
 ## 4. Pre-existing EC-18/EC-24 dead-ref findings (NOT introduced by round-26)
 

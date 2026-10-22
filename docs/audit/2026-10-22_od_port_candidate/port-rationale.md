@@ -56,6 +56,17 @@ editing the checker/workflow is outside the round-26 mandate (OD-16).
 
 Detail and run tables: `push-log-reconciliation-2026-10-22.md`.
 
+Terminal state (recorded, not claimed green): the round's push-log chain ends
+with P-086-CONFIRM / P-087-INTENT on top of 4d26041; P-087-CONFIRM remains
+PENDING-disclosed for the branch's next round. The governance-run failure set
+on the final tip comprises the 22 pre-existing dead-ref entries of section 4
+and one citation defect inside P-085-CONFIRM (its body names the 2026-10-21
+base-commit governance run, whose head predates the 37698cd head that
+P-085-CONFIRM confirms; the checker verifies every run named inside a confirm
+row against that row's own head and fails closed; the append-only rule forbids
+amending the row - correction belongs to the next round and is disclosed in
+the P-086-CONFIRM row and in the round report).
+
 ## 3. What was ported (and why)
 
 | Area | On the delivered branch | Candidate port | Rationale |

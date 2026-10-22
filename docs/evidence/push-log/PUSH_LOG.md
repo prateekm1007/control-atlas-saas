@@ -669,3 +669,37 @@
   designed truthful state.
 - ID selection: P-085-CONFIRM / P-086 verified unused across the published
   log (the highest previously used identifier is P-085-INTENT).
+
+## 2026-10-22T19:30:00Z | P-086-CONFIRM | push-confirm | branch=review/od-scope-v25-2026-10-22 remote_sha=4d26041454690dabb34effd7d18f8818b967d4b9 credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas refs/heads/review/od-scope-v25-2026-10-22 -> 4d26041454690dabb34effd7d18f8818b967d4b9 (at push time 2026-10-22T19:14:3xZ; workflow runs on this exact head: governance run 39838360885 (failure), stability run 39838361003 (success))"
+
+- Two-phase completion for the push declared by P-086-INTENT (head_at_intent
+  was DEFERRED; the remote tip 4d26041454690dabb34effd7d18f8818b967d4b9 is
+  recorded here after the push returned, never backdated).
+- The governance-acceptance run on this exact head concluded failure: the 22
+  pre-existing dead-ref findings (identical set on the base-commit run of
+  2026-10-21; see
+  docs/audit/2026-10-22_od_port_candidate/push-log-reconciliation-2026-10-22.md)
+  plus one citation defect in P-085-CONFIRM: that row's body names the
+  2026-10-21 base-commit governance run (whose head predates the 37698cd head
+  P-085-CONFIRM confirms), and the checker verifies every run named inside a
+  confirm row against that row's own head and fails closed. The append-only
+  rule forbids amending P-085-CONFIRM; this defect is disclosed here and in
+  the round report, never claimed as gate success, and its correction belongs
+  to the branch's next round, which may append (not amend) a corrected
+  record. The stability-gate run on this exact head concluded success.
+
+## 2026-10-22T19:30:00Z | P-087-INTENT | push-intent | branch=review/od-scope-v25-2026-10-22 head_at_intent=DEFERRED expected_remote_tip_before_push=4d26041454690dabb34effd7d18f8818b967d4b9 credential=OWNER-PAT-1 authorized_by="standing push-log protocol (PUSH_LOG.md header) + round-26 scope discipline (no governance or checker changes, no merge, no calibration) per the OD-16 hard stop"
+
+- This push carries: the P-086-CONFIRM / P-087-INTENT rows, the root
+  SHA256SUMS digest refresh for docs/evidence/push-log/PUSH_LOG.md, and the
+  terminal-state corrections to
+  docs/audit/2026-10-22_od_port_candidate/push-log-reconciliation-2026-10-22.md
+  and
+  docs/audit/2026-10-22_od_port_candidate/port-rationale.md.
+  No source, checker, governance, registry, or test content is modified.
+- Two-phase disclosure: head_at_intent is DEFERRED; the tip this push
+  creates is recorded by P-087-CONFIRM on the branch's next legitimate push
+  (never backdated); until then this intent's state is PENDING, the
+  designed truthful state.
+- ID selection: P-086-CONFIRM / P-087 verified unused across the published
+  log (the highest previously used identifier is P-086-INTENT).
