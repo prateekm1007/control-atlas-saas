@@ -540,21 +540,25 @@ class Tier1Measurements:
         burial_radius = 15.0
         min_burial_ratio = 1.0
         total_hydrophobic = 0
-        hydro_named = 0
-        hydro_cas = []
+        # WP-SCI-1: distinguish "no hydrophobic residues at all" (law does
+        # not apply) from "hydrophobic residues present but not measurable"
+        # (missing CA atoms).
+        hydro_named = sum(1 for r in residues if r["_name"] in HYDROPHOBIC_RESIDUES)
 
         for chain_id in get_chains(structure.atoms):
             # Collect CA positions of hydrophobic residues in this chain
+            hydro_cas = []
             chain_res = get_sequential_residues(structure.atoms, chain_id)
             for res_seq, icode, res_name in chain_res:
                 if res_name in HYDROPHOBIC_RESIDUES:
-                    hydro_named += 1
                     ca_pos = get_atom_pos(structure.atoms, chain_id, res_seq, "CA", icode)
                     if ca_pos is not None:
                         hydro_cas.append(ca_pos)
 
-        total_hydrophobic = len(hydro_cas)
-        if total_hydrophobic > 0:
+            if len(hydro_cas) == 0:
+                continue
+
+            total_hydrophobic += len(hydro_cas)
             hydro_array = np.array(hydro_cas)
             centroid = np.mean(hydro_array, axis=0)
 
@@ -563,11 +567,14 @@ class Tier1Measurements:
             if ratio < min_burial_ratio:
                 min_burial_ratio = ratio
 
-            # OD-20 owner brief: heuristics are advisory — below-threshold
-            # outcomes are reported as advisory failures, never as vetoes.
+        # WP-SCI-1: the historical "vacuously true" 1.0 fallback is gone.
+        # OD-20 owner brief: heuristics are advisory — below-threshold
+        # outcomes are reported as advisory failures, never as vetoes.
+        if total_hydrophobic > 0:
             results["LAW-182"] = {
                 "observed": round(min_burial_ratio, 3),
-                "status": "PASS" if min_burial_ratio >= LAW_CANON["LAW-182"]["threshold"] else "FAIL (Advisory)",
+                "status": ("PASS" if min_burial_ratio >= LAW_CANON["LAW-182"]["threshold"]
+                           else "FAIL (Advisory)"),
                 "sample": total_hydrophobic
             }
         elif hydro_named > 0:
