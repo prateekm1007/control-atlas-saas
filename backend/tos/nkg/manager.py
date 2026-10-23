@@ -1,6 +1,19 @@
-import json, os, fcntl, logging
+import json, os, logging
 from datetime import datetime, timezone
 from pathlib import Path
+
+import sys
+
+try:
+    import fcntl
+except ModuleNotFoundError:
+    fcntl = None
+
+try:
+    import msvcrt
+except ModuleNotFoundError:
+    msvcrt = None
+
 from ..governance.constants import AuditConstants
 
 logger = logging.getLogger("toscanini.nkg")
@@ -71,7 +84,8 @@ class NKGManager:
             return False
 
         phys = verdict.get("physical_score", 0)
-        conf = verdict.get("confidence_score", 0)
+        conf = verdict.get("confidence_score")
+        conf_display = "UNAVAILABLE" if conf is None else f"{conf}%"
         
         record = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -85,17 +99,17 @@ class NKGManager:
             "epi_index": tier3.get("probability", 0),
             "architecture": architecture.get("authoritative_category", "UNKNOWN"),
             "s8_tax_applied": AuditConstants.S8_VETO_TAX if v == "VETO" else 0.0,
-            "description": f"{v}: Phys={phys}%, Conf={conf}%, EPI={tier3.get('probability', 0)}%"
+            "description": f"{v}: Phys={phys}%, Conf={conf_display}, EPI={tier3.get('probability', 0)}%"
         }
         
         line = json.dumps(record) + "\n"
         with open(self.path, "a") as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
+            _acquire_file_lock(f)
             try:
                 f.write(line); f.flush(); os.fsync(f.fileno())
-                logger.info(f"NKG: {record['outcome_category']} — {record['artifact_hash']}")
             finally:
-                fcntl.flock(f, fcntl.LOCK_UN)
+                _release_file_lock(f)
+            logger.info(f"NKG: {record['outcome_category']} — {record['artifact_hash']}")
         return True
 
     def read_records(self, limit=20):
@@ -124,13 +138,13 @@ class NKGManager:
         try:
             line = json.dumps(record) + "\n"
             with open(usage_path, "a") as f:
-                fcntl.flock(f, fcntl.LOCK_EX)
+                _acquire_file_lock(f)
                 try:
                     f.write(line)
                     f.flush()
                     os.fsync(f.fileno())
                 finally:
-                    fcntl.flock(f, fcntl.LOCK_UN)
+                    _release_file_lock(f)
         except Exception as e:
             logger.warning(f"Usage log write failed (non-fatal): {e}")
 
@@ -149,6 +163,23 @@ class NKGManager:
                     except json.JSONDecodeError:
                         continue
         return records[-limit:]
+
+
+def _acquire_file_lock(f):
+    if fcntl is not None:
+        fcntl.flock(f, fcntl.LOCK_EX)
+    elif msvcrt is not None:
+        msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1)
+
+
+def _release_file_lock(f):
+    if fcntl is not None:
+        fcntl.flock(f, fcntl.LOCK_UN)
+    elif msvcrt is not None:
+        try:
+            msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+        except (OSError, IOError):
+            pass
 
 
 _nkg = None

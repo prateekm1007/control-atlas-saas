@@ -1,0 +1,62 @@
+{
+  "timestamp_utc": "2026-10-23T12:54:55.423019+00:00",
+  "repo": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\opencode\\reconstruct-od-scope-v25",
+  "branch": "repair/od-scope-v25-engine-audit",
+  "head_sha": "4a7c8d6fc5fba0008109abc814fe48c25422fa6b",
+  "base_sha": "ae8a53547a0433f9220ff656fc53a706591c3bd4",
+  "constitutions": {
+    "constitution.md": {
+      "sha256": "cfdd5ba3babda31513b55894a49597fbfb18c2e870535a068c8b0ea423c53ce8",
+      "blob": "211ad2c5d4b40059d9f3f03de12e0701f9235bc7"
+    },
+    "ENGINEERING_CONSTITUTION.md": {
+      "sha256": "e0f256f78f2c1256228c4286311cba15800dcd5a6c8005583508ee66d27983f5",
+      "blob": "b6bb35e84956d84a8c9d9e65734c212baf3ed075"
+    }
+  },
+  "stashes": [],
+  "worktrees": [
+    "C:/Users/Administrator/AppData/Local/Temp/opencode/control-atlas-saas       631f2bf [recovery/round27-wip-d765a4c]",
+    "C:/Users/Administrator/AppData/Local/Temp/opencode/integration-od-scope-v25 1ba42e1 [integration/od-scope-v25-2026-10-23]",
+    "C:/Users/Administrator/AppData/Local/Temp/opencode/reconstruct-od-scope-v25 4a7c8d6 [repair/od-scope-v25-engine-audit]",
+    "C:/Users/Administrator/AppData/Local/Temp/opencode/review-main              ae8a535 [review/od-scope-v25]",
+    "C:/Users/Administrator/AppData/Local/Temp/opencode/review-main-terminal     01b3d3f (detached HEAD)"
+  ],
+  "changed_files": [
+    "backend/main.py",
+    "backend/requirements-lock.txt",
+    "backend/requirements.txt",
+    "backend/tests/test_ids.py",
+    "backend/tos/engine/batch_processor.py",
+    "backend/tos/engine/coord_math.py",
+    "backend/tos/engine/tier1_measurements.py",
+    "backend/tos/forensic_artifacts/pdf_generator.py",
+    "backend/tos/ingestion/processor.py",
+    "backend/tos/ingestion/structure_object.py",
+    "backend/tos/nkg/manager.py",
+    "backend/tos/schemas/response_v1.py"
+  ],
+  "untracked_files": [
+    "backend/tests/test_canonical_ingestion.py",
+    "backend/tos/engine/identity.py",
+    "backend/tos/ingestion/atom_selection.py"
+  ],
+  "file_manifest": {
+    "backend/main.py": "4f5191502c1892364c1a7616f61d61171d07515490538938bac2748f68b5aa42",
+    "backend/requirements-lock.txt": "b3f15d1c0761ea813d4e3472feb767f6afbef83c0e791b4f0559ab45b9f6d740",
+    "backend/requirements.txt": "70cb4cff60dfd010d4ebc45041ba52f9d048410499c7df392d72c728907a4fd0",
+    "backend/tests/test_ids.py": "431f064f03a8e968779a2880ecd9d68a5fdaa17ef3991ada97d05e221014eb24",
+    "backend/tos/engine/batch_processor.py": "aa4cd409176224d31d8ec0325efd2dd295137d6bdf763989f7c49594cd3d1d94",
+    "backend/tos/engine/coord_math.py": "bdec51369eae669b44d85a5a6fbe4b4c1036125e0ccd7490978cc6fc384d0bc4",
+    "backend/tos/engine/tier1_measurements.py": "8907a470694d52afb4b5693455f330772c16422361a5a822b396f8362f924bda",
+    "backend/tos/forensic_artifacts/pdf_generator.py": "670051dbc119d95ce7abe2d48ef7bdd9a2a8b1fda20a6a8bb0aaf310af409056",
+    "backend/tos/ingestion/processor.py": "9dce15998764b53e63f7280fdb9aa26bdd53f30049f2c96b94b19f63e3c06e48",
+    "backend/tos/ingestion/structure_object.py": "19e13530c2b931ea3423804db3f0c91c7daca7350eb7de8332ed941e2ed4203f",
+    "backend/tos/nkg/manager.py": "c88fb5fdaf4c73cfbeaa4003db38565fbd5437adbbd4592611e69dc7baa907dc",
+    "backend/tos/schemas/response_v1.py": "55a7e1028ca199a487d8acfa4c30eafe4255722bc6dce33bd9f6ef9b8a3280e6",
+    "backend/tests/test_canonical_ingestion.py": "5042a24fc70c8db93a430b347ddd8b3f05d6ea560db2e5a073d9a5a1efdea0a6",
+    "backend/tos/engine/identity.py": "2bebe6b3fdec72c836d3a001471defd5299298c99069437ff72d61fb0a14e0a2",
+    "backend/tos/ingestion/atom_selection.py": "e2617122d51a59630556d4cd1bcc9bbe3f189cc30ed646052fea8b39d5a1e321"
+  },
+  "requirements": "# TOSCANINI Backend Dependencies \u00e2\u20ac\u201d v22.4.0\n# Only packages verified as imported in backend/\nfastapi>=0.104.0,<1.0\nuvicorn>=0.24.0,<1.0\npython-multipart>=0.0.6\nrequests>=2.31.0,<3.0\nfpdf2>=2.7.4\ngemmi>=0.6.7,<0.7\nnumpy>=1.24.0,<3.0\nscipy>=1.10.0,<2.0\nmatplotlib>=3.7.0\npillow>=10.0.0\n\n# Phase B1/B2 dependencies (added B.3 sync)\nPyJWT>=2.8.0,<3.0\nredis>=5.0.0,<6.0\ncelery>=5.3.0,<6.0"
+}

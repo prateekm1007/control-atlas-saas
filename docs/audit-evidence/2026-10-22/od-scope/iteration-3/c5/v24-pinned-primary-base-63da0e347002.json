@@ -1,0 +1,5341 @@
+{
+ "backend": "git materialization of engine rev 63da0e347002",
+ "excluded_targets": {
+  "1DDL": "OD-18 separate audit set",
+  "1I0T": "OD-18 separate audit set"
+ },
+ "label": "base-63da0e347002",
+ "scope_note": "v24-pinned primary analysis set; 1I0T and 1DDL are held out as the OD-18 separate audit set.",
+ "targets": {
+  "1AKE": {
+   "advisory_score": 100,
+   "atoms": 3317,
+   "bytes": 357777,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.29,
+     "reason": null,
+     "sample_size": 1672,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 428,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 427,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 14.02,
+     "reason": null,
+     "sample_size": 1282,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 424,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 3317,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 426,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 388,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 9.71,
+     "reason": null,
+     "sample_size": 350,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.97,
+     "reason": null,
+     "sample_size": 3317,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.96,
+     "reason": null,
+     "sample_size": 426,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 428,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.483,
+     "reason": null,
+     "sample_size": 178,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 75.38,
+     "reason": null,
+     "sample_size": 3317,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 2.0,
+   "sha256": "651e952f55f1317f50f4e82b7f0e99053397032cd8da5b2896f79d0af9f619a9",
+   "verdict": "PASS"
+  },
+  "1AON": {
+   "advisory_score": 66,
+   "atoms": 58674,
+   "bytes": 4973076,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 2,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.98,
+     "reason": null,
+     "sample_size": 31290,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 8015,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 8014,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 13.45,
+     "reason": null,
+     "sample_size": 24024,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 4.41,
+     "reason": null,
+     "sample_size": 7973,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 58674,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 7994,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 7245,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 5.4,
+     "reason": null,
+     "sample_size": 6125,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.65,
+     "reason": null,
+     "sample_size": 58674,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.88,
+     "reason": null,
+     "sample_size": 7994,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 8015,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.088,
+     "reason": null,
+     "sample_size": 3640,
+     "status": "VETO",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 69.14,
+     "reason": null,
+     "sample_size": 58674,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 3.0,
+   "sha256": "5cddcf0ebe222238073f73f4fcc0f579a090389f9c3d152399b4e41ca4a0ed3e",
+   "verdict": "PASS"
+  },
+  "1BPI": {
+   "advisory_score": 100,
+   "atoms": 460,
+   "bytes": 81324,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.84,
+     "reason": null,
+     "sample_size": 226,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 58,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 57,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 16.06,
+     "reason": null,
+     "sample_size": 173,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 56,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 460,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 57,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 52,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 8.7,
+     "reason": null,
+     "sample_size": 46,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.95,
+     "reason": null,
+     "sample_size": 460,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 4.02,
+     "reason": null,
+     "sample_size": 57,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 58,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.85,
+     "reason": null,
+     "sample_size": 20,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.028,
+     "reason": null,
+     "sample_size": 3,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 48.11,
+     "reason": null,
+     "sample_size": 460,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 1.09,
+   "sha256": "2289dd009b6eae05ac142836277e23098e178185df9441e2a3b9c1bed7dd75df",
+   "verdict": "PASS"
+  },
+  "1BRS": {
+   "advisory_score": 100,
+   "atoms": 4640,
+   "bytes": 466965,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.07,
+     "reason": null,
+     "sample_size": 2305,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 588,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 587,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 14.77,
+     "reason": null,
+     "sample_size": 1754,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 0.7,
+     "reason": null,
+     "sample_size": 572,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 4640,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 580,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 543,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 8.32,
+     "reason": null,
+     "sample_size": 481,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 6.03,
+     "reason": null,
+     "sample_size": 4640,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 4.95,
+     "reason": null,
+     "sample_size": 582,
+     "status": "FAIL (Advisory)",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 588,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.703,
+     "reason": null,
+     "sample_size": 223,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 93.91,
+     "reason": null,
+     "sample_size": 4640,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 2.0,
+   "sha256": "0076aae54252706a8c8c02f7b1e71ce2394b0e928b413590b4ac12aade9e8f6c",
+   "verdict": "PASS"
+  },
+  "1D3Z": {
+   "advisory_score": 100,
+   "atoms": 602,
+   "bytes": 1015821,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 7,
+   "det_total": 7,
+   "deterministic_score": 58,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.54,
+     "reason": null,
+     "sample_size": 298,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 76,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 75,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 15.93,
+     "reason": null,
+     "sample_size": 227,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "advisory_experimental",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 74,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 602,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 75,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 70,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "advisory_experimental",
+     "observed": 4.41,
+     "reason": null,
+     "sample_size": 68,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 6.26,
+     "reason": null,
+     "sample_size": 602,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.91,
+     "reason": null,
+     "sample_size": 75,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "advisory_experimental",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 76,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.964,
+     "reason": null,
+     "sample_size": 28,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 55.84,
+     "reason": null,
+     "sample_size": 602,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "nmr",
+   "resolution": null,
+   "sha256": "21099cb88231455fdfab4095dddfadcc85cc4213e105cf5f9cfff2ca21993378",
+   "verdict": "PASS"
+  },
+  "1EJG": {
+   "advisory_score": 100,
+   "atoms": 424,
+   "bytes": 124416,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.42,
+     "reason": null,
+     "sample_size": 180,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 46,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 45,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 14.92,
+     "reason": null,
+     "sample_size": 137,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 44,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 424,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 45,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 42,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 10.81,
+     "reason": null,
+     "sample_size": 37,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.78,
+     "reason": null,
+     "sample_size": 424,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.85,
+     "reason": null,
+     "sample_size": 45,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 46,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 1.0,
+     "reason": null,
+     "sample_size": 19,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.014,
+     "reason": null,
+     "sample_size": 3,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 37.44,
+     "reason": null,
+     "sample_size": 424,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 0.54,
+   "sha256": "115e25b3c80a72b51cda981575f9917309140c5c4249f81bcc0ad245f17c6f18",
+   "verdict": "PASS"
+  },
+  "1FIN": {
+   "advisory_score": 100,
+   "atoms": 8998,
+   "bytes": 817776,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.0,
+     "reason": null,
+     "sample_size": 4414,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 1116,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 1115,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 14.05,
+     "reason": null,
+     "sample_size": 3344,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 2.08,
+     "reason": null,
+     "sample_size": 1108,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 8998,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 1112,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 1066,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 16.1,
+     "reason": null,
+     "sample_size": 994,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 6.18,
+     "reason": null,
+     "sample_size": 8998,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.92,
+     "reason": null,
+     "sample_size": 1112,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 1116,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.355,
+     "reason": null,
+     "sample_size": 512,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 89.12,
+     "reason": null,
+     "sample_size": 8998,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 2.3,
+   "sha256": "12f7920d265a08c0145152e6f960d942a17dd947585fab0470869111e8136fca",
+   "verdict": "PASS"
+  },
+  "1GB1": {
+   "advisory_score": 100,
+   "atoms": 436,
+   "bytes": 4197258,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 7,
+   "det_total": 7,
+   "deterministic_score": 58,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.24,
+     "reason": null,
+     "sample_size": 220,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 56,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 55,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 15.11,
+     "reason": null,
+     "sample_size": 167,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "advisory_experimental",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 54,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 436,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 55,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 52,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "advisory_experimental",
+     "observed": 13.04,
+     "reason": null,
+     "sample_size": 46,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.98,
+     "reason": null,
+     "sample_size": 436,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.82,
+     "reason": null,
+     "sample_size": 55,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "advisory_experimental",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 56,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.944,
+     "reason": null,
+     "sample_size": 18,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 44.86,
+     "reason": null,
+     "sample_size": 436,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "nmr",
+   "resolution": null,
+   "sha256": "26ad823df283b7b0ce384fdb9ab12cf103cacd61fceb12780d8843189a93133a",
+   "verdict": "PASS"
+  },
+  "1GCI": {
+   "advisory_score": 100,
+   "atoms": 1966,
+   "bytes": 717660,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.0,
+     "reason": null,
+     "sample_size": 1041,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 269,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 268,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 14.93,
+     "reason": null,
+     "sample_size": 803,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 2.3,
+     "reason": null,
+     "sample_size": 261,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 1.53,
+     "reason": null,
+     "sample_size": 1966,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 265,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 234,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 7.22,
+     "reason": null,
+     "sample_size": 194,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.43,
+     "reason": null,
+     "sample_size": 1966,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.95,
+     "reason": null,
+     "sample_size": 268,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 269,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.588,
+     "reason": null,
+     "sample_size": 114,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 43.77,
+     "reason": null,
+     "sample_size": 1966,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 0.78,
+   "sha256": "67155b6bd0085c6cbf1724082cfee040044a61672be536b93d3a191eac7a1219",
+   "verdict": "PASS"
+  },
+  "1GFL": {
+   "advisory_score": 100,
+   "atoms": 3650,
+   "bytes": 360126,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.1,
+     "reason": null,
+     "sample_size": 1796,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 460,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 459,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 16.34,
+     "reason": null,
+     "sample_size": 1376,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 2.19,
+     "reason": null,
+     "sample_size": 456,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.55,
+     "reason": null,
+     "sample_size": 3650,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.44,
+     "reason": null,
+     "sample_size": 458,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 418,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 16.5,
+     "reason": null,
+     "sample_size": 400,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 6.06,
+     "reason": null,
+     "sample_size": 3650,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.88,
+     "reason": null,
+     "sample_size": 458,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 460,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.524,
+     "reason": null,
+     "sample_size": 168,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 56.43,
+     "reason": null,
+     "sample_size": 3650,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 1.9,
+   "sha256": "60eb370ad1a2c7c63382399d8655e0448fc29acc2a436e1a6112a5d599390d6f",
+   "verdict": "PASS"
+  },
+  "1HHO": {
+   "advisory_score": 100,
+   "atoms": 2192,
+   "bytes": 244296,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 9,
+   "det_total": 10,
+   "deterministic_score": 75,
+   "failing_deterministic": [
+    "LAW-150: Rotamer Audit"
+   ],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.25,
+     "reason": null,
+     "sample_size": 1128,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 287,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 286,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 13.35,
+     "reason": null,
+     "sample_size": 859,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 1.06,
+     "reason": null,
+     "sample_size": 283,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 2192,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 285,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 267,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 20.35,
+     "reason": null,
+     "sample_size": 231,
+     "status": "VETO",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.86,
+     "reason": null,
+     "sample_size": 2192,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.97,
+     "reason": null,
+     "sample_size": 285,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 287,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.638,
+     "reason": null,
+     "sample_size": 138,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 49.89,
+     "reason": null,
+     "sample_size": 2192,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 2.1,
+   "sha256": "f2d60a04ac027f55f20295790197fa31b290fe8ddaca6c1287ce373fcb040ed1",
+   "verdict": "VETO"
+  },
+  "1L2Y": {
+   "advisory_score": 100,
+   "atoms": 154,
+   "bytes": 959202,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 7,
+   "det_total": 7,
+   "deterministic_score": 58,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.53,
+     "reason": null,
+     "sample_size": 77,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 20,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 19,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 13.9,
+     "reason": null,
+     "sample_size": 59,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "advisory_experimental",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 18,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 154,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 19,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 17,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "advisory_experimental",
+     "observed": 41.18,
+     "reason": null,
+     "sample_size": 17,
+     "status": "FAIL (Advisory)",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.95,
+     "reason": null,
+     "sample_size": 154,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.89,
+     "reason": null,
+     "sample_size": 19,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "advisory_experimental",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 20,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 1.0,
+     "reason": null,
+     "sample_size": 8,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 31.49,
+     "reason": null,
+     "sample_size": 154,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "nmr",
+   "resolution": null,
+   "sha256": "5d1bbb545a312dfff1ae1e64b6d8addecb2f561ddc4011aeb5bee9d1dfcd4438",
+   "verdict": "PASS"
+  },
+  "1MBO": {
+   "advisory_score": 100,
+   "atoms": 1227,
+   "bytes": 160947,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.38,
+     "reason": null,
+     "sample_size": 601,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 153,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 152,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 12.08,
+     "reason": null,
+     "sample_size": 458,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 0.66,
+     "reason": null,
+     "sample_size": 151,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 1227,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 152,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 142,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 5.6,
+     "reason": null,
+     "sample_size": 125,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 6.08,
+     "reason": null,
+     "sample_size": 1227,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.91,
+     "reason": null,
+     "sample_size": 152,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 153,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.636,
+     "reason": null,
+     "sample_size": 66,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 48.69,
+     "reason": null,
+     "sample_size": 1227,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 1.6,
+   "sha256": "d7e07c844714def8303adb88ae4ca90d65950bf5b12aacc9dc4de2e3cee6a70c",
+   "verdict": "PASS"
+  },
+  "1NEK": {
+   "advisory_score": 66,
+   "atoms": 8297,
+   "bytes": 803439,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 2,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.81,
+     "reason": null,
+     "sample_size": 4179,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 1068,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 1067,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 13.66,
+     "reason": null,
+     "sample_size": 3200,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 3.21,
+     "reason": null,
+     "sample_size": 1060,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 8297,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 1064,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 975,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 5.32,
+     "reason": null,
+     "sample_size": 884,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.92,
+     "reason": null,
+     "sample_size": 8297,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.95,
+     "reason": null,
+     "sample_size": 1064,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 1068,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.183,
+     "reason": null,
+     "sample_size": 486,
+     "status": "VETO",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 79.86,
+     "reason": null,
+     "sample_size": 8297,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 2.6,
+   "sha256": "be379bd72d9d0148e664b8592f89e71c4e0cbe2202b8cdbbfb5c4e1a8c08adcd",
+   "verdict": "PASS"
+  },
+  "1PPE": {
+   "advisory_score": 100,
+   "atoms": 1851,
+   "bytes": 203958,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 9,
+   "det_total": 10,
+   "deterministic_score": 75,
+   "failing_deterministic": [
+    "LAW-110: Backbone Gap"
+   ],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.42,
+     "reason": null,
+     "sample_size": 981,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 252,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 9,
+     "reason": null,
+     "sample_size": 251,
+     "status": "VETO",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 17.4,
+     "reason": null,
+     "sample_size": 748,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 3.39,
+     "reason": null,
+     "sample_size": 236,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 3.24,
+     "reason": null,
+     "sample_size": 1851,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 2.46,
+     "reason": null,
+     "sample_size": 244,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 225,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 7.14,
+     "reason": null,
+     "sample_size": 210,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.6,
+     "reason": null,
+     "sample_size": 1851,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 7.12,
+     "reason": null,
+     "sample_size": 250,
+     "status": "FAIL (Advisory)",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 252,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.571,
+     "reason": null,
+     "sample_size": 86,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.059,
+     "reason": null,
+     "sample_size": 9,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 52.44,
+     "reason": null,
+     "sample_size": 1851,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 2.0,
+   "sha256": "fe51b4280055199c644214049f59a752e6124d858eaea29c1a2f721fb03ed0bb",
+   "verdict": "VETO"
+  },
+  "1RVS": {
+   "advisory_score": 100,
+   "atoms": 85,
+   "bytes": 293382,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 7,
+   "det_total": 7,
+   "deterministic_score": 58,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.76,
+     "reason": null,
+     "sample_size": 44,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 11,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 10,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 15.62,
+     "reason": null,
+     "sample_size": 32,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "advisory_experimental",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 9,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 85,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 10,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 11,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "advisory_experimental",
+     "observed": 44.44,
+     "reason": null,
+     "sample_size": 9,
+     "status": "FAIL (Advisory)",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.64,
+     "reason": null,
+     "sample_size": 85,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.82,
+     "reason": null,
+     "sample_size": 10,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "advisory_experimental",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 11,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 1.0,
+     "reason": null,
+     "sample_size": 6,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 40.89,
+     "reason": null,
+     "sample_size": 85,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "nmr",
+   "resolution": null,
+   "sha256": "5203953c7022cfdf6788d6ec6f76d06d6a28dd5b076b5441a08c13a9dce16bb9",
+   "verdict": "PASS"
+  },
+  "1TEN": {
+   "advisory_score": 100,
+   "atoms": 715,
+   "bytes": 114858,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.1,
+     "reason": null,
+     "sample_size": 352,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 90,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 89,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 17.79,
+     "reason": null,
+     "sample_size": 266,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 2.27,
+     "reason": null,
+     "sample_size": 88,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 715,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 88,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 84,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 8.75,
+     "reason": null,
+     "sample_size": 80,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 6.13,
+     "reason": null,
+     "sample_size": 715,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.9,
+     "reason": null,
+     "sample_size": 88,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 90,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.75,
+     "reason": null,
+     "sample_size": 32,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 41.11,
+     "reason": null,
+     "sample_size": 715,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 1.8,
+   "sha256": "5b2165e4e495d05e230c6438a8585966578fc70006ec228ac0a0d8b65d06c73c",
+   "verdict": "PASS"
+  },
+  "2ACE": {
+   "advisory_score": 66,
+   "atoms": 4143,
+   "bytes": 400059,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 2,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.2,
+     "reason": null,
+     "sample_size": 2064,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 527,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 526,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 15.27,
+     "reason": null,
+     "sample_size": 1579,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 1.34,
+     "reason": null,
+     "sample_size": 523,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 4143,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 525,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 483,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 7.46,
+     "reason": null,
+     "sample_size": 456,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.98,
+     "reason": null,
+     "sample_size": 4143,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 9.82,
+     "reason": null,
+     "sample_size": 526,
+     "status": "FAIL (Advisory)",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 527,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.194,
+     "reason": null,
+     "sample_size": 227,
+     "status": "VETO",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.03,
+     "reason": null,
+     "sample_size": 3,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 52.81,
+     "reason": null,
+     "sample_size": 4143,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 2.5,
+   "sha256": "572b0cdd389537d3ccf1da63392ed0d335ad1a2c8ce0f96685b1a907141468b3",
+   "verdict": "PASS"
+  },
+  "2CBA": {
+   "advisory_score": 100,
+   "atoms": 2079,
+   "bytes": 219510,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.48,
+     "reason": null,
+     "sample_size": 1010,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 258,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 257,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 16.52,
+     "reason": null,
+     "sample_size": 772,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 0.79,
+     "reason": null,
+     "sample_size": 254,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.48,
+     "reason": null,
+     "sample_size": 2079,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 256,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 236,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 8.07,
+     "reason": null,
+     "sample_size": 223,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 6.19,
+     "reason": null,
+     "sample_size": 2079,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.9,
+     "reason": null,
+     "sample_size": 257,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 258,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.451,
+     "reason": null,
+     "sample_size": 102,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 50.64,
+     "reason": null,
+     "sample_size": 2079,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 1.54,
+   "sha256": "7862c050b41ed8a867555699c6a0266c7997c06f7552593febf2af9c92c6e5a8",
+   "verdict": "PASS"
+  },
+  "2HBS": {
+   "advisory_score": 100,
+   "atoms": 8760,
+   "bytes": 871803,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.76,
+     "reason": null,
+     "sample_size": 4512,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 1148,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 1147,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 12.37,
+     "reason": null,
+     "sample_size": 3436,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 0.18,
+     "reason": null,
+     "sample_size": 1132,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 8760,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 1140,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 1068,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 9.52,
+     "reason": null,
+     "sample_size": 924,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.8,
+     "reason": null,
+     "sample_size": 8760,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.89,
+     "reason": null,
+     "sample_size": 1140,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 1148,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.614,
+     "reason": null,
+     "sample_size": 556,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 78.12,
+     "reason": null,
+     "sample_size": 8760,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 2.05,
+   "sha256": "b552883a48cd11bf8bc86785cc7ab5e49203e4c0dae922aaf2cc489421cd5c09",
+   "verdict": "PASS"
+  },
+  "2JOF": {
+   "advisory_score": 100,
+   "atoms": 148,
+   "bytes": 664443,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 7,
+   "det_total": 7,
+   "deterministic_score": 58,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.52,
+     "reason": null,
+     "sample_size": 77,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 20,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 19,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 12.93,
+     "reason": null,
+     "sample_size": 59,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "advisory_experimental",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 18,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 148,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 19,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 17,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "advisory_experimental",
+     "observed": 40.0,
+     "reason": null,
+     "sample_size": 15,
+     "status": "FAIL (Advisory)",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.5,
+     "reason": null,
+     "sample_size": 148,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.9,
+     "reason": null,
+     "sample_size": 19,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "advisory_experimental",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 20,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 1.0,
+     "reason": null,
+     "sample_size": 8,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 29.21,
+     "reason": null,
+     "sample_size": 148,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "nmr",
+   "resolution": null,
+   "sha256": "2cb2ebc097abed3cd5004c6d5056e1e8e2a47bc9e7f36433bbfcbfe9cf124332",
+   "verdict": "PASS"
+  },
+  "2KOX": {
+   "advisory_score": 100,
+   "atoms": 602,
+   "bytes": 64008873,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 7,
+   "det_total": 7,
+   "deterministic_score": 58,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.92,
+     "reason": null,
+     "sample_size": 298,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 76,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 75,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 15.44,
+     "reason": null,
+     "sample_size": 227,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "advisory_experimental",
+     "observed": 2.7,
+     "reason": null,
+     "sample_size": 74,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 602,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 75,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 70,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "advisory_experimental",
+     "observed": 7.35,
+     "reason": null,
+     "sample_size": 68,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 6.16,
+     "reason": null,
+     "sample_size": 602,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.93,
+     "reason": null,
+     "sample_size": 75,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "advisory_experimental",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 76,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.964,
+     "reason": null,
+     "sample_size": 28,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 41.7,
+     "reason": null,
+     "sample_size": 602,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "nmr",
+   "resolution": null,
+   "sha256": "d7fadf57dbf9a91d46d4246e22f5cfb5caa5aaf9ad15ba43c8e0bcaf093da939",
+   "verdict": "PASS"
+  },
+  "2LYZ": {
+   "advisory_score": 100,
+   "atoms": 1001,
+   "bytes": 133569,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.77,
+     "reason": null,
+     "sample_size": 504,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 129,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 128,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 15.15,
+     "reason": null,
+     "sample_size": 386,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 127,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 2.0,
+     "reason": null,
+     "sample_size": 1001,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 128,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 117,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 14.29,
+     "reason": null,
+     "sample_size": 105,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 6.02,
+     "reason": null,
+     "sample_size": 1001,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.8,
+     "reason": null,
+     "sample_size": 128,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 129,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.844,
+     "reason": null,
+     "sample_size": 45,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.077,
+     "reason": null,
+     "sample_size": 4,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 53.55,
+     "reason": null,
+     "sample_size": 1001,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 2.0,
+   "sha256": "722b8b6fb7d465ee577ad5af676f94c5a857360f1bee50559ce9c67af6399965",
+   "verdict": "PASS"
+  },
+  "2MJB": {
+   "advisory_score": 100,
+   "atoms": 602,
+   "bytes": 2013255,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 7,
+   "det_total": 7,
+   "deterministic_score": 58,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.87,
+     "reason": null,
+     "sample_size": 298,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 76,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 75,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 15.79,
+     "reason": null,
+     "sample_size": 227,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "advisory_experimental",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 74,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 602,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 75,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 70,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "advisory_experimental",
+     "observed": 5.88,
+     "reason": null,
+     "sample_size": 68,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 6.13,
+     "reason": null,
+     "sample_size": 602,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.93,
+     "reason": null,
+     "sample_size": 75,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "advisory_experimental",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 76,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.964,
+     "reason": null,
+     "sample_size": 28,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 51.15,
+     "reason": null,
+     "sample_size": 602,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "nmr",
+   "resolution": null,
+   "sha256": "547b49a69c29b3f7135e197320f232d3610d9d15fa824f7760da10695d5b57af",
+   "verdict": "PASS"
+  },
+  "2N0A": {
+   "advisory_score": 33,
+   "atoms": 10130,
+   "bytes": 1665927,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 7,
+   "det_total": 7,
+   "deterministic_score": 58,
+   "failing_deterministic": [],
+   "heur_passed": 1,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.53,
+     "reason": null,
+     "sample_size": 5420,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 1400,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 1399,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 14.5,
+     "reason": null,
+     "sample_size": 4190,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "advisory_experimental",
+     "observed": 4.28,
+     "reason": null,
+     "sample_size": 1380,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 10130,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 1390,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 1220,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "advisory_experimental",
+     "observed": 4.76,
+     "reason": null,
+     "sample_size": 1030,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.62,
+     "reason": null,
+     "sample_size": 10130,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.89,
+     "reason": null,
+     "sample_size": 1390,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "advisory_experimental",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 1400,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 550,
+     "status": "VETO",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 395.05,
+     "reason": null,
+     "sample_size": 10130,
+     "status": "VETO",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "nmr",
+   "resolution": null,
+   "sha256": "cc2aaebd34924b82cc5bcd9c5a491d4f955c005c626378e361343cbe920cf9ed",
+   "verdict": "PASS"
+  },
+  "2OV0": {
+   "advisory_score": 100,
+   "atoms": 830,
+   "bytes": 196668,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.15,
+     "reason": null,
+     "sample_size": 413,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 105,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 104,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 16.23,
+     "reason": null,
+     "sample_size": 314,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 0.97,
+     "reason": null,
+     "sample_size": 103,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 830,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 104,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 98,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 8.24,
+     "reason": null,
+     "sample_size": 85,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.9,
+     "reason": null,
+     "sample_size": 830,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.86,
+     "reason": null,
+     "sample_size": 104,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 105,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.84,
+     "reason": null,
+     "sample_size": 50,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 45.0,
+     "reason": null,
+     "sample_size": 830,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 0.75,
+   "sha256": "3eafc180aa32668ea7e4cb1e61f22d802e47a7384223cb93e1f473221df2eef4",
+   "verdict": "PASS"
+  },
+  "2VB1": {
+   "advisory_score": 100,
+   "atoms": 1323,
+   "bytes": 447444,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.42,
+     "reason": null,
+     "sample_size": 504,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 129,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 128,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 14.2,
+     "reason": null,
+     "sample_size": 386,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 127,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 1323,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 128,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 117,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 4.76,
+     "reason": null,
+     "sample_size": 105,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 6.57,
+     "reason": null,
+     "sample_size": 1323,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.88,
+     "reason": null,
+     "sample_size": 128,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 129,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.844,
+     "reason": null,
+     "sample_size": 45,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.007,
+     "reason": null,
+     "sample_size": 4,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 38.73,
+     "reason": null,
+     "sample_size": 1323,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 0.65,
+   "sha256": "cb971a808effff36ae4c2e7030a6608e7a78f55a1c4eb9ccd669872dbd66aa37",
+   "verdict": "PASS"
+  },
+  "3J9I": {
+   "advisory_score": 100,
+   "atoms": 46228,
+   "bytes": 3865968,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 9,
+   "det_total": 9,
+   "deterministic_score": 75,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 2.51,
+     "reason": null,
+     "sample_size": 23436,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 5978,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 5977,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 15.42,
+     "reason": null,
+     "sample_size": 17906,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 2.36,
+     "reason": null,
+     "sample_size": 5922,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 46228,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.24,
+     "reason": null,
+     "sample_size": 5950,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 5502,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 6.18,
+     "reason": null,
+     "sample_size": 4984,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.95,
+     "reason": null,
+     "sample_size": 46228,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.99,
+     "reason": null,
+     "sample_size": 5950,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "advisory_experimental",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 5978,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.543,
+     "reason": null,
+     "sample_size": 2590,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 46.28,
+     "reason": null,
+     "sample_size": 46228,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "cryo_em",
+   "resolution": 3.3,
+   "sha256": "f87dc96adccaaaefd2fa2747c2ce0a00cffca33f46bd28c5593f5939eb90ee92",
+   "verdict": "PASS"
+  },
+  "3LZM": {
+   "advisory_score": 100,
+   "atoms": 1309,
+   "bytes": 153495,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.45,
+     "reason": null,
+     "sample_size": 645,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 164,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 163,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 13.5,
+     "reason": null,
+     "sample_size": 491,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 0.62,
+     "reason": null,
+     "sample_size": 162,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 1309,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 163,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 153,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 7.97,
+     "reason": null,
+     "sample_size": 138,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 6.18,
+     "reason": null,
+     "sample_size": 1309,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.88,
+     "reason": null,
+     "sample_size": 163,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 164,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.53,
+     "reason": null,
+     "sample_size": 66,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 55.15,
+     "reason": null,
+     "sample_size": 1309,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 1.7,
+   "sha256": "e531a3c16462ebdc0264ef084dd55f6f924bcde5568cb125efcbfaa89d912ab8",
+   "verdict": "PASS"
+  },
+  "3NIR": {
+   "advisory_score": 100,
+   "atoms": 452,
+   "bytes": 163701,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.01,
+     "reason": null,
+     "sample_size": 180,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 46,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 45,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 15.47,
+     "reason": null,
+     "sample_size": 137,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 44,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 452,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 45,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 42,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 8.11,
+     "reason": null,
+     "sample_size": 37,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.93,
+     "reason": null,
+     "sample_size": 452,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.88,
+     "reason": null,
+     "sample_size": 45,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 46,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 1.0,
+     "reason": null,
+     "sample_size": 19,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.013,
+     "reason": null,
+     "sample_size": 3,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 35.04,
+     "reason": null,
+     "sample_size": 452,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 0.48,
+   "sha256": "b1ecd8b00fe1b0e2a3cb8f71609d2fe5177a8f3be699d30c58e4109d5e4e5ab5",
+   "verdict": "PASS"
+  },
+  "3PGK": {
+   "advisory_score": 66,
+   "atoms": 3145,
+   "bytes": 294759,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 8,
+   "det_total": 10,
+   "deterministic_score": 66,
+   "failing_deterministic": [
+    "LAW-125: Ramachandran",
+    "LAW-150: Rotamer Audit"
+   ],
+   "heur_passed": 2,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.05,
+     "reason": null,
+     "sample_size": 1623,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 415,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 414,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 12.62,
+     "reason": null,
+     "sample_size": 1244,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 21.79,
+     "reason": null,
+     "sample_size": 413,
+     "status": "VETO",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 5.72,
+     "reason": null,
+     "sample_size": 3145,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 414,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 378,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 38.21,
+     "reason": null,
+     "sample_size": 335,
+     "status": "VETO",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.72,
+     "reason": null,
+     "sample_size": 3145,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.99,
+     "reason": null,
+     "sample_size": 414,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 415,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.155,
+     "reason": null,
+     "sample_size": 187,
+     "status": "VETO",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 73.13,
+     "reason": null,
+     "sample_size": 3145,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 2.5,
+   "sha256": "32abf08811f5a2e088cc0839a984bfd7cdf638d093dd59d9802de19ced89ba53",
+   "verdict": "VETO"
+  },
+  "5A63": {
+   "advisory_score": 66,
+   "atoms": 9646,
+   "bytes": 915300,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 7,
+   "det_total": 9,
+   "deterministic_score": 58,
+   "failing_deterministic": [
+    "LAW-150: Rotamer Audit",
+    "LAW-195: Disulfide Geometry"
+   ],
+   "heur_passed": 2,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.78,
+     "reason": null,
+     "sample_size": 4818,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 1223,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 1222,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 12.5,
+     "reason": null,
+     "sample_size": 3663,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 2.81,
+     "reason": null,
+     "sample_size": 1211,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.1,
+     "reason": null,
+     "sample_size": 9646,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.25,
+     "reason": null,
+     "sample_size": 1217,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 1149,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 20.32,
+     "reason": null,
+     "sample_size": 1048,
+     "status": "VETO",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 6.04,
+     "reason": null,
+     "sample_size": 9646,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 29.68,
+     "reason": null,
+     "sample_size": 1219,
+     "status": "FAIL (Advisory)",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "advisory_experimental",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 1223,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.129,
+     "reason": null,
+     "sample_size": 617,
+     "status": "VETO",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.917,
+     "reason": null,
+     "sample_size": 5,
+     "status": "VETO",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 87.47,
+     "reason": null,
+     "sample_size": 9646,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "cryo_em",
+   "resolution": 3.4,
+   "sha256": "cc9adb1be03dc8cccf72630bea645d45afaa6e87268aad27108801836b7896f2",
+   "verdict": "VETO"
+  },
+  "5T4O": {
+   "advisory_score": 66,
+   "atoms": 23448,
+   "bytes": 2337093,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 9,
+   "det_total": 9,
+   "deterministic_score": 75,
+   "failing_deterministic": [],
+   "heur_passed": 2,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 1.07,
+     "reason": null,
+     "sample_size": 18670,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 4778,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 4777,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 13.1,
+     "reason": null,
+     "sample_size": 14311,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 1.99,
+     "reason": null,
+     "sample_size": 4732,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.04,
+     "reason": null,
+     "sample_size": 23448,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.61,
+     "reason": null,
+     "sample_size": 4755,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 4336,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 3.77,
+     "reason": null,
+     "sample_size": 23448,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 14.08,
+     "reason": null,
+     "sample_size": 4756,
+     "status": "FAIL (Advisory)",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "advisory_experimental",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 4778,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.091,
+     "reason": null,
+     "sample_size": 2352,
+     "status": "VETO",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 150.62,
+     "reason": null,
+     "sample_size": 23448,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "cryo_em",
+   "resolution": 6.9,
+   "sha256": "cec2efd1f123740bee8388abb6ff6569e52f796ad57d430110c321c59a8c1e3a",
+   "verdict": "PASS"
+  },
+  "6J6J": {
+   "advisory_score": 100,
+   "atoms": 3548,
+   "bytes": 323433,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 9,
+   "det_total": 9,
+   "deterministic_score": 75,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.85,
+     "reason": null,
+     "sample_size": 1840,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 476,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 475,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 16.19,
+     "reason": null,
+     "sample_size": 1424,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 2.56,
+     "reason": null,
+     "sample_size": 468,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 3548,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 472,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 412,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 5.23,
+     "reason": null,
+     "sample_size": 344,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.71,
+     "reason": null,
+     "sample_size": 3548,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.85,
+     "reason": null,
+     "sample_size": 472,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "advisory_experimental",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 476,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.707,
+     "reason": null,
+     "sample_size": 164,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 42.28,
+     "reason": null,
+     "sample_size": 3548,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "cryo_em",
+   "resolution": 3.2,
+   "sha256": "e699b9911536491a0aa4c7267685306f6dd054bfda2cd4875d32fffe23eb4a89",
+   "verdict": "PASS"
+  },
+  "6NB6": {
+   "advisory_score": 66,
+   "atoms": 23865,
+   "bytes": 2539917,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 9,
+   "det_total": 9,
+   "deterministic_score": 75,
+   "failing_deterministic": [],
+   "heur_passed": 2,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.93,
+     "reason": null,
+     "sample_size": 14163,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 3599,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 3598,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 15.31,
+     "reason": null,
+     "sample_size": 10768,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 1.92,
+     "reason": null,
+     "sample_size": 3541,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 23865,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 3570,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 3366,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 8.96,
+     "reason": null,
+     "sample_size": 1898,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.08,
+     "reason": null,
+     "sample_size": 23865,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 24.91,
+     "reason": null,
+     "sample_size": 3592,
+     "status": "FAIL (Advisory)",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "advisory_experimental",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 3599,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.02,
+     "reason": null,
+     "sample_size": 1478,
+     "status": "VETO",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.105,
+     "reason": null,
+     "sample_size": 48,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 141.39,
+     "reason": null,
+     "sample_size": 23865,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "cryo_em",
+   "resolution": 4.2,
+   "sha256": "991c1be973ae74f87ec61fd128005cd24302d10e98409a6135337cb735a7d774",
+   "verdict": "PASS"
+  },
+  "6WLC": {
+   "advisory_score": 66,
+   "atoms": 5707,
+   "bytes": 1055430,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 2,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.65,
+     "reason": null,
+     "sample_size": 2740,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 696,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 695,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 15.08,
+     "reason": null,
+     "sample_size": 2086,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 0.29,
+     "reason": null,
+     "sample_size": 692,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 5707,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 694,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 652,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 6.8,
+     "reason": null,
+     "sample_size": 618,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 6.22,
+     "reason": null,
+     "sample_size": 5707,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.86,
+     "reason": null,
+     "sample_size": 694,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 696,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.2,
+     "reason": null,
+     "sample_size": 300,
+     "status": "VETO",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 95.34,
+     "reason": null,
+     "sample_size": 5707,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 1.82,
+   "sha256": "b2d6d15fcdbd8fa4edff84a18bc00b8a9abdc75dcc56a909b9f05add1a8fe9c0",
+   "verdict": "PASS"
+  },
+  "7JTL": {
+   "advisory_score": 100,
+   "atoms": 1622,
+   "bytes": 330237,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 10,
+   "det_total": 10,
+   "deterministic_score": 83,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.77,
+     "reason": null,
+     "sample_size": 806,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 203,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 202,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 15.85,
+     "reason": null,
+     "sample_size": 605,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "deterministic",
+     "observed": 1.03,
+     "reason": null,
+     "sample_size": 195,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 1622,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 199,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 197,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "deterministic",
+     "observed": 8.15,
+     "reason": null,
+     "sample_size": 184,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 6.19,
+     "reason": null,
+     "sample_size": 1622,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 6.39,
+     "reason": null,
+     "sample_size": 201,
+     "status": "FAIL (Advisory)",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 203,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.714,
+     "reason": null,
+     "sample_size": 83,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.044,
+     "reason": null,
+     "sample_size": 7,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 77.59,
+     "reason": null,
+     "sample_size": 1622,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "xray",
+   "resolution": 2.04,
+   "sha256": "9d0bd8d6d5c7d82d4f2d0adc9321c50dee9e3f3933226a621671be9818d7e353",
+   "verdict": "PASS"
+  },
+  "7K3G": {
+   "advisory_score": 100,
+   "atoms": 1190,
+   "bytes": 2087370,
+   "contained_law_failures": [],
+   "coverage": 100.0,
+   "det_passed": 7,
+   "det_total": 7,
+   "deterministic_score": 58,
+   "failing_deterministic": [],
+   "heur_passed": 3,
+   "indeterminate_causes": [],
+   "is_experimental": true,
+   "laws": {
+    "LAW-100": {
+     "method": "advisory_experimental",
+     "observed": 0.77,
+     "reason": null,
+     "sample_size": 615,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-105": {
+     "method": "deterministic",
+     "observed": 100.0,
+     "reason": null,
+     "sample_size": 155,
+     "status": "PASS",
+     "threshold": 70.0
+    },
+    "LAW-110": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 154,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-120": {
+     "method": "deterministic",
+     "observed": 13.77,
+     "reason": null,
+     "sample_size": 460,
+     "status": "PASS",
+     "threshold": 18.0
+    },
+    "LAW-125": {
+     "method": "advisory_experimental",
+     "observed": 3.45,
+     "reason": null,
+     "sample_size": 145,
+     "status": "PASS",
+     "threshold": 5.0
+    },
+    "LAW-130": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 1190,
+     "status": "PASS",
+     "threshold": 20.0
+    },
+    "LAW-135": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 150,
+     "status": "PASS",
+     "threshold": 3.0
+    },
+    "LAW-145": {
+     "method": "deterministic",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 150,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-150": {
+     "method": "advisory_experimental",
+     "observed": 51.85,
+     "reason": null,
+     "sample_size": 135,
+     "status": "FAIL (Advisory)",
+     "threshold": 20.0
+    },
+    "LAW-155": {
+     "method": "heuristic",
+     "observed": 5.86,
+     "reason": null,
+     "sample_size": 1190,
+     "status": "PASS",
+     "threshold": 2.0
+    },
+    "LAW-160": {
+     "method": "advisory_experimental",
+     "observed": 3.82,
+     "reason": null,
+     "sample_size": 150,
+     "status": "PASS",
+     "threshold": 4.5
+    },
+    "LAW-170": {
+     "method": "advisory_experimental",
+     "observed": 0,
+     "reason": null,
+     "sample_size": 155,
+     "status": "PASS",
+     "threshold": 0.0
+    },
+    "LAW-182": {
+     "method": "heuristic",
+     "observed": 0.727,
+     "reason": null,
+     "sample_size": 110,
+     "status": "PASS",
+     "threshold": 0.3
+    },
+    "LAW-195": {
+     "method": "deterministic",
+     "observed": 0.0,
+     "reason": null,
+     "sample_size": 0,
+     "status": "PASS",
+     "threshold": 0.2
+    },
+    "LAW-200": {
+     "method": "heuristic",
+     "observed": 45.31,
+     "reason": null,
+     "sample_size": 1190,
+     "status": "PASS",
+     "threshold": 300.0
+    }
+   },
+   "method_type": "nmr",
+   "resolution": null,
+   "sha256": "2982f5a386ec27c096d676ec85cbf47081392446231f2787b48ad5b8ce21b62f",
+   "verdict": "PASS"
+  }
+ }
+}

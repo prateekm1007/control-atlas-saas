@@ -1,0 +1,305 @@
+{
+  "schema": "od-scope-v25-engine-audit-preflight/v1",
+  "created_at": "2026-10-23T04:49:44Z",
+  "directive": "Owner directions 2026-10-23: preserve ae8a535; next legitimate candidate must close P-091 truthfully, introduce P-092, repair P0 engine/ingestion, harden calibration provenance, repair historical evidence append-only, and produce a machine-readable audit report. OD-16 remains active.",
+  "branch": "repair/od-scope-v25-engine-audit",
+  "base": {
+    "commit": "ae8a53547a0433f9220ff656fc53a706591c3bd4",
+    "branch": "review/od-scope-v25",
+    "remote": "origin",
+    "remote_tip_verified": true,
+    "tree": "clean at branch creation"
+  },
+  "candidate": {
+    "status": "under-construction",
+    "terminal_intent": "P-092",
+    "terminal_intent_introducing_commit": "final candidate commit",
+    "expected_remote_tip_before_push": "ae8a53547a0433f9220ff656fc53a706591c3bd4",
+    "pending_confirmation": "P-091-CONFIRM"
+  },
+  "baseline_ci": {
+    "stability_run": {
+      "id": 39897260982,
+      "conclusion": "success",
+      "jobs": {
+        "secret_scan": 120230456596,
+        "unit_tests_hash_lock": 120230456813
+      }
+    },
+    "governance_run": {
+      "id": 39897260952,
+      "conclusion": "failure",
+      "failed_job": {
+        "name": "pushlog remote verification",
+        "id": 120230457210
+      },
+      "successful_jobs": {
+        "ec22_status_vocabulary": 120230456874,
+        "acceptance_at_01_at_34": 120230457021,
+        "package_manifest": 120230457056,
+        "ec23_secret_scan": 120230457093,
+        "ec26_reading_note": 120230457104,
+        "ec25_workflow_lint": 120230457140
+      },
+      "skipped_jobs": {
+        "ec21": 120230457980,
+        "ec16_ec19_ec20": 120230458312
+      }
+    },
+    "pre_existing_baseline": {
+      "commit": "e71cec36d8189125b74568343a80fff1eb9637cd",
+      "run": 39825159704,
+      "failed_job": 119986401764,
+      "finding": "same 22 missing historical refs; base also had a package-manifest failure now fixed"
+    }
+  },
+  "historical_ref_failure": {
+    "record_failures": 22,
+    "missing_refs": [
+      "refs/heads/proposal/ec16-ec26-enforcement",
+      "refs/heads/docs/owner-decisions",
+      "refs/heads/governance/canonical-docs",
+      "refs/heads/proposal/ec16-ec26-enforcement-rebased",
+      "refs/heads/repair/round19-mainline-acceptance",
+      "refs/heads/activation/ec16-ec19-ec20-r19",
+      "refs/heads/activation/ec18-r19",
+      "refs/heads/activation/ec21-r19",
+      "refs/heads/activation/ec23-r19",
+      "refs/heads/activation/ec24-r19",
+      "refs/heads/activation/ec26-r19",
+      "refs/heads/docs/owner-decisions-r19"
+    ],
+    "existing_reclassification": [
+      "P-074",
+      "P-084",
+      "P-085"
+    ],
+    "checker_behavior": "evidence_sequence_check.py requires the live branch before honoring push-not-proven; missing remote verification fails closed",
+    "repair_rule": "append-only; inspect all records; distinguish dead refs, unavailable runs, and independently provable commits; no rewriting or invention"
+  },
+  "required_reading": {
+    "files": [
+      {
+        "path": "AGENTS.md",
+        "bytes": 4021,
+        "sha256": "5e320939a11135a0d8aed5caa231df6aeaf633d724fcb4dba97b5909e51420b4",
+        "blob": "85767237399ffb30f3e45894d9dfbe6f4240584f"
+      },
+      {
+        "path": "constitution.md",
+        "bytes": 622,
+        "sha256": "cfdd5ba3babda31513b55894a49597fbfb18c2e870535a068c8b0ea423c53ce8",
+        "blob": "211ad2c5d4b40059d9f3f03de12e0701f9235bc7"
+      },
+      {
+        "path": "ENGINEERING_CONSTITUTION.md",
+        "bytes": 20572,
+        "sha256": "e0f256f78f2c1256228c4286311cba15800dcd5a6c8005583508ee66d27983f5",
+        "blob": "b6bb35e84956d84a8c9d9e65734c212baf3ed075"
+      },
+      {
+        "path": "docs/coder/BRIEF.md",
+        "bytes": 3671,
+        "sha256": "8f07edfbba9d3e57de623e242125e942369bc5d60df5805343b26b9048c52e07",
+        "blob": "052a84ca829d321dc0841a4b1c8702145dcbf6b5"
+      },
+      {
+        "path": "docs/decisions/OWNER_DECISIONS.md",
+        "bytes": 72329,
+        "sha256": "59ccd5e84176a8a610c8c234cbb95fec4734478cc1f35668599ad2e3aef3172a",
+        "blob": "12906bf5997a3e2c6b5c41e5d5c60fee14613274"
+      },
+      {
+        "path": "docs/P0_STATUS.md",
+        "bytes": 35347,
+        "sha256": "3f129dd18b9e5cf8888b763158cda42de270a8429a48ed7cc9a3aa675e810e0f",
+        "blob": "a31517abbc046c495930ba19ef7aeaf8bb72f2d0"
+      }
+    ],
+    "complete": true,
+    "read_before_edit": true
+  },
+  "scope": {
+    "canonical_ingestion": [
+      "PDB and mmCIF parity",
+      "HETATM and polymer-HETATM treatment",
+      "alternate conformer selection",
+      "deterministic occupancy tie-break",
+      "explicit model and residue identity policy",
+      "water/ligand exclusion accounting",
+      "source-backed malformed/discarded record tracking"
+    ],
+    "coverage": [
+      "source-backed denominator",
+      "required-observation accounting",
+      "no fabricated experimental 100%",
+      "no malformed-record coverage inflation"
+    ],
+    "od07_identity": [
+      "full SHA-256 audit ID",
+      "coordinate identity plus canon hash plus matrix hash",
+      "canonical serialization with delimiters",
+      "atom-order invariance",
+      "remove temporary UUID-derived audit ID"
+    ],
+    "geometry": [
+      "LAW-120 genuine peptide-bond continuity",
+      "LAW-125/135/160 dependency",
+      "insertion-code continuity",
+      "LAW-130 clash-pair identity and adjacency exclusions",
+      "finite-input propagation"
+    ],
+    "confidence_and_p1": [
+      "LAW-100 canonical denominator/scope",
+      "missing/inapplicable evidence not favorable",
+      "trace pLDDT through API/NKG/PDF",
+      "experimental B-factor never exposed as pLDDT",
+      "Ramachandran external comparison remains outstanding"
+    ],
+    "calibration_provenance": [
+      "resolve evidence references and verify actual bytes",
+      "mandatory run integrity manifest",
+      "coordinate/calibration/run/policy/artifact binding",
+      "reject or classify unpinned model inputs",
+      "future authoritative input identity fields",
+      "defect-injection tests"
+    ],
+    "evidence": [
+      "P-091-CONFIRM with exact push-event evidence",
+      "P-092-INTENT introduced by final commit",
+      "append-only historical repair",
+      "preserve P-087/P-088 bytes",
+      "machine-readable audit report",
+      "exact-SHA local and remote verification"
+    ]
+  },
+  "constraints": {
+    "od_16": "active: no merge, deploy, v25 calibration, held-out evaluation, threshold/cohort change, or golden regeneration",
+    "od_14": "roadmap D2 does not supersede controlling decision; C5 diagnostic only",
+    "append_only": true,
+    "historical_rewrite": false,
+    "global_waiver": false,
+    "invented_evidence": false,
+    "force_push": false,
+    "post_terminal_commits": false,
+    "pat_handling": "never expose, commit, log, or persist",
+    "checker_encoding": "set PYTHONIOENCODING=utf-8 on Windows",
+    "hash_locks": {
+      "law_canon": "f24ec581b3e04732",
+      "modality_matrix": "ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4",
+      "law_registry_sha256": "81b57f4c68164522b6a27f810da33c2108c1af9682d018ba15c9b8a92a8d0123",
+      "law_semantic_sha256": "d2b3b8501b1c73f67e7839662f70b68596d3c1e25b51d824d6b8a78325816dd5"
+    }
+  },
+  "planned_commits": [
+    {
+      "step": 0,
+      "purpose": "Record required reading note and machine-readable preflight before code changes",
+      "files": [
+        "docs/audit-evidence/2026-10-23/od-scope-v25-engine-audit/reading-note.md",
+        "docs/audit-evidence/2026-10-23/od-scope-v25-engine-audit/preflight.json"
+      ]
+    },
+    {
+      "step": 1,
+      "purpose": "Canonical ingestion, source-backed coverage, and OD-07 identity with tests",
+      "files": [
+        "backend/tos/ingestion/processor.py",
+        "backend/tos/ingestion/structure_object.py",
+        "backend/tos/engine/tier1_measurements.py",
+        "backend/main.py",
+        "backend/tests/test_ids.py",
+        "backend/requirements.txt",
+        "backend/requirements-lock.txt"
+      ]
+    },
+    {
+      "step": 2,
+      "purpose": "Geometry continuity and LAW-100/confidence/provenance fixes with tests",
+      "files": [
+        "backend/tos/engine/coord_math.py",
+        "backend/tos/engine/tier1_measurements.py",
+        "backend/calibration/evaluate.py",
+        "backend/calibration/runner.py"
+      ]
+    },
+    {
+      "step": 3,
+      "purpose": "Append-only historical evidence repair and exact-candidate audit report",
+      "files": [
+        "docs/evidence/push-log/PUSH_LOG.md",
+        "SHA256SUMS",
+        "docs/audit-evidence/2026-10-23/od-scope-v25-engine-audit/report.json"
+      ]
+    },
+    {
+      "step": 4,
+      "purpose": "Append P-091-CONFIRM and introduce P-092-INTENT in the final commit; regenerate hashes",
+      "files": [
+        "docs/evidence/push-log/PUSH_LOG.md",
+        "SHA256SUMS"
+      ]
+    }
+  ],
+  "affected_callers": [
+    "backend/main.py::_run_physics_sync",
+    "backend/calibration/runner.py::_audit_structure",
+    "backend/tos/engine/batch_processor.py::process_batch",
+    "API governance.audit_id and persisted audit/refinement records",
+    "NKG/PDF confidence presentation",
+    "Tier1/Auditor regression tests"
+  ],
+  "risks": [
+    {
+      "risk": "PDB/mmCIF parsers diverge on residue/altloc identity",
+      "mitigation": "single canonical selection layer; parity fixtures and measurement-equivalence tests"
+    },
+    {
+      "risk": "Including HETATM polymer residues changes verdicts",
+      "mitigation": "explicit declared policy; classify modified residues truthfully; add regression tests; do not hide HETATM"
+    },
+    {
+      "risk": "Coverage changes break downstream expectations",
+      "mitigation": "keep tuple shape; expose basis/counts; update tests to source-backed semantics"
+    },
+    {
+      "risk": "OD-07 change breaks API consumers or tokens",
+      "mitigation": "full deterministic ID; update tests and persisted-record tests; no short IDs"
+    },
+    {
+      "risk": "Historical repair is mistaken for waiver",
+      "mitigation": "inspect each record and append only supported evidence; exact checker run"
+    },
+    {
+      "risk": "Calibration provenance cannot be fully resolved",
+      "mitigation": "fail closed and report BLOCKED; do not mark authoritative or run calibration"
+    },
+    {
+      "risk": "Local pass masks remote failure",
+      "mitigation": "exact-SHA local gates, fast-forward push, then verify every push-event job"
+    },
+    {
+      "risk": "Remote moves before push",
+      "mitigation": "re-check live ref immediately before push; stop and reconcile if not ae8a535"
+    }
+  ],
+  "acceptance_criteria": [
+    "reading note and preflight precede edits",
+    "PDB/mmCIF parity and HETATM/altloc/occupancy tests pass",
+    "coverage is source-backed and cannot be inflated by malformed records",
+    "OD-07 audit ID binds coordinate identity, canon hash, matrix hash and is atom-order invariant",
+    "geometry tests reject chain breaks, missing insertion codes, and non-bonded adjacency",
+    "pLDDT/B-factor separation tests pass",
+    "calibration source bytes and mandatory integrity manifest are verified; unpinned inputs fail closed",
+    "historical repair is append-only and preserves P-087/P-088 bytes",
+    "P-091-CONFIRM cites exact post-push evidence; P-092-INTENT is the final commit",
+    "targeted and full suites, acceptance, manifest, secret scan, workflow lint, hash locks and append-only checks pass on exact candidate SHA",
+    "fast-forward push only after live remote equals ae8a535",
+    "post-push live SHA and required jobs verified"
+  ],
+  "rollback": {
+    "before_push": "no remote change; keep branch and recovery material for inspection",
+    "after_push_failure": "do not force-push or rewrite published history; record failure and append only owner-authorized reconciliation",
+    "recovery_source": "preserved ae8a535 checkpoint, recovery bundles, and rejected 01b3d3f recovery branch"
+  }
+}

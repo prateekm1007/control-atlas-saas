@@ -16,6 +16,7 @@ All modality logic delegated to modality_matrix.py.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -24,9 +25,27 @@ from tos.governance.station_sop import (
     DETERMINISTIC_COUNT,
     HEURISTIC_COUNT,
     LAW_METHOD_CLASSIFICATIONS,
+    RETIRED_LAWS,
     ARCHITECTURE_WEIGHTS,
 )
 from tos.governance.modality_matrix import resolve_method
+
+
+MEASURED_STATUSES = frozenset({"PASS", "FAIL", "VETO"})
+MISSING_STATUSES = frozenset({"NOT_MEASURED", "MEASUREMENT_FAILED"})
+VALID_STATUSES = MEASURED_STATUSES | MISSING_STATUSES | {"NOT_APPLICABLE"}
+
+APPPLICABILITY_EVIDENCE = {
+    "LAW-145": frozenset({"no chiral residue centres", "glycine-only eligible residues"}),
+    "LAW-150": frozenset({"no eligible residue types with a chi1 rotamer"}),
+    "LAW-195": frozenset(
+        {
+            "no cysteine residues are present",
+            "no disulfide pairs were detected",
+        }
+    ),
+    "LAW-182": frozenset({"no hydrophobic residues are present"}),
+}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -73,6 +92,7 @@ class AdjudicationResult:
     law_rows: list = field(default_factory=list)
     failing_deterministic: list = field(default_factory=list)
     verdict: str = "INDETERMINATE"
+    verdict_reason: Optional[str] = None
     deterministic_score: int = 0
     advisory_score: int = 0
     det_passed: int = 0
@@ -88,15 +108,26 @@ class AdjudicationResult:
 # VERDICT LOGIC (moved verbatim from main.py _compute_verdict)
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def _coverage_is_valid(coverage) -> bool:
+    """Coverage is a finite percentage; malformed values must fail closed."""
+    if isinstance(coverage, bool) or not isinstance(coverage, (int, float)):
+        return False
+    value = float(coverage)
+    return math.isfinite(value) and 0.0 <= value <= 100.0
+
+
 def _compute_verdict(res_t1: list[dict], coverage: float) -> str:
     """
     Determine binary verdict from classified law rows and coverage.
 
     Logic preserved exactly from main.py:
-    - Coverage below LAW-105 threshold → INDETERMINATE
+    - Invalid or below-threshold LAW-105 coverage → INDETERMINATE
     - Any deterministic law with FAIL or VETO → VETO
     - Otherwise → PASS
     """
+    if not _coverage_is_valid(coverage):
+        return "INDETERMINATE"
+
     cov_threshold = float(LAW_CANON["LAW-105"]["threshold"])
     if coverage < cov_threshold:
         return "INDETERMINATE"
@@ -105,7 +136,106 @@ def _compute_verdict(res_t1: list[dict], coverage: float) -> str:
         if r["method"] == "deterministic" and r["status"] in ("FAIL", "VETO"):
             return "VETO"
 
+    for r in res_t1:
+        if (
+            r["method"] == "deterministic"
+            and r["status"] in ("NOT_MEASURED", "MEASUREMENT_FAILED", "NOT_APPLICABLE")
+        ):
+            return "INDETERMINATE"
+
     return "PASS"
+
+
+def _normalize_sample(raw_sample) -> tuple[int, Optional[str]]:
+    """Strict sample-count normalization without boolean/fractional coercion."""
+    if isinstance(raw_sample, bool):
+        return 0, "sample size is a boolean, not an integer count"
+    if not isinstance(raw_sample, int):
+        return 0, f"sample size {raw_sample!r} is not an integer count"
+    if raw_sample < 0:
+        return 0, "sample size is negative"
+    return raw_sample, None
+
+
+def _normalize_observation(raw_observed) -> tuple[object, Optional[str]]:
+    """Normalize numeric observations only after rejecting invalid values."""
+    if raw_observed is None:
+        return None, None
+    if isinstance(raw_observed, bool):
+        return None, "observation is a boolean, not a finite number"
+    if isinstance(raw_observed, (int, float)):
+        observed = float(raw_observed)
+    else:
+        try:
+            observed = float(raw_observed)
+        except (TypeError, ValueError):
+            return None, f"observation {raw_observed!r} is not a finite number"
+    if not math.isfinite(observed):
+        return None, f"observation {raw_observed!r} is not a finite number"
+    return observed, None
+
+
+def _applicability_reason(lid: str, m: dict) -> Optional[str]:
+    """Return a truthful reason when a law-specific NOT_APPLICABLE claim is valid."""
+    allowed = APPPLICABILITY_EVIDENCE.get(lid)
+    if allowed is None:
+        return None
+    reason = str(m.get("reason", "")).lower()
+    return m.get("reason") if any(marker in reason for marker in allowed) else None
+
+
+def _normalize_measurement(
+    m: dict, lid: Optional[str] = None, *, method: str = "deterministic"
+) -> tuple[str, object, int, Optional[str]]:
+    """Fail closed on unknown or internally inconsistent measurement rows."""
+    raw_status = m.get("status", "NOT_MEASURED")
+    status = str(raw_status).strip().upper() if isinstance(raw_status, str) else "INVALID"
+    observed, observed_error = _normalize_observation(m.get("observed"))
+    if observed_error:
+        return "MEASUREMENT_FAILED", None, 0, observed_error
+    sample, sample_error = _normalize_sample(m.get("sample", 0))
+    if sample_error:
+        return "MEASUREMENT_FAILED", None, 0, sample_error
+
+    if status not in VALID_STATUSES:
+        return "MEASUREMENT_FAILED", None, sample, f"unknown measurement status {raw_status!r}"
+
+    if status in MEASURED_STATUSES and (observed is None or sample == 0):
+        return (
+            "MEASUREMENT_FAILED",
+            None,
+            sample,
+            "measured status claimed without a numeric observation and positive sample",
+        )
+
+    if status == "NOT_APPLICABLE":
+        if observed is not None or sample != 0:
+            return (
+                "MEASUREMENT_FAILED",
+                None,
+                sample,
+                "NOT_APPLICABLE must not carry an observation or nonzero sample",
+            )
+        if lid and method == "deterministic":
+            reason = _applicability_reason(lid, m)
+            if reason is None:
+                return (
+                    "MEASUREMENT_FAILED",
+                    None,
+                    sample,
+                    f"{lid} cannot prove NOT_APPLICABLE for this structure",
+                )
+        return status, None, sample, None
+
+    if status in MISSING_STATUSES and observed is not None:
+        return (
+            "MEASUREMENT_FAILED",
+            None,
+            sample,
+            "missing-evidence status carried a numeric observation",
+        )
+
+    return status, observed, sample, None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -131,41 +261,61 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
     # ── Stage 3: Law Classification Loop ─────────────────────────────────
     for lid in sorted(LAW_CANON.keys()):
         m = inp.raw_measurements.get(
-            lid, {"observed": 0, "deviation": "0.0", "sample": 0, "status": "FAIL"}
+            lid,
+            {"observed": None, "deviation": None, "sample": 0, "status": "NOT_MEASURED"},
         )
         method = LAW_METHOD_CLASSIFICATIONS.get(lid, "unknown")
 
-        # PIL-CAL-03: Modality-Aware Enforcement Matrix (v22.5.3)
-        # Delegated to modality_matrix.json — see modality_matrix.py for loader.
-        method = resolve_method(
-            law_id=lid,
-            is_experimental=inp.is_experimental,
-            method_type=inp.method_type,
-            default_method=method,
-        )
+        # OD-03: LAW-155 is retained for traceability but retired from
+        # enforced semantics. No modality rule may reactivate it.
+        if lid in RETIRED_LAWS:
+            method = "retired"
+        else:
+            # PIL-CAL-03: Modality-Aware Enforcement Matrix (v22.5.3)
+            # Delegated to modality_matrix.json — see modality_matrix.py for loader.
+            method = resolve_method(
+                law_id=lid,
+                is_experimental=inp.is_experimental,
+                method_type=inp.method_type,
+                default_method=method,
+            )
 
-        # PIL-CAL-03: Advisory laws cannot VETO — normalize status
-        raw_status = m.get("status", "FAIL")
-        if method == "advisory_experimental" and raw_status == "VETO":
-            raw_status = "FAIL (Advisory)"
+        # PIL-CAL-03: Advisory/heuristic laws cannot issue a VETO.
+        raw_status = m.get("status", "NOT_MEASURED")
+        normalized, observed, sample, normalization_error = _normalize_measurement(
+            m, lid, method=method
+        )
+        if method == "retired":
+            display_status = "RETIRED"
+        elif method in ("advisory_experimental", "heuristic") and normalized == "VETO":
+            display_status = "FAIL (Advisory)"
+        else:
+            display_status = normalized
 
         row = {
-            "law_id": lid, "title": LAW_CANON[lid]["title"], "status": raw_status,
-            "method": method,
-            "observed": m.get("observed", 0), "threshold": LAW_CANON[lid]["threshold"],
+            "law_id": lid, "title": LAW_CANON[lid]["title"], "status": display_status,
+            "raw_status": raw_status, "method": method,
+            "enforced": method != "retired",
+            "observed": observed, "threshold": LAW_CANON[lid]["threshold"],
             "operator": LAW_CANON[lid]["operator"], "units": LAW_CANON[lid]["unit"],
-            "deviation": m.get("deviation", "0.0"), "sample_size": m.get("sample", 0),
+            "deviation": m.get("deviation"), "sample_size": sample,
             "scope": LAW_CANON[lid]["scope"], "principle": LAW_CANON[lid].get("principle", "N/A")
         }
         # Phase A.5: Propagate residue-level diagnostics if present
-        if "granularity" in m:
-            row["granularity"] = m["granularity"]
-        if "failing_residues" in m:
-            row["failing_residues"] = m["failing_residues"]
-        if "failing_residue_pairs" in m:
-            row["failing_residue_pairs"] = m["failing_residue_pairs"]
+        for key in ("granularity", "failing_residues", "failing_residue_pairs",
+                    "reason", "plddt_advisory"):
+            if key in m:
+                row[key] = m[key]
+        if normalization_error is not None:
+            prior_reason = row.get("reason")
+            if prior_reason == normalization_error:
+                row["reason"] = normalization_error
+            else:
+                row["reason"] = (
+                    f"{prior_reason}; {normalization_error}" if prior_reason else normalization_error
+                )
         res_t1.append(row)
-        if m.get("status", "FAIL") in ("FAIL", "VETO") and row["method"] == "deterministic":
+        if display_status in ("FAIL", "VETO") and row["method"] == "deterministic":
             failing_det.append(f"{lid}: {LAW_CANON[lid]['title']}")
 
     # ── Stage 4: Scoring ─────────────────────────────────────────────────
@@ -178,7 +328,9 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
     heur_passed = sum(1 for r in res_t1 if r["status"] == "PASS" and r["method"] == "heuristic")
     adv_score = int((heur_passed / max(HEURISTIC_COUNT, 1)) * 100)
 
-    verdict = _compute_verdict(res_t1, inp.coverage)
+    coverage = inp.coverage
+    coverage_valid = _coverage_is_valid(coverage)
+    verdict = _compute_verdict(res_t1, coverage)
 
     # PIL-MTH-12: Strategic Success Math
     raw_s6 = round(det_score / 100.0, 4)
@@ -187,7 +339,14 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
 
     # Coverage Gate Logic
     cov_threshold = float(LAW_CANON["LAW-105"]["threshold"])
-    if inp.coverage < cov_threshold:
+    if not coverage_valid:
+        s6_final = 0.0
+        p_score = 0
+        suppression = (
+            "Coverage is not a finite percentage in [0, 100]; "
+            "prioritization index suppressed."
+        )
+    elif coverage < cov_threshold:
         s6_final = 0.0
         p_score = 0
         suppression = "Coverage gate enforces zeroing of prioritization index."
@@ -196,10 +355,32 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
         p_score = int(s6_final * w_arch * (1.0 - m_s8) * 100)
         suppression = None
 
+    if not coverage_valid:
+        verdict_reason = (
+            "LAW-105 residue coverage is not a finite percentage in [0, 100]"
+        )
+    elif coverage < cov_threshold:
+        verdict_reason = (
+            f"LAW-105 residue coverage {round(coverage, 2)}% is below "
+            f"the {cov_threshold}% minimum"
+        )
+    elif verdict == "VETO":
+        verdict_reason = "Deterministic violation: " + "; ".join(failing_det)
+    elif verdict == "INDETERMINATE":
+        unavailable = [
+            r["law_id"] for r in res_t1
+            if r["method"] == "deterministic"
+            and r["status"] in ("NOT_MEASURED", "MEASUREMENT_FAILED", "NOT_APPLICABLE")
+        ]
+        verdict_reason = "Mandatory deterministic measurement unavailable: " + ", ".join(unavailable)
+    else:
+        verdict_reason = None
+
     return AdjudicationResult(
         law_rows=res_t1,
         failing_deterministic=failing_det,
         verdict=verdict,
+        verdict_reason=verdict_reason,
         deterministic_score=det_score,
         advisory_score=adv_score,
         det_passed=det_passed,

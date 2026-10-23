@@ -42,11 +42,10 @@ class TestLaw120:
 
     def test_sample_counts_angles(self, simple_backbone):
         """Verify sample reflects actual angle measurements taken.
-        3 residues with N,CA,C each:
+        3 residues with N,CA,C,O each:
           - 3 intra-residue N-CA-C angles
-          - 2 intra-residue O-C-N angles (res 1 and 3 have O; res 2 has O too)
+          - 2 inter-residue O(i)-C(i)-N(i+1) angles
           - 2 inter-residue CA-C-N angles
-        Total depends on which atoms are present and which pairs are sequential.
         """
         struct = Structure(
             atoms=simple_backbone, audit_id="TEST",
@@ -54,8 +53,44 @@ class TestLaw120:
         )
         results, _, _ = Tier1Measurements.run_full_audit(struct)
         res = results["LAW-120"]
-        # At minimum: 3 N-CA-C + 2 CA-C-N = 5 (O-C-N depends on atom presence)
-        assert res["sample"] >= 5
+        assert res["sample"] == 7
+
+    def test_o_c_n_uses_next_residue(self, simple_backbone):
+        """Dropping a residue's N removes its N-CA-C, incoming O-C-N, and incoming CA-C-N."""
+        struct = Structure(
+            atoms=simple_backbone, audit_id="TEST",
+            confidence=ConfidenceProfile([], False, "predicted")
+        )
+        baseline, _, _ = Tier1Measurements.run_full_audit(struct)
+
+        without_next_n = [
+            a for a in simple_backbone
+            if not (a.chain_id == "A" and a.res_seq == 3 and a.atom_name == "N")
+        ]
+        struct2 = Structure(
+            atoms=without_next_n, audit_id="TEST2",
+            confidence=ConfidenceProfile([], False, "predicted")
+        )
+        reduced, _, _ = Tier1Measurements.run_full_audit(struct2)
+        assert reduced["LAW-120"]["sample"] == baseline["LAW-120"]["sample"] - 3
+
+    def test_chain_boundary_has_no_inter_residue_angles(self):
+        atoms = [
+            _make_atom("N", "N", [0.0, 0.0, 0.0], res_seq=1, chain_id="A"),
+            _make_atom("CA", "C", [1.47, 0.0, 0.0], res_seq=1, chain_id="A"),
+            _make_atom("C", "C", [2.5, 1.0, 0.0], res_seq=1, chain_id="A"),
+            _make_atom("O", "O", [2.5, 1.0, 1.2], res_seq=1, chain_id="A"),
+            _make_atom("N", "N", [50.0, 0.0, 0.0], res_seq=2, chain_id="B"),
+            _make_atom("CA", "C", [51.47, 0.0, 0.0], res_seq=2, chain_id="B"),
+            _make_atom("C", "C", [52.5, 1.0, 0.0], res_seq=2, chain_id="B"),
+            _make_atom("O", "O", [52.5, 1.0, 1.2], res_seq=2, chain_id="B"),
+        ]
+        struct = Structure(
+            atoms=atoms, audit_id="BOUNDARY",
+            confidence=ConfidenceProfile([], False, "predicted")
+        )
+        results, _, _ = Tier1Measurements.run_full_audit(struct)
+        assert results["LAW-120"]["sample"] == 2
 
     def test_veto_on_distorted_angles(self):
         """Create geometry with badly distorted angles — should VETO.
@@ -97,6 +132,38 @@ class TestLaw120:
         assert LAW_CANON["LAW-120"]["threshold"] == 18.0
         assert LAW_CANON["LAW-120"]["unit"] == "°"
         assert LAW_CANON["LAW-120"]["type"] == "RMSD"
+
+    def test_degenerate_zero_length_vectors_are_not_angle_samples(self):
+        struct = Structure(
+            atoms=[
+                _make_atom("N", "N", [0.0, 0.0, 0.0]),
+                _make_atom("CA", "C", [0.0, 0.0, 0.0]),
+                _make_atom("C", "C", [1.0, 0.0, 0.0]),
+            ],
+            audit_id="DEGEN",
+            confidence=ConfidenceProfile([], False, "predicted"),
+        )
+        results, _, _ = Tier1Measurements.run_full_audit(struct)
+        assert results["LAW-120"] == {
+            "observed": None,
+            "status": "NOT_MEASURED",
+            "sample": 0,
+            "reason": "no measurable backbone bond angles in the eligible residues",
+        }
+
+    def test_valid_zero_degree_angle_is_still_a_measurement(self):
+        struct = Structure(
+            atoms=[
+                _make_atom("N", "N", [1.0, 0.0, 0.0]),
+                _make_atom("CA", "C", [0.0, 0.0, 0.0]),
+                _make_atom("C", "C", [2.0, 0.0, 0.0]),
+            ],
+            audit_id="ZERO-ANGLE",
+            confidence=ConfidenceProfile([], False, "predicted"),
+        )
+        results, _, _ = Tier1Measurements.run_full_audit(struct)
+        assert results["LAW-120"]["sample"] == 1
+        assert results["LAW-120"]["observed"] >= 0.0
 
     def test_empty_structure(self):
         """Empty structure should not crash."""

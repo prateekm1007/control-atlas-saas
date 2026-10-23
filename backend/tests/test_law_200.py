@@ -106,16 +106,17 @@ class TestLaw200:
         assert abs(res["observed"] - 25.0) < 0.1
         assert res["sample"] == 4
 
-    def test_single_atom(self):
-        """Single atom → bbox 1x1x1 (all clamped) = 1.0 Å³/atom."""
+    def test_single_atom_is_not_measured(self):
+        """A one-coordinate bounding box is not a packing measurement."""
         atoms = [
             _make_atom("CA", "C", [5, 5, 5], res_seq=1),
         ]
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
         res = results["LAW-200"]
-        assert res["status"] == "PASS"
-        assert abs(res["observed"] - 1.0) < 0.1
-        assert res["sample"] == 1
+        assert res["status"] == "NOT_MEASURED"
+        assert res["observed"] is None
+        assert res["sample"] == 0
+        assert "fewer than two" in res["reason"]
 
     def test_uses_station_sop_threshold(self):
         """Verify threshold comes from station_sop.py."""

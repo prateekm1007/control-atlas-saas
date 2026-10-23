@@ -1,7 +1,7 @@
 """
 Batch Processor: Multi-Structure Adjudication
 ----------------------------------------------
-Processes a ZIP of PDB files through the Toscanini engine.
+Processes a ZIP of PDB/mmCIF files through the Toscanini engine.
 
 This module handles:
   - ZIP extraction (in-memory, no disk writes)
@@ -77,9 +77,9 @@ def _extract_pdb_files(zip_bytes: bytes) -> list[tuple[str, bytes]]:
         if "__MACOSX" in name or name.startswith(".") or "/." in name:
             continue
 
-        # Only process .pdb and .ent files
+        # Only process structure files; content is sniffed by the ingestor.
         lower = name.lower()
-        if not (lower.endswith(".pdb") or lower.endswith(".ent")):
+        if not lower.endswith((".pdb", ".ent", ".cif", ".mmcif")):
             continue
 
         content = zf.read(info.filename)
@@ -90,7 +90,7 @@ def _extract_pdb_files(zip_bytes: bytes) -> list[tuple[str, bytes]]:
         pdb_files.append((name, content))
 
     if not pdb_files:
-        raise ValueError("ZIP contains no valid PDB files (.pdb or .ent)")
+        raise ValueError("ZIP contains no valid PDB/mmCIF files (.pdb, .ent, .cif, .mmcif)")
 
     return pdb_files
 

@@ -1,1 +1,0 @@
-EXPLANATION = {"title": "Synthesis Feasibility Tax", "tier": "ADVISORY", "cutoff": "Complexity score", "summary": "Assesses manufacturability based on sequence", "rationale": "Rare codons and multiple cysteines increase synthesis cost and failure rate."}

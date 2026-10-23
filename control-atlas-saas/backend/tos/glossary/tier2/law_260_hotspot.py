@@ -1,1 +1,0 @@
-EXPLANATION = {"title": "Binding Hotspot Dispersion", "tier": "ADVISORY", "cutoff": "15Å radius", "summary": "Binding energy should cluster spatially", "rationale": "Effective interfaces have 'hotspot' residues that cluster spatially for synergistic binding."}

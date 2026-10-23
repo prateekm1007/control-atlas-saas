@@ -1,1 +1,0 @@
-EXPLANATION = {"title": "Helix-Helix Crossing", "principle": "Alpha-helices must pack at allowed ridges-into-grooves angles.", "rationale": "Deviations from canonical crossing angles indicate impossible secondary structure packing."}

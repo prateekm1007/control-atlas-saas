@@ -11,6 +11,7 @@ from tos.engine.adjudicator import (
     _compute_verdict,
 )
 from tos.governance.station_sop import (
+    DETERMINISTIC_LAWS,
     LAW_CANON,
     DETERMINISTIC_COUNT,
     HEURISTIC_COUNT,
@@ -69,11 +70,12 @@ class TestAdjudicateBasicVerdicts:
         result = adjudicate_laws(inp)
         assert result.verdict == "PASS"
 
-    def test_empty_measurements_returns_veto(self):
-        """No measurements → all laws default to FAIL → VETO."""
+    def test_empty_measurements_returns_indeterminate(self):
+        """Missing mandatory evidence is unmeasured, not an invented VETO."""
         inp = _make_input(measurements={}, coverage=100.0)
         result = adjudicate_laws(inp)
-        assert result.verdict == "VETO"
+        assert result.verdict == "INDETERMINATE"
+        assert "Mandatory deterministic measurement unavailable" in result.verdict_reason
 
     def test_low_coverage_returns_indeterminate(self):
         inp = _make_input(measurements=_all_passing_measurements(), coverage=5.0)
@@ -180,6 +182,152 @@ class TestAdjudicateResultStructure:
         assert isinstance(result.strategic_math, StrategicMath)
 
 
+class TestMeasurementNormalization:
+
+    def test_measured_status_without_evidence_fails_closed(self):
+        m = _all_passing_measurements()
+        m["LAW-130"] = {
+            "observed": None, "deviation": None, "sample": 100, "status": "PASS"
+        }
+        result = adjudicate_laws(_make_input(measurements=m))
+        row = next(r for r in result.law_rows if r["law_id"] == "LAW-130")
+        assert row["status"] == "MEASUREMENT_FAILED"
+        assert row["observed"] is None
+        assert result.verdict == "INDETERMINATE"
+
+    def test_zero_sample_pass_fails_closed(self):
+        m = _all_passing_measurements()
+        m["LAW-145"] = {
+            "observed": 0, "deviation": "0", "sample": 0, "status": "PASS"
+        }
+        result = adjudicate_laws(_make_input(measurements=m))
+        row = next(r for r in result.law_rows if r["law_id"] == "LAW-145")
+        assert row["status"] == "MEASUREMENT_FAILED"
+        assert row["raw_status"] == "PASS"
+        assert result.verdict == "INDETERMINATE"
+
+    def test_unknown_status_fails_closed(self):
+        m = _all_passing_measurements()
+        m["LAW-160"] = {
+            "observed": 0, "deviation": "0", "sample": 100, "status": "OK"
+        }
+        result = adjudicate_laws(_make_input(measurements=m))
+        row = next(r for r in result.law_rows if r["law_id"] == "LAW-160")
+        assert row["status"] == "MEASUREMENT_FAILED"
+        assert "unknown measurement status" in row["reason"]
+        assert result.verdict == "INDETERMINATE"
+
+    def test_proven_structural_not_applicable_is_not_a_vacuous_pass(self):
+        m = _all_passing_measurements()
+        m["LAW-195"] = {
+            "observed": None, "deviation": None, "sample": 0,
+            "status": "NOT_APPLICABLE", "reason": "no disulfide pairs were detected",
+        }
+        result = adjudicate_laws(_make_input(measurements=m))
+        row = next(r for r in result.law_rows if r["law_id"] == "LAW-195")
+        assert row["status"] == "NOT_APPLICABLE"
+        assert row["observed"] is None
+        assert result.verdict == "INDETERMINATE"
+
+    def test_not_applicable_with_observation_fails_closed(self):
+        m = _all_passing_measurements()
+        m["LAW-195"] = {
+            "observed": 0.0, "deviation": "0", "sample": 1, "status": "NOT_APPLICABLE"
+        }
+        result = adjudicate_laws(_make_input(measurements=m))
+        row = next(r for r in result.law_rows if r["law_id"] == "LAW-195")
+        assert row["status"] == "MEASUREMENT_FAILED"
+        assert result.verdict == "INDETERMINATE"
+
+    @pytest.mark.parametrize("lid", DETERMINISTIC_LAWS)
+    def test_unproven_not_applicable_bypass_fails_closed(self, lid):
+        m = _all_passing_measurements()
+        m[lid] = {"observed": None, "deviation": None, "sample": 0,
+                  "status": "NOT_APPLICABLE"}
+        result = adjudicate_laws(_make_input(measurements=m))
+        row = next(r for r in result.law_rows if r["law_id"] == lid)
+        assert row["status"] == "MEASUREMENT_FAILED"
+        assert "cannot prove NOT_APPLICABLE" in row["reason"]
+        assert result.verdict in ("INDETERMINATE", "VETO")
+
+    @pytest.mark.parametrize("lid,reason", [
+        ("LAW-145", "no chiral residue centres (glycine-only eligible residues)"),
+        ("LAW-150", "no eligible residue types with a chi1 rotamer"),
+        ("LAW-195", "no cysteine residues are present"),
+        ("LAW-195", "no disulfide pairs were detected"),
+    ])
+    def test_proven_not_applicable_states_are_accepted_when_structurally_valid(
+        self, lid, reason
+    ):
+        m = _all_passing_measurements()
+        m[lid] = {"observed": None, "deviation": None, "sample": 0,
+                  "status": "NOT_APPLICABLE", "reason": reason}
+        result = adjudicate_laws(_make_input(measurements=m))
+        row = next(r for r in result.law_rows if r["law_id"] == lid)
+        assert row["status"] == "NOT_APPLICABLE"
+        assert result.verdict == "INDETERMINATE"
+
+    def test_boolean_sample_fails_closed(self):
+        m = _all_passing_measurements()
+        m["LAW-130"] = {"observed": 0.0, "deviation": "0",
+                        "sample": True, "status": "PASS"}
+        result = adjudicate_laws(_make_input(measurements=m))
+        row = next(r for r in result.law_rows if r["law_id"] == "LAW-130")
+        assert row["status"] == "MEASUREMENT_FAILED"
+        assert "boolean" in row["reason"]
+        assert result.verdict == "INDETERMINATE"
+
+    def test_fractional_sample_fails_closed(self):
+        m = _all_passing_measurements()
+        m["LAW-130"] = {"observed": 0.0, "deviation": "0",
+                        "sample": 1.5, "status": "PASS"}
+        result = adjudicate_laws(_make_input(measurements=m))
+        row = next(r for r in result.law_rows if r["law_id"] == "LAW-130")
+        assert row["status"] == "MEASUREMENT_FAILED"
+        assert "not an integer count" in row["reason"]
+        assert result.verdict == "INDETERMINATE"
+
+    def test_boolean_observation_fails_closed(self):
+        m = _all_passing_measurements()
+        m["LAW-130"] = {"observed": True, "deviation": "0",
+                        "sample": 1, "status": "PASS"}
+        result = adjudicate_laws(_make_input(measurements=m))
+        row = next(r for r in result.law_rows if r["law_id"] == "LAW-130")
+        assert row["status"] == "MEASUREMENT_FAILED"
+        assert "boolean" in row["reason"]
+        assert result.verdict == "INDETERMINATE"
+
+    def test_nonfinite_observation_fails_closed(self):
+        m = _all_passing_measurements()
+        m["LAW-130"] = {"observed": float("nan"), "deviation": "0",
+                        "sample": 1, "status": "PASS"}
+        result = adjudicate_laws(_make_input(measurements=m))
+        row = next(r for r in result.law_rows if r["law_id"] == "LAW-130")
+        assert row["status"] == "MEASUREMENT_FAILED"
+        assert "finite" in row["reason"]
+        assert result.verdict == "INDETERMINATE"
+
+    def test_zero_sample_with_not_measured_is_missing_not_pass(self):
+        m = _all_passing_measurements()
+        m["LAW-150"] = {"observed": 0.0, "deviation": "0",
+                        "sample": 0, "status": "NOT_MEASURED"}
+        result = adjudicate_laws(_make_input(measurements=m))
+        row = next(r for r in result.law_rows if r["law_id"] == "LAW-150")
+        assert row["status"] == "MEASUREMENT_FAILED"
+        assert "carried a numeric observation" in row["reason"]
+        assert result.verdict == "INDETERMINATE"
+
+    def test_adjudicated_score_and_strategic_math_agree_with_indeterminate_verdict(self):
+        m = _all_passing_measurements()
+        m["LAW-195"] = {"observed": None, "deviation": None, "sample": 0,
+                        "status": "NOT_APPLICABLE"}
+        result = adjudicate_laws(_make_input(measurements=m))
+        assert result.verdict == "INDETERMINATE"
+        assert result.deterministic_score < 100
+        assert result.strategic_math.s6 < 1.0
+        assert result.strategic_math.p_score < 100
+
+
 class TestComputeVerdict:
 
     def test_pass_with_no_failures(self):
@@ -211,3 +359,23 @@ class TestComputeVerdict:
             {"method": "heuristic", "status": "FAIL"},
         ]
         assert _compute_verdict(rows, 100.0) == "PASS"
+
+    @pytest.mark.parametrize("coverage", [
+        float("nan"), float("inf"), float("-inf"),
+        -1.0, 101.0, None, "100", True,
+    ])
+    def test_invalid_coverage_fails_closed(self, coverage):
+        result = adjudicate_laws(_make_input(
+            measurements=_all_passing_measurements(), coverage=coverage))
+        assert result.verdict == "INDETERMINATE"
+        assert result.strategic_math.s6 == 0.0
+        assert result.strategic_math.p_score == 0
+        assert "coverage" in (result.verdict_reason or "").lower()
+
+    @pytest.mark.parametrize("coverage", [
+        float("nan"), float("inf"), float("-inf"),
+        -1.0, 101.0, None, "100", True,
+    ])
+    def test_compute_verdict_rejects_invalid_coverage(self, coverage):
+        rows = [{"method": "deterministic", "status": "PASS"}]
+        assert _compute_verdict(rows, coverage) == "INDETERMINATE"

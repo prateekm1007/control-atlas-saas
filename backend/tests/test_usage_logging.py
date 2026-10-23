@@ -27,7 +27,7 @@ def _sample_payload():
         "governance": {
             "audit_id": "TEST1234",
             "governance_fingerprint": {
-                "canon_hash": "6a9cd4b4349b81de",
+                "canon_hash": "f24ec581b3e04732",
                 "matrix_hash": "ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4",
             },
         },
@@ -57,7 +57,7 @@ class TestBuildUsageRecord:
 
     def test_canon_hash_matches_payload(self):
         record = build_usage_record(_sample_payload(), "/ingest")
-        assert record["canon_hash"] == "6a9cd4b4349b81de"
+        assert record["canon_hash"] == "f24ec581b3e04732"
 
     def test_matrix_hash_truncated(self):
         record = build_usage_record(_sample_payload(), "/ingest")

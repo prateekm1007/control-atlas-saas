@@ -1,0 +1,71 @@
+{
+ "excluded": {
+  "AF-P0DTC2-F1": "OD-11 exclusion"
+ },
+ "note": "Supplementary acquisition records for the current-AlphaFold cohort. AF-P0DTC2-F1 is excluded under OD-11 and is not included.",
+ "records": {
+  "AF-O15111-F1": {
+   "fmt": "cif",
+   "latest_version": 0,
+   "model_entity_id": "AF-O15111-F1",
+   "sha256": "12e729391f820a90c375169b5cda5bc1fe9daeee993ec70510788c75e76dd001",
+   "source_url": "https://alphafold.ebi.ac.uk/files/AF-O15111-F1-model_v6.cif"
+  },
+  "AF-P00533-F1": {
+   "fmt": "cif",
+   "latest_version": 0,
+   "model_entity_id": "AF-P00533-F1",
+   "sha256": "485413c9edb379204b45cae0191e4d44aa136d160da78ccbed69a4678f8e392f",
+   "source_url": "https://alphafold.ebi.ac.uk/files/AF-P00533-F1-model_v6.cif"
+  },
+  "AF-P02768-F1": {
+   "fmt": "cif",
+   "latest_version": 0,
+   "model_entity_id": "AF-P02768-F1",
+   "sha256": "8ac73784130a34b8c1464aedff4cc559b137283a7c4cd415d6835a3201f7df9f",
+   "source_url": "https://alphafold.ebi.ac.uk/files/AF-P02768-F1-model_v6.cif"
+  },
+  "AF-P04637-F1": {
+   "fmt": "cif",
+   "latest_version": 0,
+   "model_entity_id": "AF-P04637-F1",
+   "sha256": "4332bff49301d04434b6e3b43c439aa5bd8238760e88c7142f7d0c0851a68e5d",
+   "source_url": "https://alphafold.ebi.ac.uk/files/AF-P04637-F1-model_v6.cif"
+  },
+  "AF-P10636-F1": {
+   "fmt": "cif",
+   "latest_version": 0,
+   "model_entity_id": "AF-P10636-F1",
+   "sha256": "4483cfbf98313391c3af30fbd3b125d201d2d049551724ad6e910de313456050",
+   "source_url": "https://alphafold.ebi.ac.uk/files/AF-P10636-F1-model_v6.cif"
+  },
+  "AF-P21802-F1": {
+   "fmt": "cif",
+   "latest_version": 0,
+   "model_entity_id": "AF-P21802-F1",
+   "sha256": "aac8e34cddcff68a8137f1fe8bf1745c95fd4fc9a69f7da9d5ed4c52f7bc3d1e",
+   "source_url": "https://alphafold.ebi.ac.uk/files/AF-P21802-F1-model_v6.cif"
+  },
+  "AF-P62988-F1": {
+   "model_entity_id": "AF-P62988-F1",
+   "unavailable": "HTTP Error 404: Not Found"
+  },
+  "AF-P68871-F1": {
+   "fmt": "cif",
+   "latest_version": 0,
+   "model_entity_id": "AF-P68871-F1",
+   "sha256": "0c1603478734a034d38f807a57badc41c2e2086daaa98334d218a9c70ace1f4e",
+   "source_url": "https://alphafold.ebi.ac.uk/files/AF-P68871-F1-model_v6.cif"
+  },
+  "AF-Q9Y6K9-F1": {
+   "fmt": "cif",
+   "latest_version": 0,
+   "model_entity_id": "AF-Q9Y6K9-F1",
+   "sha256": "e2032e9be33052d38af99ae0c24a1ad68a27846cf2cffaf12d3693e211420eac",
+   "source_url": "https://alphafold.ebi.ac.uk/files/AF-Q9Y6K9-F1-model_v6.cif"
+  }
+ },
+ "unavailable": [
+  "AF-P62988-F1"
+ ]
+}
