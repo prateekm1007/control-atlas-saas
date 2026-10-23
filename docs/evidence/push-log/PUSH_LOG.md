@@ -672,3 +672,28 @@
   records the remote-verified tip after that push returns. Until then the tip
   pushed by this INTENT is disclosed as PENDING by the evidence-sequence
   checker - the designed, truthful state.
+
+## 2026-10-23T02:02:00Z | P-090 | intent-reconcile | voids=P-088-INTENT branch=review/od-scope-v25 credential=OWNER-PAT-1 evidence="the local candidate 01b3d3f0508d00e2b1d638a32d82b9cd7dd1cbe6 was rejected because it replaced the preserved P-087/P-088 bytes with rewritten P-090/P-091 records; that edit is not a byte-prefix of its parent and is excluded from the published lineage; this reconstruction from e71cec36d8189125b74568343a80fff1eb9637cd preserves P-087/P-088 byte-for-byte and redeclares the terminal intent as P-091-INTENT on the reconstructed candidate; the replayed code commit corresponding to original 459dd55 is 7bdb270143a42c3b20f29b09234a9eb3757b166b; no published history is rewritten and no force-push is used"
+
+- Truthful void record: P-088-INTENT's content is preserved unchanged in this
+  reconstructed lineage; only its pairing obligation is discharged.
+- The rejected commit's P-090/P-091 text is not reused. This P-090 and the
+  following P-091 are new records on the reconstructed candidate.
+
+## 2026-10-23T02:02:01Z | P-091-INTENT | push-intent | branch=review/od-scope-v25 head_at_intent=DEFERRED expected_remote_tip_before_push=e71cec36d8189125b74568343a80fff1eb9637cd credential=OWNER-PAT-1 authorized_by="owner directions recorded 2026-10-23: reconstruct the unpublished candidate from the live base, exclude the destructive push-log edit, preserve all legitimate engine/calibration/evidence work, independently audit the reconstructed exact candidate, push only this reviewed branch under the two-phase protocol, and perform no merge/deployment/v25 calibration/held-out work; OD-16 remains in force"
+
+- This push carries the replayed engine/geometry/confidence/evaluator/runner
+  corrections, the preserved P-087/P-088 records, P-090, the iteration-4
+  evidence, and the regenerated manifest. The reconstruction base is
+  e71cec36d8189125b74568343a80fff1eb9637cd; the rejected 01b3d3f is excluded.
+- Post-replay audit corrections: non-finite coverage and coordinates now fail
+  closed; forensic confidence rendering is limited to observed pLDDT and never
+  imputes missing values; the dead `tos.router` package and stale nested
+  duplicate engine tree were removed; the exact 8,364-byte evaluation protocol
+  was recovered with provenance only. OD-16 remains in force.
+- ID selection: P-090 and P-091 were verified unused on the reconstructed
+  published lineage; P-089 remains unused.
+- head_at_intent is DEFERRED per the two-phase schema; the introducing commit
+  is the exact reconstructed candidate. Until P-091-CONFIRM is appended after
+  the push returns, the tip pushed by this INTENT is disclosed as PENDING by
+  the evidence-sequence checker - the designed, truthful state.
