@@ -697,3 +697,5 @@
   is the exact reconstructed candidate. Until P-091-CONFIRM is appended after
   the push returns, the tip pushed by this INTENT is disclosed as PENDING by
   the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-24T00:05:00Z | P-092-INTENT | push-intent | branch=fix/od-scope-residue-coverage-advisory head_at_intent=DEFERRED expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1 authorized_by="auditor directions 2026-10-24 (P1-P8): implement residue-order fix, source-backed coverage, LAW-130/182/155 advisory/contract work, PDB-mmCIF parity, OD-07 binding, calibration diagnostic-only gates on the integration candidate; push only this reviewed branch under the two-phase protocol; no merge/deployment/v25 calibration/held-out work; OD-16 remains in force"
