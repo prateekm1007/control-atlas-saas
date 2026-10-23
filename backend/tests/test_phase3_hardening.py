@@ -43,7 +43,7 @@ class TestGovernanceFingerprintStructure:
 
     def test_canon_hash_matches_locked_value(self):
         fp = self._build_fingerprint()
-        assert fp["canon_hash"] == "f24ec581b3e04732", (
+        assert fp["canon_hash"] == "6a9cd4b4349b81de", (
             f"Canon hash drifted: {fp['canon_hash']}"
         )
 

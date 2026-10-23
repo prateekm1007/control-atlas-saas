@@ -105,7 +105,11 @@ def test_run_calibration_local_end_to_end(tmp_path, monkeypatch):
     results = json.loads(
         (out / "calibration_results.json").read_text(encoding="utf-8"))
     assert results["targets"]["1CRN"]["measurement_status"] == "measured"
-    assert results["targets"]["1CRN"]["laws"]["LAW-155"]["status"] == "RETIRED"
+    # LAW-155 is advisory/heuristic (not retired) — status must be a
+    # non-veto advisory/normal status, never "RETIRED".
+    assert results["targets"]["1CRN"]["laws"]["LAW-155"]["status"] in {
+        "PASS", "FAIL (Advisory)", "NOT_MEASURED", "NOT_APPLICABLE",
+    }
 
     manifest_lines = (out / "MANIFEST.sha256").read_text(encoding="utf-8").splitlines()
     manifest_names = {line.split("  ", 1)[1] for line in manifest_lines}

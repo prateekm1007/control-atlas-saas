@@ -64,11 +64,11 @@ LAW_CANON = {
     "LAW-200": {"title": "Packing Quality", "threshold": 300.0, "unit": "Å³/atom", "operator": "<=", "scope": "bounding box", "type": "Rate"}
 }
 
-RETIRED_LAWS = {"LAW-155"}
+RETIRED_LAWS = set()
 LAW_METHOD_CLASSIFICATIONS = {
     lid: (
         "retired" if lid in RETIRED_LAWS
-        else ("deterministic" if lid not in ["LAW-182", "LAW-200"] else "heuristic")
+        else ("deterministic" if lid not in ["LAW-182", "LAW-200", "LAW-155"] else "heuristic")
     )
     for lid in LAW_CANON
 }

@@ -26,8 +26,8 @@ SEMANTIC_SHA256_FILE = REPO / "governance" / "law_semantic.sha256"
 MEASUREMENTS = REPO / "backend" / "tos" / "engine" / "tier1_measurements.py"
 
 # Recorded content hash of governance/law_registry.yaml (WP-8 requirement).
-REGISTRY_SHA256 = "81b57f4c68164522b6a27f810da33c2108c1af9682d018ba15c9b8a92a8d0123"
-LAW_SEMANTIC_SHA256 = "d2b3b8501b1c73f67e7839662f70b68596d3c1e25b51d824d6b8a78325816dd5"
+REGISTRY_SHA256 = "8f21ccb449469b9707d2ee51b56e4e381fe496b67bc7395683a6eeda792825d3"
+LAW_SEMANTIC_SHA256 = "f825f38b9493a9409aa9678c1f98593e7715ba6b9e01aefba808096571a27750"
 
 yaml = pytest.importorskip("yaml", reason="PyYAML comes from requirements-dev.txt")
 
@@ -51,7 +51,11 @@ class TestRegistryCoversMeasurements:
 
     def test_registry_enforced_set_matches_pinned_canon(self):
         enforced = {k for k, e in ENTRIES.items() if e["status"] == "enforced"}
-        assert enforced == set(LAW_CANON.keys()) - RETIRED_LAWS
+        # Non-enforced laws are exactly the retired set plus LAW-155 (advisory
+        # heuristic). Everything else is enforced.
+        non_enforced = {k for k, e in ENTRIES.items() if e["status"] != "enforced"}
+        assert non_enforced == {"LAW-155", "LAW-190", "LAW-210", "LAW-220", "LAW-230"}
+        assert enforced == set(LAW_CANON.keys()) - non_enforced
 
 
 class TestRegistryMatchesPinnedValues:
@@ -69,12 +73,16 @@ class TestRegistryMatchesPinnedValues:
         assert entry["tier"] == LAW_METHOD_CLASSIFICATIONS[law_id]
 
     def test_retired_laws_exactly_match_decision(self):
-        """Brief §4.2 (owner decision): 190/210/220/230 retired, never renumbered."""
+        """Brief §4.2 (owner decision): 190/210/220/230 retired, never renumbered.
+        LAW-155 is NOT retired (D3 / Part-16: defined and advisory)."""
         retired = {k for k, e in ENTRIES.items() if e["status"] == "retired"}
-        assert retired == {"LAW-155", "LAW-190", "LAW-210", "LAW-220", "LAW-230"}
-        for k in retired - {"LAW-155"}:
+        assert retired == {"LAW-190", "LAW-210", "LAW-220", "LAW-230"}
+        for k in retired:
             assert ENTRIES[k]["implementation"] is None
             assert ENTRIES[k]["test"] is None
+        # LAW-155 is advisory/heuristic, not retired
+        assert ENTRIES["LAW-155"]["status"] == "advisory"
+        assert ENTRIES["LAW-155"]["tier"] == "heuristic"
         assert ENTRIES["LAW-155"]["implementation"] is not None
 
 
@@ -169,10 +177,10 @@ class TestGlossaryMatchesPinnedPhysics:
         from tos.glossary.law_glossary import get_law_explanation
         exp = get_law_explanation("LAW-155")
         assert exp["title"] == "Voxel Occupancy"
-        assert exp["status"] == "retired"
-        assert "voxel" in exp["explanation"].lower()
-        assert "retired" in exp["explanation"].lower()
-        assert "cannot overlap" not in exp["explanation"].lower()
+        assert exp["status"] == "advisory"
+        assert exp["tier"] == "heuristic"
+        assert "voxel" in exp["principle"].lower()
+        assert "cannot overlap" not in exp["principle"].lower()
 
     def test_law_170_describes_residue_identity_not_pi(self):
         from tos.glossary.law_glossary import get_law_explanation
