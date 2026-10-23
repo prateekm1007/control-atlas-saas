@@ -199,11 +199,11 @@ class Tier1Measurements:
                             "no law may pass on malformed geometry"
                         ),
                     }
-                }, 0.0, is_experimental
+                }, None, is_experimental
 
         residues = Tier1Measurements._extract(structure)
         if not residues:
-            return {}, 0, is_experimental
+            return {}, None, is_experimental
 
         complete = [
             r for r in residues

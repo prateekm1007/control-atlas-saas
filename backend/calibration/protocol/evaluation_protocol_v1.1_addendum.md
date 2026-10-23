@@ -95,3 +95,16 @@ This addendum reconciles the v1 protocol with the engine audit by:
 5. Not authorizing any new calibration evidence generation
 
 OD-16 remains in force.
+
+
+## 6. Preregistered numeric acceptance rule (recorded 2026-10-24, delegated audit authority)
+
+Acceptance is judged on the validation split (independently labelled acceptable
+structures) using a one-sided 95% exact Clopper-Pearson upper confidence bound
+on the false-veto rate. The bound must be at most 5% both overall and for every
+prespecified modality/quality stratum. Label eligibility, denominators, interval
+calculation, stratum treatment, exclusions and this acceptance rule are fixed
+before outcome inspection. The minimum of 30 samples per planned stratum is a
+feasibility floor, not evidence of acceptance. If evidence cannot satisfy the
+criterion, report infeasibility; do not loosen the rule or tune against
+held-out outcomes.

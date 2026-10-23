@@ -184,7 +184,12 @@ def generate_v21_dossier(payload):
 
         is_experimental = ss.get("source_type") != "predicted"
         verdict_binary = v.get("binary", "ERROR")
-        coverage = v.get("coverage_pct", 0)
+        _coverage_raw = v.get("coverage_pct")
+        coverage_available = (
+            isinstance(_coverage_raw, (int, float))
+            and not isinstance(_coverage_raw, bool)
+        )
+        coverage = float(_coverage_raw) if coverage_available else None
 
         # ══════ PAGE 1: EXECUTIVE DETERMINATION ══════
         pdf.add_page()
@@ -214,9 +219,11 @@ def generate_v21_dossier(payload):
         cov_val = coverage
         pri_val = payload.get('tier3', {}).get('probability', 0)
 
-        if cov_val >= 70:
+        if not coverage_available:
+            cov_sub, cov_col = "UNAVAILABLE", PDF_COLORS["INDETERMINATE"]
+        elif coverage >= 70:
             cov_sub, cov_col = "SUFFICIENT", PDF_COLORS["PASS"]
-        elif cov_val >= 50:
+        elif coverage >= 50:
             cov_sub, cov_col = "MARGINAL", PDF_COLORS["ALERT"]
         else:
             cov_sub, cov_col = "INSUFFICIENT", PDF_COLORS["INDETERMINATE"]
@@ -350,7 +357,7 @@ def generate_v21_dossier(payload):
         pdf.ln(4)
 
         # ═══ REGULATOR FIX #1: Coverage failure high-contrast warning ═══
-        if coverage < LAW_105_THRESHOLD:
+        if coverage_available and coverage < LAW_105_THRESHOLD:
             pdf.red_banner(f"ADJUDICATION SUSPENDED -- Evidence Scope Below Threshold (LAW-105: {coverage}%)")
             pdf.set_font("Helvetica", "I", 8)
             pdf.multi_cell(w, 4, "The engine cannot certify structural compliance when reliability "
@@ -709,7 +716,7 @@ def generate_v21_dossier(payload):
         pdf.set_font("Helvetica", "", 9)
 
         if helix is None and sheet is None and loop is None:
-            if coverage < LAW_105_THRESHOLD:
+            if coverage_available and coverage < LAW_105_THRESHOLD:
                 pdf.set_font("Helvetica", "I", 9)
                 pdf.set_text_color(*PDF_COLORS["VETO"])
                 pdf.multi_cell(w, 6, f"Secondary structure not computable: reliability coverage below {LAW_105_THRESHOLD}% "
@@ -735,7 +742,7 @@ def generate_v21_dossier(payload):
         # ══════ PAGE 5: PROVENANCE ══════
 
         # ══════ REFINEMENT RECOMMENDATIONS PAGE ══════
-        if verdict_binary != "PASS" or coverage < LAW_105_THRESHOLD:
+        if verdict_binary != "PASS" or (coverage_available and coverage < LAW_105_THRESHOLD):
             pdf.add_page()
             pdf.section_title("Refinement Recommendations")
             pdf.section_divider("PHYSICS-FIRST REFINEMENT FOR DRUG DISCOVERY USE", 20, 60, 120)
@@ -743,11 +750,16 @@ def generate_v21_dossier(payload):
 
             pdf.set_font("Helvetica", "", 9)
             pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
-            if coverage < LAW_105_THRESHOLD:
+            if coverage_available and coverage < LAW_105_THRESHOLD:
                 pdf.multi_cell(w, 5,
                     "This structure has insufficient reliability coverage (%.1f%%) and is not yet "
                     "suitable for drug discovery without refinement. The following physics-first "
                     "methods are recommended to improve structural quality." % coverage)
+            elif not coverage_available:
+                pdf.multi_cell(w, 5,
+                    "Authoritative reliability-coverage evidence could not be established for this "
+                    "structure; the verdict is indeterminate. The following physics-first "
+                    "methods are recommended to improve structural quality.")
             else:
                 det_fail_list = [l for l in laws if l.get('method') == 'deterministic' and l['status'] != 'PASS']
                 fail_names = ", ".join([l['law_id'] for l in det_fail_list])

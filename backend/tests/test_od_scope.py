@@ -430,7 +430,7 @@ class TestNonFiniteCoordinates:
         atoms += _residue("A", 2, [bad, 0, 0], [5, 0, 0])
         results, coverage, is_experimental = Tier1Measurements.run_full_audit(
             _structure(atoms, experimental=True))
-        assert coverage == 0.0
+        assert coverage is None
         assert is_experimental is True
         assert results["LAW-105"]["status"] == "MEASUREMENT_FAILED"
         assert "non-finite" in results["LAW-105"]["reason"]
