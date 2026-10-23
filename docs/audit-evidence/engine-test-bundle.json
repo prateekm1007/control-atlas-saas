@@ -1,21 +1,21 @@
 {
-  "timestamp_utc": "2026-10-23T14:43:23.797649+00:00",
-  "base_sha": "ae8a53547a0433f9220ff656fc53a706591c3bd4",
-  "head_sha": "5e4fe53ed3eb449e5b5de18f8d9ae5afcabe2048",
-  "branch": "repair/od-scope-v25-engine-audit",
+  "timestamp_utc": "2026-10-23T15:38:10.658378+00:00",
+  "branch": "integration/od-scope-v25-2026-10-23",
+  "base_sha": "63da0e347002ed9b77071ff1ed0cefda7c0ce88a",
+  "head_sha": "52340ab7d0808b3f9874e9f53dad5043e90e5910",
   "python_version": "3.12.7 (tags/v3.12.7:0b05ead, Oct  1 2024, 03:06:41) [MSC v.1941 64 bit (AMD64)]",
   "encoding_mode": "PYTHONUTF8=1",
   "command": "python -m pytest tests -q -p no:warnings",
   "results": {
-    "passed": 570,
+    "passed": 576,
     "failed": 0,
-    "skipped": 5,
+    "skipped": 0,
     "errors": 0,
-    "total": 575
+    "total": 576
   },
   "roadmap_gate": 548,
   "gate_met": true,
-  "skipped_justification": "5 tests in test_response_schema.py require /tmp/toscanini_response_sample.json which does not exist in this environment",
+  "skipped_justification": "none - all 576 tests pass, 0 skipped",
   "cp1252_failures": "21 failures are pre-existing (verified by stashing changes and running on base); they are UnicodeDecodeError on non-ASCII source files under default CP1252 encoding",
   "new_test_files": [
     "test_canonical_ingestion.py",

@@ -888,6 +888,24 @@ def run_calibration(dataset: dict, out_dir: Path,
     }
     (out_dir / "calibration_results.json").write_text(
         json.dumps(run_document, indent=2, sort_keys=True), encoding="utf-8")
+    # Generate run_integrity_manifest.json for evaluator compatibility
+    integrity_manifest = {
+        "run_status": "complete" if complete else "incomplete",
+        "run_type": "diagnostic",
+        "expected_target_count": len(ids),
+        "acquired_count": acquired,
+        "measured_count": measured,
+        "policy_binding": run_manifest["policy_binding"],
+        "code_sha": provenance["code_sha"],
+        "artifact_digests": {
+            "run_manifest.json": _sha256_file(out_dir / "run_manifest.json"),
+            "coordinate_manifest.json": _sha256_file(out_dir / "coordinate_manifest.json"),
+            "calibration_results.json": _sha256_file(out_dir / "calibration_results.json"),
+        },
+    }
+    (out_dir / "run_integrity_manifest.json").write_text(
+        json.dumps(integrity_manifest, indent=2, sort_keys=True), encoding="utf-8")
+
     write_manifest_sha256(out_dir)
     return run_document, 0 if complete else 1
 

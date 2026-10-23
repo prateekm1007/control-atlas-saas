@@ -113,6 +113,7 @@ def test_run_calibration_local_end_to_end(tmp_path, monkeypatch):
         "run_manifest.json",
         "coordinate_manifest.json",
         "calibration_results.json",
+        "run_integrity_manifest.json",
     }
     for line in manifest_lines:
         digest, name = line.split("  ", 1)

@@ -18,7 +18,7 @@ from tos.schemas.response_v1 import (
 
 
 # Load the sample response captured from the live API
-SAMPLE_PATH = Path("/tmp/toscanini_response_sample.json")
+SAMPLE_PATH = Path(__file__).parent / "fixtures" / "sample_response.json"
 
 
 class TestSchemaMatchesLiveResponse:
@@ -26,8 +26,6 @@ class TestSchemaMatchesLiveResponse:
 
     @pytest.fixture
     def sample_data(self):
-        if not SAMPLE_PATH.exists():
-            pytest.skip("No sample response at /tmp/toscanini_response_sample.json")
         with SAMPLE_PATH.open() as f:
             data = json.load(f)
         # Add back fields that were stripped for readability

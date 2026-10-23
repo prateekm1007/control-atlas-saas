@@ -138,13 +138,13 @@ def canonicalize_atoms(atoms: Iterable) -> list:
                 # Use dominant conformer atom with highest occupancy
                 best = max(dominant_atoms, key=atom_occupancy)
             elif blank_atoms:
+                # Fall back to shared (blank) atom
                 best = max(blank_atoms, key=atom_occupancy)
-            elif dominant_atoms:
-                best = max(dominant_atoms, key=atom_occupancy)
             else:
-                # Only non-dominant, non-blank altlocs available; pick highest occ
-                candidates = [a for a in res_atoms if a.atom_name == name]
-                best = max(candidates, key=atom_occupancy) if candidates else None
+                # Neither dominant conformer nor shared atom has this atom.
+                # Do NOT substitute from a non-dominant conformer — that would
+                # mix conformations.  Skip this atom entirely.
+                best = None
             if best is not None:
                 key = atom_identity(best)
                 selected[key] = choose_atom(selected.get(key), best)

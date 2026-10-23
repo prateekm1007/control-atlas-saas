@@ -1,6 +1,6 @@
 # Evaluation Protocol v1.1 Addendum — Engine Audit Reconciliation
 
-**Status:** REVIEWED ADDENDUM — reconciles v1 protocol with the 2026-10-23 engine audit.
+**Status:** PENDING INDEPENDENT REVIEW — reconciles v1 protocol with the 2026-10-23 engine audit.
 **Effective:** 2026-10-23
 **Parent protocol:** `evaluation_protocol_v1.md` (ACTIVE, `calibration_status=not_approved`, `supports_threshold_validation=false`)
 **Scope:** Reconciliation of protocol claims with the engine correctness audit results.

@@ -799,8 +799,8 @@ def _verify_run_inputs(run_inputs: dict, run_dir: Path,
              "run integrity manifest: acquired != expected")
     _require(isinstance(measured, int) and measured == expected,
              "run integrity manifest: measured != expected")
-    _require(integrity.get("run_type") != "diagnostic",
-             "diagnostic-only runs cannot be used as authoritative evidence")
+    _require(integrity.get("run_type") == "authoritative",
+             "only authoritative run type is permitted for evaluation")
 
     manifest = json.loads(
         (run_dir / "run_manifest.json").read_text(encoding="utf-8"))
