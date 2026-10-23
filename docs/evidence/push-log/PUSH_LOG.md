@@ -697,3 +697,11 @@
   is the exact reconstructed candidate. Until P-091-CONFIRM is appended after
   the push returns, the tip pushed by this INTENT is disclosed as PENDING by
   the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-23T20:04:11Z | P-104-INTENT | push-intent | branch=fix/residue-order-contract head_at_intent=DEFERRED expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1 authorized_by="auditor/owner direction 2026-10-24 (P1): deliver the residue-order contract patch as a separate reviewed engine-correctness branch; no merge to main, no deployment, no v25 calibration, no held-out evaluation; OD-16 remains in force"
+
+- This is the first push of the ref `fix/residue-order-contract` (base
+  `8a9a9c9`), so the declared pre-push remote tip is ABSENT.
+- head_at_intent is DEFERRED; the introducing commit is the exact candidate.
+  Until P-104-CONFIRM is appended after the push returns, the pushed tip is
+  disclosed as PENDING.
