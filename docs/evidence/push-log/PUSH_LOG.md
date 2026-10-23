@@ -697,3 +697,16 @@
   is the exact reconstructed candidate. Until P-091-CONFIRM is appended after
   the push returns, the tip pushed by this INTENT is disclosed as PENDING by
   the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-23T19:09:59Z | P-093-INTENT | push-intent | branch=feature/evaluator-trust-boundary head_at_intent=DEFERRED expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1 authorized_by="owner direction 2026-10-24: push the evaluator trust-boundary hardening feature branch under the two-phase protocol; no merge to main, no deployment, no v25 calibration, no held-out evaluation; OD-16 remains in force"
+
+- This is the first push of the ref `feature/evaluator-trust-boundary`, so the
+  declared pre-push remote tip is ABSENT.
+- The push carries the evaluator hardening (recursive MANIFEST.sha256
+  verification with traversal/symlink rejection, source-byte evidence
+  verification, cross-manifest target reconciliation, exact run_inputs schema)
+  plus the 2026-10-24 workspace preflight and constitution reading note.
+- head_at_intent is DEFERRED per the two-phase schema; the introducing commit is
+  the exact candidate. Until P-093-CONFIRM is appended after the push returns,
+  the tip pushed by this INTENT is disclosed as PENDING by the evidence-sequence
+  checker - the designed, truthful state.
