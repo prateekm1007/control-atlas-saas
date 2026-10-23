@@ -24,7 +24,6 @@ from ..ingestion.atom_selection import (
     canonicalize_atoms,
     finite_float,
     normalize_insertion_code,
-    residue_source_order_key,
 )
 import math
 import numpy as np
@@ -82,19 +81,46 @@ class Tier1Measurements:
         }
 
     @staticmethod
-    def _is_sequential(r1, r2):
-        if r1["_chain"] != r2["_chain"]:
-            return False
+    def _numeric_adjacent(r1, r2):
+        """Numbering compatibility (PDB residue number + insertion code).
+
+        Used as a guard on top of source-order consecutiveness so that two
+        residues separated by a genuinely missing position are not paired.
+        Insertions (same residue number, distinct insertion codes) are adjacent
+        when consecutive in source order; a step across a numbered position
+        requires the canonical blank/insertion transition.
+        """
         s1, s2 = int(r1["_seq"]), int(r2["_seq"])
         i1 = normalize_insertion_code(r1.get("_icode", ""))
         i2 = normalize_insertion_code(r2.get("_icode", ""))
         if s2 == s1:
-            rank1 = INSERTION_RANK.get(i1)
-            rank2 = INSERTION_RANK.get(i2)
-            return rank1 is not None and rank2 is not None and rank2 == rank1 + 1
+            return i1 != i2
         if s2 == s1 + 1:
             return (not i1 and not i2) or (bool(i1) and not i2)
         return False
+
+    @staticmethod
+    def _is_sequential(r1, r2):
+        """Adjacency defined by the canonical residue-order contract.
+
+        Two residues are sequential iff they share a chain, ``r2`` is the next
+        canonical position after ``r1`` (``_pos`` + 1), and — for coordinate-
+        derived bases — they are numbering-compatible. For the sequence-position
+        basis (label_seq_id) adjacency is fully encoded by the positions
+        themselves. This keeps ordering and adjacency on one contract while
+        never pairing residues separated by a genuinely missing position.
+        """
+        if r1["_chain"] != r2["_chain"]:
+            return False
+        p1 = r1.get("_pos")
+        p2 = r2.get("_pos")
+        if p1 is None or p2 is None:
+            return False
+        if p2 != p1 + 1:
+            return False
+        if r1.get("_basis") == "label_seq_id":
+            return True
+        return Tier1Measurements._numeric_adjacent(r1, r2)
 
     @staticmethod
     def _has_peptide_bond(r1, r2):
@@ -129,26 +155,66 @@ class Tier1Measurements:
                 normalize_insertion_code(a.insertion_code),
                 str(a.res_name).strip().upper(),
             )
+            label_seq_id = getattr(a, "label_seq_id", None)
+            label_seq_id = int(label_seq_id) if isinstance(label_seq_id, int) and label_seq_id >= 0 else None
+            source_order = getattr(a, "source_order", None)
+            source_order = int(source_order) if isinstance(source_order, int) and source_order >= 0 else None
             if k not in res_map:
                 res_map[k] = {
                     "_name": str(a.res_name).strip().upper(), "_chain": a.chain_id,
                     "_seq": int(a.res_seq), "_icode": normalize_insertion_code(a.insertion_code),
-                    "_src": residue_source_order_key(a),
+                    "_lseq": label_seq_id, "_src_raw": source_order,
                     "_conf_acc": [], "_atoms": {}
                 }
             else:
-                res_map[k]["_src"] = min(
-                    res_map[k]["_src"], residue_source_order_key(a))
+                if res_map[k]["_lseq"] is None:
+                    res_map[k]["_lseq"] = label_seq_id
+                if res_map[k]["_src_raw"] is None:
+                    res_map[k]["_src_raw"] = source_order
             res_map[k]["_atoms"][a.atom_name] = a.pos
             b_value = finite_float(getattr(a, "b_iso", None), None)
             if b_value is not None:
                 res_map[k]["_conf_acc"].append(b_value)
         for r in res_map.values():
             r["_conf"] = float(np.mean(r["_conf_acc"])) if r["_conf_acc"] else None
-        return sorted(
-            res_map.values(),
-            key=lambda x: (x["_chain"], x["_src"], x["_seq"], x["_icode"], x["_name"]),
-        )
+        return Tier1Measurements._order_residues(list(res_map.values()))
+
+    @staticmethod
+    def _order_residues(residues):
+        """Order residues per chain under ONE consistent evidence basis.
+
+        Basis precedence per chain: valid ``label_seq_id`` (gap-sensitive),
+        else ``source_order`` (deposited file order), else residue number.
+        Both ordering and adjacency (via ``_is_sequential``) derive from the
+        resulting ``_pos``, so the order contract and the adjacency contract
+        cannot diverge.
+        """
+        by_chain = {}
+        for r in residues:
+            by_chain.setdefault(r["_chain"], []).append(r)
+        out = []
+        for chain in sorted(by_chain):
+            members = by_chain[chain]
+            if all(r["_lseq"] is not None for r in members):
+                ordered = sorted(members, key=lambda r: r["_lseq"])
+                for r in ordered:
+                    r["_pos"] = r["_lseq"]
+                    r["_basis"] = "label_seq_id"
+                    r["_gap_known"] = True
+            elif all(r["_src_raw"] is not None for r in members):
+                ordered = sorted(members, key=lambda r: r["_src_raw"])
+                for index, r in enumerate(ordered):
+                    r["_pos"] = index
+                    r["_basis"] = "source_order"
+                    r["_gap_known"] = False
+            else:
+                ordered = sorted(members, key=lambda r: (r["_seq"], r["_icode"]))
+                for index, r in enumerate(ordered):
+                    r["_pos"] = index
+                    r["_basis"] = "residue_number"
+                    r["_gap_known"] = False
+            out.extend(ordered)
+        return out
 
     @staticmethod
     def _plddt_advisory(residues, is_experimental):
@@ -265,14 +331,29 @@ class Tier1Measurements:
         # ═══════════════════════════════════════════════════════════
         gaps = 0
         measured_pairs = 0
+        unknown_gap_found = False
         for i in range(len(residues) - 1):
             r1, r2 = residues[i], residues[i + 1]
-            if Tier1Measurements._is_sequential(r1, r2):
-                if "C" in r1["_atoms"] and "N" in r2["_atoms"]:
-                    measured_pairs += 1
-                    if distance(r1["_atoms"]["C"], r2["_atoms"]["N"]) > 2.0:
-                        gaps += 1
-        if measured_pairs == 0:
+            if r1["_chain"] != r2["_chain"]:
+                continue
+            gap_known = bool(r1.get("_gap_known"))
+            pos_delta = r2.get("_pos", 0) - r1.get("_pos", 0)
+            if gap_known and pos_delta > 1:
+                # A genuine source polymer position lies between observed residues;
+                # peptide-bond accounting cannot be assumed complete.
+                unknown_gap_found = True
+                continue
+            if not Tier1Measurements._is_sequential(r1, r2):
+                continue
+            if "C" in r1["_atoms"] and "N" in r2["_atoms"]:
+                measured_pairs += 1
+                if distance(r1["_atoms"]["C"], r2["_atoms"]["N"]) > 2.0:
+                    gaps += 1
+        if unknown_gap_found:
+            results["LAW-110"] = Tier1Measurements._not_measured(
+                "missing polymer positions prevent complete peptide-bond accounting"
+            )
+        elif measured_pairs == 0:
             results["LAW-110"] = Tier1Measurements._not_measured(
                 "no eligible sequential C-N pairs with both atoms present"
             )
@@ -392,6 +473,16 @@ class Tier1Measurements:
         canonical_atoms = canonicalize_atoms(getattr(structure, "atoms", []) or [])
         all_coords = np.array([a.pos for a in canonical_atoms], dtype=float)
         neighbor_search_error = None
+        residue_pos = {}
+        for r in residues:
+            residue_pos[(r["_chain"], r["_seq"], r["_icode"])] = r["_pos"]
+
+        def _is_peptide_neighbor(ai, aj):
+            ka = (ai.chain_id, ai.res_seq, ai.insertion_code)
+            kb = (aj.chain_id, aj.res_seq, aj.insertion_code)
+            pa = residue_pos.get(ka)
+            pb = residue_pos.get(kb)
+            return pa is not None and pb is not None and pb == pa + 1
         if len(all_coords) > 1:
             try:
                 from scipy.spatial import cKDTree
@@ -411,18 +502,7 @@ class Tier1Measurements:
                     if same_residue:
                         continue
                     if (
-                        Tier1Measurements._is_sequential(
-                            {
-                                "_chain": ai.chain_id,
-                                "_seq": ai.res_seq,
-                                "_icode": ai.insertion_code,
-                            },
-                            {
-                                "_chain": aj.chain_id,
-                                "_seq": aj.res_seq,
-                                "_icode": aj.insertion_code,
-                            },
-                        )
+                        _is_peptide_neighbor(ai, aj)
                         and ((ai.atom_name, aj.atom_name) == ("C", "N")
                              or (ai.atom_name, aj.atom_name) == ("N", "C"))
                     ):

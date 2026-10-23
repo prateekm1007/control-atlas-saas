@@ -1,0 +1,31 @@
+{
+  "artifact": "p1-closure-note",
+  "generated_at_utc": "2026-10-23T20:12:00Z",
+  "branch": {"name": "fix/residue-order-contract", "base_sha": "8a9a9c9b156f8d05a76cf88550b9a36cfb609786"},
+  "summary": "P1 closure: unify the residue-order AND adjacency contract on one evidence basis.",
+  "contract": {
+    "ordering": "Per-chain canonical _pos from a single basis: valid label_seq_id > source_order > residue number. _extract / get_sequential_residues use it.",
+    "adjacency": "_is_sequential requires (a) same chain, (b) _pos==_pos+1 (source-order consecutiveness), and (c) labelling-coordinate bases, numbering compatibility (same seq with distinct insertion codes, or seq+1 with the blank/insertion transition). label_seq_id basis encodes adjacency directly and is gap-sensitive.",
+    "gap_handling": "For label_seq_id basis a source gap (_pos jump >1) yields an explicit NOT_MEASURED for LAW-110 (never a favorable PASS). For source/residue-number bases, numbering incompatibility prevents pairing across a missing position."
+  },
+  "before_after": {
+    "1PPE_class_synthetic": {
+      "before": "alphabetical (seq, icode) sort re-paired 1A/1/2; LAW-110 fabricated gaps (false veto).",
+      "after": "source-order traversal measures both peptide pairs (1A->1, 1->2), sample=2, observed=0, PASS.",
+      "sample_before_after": "LAW-110 sample 0 (skipped) -> 2 (both measured); observed 0 in both but the pair set is now correct."
+    },
+    "missing_position_1_3": {
+      "before": "numeric rule skipped the pair -> NOT_MEASURED.",
+      "after": "still NOT_MEASURED (numbering-incompatible; not paired), so no favorable zero is fabricated."
+    },
+    "label_seq_id_gap_1_3": {
+      "after": "LAW-110 NOT_MEASURED with reason 'missing polymer positions' (gap-sensitive)."
+    }
+  },
+  "od07_coordinate_identity": "Unchanged: compute_coordinate_hash sorts by atom identity attributes (not source_order); OD-07 identity.py untouched; invariance/parity tests pass.",
+  "real_fixtures": "1PPE / 5T4O real pinned structures are NOT included; the 1PPE-class reproduction is synthetic. Real-fixture verification remains open and requires reproducibly pinned source structures.",
+  "test_count": {
+    "ind": "python -m pytest tests/ --q under PYTHONUTF8=1 on this candidate: 575 passed, 10 pre-existing baseline failures (9 governance hash-lock drift + 1 CRLF protocol byte-length).",
+    "note": "The exact-tip CI Stability Gate reports its own count (581); local and CI counts are not asserted equal; each is recorded with its own environment."
+  }
+}
