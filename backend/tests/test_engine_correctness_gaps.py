@@ -85,7 +85,7 @@ END
         assert ca.altloc == "A"  # dominant conformer (occ 0.6 > 0.4)
 
 
-    def test_blank_altloc_preferred_over_alternate(self):
+    def test_dominant_conformer_selected_over_blank(self):
         pdb = (
             "ATOM      1  N   ALA A   1       0.000   0.000   0.000  0.50 90.00           N\n"
             "ATOM      2  CA  ALA A   1       1.458   0.000   0.000  0.50 90.00           C\n"
@@ -96,7 +96,7 @@ END
         )
         s = IngestionProcessor.run(pdb.encode(), "input.pdb", "Audit", "Audit")
         ca = next(a for a in s.atoms if a.atom_name == "CA")
-        assert ca.altloc == ""  # blank preferred over A at equal occupancy
+        assert ca.altloc == "A"  # dominant conformer A selected
 
 class TestIngestionErrorPropagation:
     """IngestionError must propagate through all entry points."""

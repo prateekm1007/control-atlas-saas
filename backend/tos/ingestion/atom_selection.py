@@ -109,21 +109,18 @@ def canonicalize_atoms(atoms: Iterable) -> list:
                 occ = 0.0
             specific_altloc_occ[alt] = specific_altloc_occ.get(alt, 0.0) + occ
 
-        blank_total = sum(
-            atom_occupancy(a) for a in res_atoms if atom_altloc(a) == ""
-        )
+        # Determine dominant conformer among EXPLICIT (non-blank) altlocs
+        # only.  Blank-altloc atoms are shared/universal and never compete
+        # as a conformer.  If no explicit altlocs exist, dominant is blank.
         if not specific_altloc_occ:
             dominant = ""
         else:
             max_specific = max(specific_altloc_occ.values())
-            if blank_total >= max_specific:
-                dominant = ""
-            else:
-                dominant_candidates = [
-                    alt for alt, occ in specific_altloc_occ.items()
-                    if occ == max_specific
-                ]
-                dominant = sorted(dominant_candidates)[0]
+            dominant_candidates = [
+                alt for alt, occ in specific_altloc_occ.items()
+                if occ == max_specific
+            ]
+            dominant = sorted(dominant_candidates)[0]
 
         # Select atoms: prefer the dominant conformer when it has the atom;
         # fall back to blank (universal) atoms otherwise.
