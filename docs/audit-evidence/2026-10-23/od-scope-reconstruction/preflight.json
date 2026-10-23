@@ -1,0 +1,168 @@
+{
+  "schema": "od-scope-reconstruction-preflight/v1",
+  "created_at": "2026-10-23T01:57:32Z",
+  "directive": "Owner directions 2026-10-23: reject 01b3d3f as push candidate; reconstruct from live base e71cec3; audit engine and calibration; verify exact candidate before push; no merge/deploy/v25 calibration/held-out work (OD-16).",
+  "branch": "reconstruct/od-scope-v25",
+  "base": {
+    "commit": "e71cec36d8189125b74568343a80fff1eb9637cd",
+    "branch": "review/od-scope-v25",
+    "remote": "origin",
+    "tree": "clean at worktree creation"
+  },
+  "candidate": {
+    "status": "under-construction",
+    "terminal_intent": "P-091",
+    "terminal_intent_introducing_commit": "final reconstruction commit",
+    "expected_remote_tip_before_push": "e71cec36d8189125b74568343a80fff1eb9637cd"
+  },
+  "rejected_candidate": {
+    "commit": "01b3d3f0508d00e2b1d638a32d82b9cd7dd1cbe6",
+    "reason": "destructive PUSH_LOG rewrite: P-087/P-088 bytes replaced by P-090/P-091; append-only violation",
+    "disposition": "preserved in recovery refs and bundles; not pushed"
+  },
+  "recovery": {
+    "directory": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\opencode\\od-scope-recovery-2026-10-23",
+    "bundle_initial": {
+      "path": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\opencode\\od-scope-recovery-2026-10-23\\control-atlas-saas-all.bundle",
+      "sha256": "0f718d75c62a91fac4d2abd5d5dcd7709e1a46b7d4ae1c79fd84ba4dae3a8aa6"
+    },
+    "bundle_full": {
+      "path": "C:\\Users\\Administrator\\AppData\\Local\\Temp\\opencode\\od-scope-recovery-2026-10-23\\control-atlas-saas-all-2026-10-23T0726Z.bundle",
+      "sha256": "e4f07bb3b3c75a6e8ec47f8ea9b8b491b212adc88d819926ee7aee26136f7f39"
+    },
+    "wip_commit": "631f2bf664d63bc80311be61d47f01770595030b",
+    "wip_branch": "recovery/round27-wip-d765a4c",
+    "wip_patch_sha256": "1784ddefa909b9719473e2562b51e08817ba5122351754cb38abe45b7ca1110d",
+    "stash_commit": "abd57be630f2d62b9d86d9e7c0b3533ba10ef199",
+    "recovery_branches": [
+      "recovery/control-atlas-saas-wip",
+      "recovery/od-scope-v25-01b3d3f",
+      "recovery/od-scope-v25-2026-10-22-d765a4c",
+      "recovery/round27-wip-d765a4c"
+    ]
+  },
+  "append_only_findings": [
+    {
+      "commit": "459dd55",
+      "finding": "PUSH_LOG.md parent bytes are not a prefix: 72085 -> 76893 bytes; one pre-existing whitespace sequence rewritten; no entry deleted",
+      "disposition": "replay with the original whitespace restored"
+    },
+    {
+      "commit": "01b3d3f0508d00e2b1d638a32d82b9cd7dd1cbe6",
+      "finding": "PUSH_LOG.md parent bytes are not a prefix: 78724 -> 78730 bytes; P-087/P-088 replaced by P-090/P-091",
+      "disposition": "do not replay; append new P-090 voiding P-088 and P-091 terminal intent in a new final commit"
+    }
+  ],
+  "planned_commits": [
+    {
+      "step": 0,
+      "purpose": "Record required reading note and machine-readable preflight before code changes",
+      "files": [
+        "docs/audit-evidence/2026-10-23/od-scope-reconstruction/reading-note.md",
+        "docs/audit-evidence/2026-10-23/od-scope-reconstruction/preflight.json"
+      ]
+    },
+    {
+      "step": 1,
+      "source": "459dd55",
+      "purpose": "Replay engine/test/evidence changes with the PUSH_LOG whitespace restored to the base byte stream",
+      "files": [
+        "docs/evidence/push-log/PUSH_LOG.md",
+        "SHA256SUMS"
+      ]
+    },
+    {
+      "step": 2,
+      "source": "fc11d10",
+      "purpose": "Replay unchanged commit",
+      "files": []
+    },
+    {
+      "step": 3,
+      "source": "f0228a7",
+      "purpose": "Replay P-087/P-088 append",
+      "files": [
+        "docs/evidence/push-log/PUSH_LOG.md",
+        "SHA256SUMS"
+      ]
+    },
+    {
+      "step": 4,
+      "source": "c44457e",
+      "purpose": "Replay unchanged commit",
+      "files": []
+    },
+    {
+      "step": 5,
+      "purpose": "Append P-090 (voids=P-088-INTENT) and P-091-INTENT; regenerate final SHA256SUMS",
+      "files": [
+        "docs/evidence/push-log/PUSH_LOG.md",
+        "SHA256SUMS"
+      ]
+    }
+  ],
+  "expected_change_groups": [
+    "backend/tos/engine/{tier1_measurements,coord_math,adjudicator}.py",
+    "backend/tos/{schemas,ingestion,router,forensic_artifacts}/...",
+    "backend/tests/{test_od_scope,test_law_120,test_law_125,test_law_130_boundary,test_law_135,test_law_145,test_law_150,test_law_160,test_adjudicator,test_od_scope_payload,...}.py",
+    "docs/evidence/push-log/PUSH_LOG.md",
+    "docs/audit-evidence/2026-10-22/od-scope/iteration-4/...",
+    "SHA256SUMS"
+  ],
+  "constraints": {
+    "od_16": "active: no merge, deploy, v25 calibration, held-out evaluation, threshold/cohort change, or golden regeneration",
+    "force_push": false,
+    "rewrite_published_history": false,
+    "post_terminal_commits": false,
+    "pat_handling": "never expose, commit, log, or persist",
+    "checker_encoding": "set PYTHONIOENCODING=utf-8 on Windows",
+    "checker_flags": "--pushlog-schema --remote-verify --branch <branch> --expect-tip <sha> --runs-manifest runs_manifest.json --repo <repo> --api-token-env GH_TOKEN --parent-prefix <parent-log>"
+  },
+  "risks": [
+    {
+      "risk": "Intermediate replayed commits carry stale manifests if SHA256SUMS is not updated per log-changing commit",
+      "mitigation": "update the affected manifest row in each replayed commit; regenerate final manifest only in the terminal commit"
+    },
+    {
+      "risk": "P-090/P-091 are free only if the rejected commit is excluded; ID collision could cause checker failure",
+      "mitigation": "verify global identifier use on the reconstructed history before writing the final records"
+    },
+    {
+      "risk": "Time-drift checker defaults may flag historical records",
+      "mitigation": "run with the exact CI flags and inspect chronology; do not suppress drift unless the CI workflow does"
+    },
+    {
+      "risk": "Remote moves before push",
+      "mitigation": "re-check live ref immediately before push; stop and reconcile if it is not e71cec3"
+    },
+    {
+      "risk": "Local suite passes while remote CI or exact-SHA checks fail",
+      "mitigation": "treat local results as provisional; verify every required push-event job from actual remote logs"
+    },
+    {
+      "risk": "Calibration protocol provenance remains unresolved",
+      "mitigation": "audit the engine-line protocol history and mark readiness BLOCKED if provenance or consistency cannot be proved"
+    },
+    {
+      "risk": "Engine defects not covered by existing tests",
+      "mitigation": "run the independent audit matrix and add regression tests only where behavior is uncovered; do not change thresholds/cohorts"
+    }
+  ],
+  "acceptance_criteria": [
+    "append-only parent-prefix check passes for every reconstructed commit",
+    "schema, pairing, chronology, global unmatched-intent, remote-reference, citation, and terminal-intent checks pass",
+    "P-091-INTENT is introduced only by the terminal commit and declares e71cec3",
+    "final SHA256SUMS matches every file in scope",
+    "secret scan, forbidden-reference check, workflow-trigger lint, and package integrity pass",
+    "targeted engine/adjudicator/calibration tests and full suite pass on the exact candidate SHA",
+    "engine audit matrix records implementation, tests, edge cases, and unresolved issues",
+    "calibration readiness report is PASS/FAIL/BLOCKED with source and test evidence",
+    "live remote is e71cec3 immediately before a fast-forward push",
+    "post-push live SHA equals the candidate and required push-event jobs pass"
+  ],
+  "rollback": {
+    "before_push": "no remote change; keep reconstruction branch and recovery refs for inspection",
+    "after_push_failure": "do not force-push or rewrite published history; record the failure and append a reviewed reconciliation only under owner authorization",
+    "recovery_source": "two bundles plus WIP tree/patch and recovery branches"
+  }
+}
