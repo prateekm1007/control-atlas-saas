@@ -184,7 +184,13 @@ def get_sequential_residues(atoms, chain_id: str) -> List[Tuple[int, str, str]]:
     Return an ordered list of residues in a chain.
 
     Each entry is (res_seq, insertion_code, res_name).
-    Sorted by (res_seq, insertion_code) to handle insertion codes correctly.
+
+    Order follows the authoritative sequence position (P1 ordering contract):
+    a valid mmCIF label_seq_id wins when present; otherwise the numeric residue
+    sequence number is used. The sort is STABLE, so residues sharing a primary
+    position (e.g. 184A before 184 in 1PPE) keep their source-file order, which
+    is the depositor's chemical order. Alphabetical insertion-code sorting is
+    intentionally NOT used, because it can re-pair peptide geometry (P0 item 4).
 
     Args:
         atoms: list of Atom objects
@@ -202,10 +208,18 @@ def get_sequential_residues(atoms, chain_id: str) -> List[Tuple[int, str, str]]:
         key = atom_identity(atom)[:4]
         if key not in seen:
             seen.add(key)
-            residues.append((atom.res_seq, normalize_insertion_code(atom.insertion_code), atom.res_name))
+            ls = getattr(atom, "label_seq_id", None)
+            try:
+                ls_int = int(ls) if ls is not None else None
+            except (TypeError, ValueError):
+                ls_int = None
+            residues.append(
+                (atom.res_seq, normalize_insertion_code(atom.insertion_code),
+                 atom.res_name, ls_int)
+            )
 
-    residues.sort(key=lambda r: (r[0], r[1], r[2]))
-    return residues
+    residues.sort(key=lambda r: (r[3] if r[3] is not None else r[0],))
+    return [(r[0], r[1], r[2]) for r in residues]
 
 
 def get_residue_atoms(atoms, chain_id: str, res_seq: int,

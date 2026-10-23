@@ -132,17 +132,35 @@ class Tier1Measurements:
                 res_map[k] = {
                     "_name": str(a.res_name).strip().upper(), "_chain": a.chain_id,
                     "_seq": int(a.res_seq), "_icode": normalize_insertion_code(a.insertion_code),
-                    "_conf_acc": [], "_atoms": {}
+                    "_label_seq": None, "_conf_acc": [], "_atoms": {}
                 }
             res_map[k]["_atoms"][a.atom_name] = a.pos
+            ls = getattr(a, "label_seq_id", None)
+            if ls is not None:
+                try:
+                    ls_int = int(ls)
+                except (TypeError, ValueError):
+                    ls_int = None
+                if ls_int is not None:
+                    res_map[k]["_label_seq"] = ls_int
             b_value = finite_float(getattr(a, "b_iso", None), None)
             if b_value is not None:
                 res_map[k]["_conf_acc"].append(b_value)
         for r in res_map.values():
             r["_conf"] = float(np.mean(r["_conf_acc"])) if r["_conf_acc"] else None
+        # Order residues by authoritative sequence position, not by alphabetical
+        # insertion-code sort. A valid mmCIF label_seq_id wins; otherwise fall
+        # back to the numeric residue sequence number. The sort is STABLE so
+        # residues sharing a primary position (e.g. 184A before 184 in 1PPE)
+        # keep their source-file order, which is the depositor's chemical order.
+        # This is the P1 ordering contract; alphabetical insertion-code sorting
+        # previously re-paired peptide geometry (P0 item 4).
         return sorted(
             res_map.values(),
-            key=lambda x: (x["_chain"], x["_seq"], x["_icode"], x["_name"]),
+            key=lambda x: (
+                x["_chain"],
+                x["_label_seq"] if x["_label_seq"] is not None else x["_seq"],
+            ),
         )
 
     @staticmethod

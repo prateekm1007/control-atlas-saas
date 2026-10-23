@@ -1,0 +1,46 @@
+{
+  "phase": "od-scope-priority-fix",
+  "date": "2026-10-23T20:48:52Z",
+  "branch": "fix/od-scope-residue-coverage-advisory",
+  "base_main": "63da0e347002ed9b77071ff1ed0cefda7c0ce88a",
+  "parent_candidate": "8a9a9c9b156f8d05a76cf88550b9a36cfb609786",
+  "engine_reference": "97d62a89f0efb2917e80a82808a930d34af7f492",
+  "priorities": {
+    "P1": {
+      "title": "Residue-order / peptide-adjacency contract",
+      "status": "implemented",
+      "verdict_impact": "Fixes fabricated peptide re-pairing for insertion-coded residues (e.g. 1PPE 184A/184). May change LAW-110/120/125/135/160 observations for such deposits; no threshold definitions changed. No false veto is silenced; the ordering is corrected to source order.",
+      "files_changed": [
+        "backend/tos/ingestion/processor.py",
+        "backend/tos/ingestion/atom_selection.py",
+        "backend/tos/engine/coord_math.py",
+        "backend/tos/engine/tier1_measurements.py",
+        "backend/tests/test_residue_order.py"
+      ],
+      "regression_tests": [
+        "tests/test_residue_order.py::TestGetSequentialResiduesOrder::test_preserves_source_order_for_insertion_coded_residues",
+        "tests/test_residue_order.py::TestGetSequentialResiduesOrder::test_label_seq_id_wins_when_present",
+        "tests/test_residue_order.py::TestGetSequentialResiduesOrder::test_distinct_seq_preserves_order",
+        "tests/test_residue_order.py::TestExtractOrder::test_extract_preserves_source_order_for_insertion_codes",
+        "tests/test_residue_order.py::TestPeptideAdjacencyNoFalseVeto::test_insertion_code_order_does_not_fabricate_peptide_assignment"
+      ],
+      "acceptance": "get_sequential_residues and Tier1Measurements._extract order by authoritative sequence position (label_seq_id when valid else res_seq) with a stable sort; source order preserved for same-position residues; full backend suite green."
+    },
+    "P2": { "title": "Source-backed coverage denominator", "status": "pending" },
+    "P3": { "title": "LAW-130 boundary/MEASUREMENT_FAILED tests", "status": "pending" },
+    "P4": { "title": "LAW-182 advisory end-to-end", "status": "pending" },
+    "P5": { "title": "LAW-155 advisory restoration", "status": "pending" },
+    "P6": { "title": "Gemmi/altloc/HETATM/PDB-mmCIF parity proof", "status": "pending" },
+    "P7": { "title": "Canonical OD-07 audit-ID binding", "status": "pending" },
+    "P8": { "title": "Calibration diagnostic-only", "status": "pending" }
+  },
+  "rollback": "The P1 change is confined to backend/tos/engine/coord_math.py, tier1_measurements.py, ingestion/{processor,atom_selection}.py, and a new test file. Reverting those four source edits restores prior ordering behavior; the new test file can be removed. No data migration, hash-lock change, or law-semantic change is introduced by P1.",
+  "not_authorized": [
+    "merge to main",
+    "deploy",
+    "v25 calibration run",
+    "held-out evaluation",
+    "threshold/cohort change",
+    "golden-artifact regeneration"
+  ]
+}

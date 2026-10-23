@@ -36,6 +36,11 @@ class Atom:
     label_asym_id: str = ""
     label_seq_id: Optional[int] = None
     model_index: int = 1
+    # 0-based index of the source record (chain/residue iteration order) as
+    # read from the PDB/mmCIF file. This is the authoritative depositor order
+    # for peptide adjacency; alphabetical insertion-code sorting must not
+    # override it (P0 item 4 / P1 ordering contract).
+    source_order: int = -1
 
 
 @dataclass
@@ -224,6 +229,7 @@ class IngestionProcessor:
         selected = []
         identities = {}
         b_values = []
+        source_order = 0
 
         for chain in model:
             chain_id = _normalize_chain(chain.name)
@@ -292,8 +298,10 @@ class IngestionProcessor:
                         label_asym_id=_normalize_chain(getattr(chain, "name", "")),
                         label_seq_id=int(label_seq_id) if label_seq_id is not None else None,
                         model_index=1,
+                        source_order=source_order,
                     )
                     selected.append(atom_obj)
+                    source_order += 1
                     if finite_float(b_iso, None) is not None:
                         b_values.append(float(b_iso))
 

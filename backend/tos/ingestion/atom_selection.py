@@ -148,4 +148,4 @@ def canonicalize_atoms(atoms: Iterable) -> list:
             if best is not None:
                 key = atom_identity(best)
                 selected[key] = choose_atom(selected.get(key), best)
-    return sorted(selected.values(), key=atom_sort_key)
+    return list(selected.values())
