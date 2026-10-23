@@ -3,7 +3,7 @@
 # =============================================================================
 # AUTHORITY CHAIN (do not break):
 #   1. backend/tos/governance/station_sop.py  (LAW_CANON) — enforced runtime
-#      source, protected by canon hash f24ec581b3e04732. Values here are
+#      source, protected by canon hash 6a9cd4b4349b81de. Values here are
 #      copied EXACTLY from it. Never edit one side without the other.
 #   2. This registry — documents every law: enforced, declared, or retired.
 #   3. Glossary text (backend/tos/glossary/**) — derived from this registry.
@@ -25,7 +25,7 @@
 registry_version: "1.0.0"
 authority:
   runtime_source: "backend/tos/governance/station_sop.py::LAW_CANON"
-  canon_hash: "f24ec581b3e04732"
+  canon_hash: "6a9cd4b4349b81de"
   matrix_hash: "ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4"
   method_classification_source: "backend/tos/governance/station_sop.py::LAW_METHOD_CLASSIFICATIONS"
 

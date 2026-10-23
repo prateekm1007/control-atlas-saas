@@ -699,3 +699,7 @@
   the evidence-sequence checker - the designed, truthful state.
 
 ## 2026-10-24T00:05:00Z | P-092-INTENT | push-intent | branch=fix/od-scope-residue-coverage-advisory head_at_intent=DEFERRED expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1 authorized_by="auditor directions 2026-10-24 (P1-P8): implement residue-order fix, source-backed coverage, LAW-130/182/155 advisory/contract work, PDB-mmCIF parity, OD-07 binding, calibration diagnostic-only gates on the integration candidate; push only this reviewed branch under the two-phase protocol; no merge/deployment/v25 calibration/held-out work; OD-16 remains in force"
+
+## 2026-10-24T00:20:00Z | P-092-CONFIRM | push-confirm | branch=fix/od-scope-residue-coverage-advisory remote_sha=8d97729bad07f10c1891569b85ab6866b4282c4c credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/fix/od-scope-residue-coverage-advisory -> 8d97729bad07f10c1891569b85ab6866b4282c4c (recorded 2026-10-24T00:14Z)"
+
+## 2026-10-24T00:20:30Z | P-093-INTENT | push-intent | branch=fix/od-scope-residue-coverage-advisory head_at_intent=DEFERRED expected_remote_tip_before_push=8d97729bad07f10c1891569b85ab6866b4282c4c credential=OWNER-PAT-1 authorized_by="continuation of auditor direction 2026-10-24 (push/publish step): follow-up push carrying the Stability-Gate hash-lock fix (workflow canon hash) and registry canon_hash/doc updates; no merge/deployment/v25 calibration/held-out work; OD-16 remains in force"
