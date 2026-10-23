@@ -82,7 +82,30 @@ class Tier1Measurements:
 
     @staticmethod
     def _is_sequential(r1, r2):
+        """Shared residue-adjacency contract (P1).
+
+        Two residues of the same chain are sequential when they are
+        consecutive in the canonical polymer sequence with no missing
+        internal position between them.
+
+        - When BOTH carry a valid mmCIF label_seq_id, adjacency requires
+          exactly label_seq(r2) == label_seq(r1) + 1. A larger gap means a
+          missing internal polymer position and is NOT sequential (so it can
+          never fabricate a favorable measured pair).
+        - Mixed availability (one residue has label_seq_id, the other does
+          not) is ambiguous and NOT sequential.
+        - Otherwise (author-numbering fallback for PDB without label_seq_id),
+          the documented number/insertion-rank predicate is used.
+        """
         if r1["_chain"] != r2["_chain"]:
+            return False
+        h1 = r1.get("_has_label_seq")
+        h2 = r2.get("_has_label_seq")
+        if h1 and h2:
+            # Canonical label_seq positions: consecutive, no missing span.
+            return int(r2["_seq_pos"]) == int(r1["_seq_pos"]) + 1
+        if h1 or h2:
+            # Ambiguous mapping: reject (fail-closed).
             return False
         s1, s2 = int(r1["_seq"]), int(r2["_seq"])
         i1 = normalize_insertion_code(r1.get("_icode", ""))
@@ -148,6 +171,13 @@ class Tier1Measurements:
                 res_map[k]["_conf_acc"].append(b_value)
         for r in res_map.values():
             r["_conf"] = float(np.mean(r["_conf_acc"])) if r["_conf_acc"] else None
+            # Canonical per-chain sequence position and availability (P1 shared
+            # contract). label_seq_id (mmCIF) is authoritative when valid;
+            # otherwise the author residue number is used under the documented
+            # fallback. Mixed availability within a pair is ambiguous and the
+            # adjacency predicate must reject it.
+            r["_has_label_seq"] = r["_label_seq"] is not None
+            r["_seq_pos"] = r["_label_seq"] if r["_label_seq"] is not None else r["_seq"]
         # Order residues by authoritative sequence position, not by alphabetical
         # insertion-code sort. A valid mmCIF label_seq_id wins; otherwise fall
         # back to the numeric residue sequence number. The sort is STABLE so

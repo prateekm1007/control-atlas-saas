@@ -142,3 +142,62 @@ class TestPeptideAdjacencyNoFalseVeto:
         i184a = order.index((184, "A"))
         assert order[i184a + 1] == (184, ""), \
             "insertion-coded residue must be immediately followed by its base residue"
+
+
+class TestSharedAdjacencyContract:
+
+    def _res(self, chain, seq, icode="", label_seq=None):
+        return {
+            "_chain": chain, "_seq": seq, "_icode": icode,
+            "_label_seq": label_seq,
+            "_has_label_seq": label_seq is not None,
+            "_seq_pos": label_seq if label_seq is not None else seq,
+        }
+
+    def test_label_seq_consecutive_is_sequential(self):
+        from tos.engine.tier1_measurements import Tier1Measurements
+        r1 = self._res("A", 5, label_seq=10)
+        r2 = self._res("A", 6, label_seq=11)
+        assert Tier1Measurements._is_sequential(r1, r2) is True
+
+    def test_label_seq_missing_internal_position_not_sequential(self):
+        """label_seq gap > 1 means a missing internal polymer position; the
+        pair must NOT be treated as sequential (no fabricated adjacency)."""
+        from tos.engine.tier1_measurements import Tier1Measurements
+        r1 = self._res("A", 5, label_seq=10)
+        r3 = self._res("A", 7, label_seq=12)  # position 11 missing
+        assert Tier1Measurements._is_sequential(r1, r3) is False
+
+    def test_label_seq_reverse_not_sequential(self):
+        from tos.engine.tier1_measurements import Tier1Measurements
+        r1 = self._res("A", 5, label_seq=10)
+        r2 = self._res("A", 6, label_seq=11)
+        # reverse order (11 then 10) is not consecutive forward
+        assert Tier1Measurements._is_sequential(r2, r1) is False
+
+    def test_mixed_label_seq_availability_is_ambiguous(self):
+        """One residue has label_seq_id, the other does not -> ambiguous -> not
+        sequential (fail-closed)."""
+        from tos.engine.tier1_measurements import Tier1Measurements
+        r1 = self._res("A", 5, label_seq=10)
+        r2 = self._res("A", 6)  # no label_seq (author fallback)
+        assert Tier1Measurements._is_sequential(r1, r2) is False
+        assert Tier1Measurements._is_sequential(r2, r1) is False
+
+    def test_author_numbering_fallback_unchanged(self):
+        from tos.engine.tier1_measurements import Tier1Measurements
+        r1 = self._res("A", 1)
+        r2 = self._res("A", 2)
+        assert Tier1Measurements._is_sequential(r1, r2) is True
+        # missing span under author numbering (1 -> 3) is not sequential
+        r3 = self._res("A", 3)
+        assert Tier1Measurements._is_sequential(r1, r3) is False
+        # chain boundary is never sequential
+        rB = self._res("B", 2)
+        assert Tier1Measurements._is_sequential(r1, rB) is False
+
+    def test_chain_boundary_is_not_sequential(self):
+        from tos.engine.tier1_measurements import Tier1Measurements
+        assert Tier1Measurements._is_sequential(
+            self._res("A", 1, label_seq=1),
+            self._res("B", 2, label_seq=2)) is False
