@@ -488,14 +488,19 @@ class Tier1Measurements:
         if len(all_coords) < 2:
             results["LAW-130"] = {
                 "observed": None, "status": "NOT_MEASURED", "sample": 0,
+                "input_atom_count": len(all_coords),
                 "granularity": GRANULARITY_RESIDUE_PAIR,
                 "failing_residue_pairs": [],
                 "reason": "fewer than two atomic coordinates available",
                 "plddt_advisory": Tier1Measurements._plddt_advisory(residues, is_experimental),
             }
         elif neighbor_search_error is not None:
+            # A tooling failure is NOT a measurement. sample stays 0 (no
+            # valid measurements); the input atom count is exposed separately
+            # for diagnostics and never implies a measured sample.
             results["LAW-130"] = {
-                "observed": None, "status": "MEASUREMENT_FAILED", "sample": len(all_coords),
+                "observed": None, "status": "MEASUREMENT_FAILED", "sample": 0,
+                "input_atom_count": len(all_coords),
                 "granularity": GRANULARITY_RESIDUE_PAIR,
                 "failing_residue_pairs": [],
                 "reason": f"neighbor search failed: {neighbor_search_error}",
@@ -504,10 +509,16 @@ class Tier1Measurements:
         else:
             clash_score = (clash / len(all_coords)) * 1000
             threshold = LAW_CANON["LAW-130"]["threshold"]
+            # Observation-precision contract: the reported value is the raw
+            # score rounded to 2 decimals, and the canonical "<=" threshold is
+            # applied to that same reported value so the displayed value and
+            # status can never appear contradictory.
+            reported = round(clash_score, 2)
             results["LAW-130"] = {
-                "observed": round(clash_score, 2),
-                "status": "PASS" if clash_score <= threshold else "VETO",
+                "observed": reported,
+                "status": "PASS" if reported <= threshold else "VETO",
                 "sample": len(all_coords),
+                "input_atom_count": len(all_coords),
                 "granularity": GRANULARITY_RESIDUE_PAIR,
                 "failing_residue_pairs": unique_pairs,
                 "plddt_advisory": Tier1Measurements._plddt_advisory(residues, is_experimental),
