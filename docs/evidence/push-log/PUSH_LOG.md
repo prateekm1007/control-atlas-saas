@@ -707,3 +707,7 @@
 ## 2026-10-24T00:35:00Z | P-093-CONFIRM | push-confirm | branch=fix/od-scope-residue-coverage-advisory remote_sha=dd422df96f921c09a31333793440ab5b92a8244f credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/fix/od-scope-residue-coverage-advisory -> dd422df96f921c09a31333793440ab5b92a8244f (recorded 2026-10-24T00:26Z)"
 
 ## 2026-10-24T00:35:30Z | P-094-INTENT | push-intent | branch=fix/od-scope-residue-coverage-advisory head_at_intent=DEFERRED expected_remote_tip_before_push=dd422df96f921c09a31333793440ab5b92a8244f credential=OWNER-PAT-1 authorized_by="continuation of auditor direction 2026-10-24 (push/publish step): manifest fix for PUSH_LOG.md digest in SHA256SUMS; no merge/deployment/v25 calibration/held-out work; OD-16 remains in force"
+
+## 2026-10-24T01:00:00Z | P-094-CONFIRM | push-confirm | branch=fix/od-scope-residue-coverage-advisory remote_sha=f4485d8badca1756bf010f90b01af479dcb52fe5 credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/fix/od-scope-residue-coverage-advisory -> f4485d8badca1756bf010f90b01af479dcb52fe5 (recorded 2026-10-24T00:48Z)"
+
+## 2026-10-24T01:00:30Z | P-095-INTENT | push-intent | branch=fix/od-scope-residue-coverage-advisory head_at_intent=DEFERRED expected_remote_tip_before_push=f4485d8badca1756bf010f90b01af479dcb52fe5 credential=OWNER-PAT-1 authorized_by="auditor direction 2026-10-24: P2 returned-coverage fail-closed agreement + refreshed reading-note/preflight for f4485d8; no merge/deployment/v25 calibration/held-out work; OD-16 remains in force"

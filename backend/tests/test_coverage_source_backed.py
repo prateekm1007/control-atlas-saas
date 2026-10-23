@@ -94,16 +94,20 @@ class TestSourceBackedDenominator:
     def test_missing_source_sequence_fails_closed(self):
         """Without source-sequence metadata, LAW-105 must not claim 100% on
         observed coordinates alone: it fails closed (MEASUREMENT_FAILED,
-        observed=None), never PASS."""
+        observed=None), never PASS. The returned coverage (consumed by the
+        adjudicator/API/PDF) must be None — the same fail-closed state — not
+        a stale observed percentage."""
         from tos.engine.tier1_measurements import Tier1Measurements
         atoms = _backbone_atoms(5)
         s = _structure(atoms, source_by_chain={}, source_available=False)
-        r, _, _ = Tier1Measurements.run_full_audit(s)
+        r, coverage_returned, _ = Tier1Measurements.run_full_audit(s)
         law105 = r["LAW-105"]
         assert law105["observed"] is None
         assert law105["status"] == "MEASUREMENT_FAILED"
         assert law105["source_sequence_available"] is False
         assert law105["coverage_basis"] == "source_polymer_sequence_unavailable"
+        # returned coverage agrees (fail-closed), never an observed-only %
+        assert coverage_returned is None
 
     def test_explicit_source_and_method_reported(self):
         from tos.engine.tier1_measurements import Tier1Measurements

@@ -276,10 +276,13 @@ class Tier1Measurements:
         else:
             # The source polymer sequence cannot be established. Do NOT
             # silently claim 100% coverage on observed coordinates alone;
-            # LAW-105 fails closed as an explicit unknown/unmeasured state.
+            # LAW-105 fails closed as an explicit unknown/unmeasured state,
+            # and the returned coverage is None so every downstream consumer
+            # (adjudicator, API verdict.coverage_pct, batch, PDF) sees the
+            # same fail-closed state rather than a stale observed percentage.
             denominator = 0
             numerator = 0
-            coverage = 0.0
+            coverage = None
             coverage_basis = "source_polymer_sequence_unavailable"
             source_reported = {}
             coverage_available = False
