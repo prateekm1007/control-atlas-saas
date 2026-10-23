@@ -411,3 +411,23 @@ class TestConfidenceContract:
         assert meta["data_available"] is True
         assert meta["observation_count"] == 1
         assert meta.get("b_factor_mean") is None
+
+class TestNonFiniteCoordinates:
+    @pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+    def test_malformed_coordinates_cannot_pass(self, bad):
+        atoms = _residue("A", 1, [0, 0, 0], [0, 5, 0])
+        atoms += _residue("A", 2, [bad, 0, 0], [5, 0, 0])
+        results, coverage, is_experimental = Tier1Measurements.run_full_audit(
+            _structure(atoms, experimental=True))
+        assert coverage == 0.0
+        assert is_experimental is True
+        assert results["LAW-105"]["status"] == "MEASUREMENT_FAILED"
+        assert "non-finite" in results["LAW-105"]["reason"]
+        adjudication = adjudicate_laws(AdjudicationInput(
+            raw_measurements=results,
+            coverage=coverage,
+            is_experimental=True,
+            method_type="xray",
+            architecture="NONE",
+        ))
+        assert adjudication.verdict == "INDETERMINATE"

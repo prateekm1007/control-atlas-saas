@@ -359,3 +359,23 @@ class TestComputeVerdict:
             {"method": "heuristic", "status": "FAIL"},
         ]
         assert _compute_verdict(rows, 100.0) == "PASS"
+
+    @pytest.mark.parametrize("coverage", [
+        float("nan"), float("inf"), float("-inf"),
+        -1.0, 101.0, None, "100", True,
+    ])
+    def test_invalid_coverage_fails_closed(self, coverage):
+        result = adjudicate_laws(_make_input(
+            measurements=_all_passing_measurements(), coverage=coverage))
+        assert result.verdict == "INDETERMINATE"
+        assert result.strategic_math.s6 == 0.0
+        assert result.strategic_math.p_score == 0
+        assert "coverage" in (result.verdict_reason or "").lower()
+
+    @pytest.mark.parametrize("coverage", [
+        float("nan"), float("inf"), float("-inf"),
+        -1.0, 101.0, None, "100", True,
+    ])
+    def test_compute_verdict_rejects_invalid_coverage(self, coverage):
+        rows = [{"method": "deterministic", "status": "PASS"}]
+        assert _compute_verdict(rows, coverage) == "INDETERMINATE"

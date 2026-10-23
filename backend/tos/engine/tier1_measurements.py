@@ -115,12 +115,31 @@ class Tier1Measurements:
 
     @staticmethod
     def run_full_audit(structure, user_intent="NONE"):
+        method = getattr(structure.confidence, "method", "predicted")
+        is_experimental = (method != "predicted")
+
+        for atom in getattr(structure, "atoms", []) or []:
+            try:
+                pos = np.asarray(getattr(atom, "pos", None), dtype=float)
+            except (TypeError, ValueError):
+                pos = None
+            if pos is None or pos.shape != (3,) or not np.all(np.isfinite(pos)):
+                return {
+                    "LAW-105": {
+                        "observed": None,
+                        "status": "MEASUREMENT_FAILED",
+                        "sample": 0,
+                        "reason": (
+                            "non-finite atomic coordinates cannot be measured; "
+                            "no law may pass on malformed geometry"
+                        ),
+                    }
+                }, 0.0, is_experimental
+
         residues = Tier1Measurements._extract(structure)
         if not residues:
             return {}, 0, False
 
-        method = getattr(structure.confidence, "method", "predicted")
-        is_experimental = (method != "predicted")
         core = residues if is_experimental else [r for r in residues if r["_conf"] >= 70]
         coverage = 100.0 if is_experimental else (len(core) / len(residues) * 100)
 

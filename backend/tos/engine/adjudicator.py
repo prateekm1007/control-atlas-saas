@@ -108,15 +108,26 @@ class AdjudicationResult:
 # VERDICT LOGIC (moved verbatim from main.py _compute_verdict)
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def _coverage_is_valid(coverage) -> bool:
+    """Coverage is a finite percentage; malformed values must fail closed."""
+    if isinstance(coverage, bool) or not isinstance(coverage, (int, float)):
+        return False
+    value = float(coverage)
+    return math.isfinite(value) and 0.0 <= value <= 100.0
+
+
 def _compute_verdict(res_t1: list[dict], coverage: float) -> str:
     """
     Determine binary verdict from classified law rows and coverage.
 
     Logic preserved exactly from main.py:
-    - Coverage below LAW-105 threshold → INDETERMINATE
+    - Invalid or below-threshold LAW-105 coverage → INDETERMINATE
     - Any deterministic law with FAIL or VETO → VETO
     - Otherwise → PASS
     """
+    if not _coverage_is_valid(coverage):
+        return "INDETERMINATE"
+
     cov_threshold = float(LAW_CANON["LAW-105"]["threshold"])
     if coverage < cov_threshold:
         return "INDETERMINATE"
@@ -317,7 +328,9 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
     heur_passed = sum(1 for r in res_t1 if r["status"] == "PASS" and r["method"] == "heuristic")
     adv_score = int((heur_passed / max(HEURISTIC_COUNT, 1)) * 100)
 
-    verdict = _compute_verdict(res_t1, inp.coverage)
+    coverage = inp.coverage
+    coverage_valid = _coverage_is_valid(coverage)
+    verdict = _compute_verdict(res_t1, coverage)
 
     # PIL-MTH-12: Strategic Success Math
     raw_s6 = round(det_score / 100.0, 4)
@@ -326,7 +339,14 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
 
     # Coverage Gate Logic
     cov_threshold = float(LAW_CANON["LAW-105"]["threshold"])
-    if inp.coverage < cov_threshold:
+    if not coverage_valid:
+        s6_final = 0.0
+        p_score = 0
+        suppression = (
+            "Coverage is not a finite percentage in [0, 100]; "
+            "prioritization index suppressed."
+        )
+    elif coverage < cov_threshold:
         s6_final = 0.0
         p_score = 0
         suppression = "Coverage gate enforces zeroing of prioritization index."
@@ -335,9 +355,13 @@ def adjudicate_laws(inp: AdjudicationInput) -> AdjudicationResult:
         p_score = int(s6_final * w_arch * (1.0 - m_s8) * 100)
         suppression = None
 
-    if inp.coverage < cov_threshold:
+    if not coverage_valid:
         verdict_reason = (
-            f"LAW-105 residue coverage {round(inp.coverage, 2)}% is below "
+            "LAW-105 residue coverage is not a finite percentage in [0, 100]"
+        )
+    elif coverage < cov_threshold:
+        verdict_reason = (
+            f"LAW-105 residue coverage {round(coverage, 2)}% is below "
             f"the {cov_threshold}% minimum"
         )
     elif verdict == "VETO":
