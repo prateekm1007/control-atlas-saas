@@ -1,8 +1,0 @@
-fastapi
-uvicorn
-python-multipart
-biopython
-numpy
-PyYAML
-fpdf2
-requests

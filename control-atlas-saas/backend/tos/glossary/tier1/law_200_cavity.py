@@ -1,1 +1,0 @@
-EXPLANATION = {"title": "Cavity Collapse", "principle": "Functional binding pockets must maintain minimum volume.", "rationale": "Binding requires defined cavities (~150A^3). Pocket collapse renders the design functionally dead."}

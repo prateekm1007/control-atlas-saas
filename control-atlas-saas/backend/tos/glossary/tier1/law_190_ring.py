@@ -1,1 +1,0 @@
-EXPLANATION = {"title": "Ring Planarity", "principle": "Aromatic rings must remain geometrically flat.", "rationale": "Delocalized pi-bonding enforces planarity. Non-planar rings indicate a catastrophic optimization failure."}
