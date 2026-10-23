@@ -62,7 +62,21 @@
       ],
       "acceptance": "LAW-130 boundary (<=), MEASUREMENT_FAILED on neighbor-search failure, sample=0 with separate input_atom_count, and reported-value/status consistency all pinned. Full backend suite green."
     },
-    "P4": { "title": "LAW-182 advisory end-to-end", "status": "pending" },
+    "P4": {
+      "title": "LAW-182 advisory end-to-end",
+      "status": "implemented",
+      "verdict_impact": "LAW-182 is confirmed heuristic/advisory (non-blocking). Added negative controls proving an adverse LAW-182 alone never vetoes, never enters deterministic blocking laws, and serializes as FAIL (Advisory); deterministic failures still veto. Missing LAW-182 stays NOT_MEASURED (not favorable). API response exposes method=heuristic and advisory status; PDF labels heuristic/advisory (existing PDF logic verified through the API ingest path). No threshold/classification changed; behavior pinned by tests.",
+      "files_changed": [
+        "backend/tests/test_law_182_advisory_e2e.py"
+      ],
+      "regression_tests": [
+        "tests/test_law_182_advisory_e2e.py::TestLAW182AdvisoryOnly::test_law182_adverse_alone_does_not_veto",
+        "tests/test_law_182_advisory_e2e.py::TestLAW182AdvisoryOnly::test_deterministic_failure_still_vetoes",
+        "tests/test_law_182_advisory_e2e.py::TestLAW182AdvisoryOnly::test_missing_law182_is_not_favorable",
+        "tests/test_law_182_advisory_e2e.py::TestLAW182ApiContract::test_api_response_exposes_method_and_status"
+      ],
+      "acceptance": "Adverse LAW-182 alone never vetoes; absent from deterministic blocking; API/PDF label advisory; missing measurement honest; deterministic failures still veto. Full backend suite green."
+    },
     "P5": { "title": "LAW-155 advisory restoration", "status": "pending" },
     "P6": { "title": "Gemmi/altloc/HETATM/PDB-mmCIF parity proof", "status": "pending" },
     "P7": { "title": "Canonical OD-07 audit-ID binding", "status": "pending" },
