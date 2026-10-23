@@ -270,6 +270,18 @@ def test_chain_boundary_is_not_sequential():
     assert Tier1Measurements._is_sequential(residues[0], residues[1]) is False
 
 
+def test_insertion_coded_pair_is_sequential_in_source_order():
+    """An insertion-coded residue placed before its base-numbered residue in
+    source order (184A then 184) must still be recognized as adjacent — equal
+    residue numbers with distinct insertion codes are sequential in source order."""
+    atoms = _ala("A", 184, "A", 0.0, 0.0, 0.0, src=0)
+    atoms += _ala("A", 184, "", 3.0, 0.0, 0.0, src=1)
+    s = _fake_structure(atoms)
+    residues = Tier1Measurements._extract(s)
+    assert [(r["_seq"], r["_icode"]) for r in residues] == [(184, "A"), (184, "")]
+    assert Tier1Measurements._is_sequential(residues[0], residues[1]) is True
+
+
 def test_p2_source_backed_coverage_counts_absent_positions():
     """A missing internal source position must count against coverage: two
     observed complete residues at label_seq_id 1 and 3 of a 3-position polymer

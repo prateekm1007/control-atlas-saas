@@ -1,0 +1,37 @@
+{
+  "artifact": "workspace-preflight",
+  "patch": "P1-P8 engine/calibration work on fix/residue-order-contract",
+  "generated_at_utc": "2026-10-23T21:55:00Z",
+  "repository": {"remote_origin": "https://github.com/prateekm1007/control-atlas-saas.git"},
+  "branch": {"name": "fix/residue-order-contract", "base_sha": "8a9a9c9b156f8d05a76cf88550b9a36cfb609786"},
+  "governing_docs_read": {
+    "AGENTS.md": "85767237399ffb30f3e45894d9dfbe6f4240584f",
+    "constitution.md": "211ad2c5d4b40059d9f3f03de12e0701f9235bc7",
+    "ENGINEERING_CONSTITUTION.md": "b6bb35e84956d84a8c9d9e65734c212baf3ed075",
+    "docs/coder/BRIEF.md": "052a84ca829d321dc0841a4b1c8702145dcbf6b5",
+    "docs/decisions/OWNER_DECISIONS.md": "12906bf5997a3e2c6b5c41e5d5c60fee14613274",
+    "docs/P0_STATUS.md": "a31517abbc046c495930ba19ef7aeaf8bb72f2d0"
+  },
+  "read_window_utc": "2026-10-23T21:50:00Z (first edit after re-read)",
+  "risks": [
+    "Residue ordering/adjacency must share one canonical contract; source-file order alone is not adjacency proof.",
+    "Coverage must be source-backed end-to-end; returned coverage, LAW-105, adjudicator and API must agree.",
+    "Evaluator trust boundary: exact artifact set, path containment, duplicate manifest paths, cross-manifest consistency, and authenticity boundary.",
+    "Real 1PPE/5T4O and independent mmCIF fixtures are not present in this environment; synthetic reproductions are used."
+  ],
+  "impacted_consumers": [
+    "Tier1Measurements (LAW-105/110/120/125/135/160)",
+    "coord_math.get_sequential_residues",
+    "adjudicator + main.py verdict path",
+    "calibration evaluate.py (run-input/artifact validation)",
+    "API/PDF/export/batch surfaces"
+  ],
+  "acceptance": [
+    "One canonical residue identity/order/adjacency contract across all adjacency-sensitive laws.",
+    "Source-backed coverage shared by returned coverage, LAW-105, adjudicator, API, PDF.",
+    "Evaluator exact-artifact set, traversal/symlink containment, duplicate-manifest rejection, cross-manifest reconciliation.",
+    "Full suite green apart from pre-existing baseline failures; OD-16 preserved."
+  ],
+  "rollback": "Append-only; do not force-push or merge; revert forward via reviewed follow-up.",
+  "verdict_impact": "Classification/ordering/coverage contracts only; no law threshold/ID/meaning changes except the authorized LAW-155 advisory reconciliation."
+}

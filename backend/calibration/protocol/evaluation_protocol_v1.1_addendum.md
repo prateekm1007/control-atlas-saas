@@ -95,3 +95,31 @@ This addendum reconciles the v1 protocol with the engine audit by:
 5. Not authorizing any new calibration evidence generation
 
 OD-16 remains in force.
+
+## 7. Calibration preregistration (2026-10-24, P8)
+
+This section preregisters the corrected-cohort analysis plan **before** any
+outcome inspection. It adds no authorization to run v25, a held-out split, or
+any threshold/cohort change (OD-16 remains in force). It reconciles the v1
+protocol's 15-per-stratum target to the stricter requirement below.
+
+1. **v23 quarantine.** Historical v23 data and outputs remain quarantined and
+   byte-for-byte unchanged.
+2. **Corrected cohort.** A separately versioned corrected cohort will carry
+   row-level source provenance and reproducible checksums. Eligibility and
+   labels are reconciled independently of Toscanini verdicts; synthetic data
+   is never used as production evidence.
+3. **Split design.** Sequence/family-disjoint splits drawn with seed
+   `20261021`. The intended 80/20 calibration/validation split is adopted only
+   after feasibility is demonstrated on the corrected, eligible data (minimum
+   counts per planned stratum).
+4. **Stratum minimums.** At least 30 eligible samples per planned stratum
+   (this supersedes the v1-protocol 15-per-stratum target; the stricter value
+   governs unless a dated feasibility decision explicitly supersedes it).
+5. **Preregistered acceptance criteria.** A preregistered false-veto limit and
+   confidence-interval acceptance criteria are fixed before inspection. No
+   threshold may be tuned on held-out outcomes.
+6. **External validation (separate).** An executable validator with
+   independent reference evidence, at least 200 valid structures, and at least
+   95% agreement in each of four categories (bond, angle, Ramachandran,
+   clash) is required separately; the current harness remains a skeleton.

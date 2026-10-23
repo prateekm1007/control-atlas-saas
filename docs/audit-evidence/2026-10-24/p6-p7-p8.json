@@ -1,0 +1,28 @@
+{
+  "artifact": "p6-p7-p8-closure-note",
+  "generated_at_utc": "2026-10-23T21:50:00Z",
+  "branch": {"name": "fix/residue-order-contract", "base_sha": "8a9a9c9b156f8d05a76cf88550b9a36cfb609786"},
+  "summary": "P6 ingestion contract tests; P7 OD-07 audit-ID verification; P8 calibration preregistration.",
+  "p6": {
+    "tests": [
+      "HETATM polymer retained; water and non-polymer ligand excluded (counts)",
+      "altloc dominant-conformer selection and discard accounting",
+      "incomplete residue retained but not fabricated as complete-backbone",
+      "empty/malformed/unsupported inputs -> IngestionError",
+      "PDB/mmCIF parity: equal coordinate hash and residue identity"
+    ]
+  },
+  "p7": {
+    "tests": [
+      "audit ID = deterministic full SHA-256 (64 hex)",
+      "identical inputs -> identical IDs",
+      "changing canon/matrix/coordinate component changes the ID"
+    ]
+  },
+  "p8": {
+    "preregistration": "evaluation_protocol_v1.1_addendum.md section 7: v23 quarantine; corrected cohort with row-level provenance; seed 20261021, 80/20 only after feasibility; >=30 per stratum (supersedes 15); preregistered false-veto/CI acceptance; external validation separate (200 structures, 95% x4 categories). No v25/held-out/threshold authorization."
+  },
+  "test_count": {
+    "local": "python -m pytest tests/ --q under PYTHONUTF8=1: 605 passed, 3 pre-existing baseline failures (protocol CRLF, matrix-hash drift x2)."
+  }
+}
