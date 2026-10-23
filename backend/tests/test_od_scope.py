@@ -135,6 +135,29 @@ class TestLaw130:
         assert high_results["LAW-130"]["observed"] == low_results["LAW-130"]["observed"]
         assert high_results["LAW-130"]["plddt_advisory"] != low_results["LAW-130"]["plddt_advisory"]
 
+    def test_law_130_status_matches_reported_rounded_value(self):
+        threshold = LAW_CANON["LAW-130"]["threshold"]
+        for struct in (
+            _clash_structure(),                     # exact boundary 20.0
+            _clash_structure(extra_clash=True),     # above threshold 40.0
+        ):
+            row = Tier1Measurements.run_full_audit(struct)[0]["LAW-130"]
+            expected = "PASS" if row["observed"] <= threshold else "VETO"
+            assert row["status"] == expected
+            assert row.get("precision") == "verdict evaluates the reported rounded observed value"
+
+    def test_neighbor_search_failure_does_not_imply_success_sample(self, monkeypatch):
+        import scipy.spatial
+
+        def boom(*args, **kwargs):
+            raise RuntimeError("synthetic tree failure")
+
+        monkeypatch.setattr(scipy.spatial, "cKDTree", boom)
+        row = Tier1Measurements.run_full_audit(_clash_structure())[0]["LAW-130"]
+        assert row["status"] == "MEASUREMENT_FAILED"
+        assert row["sample"] == 0
+        assert row["atom_input_count"] == 50
+
 
 class TestLaw105Coverage:
     def test_returns_residue_coverage_not_atom_coverage(self):

@@ -1,0 +1,22 @@
+{
+  "artifact": "p3-closure-note",
+  "generated_at_utc": "2026-10-23T20:55:00Z",
+  "branch": {"name": "fix/residue-order-contract", "base_sha": "8a9a9c9b156f8d05a76cf88550b9a36cfb609786"},
+  "summary": "P3: LAW-130 boundary/tooling-failure contract and precision contract.",
+  "contract": {
+    "operator": "LAW-130 uses the canonical inclusive threshold operator (<==).",
+    "precision": "The verdict is computed from the SAME rounded value that is reported (observed = round(clash_score, 2)), so the displayed value and status never contradict. Exposed as result field precision='verdict evaluates the reported rounded observed value'.",
+    "sample_semantics": "sample is the valid measurement sample (atom input count on success). On MEASUREMENT_FAILED / NOT_MEASURED sample=0 and the diagnostic input atom count is exposed separately as atom_input_count; a failure never implies a successful sample."
+  },
+  "tests": [
+    "exact-boundary (20.0) PASS with inclusive operator",
+    "below-threshold PASS",
+    "above-threshold VETO",
+    "status-matches-reported-rounded-value invariant (boundary + above)",
+    "neighbor-search failure -> MEASUREMENT_FAILED, sample=0, atom_input_count=50",
+    "adjudicator: failed deterministic measurement -> INDETERMINATE (not PASS)"
+  ],
+  "test_count": {
+    "local": "python -m pytest tests/ --q under PYTHONUTF8=1: 580 passed, 10 pre-existing baseline failures."
+  }
+}

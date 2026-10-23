@@ -566,9 +566,11 @@ class Tier1Measurements:
                 _residue_label_sort_key(pair[1]),
             ),
         )
+        atom_input_count = len(all_coords)
         if len(all_coords) < 2:
             results["LAW-130"] = {
                 "observed": None, "status": "NOT_MEASURED", "sample": 0,
+                "atom_input_count": atom_input_count,
                 "granularity": GRANULARITY_RESIDUE_PAIR,
                 "failing_residue_pairs": [],
                 "reason": "fewer than two atomic coordinates available",
@@ -576,19 +578,26 @@ class Tier1Measurements:
             }
         elif neighbor_search_error is not None:
             results["LAW-130"] = {
-                "observed": None, "status": "MEASUREMENT_FAILED", "sample": len(all_coords),
+                "observed": None, "status": "MEASUREMENT_FAILED", "sample": 0,
+                "atom_input_count": atom_input_count,
                 "granularity": GRANULARITY_RESIDUE_PAIR,
                 "failing_residue_pairs": [],
                 "reason": f"neighbor search failed: {neighbor_search_error}",
                 "plddt_advisory": Tier1Measurements._plddt_advisory(residues, is_experimental),
             }
         else:
-            clash_score = (clash / len(all_coords)) * 1000
             threshold = LAW_CANON["LAW-130"]["threshold"]
+            # Precision contract: the verdict is computed from the SAME rounded
+            # value that is reported, so the displayed value and status never
+            # contradict one another.
+            reported = round((clash / atom_input_count) * 1000, 2)
             results["LAW-130"] = {
-                "observed": round(clash_score, 2),
-                "status": "PASS" if clash_score <= threshold else "VETO",
-                "sample": len(all_coords),
+                "observed": reported,
+                "status": "PASS" if reported <= threshold else "VETO",
+                "sample": atom_input_count,
+                "atom_input_count": atom_input_count,
+                "clash_count": clash,
+                "precision": "verdict evaluates the reported rounded observed value",
                 "granularity": GRANULARITY_RESIDUE_PAIR,
                 "failing_residue_pairs": unique_pairs,
                 "plddt_advisory": Tier1Measurements._plddt_advisory(residues, is_experimental),
