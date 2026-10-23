@@ -836,3 +836,15 @@ law-semantic changes, no golden-artifact regeneration without their approved
 gates. The independent r2 evidence-archive verification, the portable 40-row
 cohort metadata table, A-02 issuer-side revocation, and the EC2 deployment
 secrets remain OPEN and are not closed by this governance work.
+
+## Part 16 — 2026-10-24 delegated LAW-155 classification reconciliation (AUDITOR-DECIDED, register rev 13)
+
+This Part records the delegated direction from the 2026-10-24 audit cycle
+(P5). It is a dated supplemental/superseding decision; it does not edit any
+earlier register row. It supersedes OD-03 to the extent OD-03 directed
+retirement of LAW-155 from enforced semantics, and it implements the owner
+decision D3 (recorded on the owner-decisions register, Part 15).
+
+| ID | Decision (current controlling text) | Decision status | Supersedes / refines |
+|---|---|---|
+| D6 | LAW-155 (Voxel Occupancy) is defined and advisory, non-blocking, pending independent negative-control validation. It is reclassified from retired (OD-03) to heuristic/advisory. It must NOT independently produce a deterministic VETO, must not appear among deterministic blocking laws, and a missing/failed LAW-155 measurement must not be misrepresented as favorable evidence. This decision authorizes the classification reconciliation only; it does NOT authorize changing LAW-155's numerical threshold (2.0 V) or inventing a new scientific meaning. Hash locks re-pinned in this reviewed patch: governance/law_registry.sha256 old `81b57f4c68164522b6a27f810da33c2108c1af9682d018ba15c9b8a92a8d0123` → new `8f21ccb449469b9707d2ee51b56e4e381fe496b67bc7395683a6eeda792825d3`; governance/law_semantic.sha256 old `d2b3b8501b1c73f67e7839662f70b68596d3c1e25b51d824d6b8a78325816dd5` → new `f825f38b9493a9409aa9678c1f98593e7715ba6b9e01aefba808096571a27750`. Unrelated law semantics verified unchanged. | AUDITOR-DECIDED 2026-10-24 | Supersedes OD-03 to the extent OD-03 directed LAW-155 retirement; implements D3 (Part 15). |

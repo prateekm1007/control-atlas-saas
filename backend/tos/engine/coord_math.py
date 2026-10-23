@@ -14,6 +14,12 @@ References:
 import numpy as np
 from typing import List, Optional, Tuple, Set
 
+from ..ingestion.atom_selection import (
+    atom_identity,
+    choose_atom,
+    normalize_insertion_code,
+)
+
 
 def distance(a: np.ndarray, b: np.ndarray) -> float:
     """
@@ -56,6 +62,15 @@ def angle_deg(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> float:
     cos_angle = np.clip(cos_angle, -1.0, 1.0)
 
     return float(np.degrees(np.arccos(cos_angle)))
+
+
+def angle_deg_valid(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> tuple[float, bool]:
+    """Return `(angle_deg, valid)` where degenerate vectors are not valid."""
+    angle = angle_deg(a, b, c)
+    ba = a - b
+    bc = c - b
+    valid = bool(np.linalg.norm(ba) >= 1e-10 and np.linalg.norm(bc) >= 1e-10)
+    return angle, valid
 
 
 def dihedral_deg(a: np.ndarray, b: np.ndarray,
@@ -108,6 +123,23 @@ def dihedral_deg(a: np.ndarray, b: np.ndarray,
     return float(np.degrees(np.arctan2(-y, x)))
 
 
+def dihedral_deg_valid(a: np.ndarray, b: np.ndarray,
+                       c: np.ndarray, d: np.ndarray) -> tuple[float, bool]:
+    """Return `(dihedral_deg, valid)` where degenerate geometry is not valid."""
+    angle = dihedral_deg(a, b, c, d)
+    b1 = b - a
+    b2 = c - b
+    b3 = d - c
+    n1 = np.cross(b1, b2)
+    n2 = np.cross(b2, b3)
+    valid = bool(
+        np.linalg.norm(n1) >= 1e-10
+        and np.linalg.norm(n2) >= 1e-10
+        and np.linalg.norm(b2) >= 1e-10
+    )
+    return angle, valid
+
+
 def get_atom_pos(atoms, chain_id: str, res_seq: int,
                  atom_name: str, insertion_code: str = "") -> Optional[np.ndarray]:
     """
@@ -123,13 +155,15 @@ def get_atom_pos(atoms, chain_id: str, res_seq: int,
     Returns:
         numpy array of shape (3,) with atom position, or None if not found.
     """
+    best = None
+    insertion_code = normalize_insertion_code(insertion_code)
     for atom in atoms:
         if (atom.chain_id == chain_id and
                 atom.res_seq == res_seq and
                 atom.atom_name == atom_name and
-                atom.insertion_code == insertion_code):
-            return atom.pos
-    return None
+                normalize_insertion_code(atom.insertion_code) == insertion_code):
+            best = choose_atom(best, atom)
+    return best.pos if best is not None else None
 
 
 def get_chains(atoms) -> Set[str]:
@@ -150,7 +184,13 @@ def get_sequential_residues(atoms, chain_id: str) -> List[Tuple[int, str, str]]:
     Return an ordered list of residues in a chain.
 
     Each entry is (res_seq, insertion_code, res_name).
-    Sorted by (res_seq, insertion_code) to handle insertion codes correctly.
+
+    Order follows the authoritative sequence position (P1 ordering contract):
+    a valid mmCIF label_seq_id wins when present; otherwise the numeric residue
+    sequence number is used. The sort is STABLE, so residues sharing a primary
+    position (e.g. 184A before 184 in 1PPE) keep their source-file order, which
+    is the depositor's chemical order. Alphabetical insertion-code sorting is
+    intentionally NOT used, because it can re-pair peptide geometry (P0 item 4).
 
     Args:
         atoms: list of Atom objects
@@ -165,14 +205,21 @@ def get_sequential_residues(atoms, chain_id: str) -> List[Tuple[int, str, str]]:
     for atom in atoms:
         if atom.chain_id != chain_id:
             continue
-        key = (atom.res_seq, atom.insertion_code)
+        key = atom_identity(atom)[:4]
         if key not in seen:
             seen.add(key)
-            residues.append((atom.res_seq, atom.insertion_code, atom.res_name))
+            ls = getattr(atom, "label_seq_id", None)
+            try:
+                ls_int = int(ls) if ls is not None else None
+            except (TypeError, ValueError):
+                ls_int = None
+            residues.append(
+                (atom.res_seq, normalize_insertion_code(atom.insertion_code),
+                 atom.res_name, ls_int)
+            )
 
-    # Sort by sequence number, then insertion code
-    residues.sort(key=lambda r: (r[0], r[1]))
-    return residues
+    residues.sort(key=lambda r: (r[3] if r[3] is not None else r[0],))
+    return [(r[0], r[1], r[2]) for r in residues]
 
 
 def get_residue_atoms(atoms, chain_id: str, res_seq: int,
@@ -190,13 +237,14 @@ def get_residue_atoms(atoms, chain_id: str, res_seq: int,
         dict mapping atom name strings to numpy position arrays.
         Example: {"N": array([1,2,3]), "CA": array([4,5,6]), ...}
     """
-    result = {}
+    selected = {}
+    insertion_code = normalize_insertion_code(insertion_code)
     for atom in atoms:
         if (atom.chain_id == chain_id and
                 atom.res_seq == res_seq and
-                atom.insertion_code == insertion_code):
-            result[atom.atom_name] = atom.pos
-    return result
+                normalize_insertion_code(atom.insertion_code) == insertion_code):
+            selected[atom.atom_name] = choose_atom(selected.get(atom.atom_name), atom)
+    return {name: atom.pos for name, atom in selected.items()}
 
 
 # ═══════════════════════════════════════════════════════════════

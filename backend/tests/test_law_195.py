@@ -68,7 +68,7 @@ class TestLaw195:
         assert res["sample"] == 1
 
     def test_no_cys_residues(self):
-        """Structure with no CYS → sample=0, observed=0, PASS."""
+        """Structure with no CYS has no applicable disulfide geometry test."""
         atoms = [
             _make_atom("N",  "N", [0.0, 0.0, 0.0],  res_name="ALA", res_seq=1),
             _make_atom("CA", "C", [1.47, 0.0, 0.0],  res_name="ALA", res_seq=1),
@@ -76,12 +76,12 @@ class TestLaw195:
         ]
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
         res = results["LAW-195"]
-        assert res["status"] == "PASS"
-        assert res["observed"] == 0.0
+        assert res["status"] == "NOT_APPLICABLE"
+        assert res["observed"] is None
         assert res["sample"] == 0
 
     def test_distant_cys_not_disulfide(self):
-        """Two CYS with SG-SG > 3.0Å → not a disulfide pair → sample=0."""
+        """Two CYS with SG-SG > 3.0Å have no disulfide, so the law is not applicable."""
         atoms = [
             _make_atom("N",  "N", [0.0, 0.0, 0.0],   res_name="CYS", res_seq=5),
             _make_atom("CA", "C", [1.47, 0.0, 0.0],   res_name="CYS", res_seq=5),
@@ -94,8 +94,8 @@ class TestLaw195:
         ]
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
         res = results["LAW-195"]
-        assert res["status"] == "PASS"
-        assert res["observed"] == 0.0
+        assert res["status"] == "NOT_APPLICABLE"
+        assert res["observed"] is None
         assert res["sample"] == 0
 
     def test_multiple_disulfides(self):
@@ -147,8 +147,8 @@ class TestLaw195:
         assert LAW_CANON["LAW-195"]["type"] == "Scalar"
         assert IDEAL_TABLE["S-S"] == 2.033
 
-    def test_cys_without_sg_skipped(self):
-        """CYS residue without SG atom → not included in search."""
+    def test_cys_without_sg_is_not_measured(self):
+        """A cysteine without SG blocks disulfide assessment instead of passing."""
         atoms = [
             _make_atom("N",  "N", [0.0, 0.0, 0.0],   res_name="CYS", res_seq=5),
             _make_atom("CA", "C", [1.47, 0.0, 0.0],   res_name="CYS", res_seq=5),
@@ -159,5 +159,6 @@ class TestLaw195:
         ]
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(atoms))
         res = results["LAW-195"]
-        assert res["status"] == "PASS"
+        assert res["status"] == "NOT_MEASURED"
+        assert res["observed"] is None
         assert res["sample"] == 0

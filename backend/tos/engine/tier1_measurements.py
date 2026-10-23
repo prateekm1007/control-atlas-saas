@@ -12,12 +12,20 @@ Changes from pre-migration:
   - LAW-120: IMPLEMENTED (Bond Angle RMSD via coord_math.angle_deg)
   - LAW-160: sample field fixed to report actual CA pairs measured
   - LAW-155: explicit result inserted (was missing entirely)
+  - Zero-observation laws report NOT_MEASURED or NOT_APPLICABLE, never PASS.
+  - LAW-100 uses the canonical percentage-of-outliers threshold in every modality.
 """
 from .coord_math import (
-    distance, angle_deg, dihedral_deg,
+    distance, angle_deg_valid, dihedral_deg_valid,
     get_atom_pos, get_chains, get_sequential_residues,
     CHI1_ATOMS, NO_CHI1_RESIDUES
 )
+from ..ingestion.atom_selection import (
+    canonicalize_atoms,
+    finite_float,
+    normalize_insertion_code,
+)
+import math
 import numpy as np
 import logging
 from ..governance.station_sop import (
@@ -32,19 +40,92 @@ GRANULARITY_GLOBAL       = "global"
 
 logger = logging.getLogger("toscanini.tier1")
 
+MEASURED_STATUSES = frozenset({"PASS", "FAIL", "VETO"})
+MISSING_STATUSES = frozenset({"NOT_MEASURED", "MEASUREMENT_FAILED", "NOT_APPLICABLE"})
+VALID_MEASUREMENT_STATUSES = MEASURED_STATUSES | MISSING_STATUSES
+
+INSERTION_ALPHABET = (
+    "",
+    *tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+    *tuple("abcdefghijklmnopqrstuvwxyz"),
+)
+INSERTION_RANK = {code: index for index, code in enumerate(INSERTION_ALPHABET)}
+REQUIRED_BACKBONE_ATOMS = frozenset({"N", "CA", "C"})
+PEPTIDE_BOND_MIN = 0.5
+PEPTIDE_BOND_MAX = 2.0
+
+
+def _residue_label_sort_key(label: str):
+    chain_id, _, residue = label.partition(":")
+    digits = "".join(character for character in residue if character.isdigit())
+    return chain_id, int(digits) if digits else 0, residue
+
 
 class Tier1Measurements:
     @staticmethod
+    def _not_measured(reason):
+        return {
+            "observed": None,
+            "status": "NOT_MEASURED",
+            "sample": 0,
+            "reason": reason,
+        }
+
+    @staticmethod
+    def _not_applicable(reason):
+        return {
+            "observed": None,
+            "status": "NOT_APPLICABLE",
+            "sample": 0,
+            "reason": reason,
+        }
+
+    @staticmethod
     def _is_sequential(r1, r2):
+        """Shared residue-adjacency contract (P1).
+
+        Two residues of the same chain are sequential when they are
+        consecutive in the canonical polymer sequence with no missing
+        internal position between them.
+
+        - When BOTH carry a valid mmCIF label_seq_id, adjacency requires
+          exactly label_seq(r2) == label_seq(r1) + 1. A larger gap means a
+          missing internal polymer position and is NOT sequential (so it can
+          never fabricate a favorable measured pair).
+        - Mixed availability (one residue has label_seq_id, the other does
+          not) is ambiguous and NOT sequential.
+        - Otherwise (author-numbering fallback for PDB without label_seq_id),
+          the documented number/insertion-rank predicate is used.
+        """
         if r1["_chain"] != r2["_chain"]:
             return False
-        s1, s2 = r1["_seq"], r2["_seq"]
-        i1, i2 = r1.get("_icode", ""), r2.get("_icode", "")
-        return (
-            (s2 - s1 == 1 and not i1 and not i2) or
-            (s2 == s1 and i2 > i1) or
-            (s2 - s1 == 1 and i1 and not i2)
-        )
+        h1 = r1.get("_has_label_seq")
+        h2 = r2.get("_has_label_seq")
+        if h1 and h2:
+            # Canonical label_seq positions: consecutive, no missing span.
+            return int(r2["_seq_pos"]) == int(r1["_seq_pos"]) + 1
+        if h1 or h2:
+            # Ambiguous mapping: reject (fail-closed).
+            return False
+        s1, s2 = int(r1["_seq"]), int(r2["_seq"])
+        i1 = normalize_insertion_code(r1.get("_icode", ""))
+        i2 = normalize_insertion_code(r2.get("_icode", ""))
+        if s2 == s1:
+            rank1 = INSERTION_RANK.get(i1)
+            rank2 = INSERTION_RANK.get(i2)
+            return rank1 is not None and rank2 is not None and rank2 == rank1 + 1
+        if s2 == s1 + 1:
+            return (not i1 and not i2) or (bool(i1) and not i2)
+        return False
+
+    @staticmethod
+    def _has_peptide_bond(r1, r2):
+        if not Tier1Measurements._is_sequential(r1, r2):
+            return False
+        if "C" not in r1["_atoms"] or "N" not in r2["_atoms"]:
+            return False
+        length = distance(r1["_atoms"]["C"], r2["_atoms"]["N"])
+        return math.isfinite(length) and PEPTIDE_BOND_MIN <= length <= PEPTIDE_BOND_MAX
 
     @staticmethod
     def _is_rama_outlier(res_name, phi, psi):
@@ -63,38 +144,120 @@ class Tier1Measurements:
     @staticmethod
     def _extract(structure):
         res_map = {}
-        for a in structure.atoms:
-            k = (a.chain_id, a.res_seq, a.insertion_code)
+        for a in canonicalize_atoms(getattr(structure, "atoms", []) or []):
+            k = (
+                a.chain_id,
+                int(a.res_seq),
+                normalize_insertion_code(a.insertion_code),
+                str(a.res_name).strip().upper(),
+            )
             if k not in res_map:
                 res_map[k] = {
-                    "_name": a.res_name, "_chain": a.chain_id,
-                    "_seq": a.res_seq, "_icode": a.insertion_code,
-                    "_conf_acc": [], "_atoms": {}
+                    "_name": str(a.res_name).strip().upper(), "_chain": a.chain_id,
+                    "_seq": int(a.res_seq), "_icode": normalize_insertion_code(a.insertion_code),
+                    "_label_seq": None, "_conf_acc": [], "_atoms": {}
                 }
             res_map[k]["_atoms"][a.atom_name] = a.pos
-            res_map[k]["_conf_acc"].append(a.b_iso)
+            ls = getattr(a, "label_seq_id", None)
+            if ls is not None:
+                try:
+                    ls_int = int(ls)
+                except (TypeError, ValueError):
+                    ls_int = None
+                if ls_int is not None:
+                    res_map[k]["_label_seq"] = ls_int
+            b_value = finite_float(getattr(a, "b_iso", None), None)
+            if b_value is not None:
+                res_map[k]["_conf_acc"].append(b_value)
         for r in res_map.values():
-            r["_conf"] = float(np.mean(r["_conf_acc"]))
-        return sorted(res_map.values(), key=lambda x: (x["_chain"], x["_seq"], x["_icode"]))
+            r["_conf"] = float(np.mean(r["_conf_acc"])) if r["_conf_acc"] else None
+            # Canonical per-chain sequence position and availability (P1 shared
+            # contract). label_seq_id (mmCIF) is authoritative when valid;
+            # otherwise the author residue number is used under the documented
+            # fallback. Mixed availability within a pair is ambiguous and the
+            # adjacency predicate must reject it.
+            r["_has_label_seq"] = r["_label_seq"] is not None
+            r["_seq_pos"] = r["_label_seq"] if r["_label_seq"] is not None else r["_seq"]
+        # Order residues by authoritative sequence position, not by alphabetical
+        # insertion-code sort. A valid mmCIF label_seq_id wins; otherwise fall
+        # back to the numeric residue sequence number. The sort is STABLE so
+        # residues sharing a primary position (e.g. 184A before 184 in 1PPE)
+        # keep their source-file order, which is the depositor's chemical order.
+        # This is the P1 ordering contract; alphabetical insertion-code sorting
+        # previously re-paired peptide geometry (P0 item 4).
+        return sorted(
+            res_map.values(),
+            key=lambda x: (
+                x["_chain"],
+                x["_label_seq"] if x["_label_seq"] is not None else x["_seq"],
+            ),
+        )
+
+    @staticmethod
+    def _plddt_advisory(residues, is_experimental):
+        if is_experimental or not residues:
+            return None
+        scores = [r["_conf"] for r in residues if r["_conf"] is not None]
+        if not scores:
+            return None
+        above = sum(1 for s in scores if s >= 70.0)
+        return {
+            "mean_plddt": round(float(np.mean(scores)), 2),
+            "fraction_at_or_above_70": round(above / len(scores) * 100, 2),
+            "observation_count": len(scores),
+            "policy": "advisory only; does not affect status or verdict",
+        }
 
     @staticmethod
     def run_full_audit(structure, user_intent="NONE"):
-        residues = Tier1Measurements._extract(structure)
-        if not residues:
-            return {}, 0, False
-
         method = getattr(structure.confidence, "method", "predicted")
         is_experimental = (method != "predicted")
-        core = residues if is_experimental else [r for r in residues if r["_conf"] >= 70]
-        coverage = 100.0 if is_experimental else (len(core) / len(residues) * 100)
+
+        for atom in getattr(structure, "atoms", []) or []:
+            try:
+                pos = np.asarray(getattr(atom, "pos", None), dtype=float)
+            except (TypeError, ValueError):
+                pos = None
+            if pos is None or pos.shape != (3,) or not np.all(np.isfinite(pos)):
+                return {
+                    "LAW-105": {
+                        "observed": None,
+                        "status": "MEASUREMENT_FAILED",
+                        "sample": 0,
+                        "reason": (
+                            "non-finite atomic coordinates cannot be measured; "
+                            "no law may pass on malformed geometry"
+                        ),
+                    }
+                }, None, is_experimental
+
+        residues = Tier1Measurements._extract(structure)
+        if not residues:
+            return {}, None, is_experimental
+
+        complete = [
+            r for r in residues
+            if REQUIRED_BACKBONE_ATOMS.issubset(r["_atoms"].keys())
+        ]
+        if is_experimental:
+            core = complete
+            coverage_basis = "complete_backbone_residues"
+        else:
+            core = [
+                r for r in complete
+                if r["_conf"] is not None and r["_conf"] >= 70.0
+            ]
+            coverage_basis = "plddt_core_complete_backbone_residues"
+        coverage = (len(core) / len(residues) * 100) if residues else 0.0
 
         results = {}
 
         # ═══════════════════════════════════════════════════════════
         # LAW-100: Bond Integrity (uses coord_math.distance)
         # Measures z-scores of covalent bond lengths against Engh-Huber ideals.
-        # Reports % outliers (z > 4σ) for predicted, RMSZ for experimental.
-        # ═══════════════════════════════════════════════════════════
+        # Canonical metric: percentage of bonds with |z| > 4σ. Applies to every
+        # modality; the former experimental-only RMSZ comparison was unregistered.
+        # ─────────────────────────────────────────────────────────────────────
         z_scores, outliers = [], 0
         for r in core:
             for b in ["N-CA", "CA-C", "C-O", "CA-CB"]:
@@ -108,21 +271,68 @@ class Tier1Measurements:
                     if z > 4.0:
                         outliers += 1
 
-        rmsz = float(np.sqrt(np.mean(np.array(z_scores)**2))) if z_scores else 0.0
-        bond_pct = (outliers / max(len(z_scores), 1) * 100)
-        results["LAW-100"] = {
-            "observed": round(rmsz if is_experimental else bond_pct, 2),
-            "status": "PASS" if (rmsz <= 8.0 if is_experimental else bond_pct <= 5.0) else "VETO",
-            "sample": len(z_scores)
-        }
+        if not z_scores:
+            results["LAW-100"] = Tier1Measurements._not_measured(
+                "no measurable covalent bonds in the eligible residues"
+            )
+        else:
+            bond_pct = outliers / len(z_scores) * 100
+            threshold = LAW_CANON["LAW-100"]["threshold"]
+            results["LAW-100"] = {
+                "observed": round(bond_pct, 2),
+                "status": "PASS" if bond_pct <= threshold else "VETO",
+                "sample": len(z_scores),
+            }
 
         # ═══════════════════════════════════════════════════════════
         # LAW-105: Reliability Coverage
         # ═══════════════════════════════════════════════════════════
+        metadata = getattr(structure, "metadata", None)
+        source_by_chain = getattr(
+            metadata, "source_polymer_residues_by_chain", None
+        ) or {}
+        source_available = bool(getattr(metadata, "source_sequence_available", False))
+        if source_available and source_by_chain:
+            # Source-backed denominator (P2): polymer positions from the
+            # authoritative source sequence (SEQRES / entity_poly_seq),
+            # including positions absent from the observed coordinates.
+            source_chains = set(source_by_chain.keys())
+            denominator = sum(source_by_chain.values())
+            numerator = len([r for r in core if r["_chain"] in source_chains])
+            coverage = (numerator / denominator * 100) if denominator else 0.0
+            coverage_basis = "source_polymer_sequence"
+            source_reported = source_by_chain
+            coverage_available = bool(denominator)
+        else:
+            # The source polymer sequence cannot be established. Do NOT
+            # silently claim 100% coverage on observed coordinates alone;
+            # LAW-105 fails closed as an explicit unknown/unmeasured state,
+            # and the returned coverage is None so every downstream consumer
+            # (adjudicator, API verdict.coverage_pct, batch, PDF) sees the
+            # same fail-closed state rather than a stale observed percentage.
+            denominator = 0
+            numerator = 0
+            coverage = None
+            coverage_basis = "source_polymer_sequence_unavailable"
+            source_reported = {}
+            coverage_available = False
         results["LAW-105"] = {
-            "observed": round(coverage, 2),
-            "status": "PASS" if coverage >= 70.0 else "FAIL",
-            "sample": len(residues)
+            "observed": round(coverage, 2) if coverage_available else None,
+            "status": (
+                "PASS" if coverage_available and coverage >= 70.0
+                else ("FAIL" if coverage_available else "MEASUREMENT_FAILED")
+            ),
+            "sample": numerator,
+            "coverage_basis": coverage_basis,
+            "coverage_numerator": numerator,
+            "coverage_denominator": denominator,
+            "source_sequence_available": source_available,
+            "source_polymer_residues_by_chain": source_reported,
+            "required_atoms": "N,CA,C",
+            "complete_backbone_residues": len(complete),
+            "source_atom_records": getattr(metadata, "source_atom_records", None),
+            "selected_atoms": getattr(metadata, "selected_atoms", None),
+            "malformed_atom_records": getattr(metadata, "malformed_records", None),
         }
 
         # ═══════════════════════════════════════════════════════════
@@ -130,24 +340,31 @@ class Tier1Measurements:
         # Measures C(i)-N(i+1) peptide bond distance for sequential pairs.
         # ═══════════════════════════════════════════════════════════
         gaps = 0
+        measured_pairs = 0
         for i in range(len(residues) - 1):
             r1, r2 = residues[i], residues[i + 1]
-            if r1["_chain"] == r2["_chain"] and Tier1Measurements._is_sequential(r1, r2):
+            if Tier1Measurements._is_sequential(r1, r2):
                 if "C" in r1["_atoms"] and "N" in r2["_atoms"]:
+                    measured_pairs += 1
                     if distance(r1["_atoms"]["C"], r2["_atoms"]["N"]) > 2.0:
                         gaps += 1
-        results["LAW-110"] = {
-            "observed": gaps,
-            "status": "PASS" if gaps == 0 else "VETO",
-            "sample": len(residues) - 1
-        }
+        if measured_pairs == 0:
+            results["LAW-110"] = Tier1Measurements._not_measured(
+                "no eligible sequential C-N pairs with both atoms present"
+            )
+        else:
+            results["LAW-110"] = {
+                "observed": gaps,
+                "status": "PASS" if gaps == 0 else "VETO",
+                "sample": measured_pairs
+            }
 
         # ═══════════════════════════════════════════════════════════
         # LAW-120: Bond Angle RMSD (Module 1.2.1 — uses coord_math.angle_deg)
-        # Measures N-CA-C and CA-C-N angles against Engh-Huber ideals.
-        # Reports RMSD of angular deviations in degrees.
-        # Threshold: 10.0° from station_sop.py
-        # ═══════════════════════════════════════════════════════════
+        # Measures N-CA-C, O(i)-C(i)-N(i+1), and CA-C-N angles against
+        # Engh-Huber ideals. Reports RMSD of angular deviations in degrees.
+        # Threshold: 18.0° from station_sop.py
+        # ─────────────────────────────────────────────────────────────────────
         angle_sq_diffs = []
         for i in range(len(core)):
             r = core[i]
@@ -155,32 +372,43 @@ class Tier1Measurements:
 
             # Intra-residue: N-CA-C
             if all(a in atoms for a in ["N", "CA", "C"]):
-                measured = angle_deg(atoms["N"], atoms["CA"], atoms["C"])
+                measured, angle_valid = angle_deg_valid(atoms["N"], atoms["CA"], atoms["C"])
+                if not angle_valid:
+                    continue
                 ideal = IDEAL_TABLE["N-CA-C"]
                 angle_sq_diffs.append((measured - ideal) ** 2)
 
-            # Intra-residue: O-C-N (requires O in same residue, N is same residue's N)
-            if all(a in atoms for a in ["O", "C", "N"]):
-                measured = angle_deg(atoms["O"], atoms["C"], atoms["N"])
-                ideal = IDEAL_TABLE["O-C-N"]
-                angle_sq_diffs.append((measured - ideal) ** 2)
-
-        # Inter-residue: CA-C-N across sequential pairs
+        # Inter-residue: O(i)-C(i)-N(i+1) and CA-C-N across sequential pairs
         for i in range(len(core) - 1):
             r1, r2 = core[i], core[i + 1]
-            if not Tier1Measurements._is_sequential(r1, r2):
+            if not Tier1Measurements._has_peptide_bond(r1, r2):
                 continue
+            if all(a in r1["_atoms"] for a in ["O", "C"]) and "N" in r2["_atoms"]:
+                measured, angle_valid = angle_deg_valid(
+                    r1["_atoms"]["O"], r1["_atoms"]["C"], r2["_atoms"]["N"]
+                )
+                if angle_valid:
+                    ideal = IDEAL_TABLE["O-C-N"]
+                    angle_sq_diffs.append((measured - ideal) ** 2)
             if "CA" in r1["_atoms"] and "C" in r1["_atoms"] and "N" in r2["_atoms"]:
-                measured = angle_deg(r1["_atoms"]["CA"], r1["_atoms"]["C"], r2["_atoms"]["N"])
-                ideal = IDEAL_TABLE["CA-C-N"]
-                angle_sq_diffs.append((measured - ideal) ** 2)
+                measured, angle_valid = angle_deg_valid(
+                    r1["_atoms"]["CA"], r1["_atoms"]["C"], r2["_atoms"]["N"]
+                )
+                if angle_valid:
+                    ideal = IDEAL_TABLE["CA-C-N"]
+                    angle_sq_diffs.append((measured - ideal) ** 2)
 
-        angle_rmsd = float(np.sqrt(np.mean(angle_sq_diffs))) if angle_sq_diffs else 0.0
-        results["LAW-120"] = {
-            "observed": round(angle_rmsd, 2),
-            "status": "PASS" if angle_rmsd <= LAW_CANON["LAW-120"]["threshold"] else "VETO",
-            "sample": len(angle_sq_diffs)
-        }
+        if not angle_sq_diffs:
+            results["LAW-120"] = Tier1Measurements._not_measured(
+                "no measurable backbone bond angles in the eligible residues"
+            )
+        else:
+            angle_rmsd = float(np.sqrt(np.mean(angle_sq_diffs)))
+            results["LAW-120"] = {
+                "observed": round(angle_rmsd, 2),
+                "status": "PASS" if angle_rmsd <= LAW_CANON["LAW-120"]["threshold"] else "VETO",
+                "sample": len(angle_sq_diffs)
+            }
 
         # ═══════════════════════════════════════════════════════════
         # LAW-125: Ramachandran (uses coord_math.dihedral_deg)
@@ -190,41 +418,45 @@ class Tier1Measurements:
         rama_outliers = []  # Phase A.5: inline residue capture
         for i in range(1, len(core) - 1):
             p, c, n = core[i - 1], core[i], core[i + 1]
-            if not (Tier1Measurements._is_sequential(p, c) and
-                    Tier1Measurements._is_sequential(c, n)):
+            if not (Tier1Measurements._has_peptide_bond(p, c) and
+                    Tier1Measurements._has_peptide_bond(c, n)):
                 continue
             if ("C" not in p["_atoms"] or
                     not all(k in c["_atoms"] for k in ["N", "CA", "C"]) or
                     "N" not in n["_atoms"]):
                 continue
 
-            phi = dihedral_deg(
+            phi, phi_valid = dihedral_deg_valid(
                 p["_atoms"]["C"], c["_atoms"]["N"],
                 c["_atoms"]["CA"], c["_atoms"]["C"]
             )
-            psi = dihedral_deg(
+            psi, psi_valid = dihedral_deg_valid(
                 c["_atoms"]["N"], c["_atoms"]["CA"],
                 c["_atoms"]["C"], n["_atoms"]["N"]
             )
 
-            # dihedral_deg returns float (never None), but 0.0 on degenerate geometry.
-            # Only count if both are non-degenerate (non-zero or genuinely zero).
-            # In practice, real backbone dihedrals are never exactly 0.0 for both.
-            if phi == 0.0 and psi == 0.0:
+            if not (phi_valid and psi_valid):
                 continue
             rama_tot += 1
             if Tier1Measurements._is_rama_outlier(c["_name"], phi, psi):
                 rama_out += 1
                 rama_outliers.append(f"{c['_chain']}:{c['_seq']}")  # chain:seq format
 
-        rama_pct = (rama_out / rama_tot * 100) if rama_tot > 0 else 0.0
-        results["LAW-125"] = {
-            "observed": round(rama_pct, 2),
-            "status": "PASS" if rama_pct <= LAW_CANON["LAW-125"]["threshold"] else "VETO",
-            "sample": rama_tot,
-            "granularity": GRANULARITY_RESIDUE,
-            "failing_residues": sorted(rama_outliers, key=lambda x: (x.split(":")[0], int(x.split(":")[1])))
-        }
+        if rama_tot == 0:
+            results["LAW-125"] = Tier1Measurements._not_measured(
+                "no eligible sequential residue triples with measurable phi/psi"
+            )
+            results["LAW-125"]["granularity"] = GRANULARITY_RESIDUE
+            results["LAW-125"]["failing_residues"] = []
+        else:
+            rama_pct = rama_out / rama_tot * 100
+            results["LAW-125"] = {
+                "observed": round(rama_pct, 2),
+                "status": "PASS" if rama_pct <= LAW_CANON["LAW-125"]["threshold"] else "VETO",
+                "sample": rama_tot,
+                "granularity": GRANULARITY_RESIDUE,
+                "failing_residues": sorted(rama_outliers, key=lambda x: (x.split(":")[0], int(x.split(":")[1])))
+            }
 
         # ═══════════════════════════════════════════════════════════
         # LAW-130: Clashscore (Neighbor Exclusion)
@@ -233,36 +465,97 @@ class Tier1Measurements:
         # ═══════════════════════════════════════════════════════════
         clash = 0
         clash_pairs = []  # Phase A.5: inline residue-pair capture
-        all_coords = np.array([a.pos for a in structure.atoms])
+        canonical_atoms = canonicalize_atoms(getattr(structure, "atoms", []) or [])
+        all_coords = np.array([a.pos for a in canonical_atoms], dtype=float)
+        neighbor_search_error = None
         if len(all_coords) > 1:
             try:
                 from scipy.spatial import cKDTree
                 tree = cKDTree(all_coords)
                 pairs = tree.query_pairs(r=1.5)
                 for ii, jj in pairs:
-                    ai, aj = structure.atoms[ii], structure.atoms[jj]
-                    if ai.res_seq == aj.res_seq and ai.chain_id == aj.chain_id:
+                    ai, aj = canonical_atoms[ii], canonical_atoms[jj]
+                    same_residue = (
+                        ai.chain_id,
+                        ai.res_seq,
+                        ai.insertion_code,
+                    ) == (
+                        aj.chain_id,
+                        aj.res_seq,
+                        aj.insertion_code,
+                    )
+                    if same_residue:
                         continue
-                    if ai.chain_id == aj.chain_id and abs(ai.res_seq - aj.res_seq) <= 1:
+                    if (
+                        Tier1Measurements._is_sequential(
+                            {
+                                "_chain": ai.chain_id,
+                                "_seq": ai.res_seq,
+                                "_icode": ai.insertion_code,
+                            },
+                            {
+                                "_chain": aj.chain_id,
+                                "_seq": aj.res_seq,
+                                "_icode": aj.insertion_code,
+                            },
+                        )
+                        and ((ai.atom_name, aj.atom_name) == ("C", "N")
+                             or (ai.atom_name, aj.atom_name) == ("N", "C"))
+                    ):
                         continue
                     clash += 1
-                    # Capture as residue pair, deterministic order (lower chain:seq first)
-                    r1 = f"{ai.chain_id}:{ai.res_seq}"
-                    r2 = f"{aj.chain_id}:{aj.res_seq}"
-                    pair = tuple(sorted([r1, r2], key=lambda x: (x.split(":")[0], int(x.split(":")[1]))))
+                    r1 = f"{ai.chain_id}:{ai.res_seq}{normalize_insertion_code(ai.insertion_code)}"
+                    r2 = f"{aj.chain_id}:{aj.res_seq}{normalize_insertion_code(aj.insertion_code)}"
+                    pair = tuple(sorted([r1, r2], key=_residue_label_sort_key))
                     clash_pairs.append(pair)
-            except Exception:
-                pass
+            except Exception as exc:
+                neighbor_search_error = f"{type(exc).__name__}: {exc}"
         # Deduplicate and sort pairs
-        unique_pairs = sorted(set(clash_pairs), key=lambda p: (p[0].split(":")[0], int(p[0].split(":")[1]), p[1].split(":")[0], int(p[1].split(":")[1])))
-        clash_score = (clash / len(all_coords)) * 1000 if len(all_coords) > 0 else 0.0
-        results["LAW-130"] = {
-            "observed": round(clash_score, 2),
-            "status": "PASS" if clash_score < LAW_CANON["LAW-130"]["threshold"] else "VETO",
-            "sample": len(all_coords),
-            "granularity": GRANULARITY_RESIDUE_PAIR,
-            "failing_residue_pairs": unique_pairs
-        }
+        unique_pairs = sorted(
+            set(clash_pairs),
+            key=lambda pair: (
+                _residue_label_sort_key(pair[0]),
+                _residue_label_sort_key(pair[1]),
+            ),
+        )
+        if len(all_coords) < 2:
+            results["LAW-130"] = {
+                "observed": None, "status": "NOT_MEASURED", "sample": 0,
+                "input_atom_count": len(all_coords),
+                "granularity": GRANULARITY_RESIDUE_PAIR,
+                "failing_residue_pairs": [],
+                "reason": "fewer than two atomic coordinates available",
+                "plddt_advisory": Tier1Measurements._plddt_advisory(residues, is_experimental),
+            }
+        elif neighbor_search_error is not None:
+            # A tooling failure is NOT a measurement. sample stays 0 (no
+            # valid measurements); the input atom count is exposed separately
+            # for diagnostics and never implies a measured sample.
+            results["LAW-130"] = {
+                "observed": None, "status": "MEASUREMENT_FAILED", "sample": 0,
+                "input_atom_count": len(all_coords),
+                "granularity": GRANULARITY_RESIDUE_PAIR,
+                "failing_residue_pairs": [],
+                "reason": f"neighbor search failed: {neighbor_search_error}",
+                "plddt_advisory": Tier1Measurements._plddt_advisory(residues, is_experimental),
+            }
+        else:
+            clash_score = (clash / len(all_coords)) * 1000
+            threshold = LAW_CANON["LAW-130"]["threshold"]
+            # Observation-precision contract: the reported value is the raw
+            # score rounded to 2 decimals, and the canonical "<=" threshold is
+            # applied to that same reported value so the displayed value and
+            # status can never appear contradictory.
+            reported = round(clash_score, 2)
+            results["LAW-130"] = {
+                "observed": reported,
+                "status": "PASS" if reported <= threshold else "VETO",
+                "sample": len(all_coords),
+                "input_atom_count": len(all_coords),
+                "granularity": GRANULARITY_RESIDUE_PAIR,
+                "failing_residue_pairs": unique_pairs,
+                "plddt_advisory": Tier1Measurements._plddt_advisory(residues, is_experimental),
+            }
 
         # ═══════════════════════════════════════════════════════════
         # LAW-170: Residue Identity
@@ -275,10 +568,7 @@ class Tier1Measurements:
         }
 
         # ═══════════════════════════════════════════════════════════
-        # STUBS: Laws awaiting Phase 1 implementation
-        # These return hardcoded PASS values. Each will be replaced
-        # in subsequent modules with real coord_math calculations.
-        # ═══════════════════════════════════════════════════════════
+        # Implemented laws follow.
         # ═══════════════════════════════════════════════════════════
         # LAW-145: Chirality (Module 1.2.3 — uses coord_math.dihedral_deg)
         # Checks Cα chirality via improper dihedral N-CA-C-CB.
@@ -290,19 +580,26 @@ class Tier1Measurements:
         # ═══════════════════════════════════════════════════════════
         chiral_violations = 0
         chiral_checked = 0
+        chiral_candidates = 0
+        chiral_unmeasured = 0
         chiral_outlier_residues = []  # Phase A.5: inline residue capture
         for r in core:
             if r["_name"] == "GLY":
                 continue
+            chiral_candidates += 1
             atoms = r["_atoms"]
             if not all(a in atoms for a in ["N", "CA", "C", "CB"]):
+                chiral_unmeasured += 1
+                continue
+            improper, improper_valid = dihedral_deg_valid(
+                atoms["N"], atoms["CA"], atoms["C"], atoms["CB"]
+            )
+            if not improper_valid:
+                chiral_unmeasured += 1
                 continue
             chiral_checked += 1
             # Improper dihedral: N-CA-C-CB
             # L-amino acid → negative, D-amino acid → positive
-            improper = dihedral_deg(
-                atoms["N"], atoms["CA"], atoms["C"], atoms["CB"]
-            )
             # Genuine D-amino acid: improper between 0° and 90°
             # Values near ±180° indicate degenerate/coplanar geometry
             # (CB in the N-CA-C plane) — refinement artifact, not chirality error.
@@ -312,13 +609,25 @@ class Tier1Measurements:
                 chiral_violations += 1
                 chiral_outlier_residues.append(f"{r['_chain']}:{r['_seq']}")
 
-        results["LAW-145"] = {
-            "observed": chiral_violations,
-            "status": "PASS" if chiral_violations == 0 else "VETO",
-            "sample": chiral_checked,
-            "granularity": GRANULARITY_RESIDUE,
-            "failing_residues": sorted(chiral_outlier_residues, key=lambda x: (x.split(":")[0], int(x.split(":")[1])))
-        }
+        if chiral_candidates == 0:
+            results["LAW-145"] = Tier1Measurements._not_applicable(
+                "no chiral residue centres (glycine-only eligible residues)"
+            )
+        elif chiral_checked == 0 or chiral_unmeasured > 0:
+            results["LAW-145"] = Tier1Measurements._not_measured(
+                "chirality is not measurable for every eligible residue "
+                f"({chiral_unmeasured} lacked valid N-CA-C-CB geometry)"
+            )
+        else:
+            results["LAW-145"] = {
+                "observed": chiral_violations,
+                "status": "PASS" if chiral_violations == 0 else "VETO",
+                "sample": chiral_checked,
+            }
+        results["LAW-145"]["granularity"] = GRANULARITY_RESIDUE
+        results["LAW-145"]["failing_residues"] = sorted(
+            chiral_outlier_residues, key=lambda x: (x.split(":")[0], int(x.split(":")[1]))
+        )
         # ═══════════════════════════════════════════════════════════
         # LAW-135: Omega Planarity (Module 1.2.2 — uses coord_math.dihedral_deg)
         # Measures omega dihedral CA(i)-C(i)-N(i+1)-CA(i+1) for sequential pairs.
@@ -332,17 +641,19 @@ class Tier1Measurements:
         omega_outlier_residues = []  # Phase A.5: inline residue capture
         for i in range(len(core) - 1):
             r1, r2 = core[i], core[i + 1]
-            if not Tier1Measurements._is_sequential(r1, r2):
+            if not Tier1Measurements._has_peptide_bond(r1, r2):
                 continue
             if not all(a in r1["_atoms"] for a in ["CA", "C"]):
                 continue
             if not all(a in r2["_atoms"] for a in ["N", "CA"]):
                 continue
 
-            omega = dihedral_deg(
+            omega, omega_valid = dihedral_deg_valid(
                 r1["_atoms"]["CA"], r1["_atoms"]["C"],
                 r2["_atoms"]["N"], r2["_atoms"]["CA"]
             )
+            if not omega_valid:
+                continue
 
             omega_total += 1
             # Deviation from nearest planar ideal (0° cis or ±180° trans)
@@ -354,14 +665,22 @@ class Tier1Measurements:
                 # Capture the peptide bond as r1-r2 pair (report r2 as the affected residue)
                 omega_outlier_residues.append(f"{r2['_chain']}:{r2['_seq']}")
 
-        omega_pct = (omega_outliers / omega_total * 100) if omega_total > 0 else 0.0
-        results["LAW-135"] = {
-            "observed": round(omega_pct, 2),
-            "status": "PASS" if omega_pct <= LAW_CANON["LAW-135"]["threshold"] else "VETO",
-            "sample": omega_total,
-            "granularity": GRANULARITY_RESIDUE,
-            "failing_residues": sorted(omega_outlier_residues, key=lambda x: (x.split(":")[0], int(x.split(":")[1])))
-        }
+        if omega_total == 0:
+            results["LAW-135"] = Tier1Measurements._not_measured(
+                "no measurable sequential peptide bonds"
+            )
+            results["LAW-135"]["failing_residues"] = []
+        else:
+            omega_pct = omega_outliers / omega_total * 100
+            results["LAW-135"] = {
+                "observed": round(omega_pct, 2),
+                "status": "PASS" if omega_pct <= LAW_CANON["LAW-135"]["threshold"] else "VETO",
+                "sample": omega_total,
+                "failing_residues": sorted(
+                    omega_outlier_residues, key=lambda x: (x.split(":")[0], int(x.split(":")[1]))
+                )
+            }
+        results["LAW-135"]["granularity"] = GRANULARITY_RESIDUE
         # ═══════════════════════════════════════════════════════════
         # LAW-150: Rotamer Audit (Module 1.2.5 — uses coord_math.dihedral_deg)
         # Measures chi1 dihedral for non-GLY/ALA core residues.
@@ -374,6 +693,8 @@ class Tier1Measurements:
         # Threshold: 20.0% from station_sop.py
         # ═══════════════════════════════════════════════════════════
         rot_outliers, rot_total = 0, 0
+        chi1_candidates = 0
+        chi1_unmeasured = 0
         rotamer_outliers = []  # Phase A.5: inline residue capture
         for r in core:
             res_name = r["_name"]
@@ -381,17 +702,22 @@ class Tier1Measurements:
                 continue
             if res_name not in CHI1_ATOMS:
                 continue
+            chi1_candidates += 1
             chi1_def = CHI1_ATOMS[res_name]
             atoms = r["_atoms"]
             if not all(a in atoms for a in chi1_def):
+                chi1_unmeasured += 1
                 continue
 
-            rot_total += 1
-            chi1 = dihedral_deg(
+            chi1, chi1_valid = dihedral_deg_valid(
                 atoms[chi1_def[0]], atoms[chi1_def[1]],
                 atoms[chi1_def[2]], atoms[chi1_def[3]]
             )
+            if not chi1_valid:
+                chi1_unmeasured += 1
+                continue
 
+            rot_total += 1
             # Check if chi1 falls in any expected rotamer well
             abs_chi1 = abs(chi1)
             in_gauche_plus = (30.0 <= chi1 <= 90.0)
@@ -401,14 +727,26 @@ class Tier1Measurements:
                 rot_outliers += 1
                 rotamer_outliers.append(f"{r['_chain']}:{r['_seq']}")  # inline capture
 
-        rot_pct = (rot_outliers / rot_total * 100) if rot_total > 0 else 0.0
-        results["LAW-150"] = {
-            "observed": round(rot_pct, 2),
-            "status": "PASS" if rot_pct <= LAW_CANON["LAW-150"]["threshold"] else "VETO",
-            "sample": rot_total,
-            "granularity": GRANULARITY_RESIDUE,
-            "failing_residues": sorted(rotamer_outliers, key=lambda x: (x.split(":")[0], int(x.split(":")[1])))
-        }
+        if chi1_candidates == 0:
+            results["LAW-150"] = Tier1Measurements._not_applicable(
+                "no eligible residue types with a chi1 rotamer"
+            )
+        elif rot_total == 0 or chi1_unmeasured > 0:
+            results["LAW-150"] = Tier1Measurements._not_measured(
+                "chi1 is not measurable for every eligible residue "
+                f"({chi1_unmeasured} lacked valid chi1 geometry)"
+            )
+        else:
+            rot_pct = rot_outliers / rot_total * 100
+            results["LAW-150"] = {
+                "observed": round(rot_pct, 2),
+                "status": "PASS" if rot_pct <= LAW_CANON["LAW-150"]["threshold"] else "VETO",
+                "sample": rot_total,
+            }
+        results["LAW-150"]["granularity"] = GRANULARITY_RESIDUE
+        results["LAW-150"]["failing_residues"] = sorted(
+            rotamer_outliers, key=lambda x: (x.split(":")[0], int(x.split(":")[1]))
+        )
 
         # ═══════════════════════════════════════════════════════════
         # LAW-160: Chain Integrity (uses coord_math.distance/get_atom_pos)
@@ -417,28 +755,39 @@ class Tier1Measurements:
         # ═══════════════════════════════════════════════════════════
         max_gap = 0.0
         ca_pairs_checked = 0
-        for chain_id in get_chains(structure.atoms):
-            chain_residues = get_sequential_residues(structure.atoms, chain_id)
+        missing_ca_pairs = 0
+        by_chain = {}
+        for residue in residues:
+            by_chain.setdefault(residue["_chain"], []).append(residue)
+        for chain_id in sorted(by_chain):
+            chain_residues = by_chain[chain_id]
             for i in range(len(chain_residues) - 1):
-                curr_res = chain_residues[i]
-                next_res = chain_residues[i + 1]
-                p1 = get_atom_pos(structure.atoms, chain_id, curr_res[0], "CA", curr_res[1])
-                p2 = get_atom_pos(structure.atoms, chain_id, next_res[0], "CA", next_res[1])
-                if p1 is not None and p2 is not None:
-                    d = distance(p1, p2)
-                    ca_pairs_checked += 1
-                    if d > max_gap:
-                        max_gap = d
+                r1, r2 = chain_residues[i], chain_residues[i + 1]
+                if not Tier1Measurements._is_sequential(r1, r2):
+                    continue
+                if "CA" not in r1["_atoms"] or "CA" not in r2["_atoms"]:
+                    missing_ca_pairs += 1
+                    continue
+                d = distance(r1["_atoms"]["CA"], r2["_atoms"]["CA"])
+                ca_pairs_checked += 1
+                if d > max_gap:
+                    max_gap = d
 
-        results["LAW-160"] = {
-            "observed": round(max_gap, 2),
-            "status": "PASS" if max_gap <= LAW_CANON["LAW-160"]["threshold"] else "VETO",
-            "sample": ca_pairs_checked
-        }
+        if ca_pairs_checked == 0:
+            reason = "no eligible sequential CA pairs with both coordinates present"
+            if missing_ca_pairs:
+                reason = (
+                    f"{missing_ca_pairs} sequential pair(s) lack CA coordinates; "
+                    "no measurable CA-CA distance"
+                )
+            results["LAW-160"] = Tier1Measurements._not_measured(reason)
+        else:
+            results["LAW-160"] = {
+                "observed": round(max_gap, 2),
+                "status": "PASS" if max_gap <= LAW_CANON["LAW-160"]["threshold"] else "VETO",
+                "sample": ca_pairs_checked
+            }
 
-        # ═══════════════════════════════════════════════════════════
-        # STUBS: Remaining laws
-        # ═══════════════════════════════════════════════════════════
         # ═══════════════════════════════════════════════════════════
         # LAW-195: Disulfide Geometry (Module 1.2.4 — uses coord_math.distance)
         # Finds CYS pairs with SG-SG distance < 3.0Å (putative disulfides).
@@ -448,10 +797,8 @@ class Tier1Measurements:
         # Reference: Engh & Huber (1991), Acta Cryst. A47, 392-400
         # ═══════════════════════════════════════════════════════════
         ss_ideal = IDEAL_TABLE["S-S"]
-        cys_sg = []
-        for r in residues:
-            if r["_name"] == "CYS" and "SG" in r["_atoms"]:
-                cys_sg.append(r)
+        cys_residues = [r for r in residues if r["_name"] == "CYS"]
+        cys_sg = [r for r in cys_residues if "SG" in r["_atoms"]]
 
         max_ss_dev = 0.0
         ss_pairs_found = 0
@@ -466,11 +813,24 @@ class Tier1Measurements:
                     if dev > max_ss_dev:
                         max_ss_dev = dev
 
-        results["LAW-195"] = {
-            "observed": round(max_ss_dev, 3),
-            "status": "PASS" if max_ss_dev <= LAW_CANON["LAW-195"]["threshold"] else "VETO",
-            "sample": ss_pairs_found
-        }
+        if not cys_residues:
+            results["LAW-195"] = Tier1Measurements._not_applicable(
+                "no cysteine residues are present"
+            )
+        elif len(cys_sg) < len(cys_residues):
+            results["LAW-195"] = Tier1Measurements._not_measured(
+                "one or more cysteine SG coordinates are unavailable"
+            )
+        elif ss_pairs_found == 0:
+            results["LAW-195"] = Tier1Measurements._not_applicable(
+                "no disulfide pairs were detected"
+            )
+        else:
+            results["LAW-195"] = {
+                "observed": round(max_ss_dev, 3),
+                "status": "PASS" if max_ss_dev <= LAW_CANON["LAW-195"]["threshold"] else "VETO",
+                "sample": ss_pairs_found
+            }
         # ═══════════════════════════════════════════════════════════
         # LAW-182: Hydrophobic Burial (Module 1.2.7 — heuristic)
         # Per-chain evaluation of hydrophobic core compactness.
@@ -484,17 +844,25 @@ class Tier1Measurements:
         burial_radius = 15.0
         min_burial_ratio = 1.0
         total_hydrophobic = 0
+        hydrophobic_residues = 0
+        chains_missing_hydrophobic_ca = []
 
         for chain_id in get_chains(structure.atoms):
             # Collect CA positions of hydrophobic residues in this chain
             hydro_cas = []
+            chain_hydrophobic = 0
             chain_res = get_sequential_residues(structure.atoms, chain_id)
             for res_seq, icode, res_name in chain_res:
                 if res_name in HYDROPHOBIC_RESIDUES:
+                    hydrophobic_residues += 1
+                    chain_hydrophobic += 1
                     ca_pos = get_atom_pos(structure.atoms, chain_id, res_seq, "CA", icode)
                     if ca_pos is not None:
                         hydro_cas.append(ca_pos)
 
+            if chain_hydrophobic > 0 and len(hydro_cas) == 0:
+                chains_missing_hydrophobic_ca.append(chain_id)
+                continue
             if len(hydro_cas) == 0:
                 continue
 
@@ -507,15 +875,25 @@ class Tier1Measurements:
             if ratio < min_burial_ratio:
                 min_burial_ratio = ratio
 
-        # If no hydrophobic residues found anywhere, report 1.0 (vacuously true)
-        if total_hydrophobic == 0:
-            min_burial_ratio = 1.0
-
-        results["LAW-182"] = {
-            "observed": round(min_burial_ratio, 3),
-            "status": "PASS" if min_burial_ratio >= LAW_CANON["LAW-182"]["threshold"] else "VETO",
-            "sample": total_hydrophobic
-        }
+        if hydrophobic_residues == 0:
+            results["LAW-182"] = Tier1Measurements._not_applicable(
+                "no hydrophobic residues are present"
+            )
+        elif chains_missing_hydrophobic_ca:
+            results["LAW-182"] = Tier1Measurements._not_measured(
+                "hydrophobic residues lack CA coordinates on chain(s): "
+                + ", ".join(sorted(chains_missing_hydrophobic_ca))
+            )
+        elif total_hydrophobic != hydrophobic_residues:
+            results["LAW-182"] = Tier1Measurements._not_measured(
+                "hydrophobic residue CA coverage is incomplete"
+            )
+        else:
+            results["LAW-182"] = {
+                "observed": round(min_burial_ratio, 3),
+                "status": "PASS" if min_burial_ratio >= LAW_CANON["LAW-182"]["threshold"] else "VETO",
+                "sample": total_hydrophobic
+            }
         # ═══════════════════════════════════════════════════════════
         # LAW-155: Voxel Occupancy (Module 1.2.8 — heuristic)
         # Divides bounding box into 2Å voxels. Counts voxels containing
@@ -536,14 +914,16 @@ class Tier1Measurements:
                 iz = int(np.floor((pos[2] - bbox_min[2]) / voxel_size))
                 voxel_indices.add((ix, iy, iz))
             voxels_per_residue = len(voxel_indices) / n_residues
+            results["LAW-155"] = {
+                "observed": round(voxels_per_residue, 2),
+                "status": "PASS" if voxels_per_residue >= LAW_CANON["LAW-155"]["threshold"] else "VETO",
+                "sample": len(all_coords)
+            }
         else:
-            voxels_per_residue = 0.0
-
-        results["LAW-155"] = {
-            "observed": round(voxels_per_residue, 2),
-            "status": "PASS" if voxels_per_residue >= LAW_CANON["LAW-155"]["threshold"] else "VETO",
-            "sample": len(all_coords)
-        }
+            results["LAW-155"] = {
+                "observed": None, "status": "NOT_MEASURED", "sample": 0,
+                "reason": "no atomic coordinates available"
+            }
         # ═══════════════════════════════════════════════════════════
         # LAW-200: Packing Quality (Module 1.2.6 — heuristic)
         # Computes bounding box volume / number of atoms.
@@ -551,7 +931,7 @@ class Tier1Measurements:
         # Exploded/sparse structures: >> 300 Å³/atom.
         # Threshold: 300.0 Å³/atom from station_sop.py
         # ═══════════════════════════════════════════════════════════
-        if len(all_coords) > 0:
+        if len(all_coords) >= 2:
             bbox_min = np.min(all_coords, axis=0)
             bbox_max = np.max(all_coords, axis=0)
             bbox_dims = bbox_max - bbox_min
@@ -559,22 +939,27 @@ class Tier1Measurements:
             bbox_dims = np.maximum(bbox_dims, 1.0)
             bbox_volume = float(bbox_dims[0] * bbox_dims[1] * bbox_dims[2])
             vol_per_atom = bbox_volume / len(all_coords)
+            results["LAW-200"] = {
+                "observed": round(vol_per_atom, 2),
+                "status": "PASS" if vol_per_atom <= LAW_CANON["LAW-200"]["threshold"] else "VETO",
+                "sample": len(all_coords),
+                "plddt_advisory": Tier1Measurements._plddt_advisory(residues, is_experimental),
+            }
         else:
-            vol_per_atom = 0.0
+            results["LAW-200"] = {
+                "observed": None, "status": "NOT_MEASURED", "sample": 0,
+                "reason": "fewer than two atomic coordinates available",
+                "plddt_advisory": Tier1Measurements._plddt_advisory(residues, is_experimental),
+            }
 
-        results["LAW-200"] = {
-            "observed": round(vol_per_atom, 2),
-            "status": "PASS" if vol_per_atom <= LAW_CANON["LAW-200"]["threshold"] else "VETO",
-            "sample": len(all_coords)
-        }
-
-        return results, coverage, False
+        return results, coverage, is_experimental
 
     @staticmethod
     def compute_structural_characterization(structure):
+        atoms = canonicalize_atoms(getattr(structure, "atoms", []) or [])
         res = Tier1Measurements._extract(structure)
         return {
-            "total_atoms": len(structure.atoms),
+            "total_atoms": len(atoms),
             "total_residues": len(res),
             "source_type": getattr(structure.confidence, "method", "predicted"),
             "resolution": getattr(structure.confidence, "resolution", None),
@@ -582,9 +967,56 @@ class Tier1Measurements:
         }
 
     @staticmethod
+    def _plddt_observations(structure):
+        profile = getattr(structure, "confidence", None)
+        values = list(getattr(profile, "_values", []) or [])
+        return [
+            number for number in (finite_float(value, None) for value in values)
+            if number is not None
+        ]
+
+    @staticmethod
+    def _b_factor_observations(structure):
+        profile = getattr(structure, "confidence", None)
+        values = list(getattr(profile, "_bfactors", []) or [])
+        if values:
+            return [
+                number for number in (finite_float(value, None) for value in values)
+                if number is not None
+            ]
+        if getattr(profile, "_values", []):
+            return []
+        return [
+            number for number in (
+                finite_float(getattr(atom, "b_iso", None), None)
+                for atom in getattr(structure, "atoms", [])
+            )
+            if number is not None
+        ]
+
+    @staticmethod
     def detect_confidence_source(structure):
-        return ("pLDDT", 90.0, "static")
+        profile = getattr(structure, "confidence", None)
+        method = getattr(profile, "method", "unavailable")
+        plddt_values = Tier1Measurements._plddt_observations(structure)
+        source = "pLDDT" if plddt_values else getattr(profile, "source_type", "unavailable")
+        mean = round(float(np.mean(plddt_values)), 2) if plddt_values else None
+        return (source, mean, method)
 
     @staticmethod
     def decompose_confidence(structure):
-        return {"mean": 90.0, "data_available": True}
+        plddt_values = Tier1Measurements._plddt_observations(structure)
+        b_values = Tier1Measurements._b_factor_observations(structure)
+        mean = round(float(np.mean(plddt_values)), 2) if plddt_values else None
+        b_mean = round(float(np.mean(b_values)), 2) if b_values else None
+        meta = {
+            "schema_version": "confidence-meta/1.0.0",
+            "mean": mean,
+            "data_available": bool(plddt_values),
+            "observation_count": len(plddt_values),
+        }
+        if b_mean is not None:
+            meta["b_factor_mean"] = b_mean
+            meta["b_factor_unit"] = "B-factor"
+            meta["b_factor_observation_count"] = len(b_values)
+        return meta

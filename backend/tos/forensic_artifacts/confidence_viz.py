@@ -1,6 +1,8 @@
 """
-Confidence Visualization Module v3
-Institutional-grade pLDDT distribution bar for PDF embedding.
+Reliability-coverage visualization for PDF embedding.
+
+This bar displays the single measured LAW-105 residue-coverage percentage.
+It deliberately does not invent pLDDT bin proportions.
 """
 import io
 import matplotlib
@@ -9,79 +11,57 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
 
+def coverage_segments(coverage_pct: float):
+    """Return the measured covered and below-coverage percentages."""
+    covered = min(max(float(coverage_pct), 0.0), 100.0)
+    return covered, 100.0 - covered
+
+
 def generate_confidence_bar(coverage_pct: float, det_passed: int, det_total: int) -> bytes:
     """
-    Full-width pLDDT bin histogram with percentages inside segments.
+    Full-width reliability-coverage bar with the 70% minimum marker.
     Returns PNG bytes for PDF embedding.
     """
     fig, ax = plt.subplots(figsize=(10, 1.6))
     fig.patch.set_facecolor('white')
 
-    bins = [
-        ("Very High (>=90)",  "#0050A0", 90, 100),
-        ("High (70-90)",      "#4DA6FF", 70,  90),
-        ("Medium (50-70)",    "#FFB84D", 50,  70),
-        ("Low (<50)",         "#CC2200",  0,  50),
-    ]
+    covered, below = coverage_segments(coverage_pct)
+    colors = ['#2E7D32', '#D32F2F'] if covered >= 70.0 else ['#D32F2F', '#9E9E9E']
 
-    if coverage_pct >= 90:
-        fracs = [coverage_pct * 0.85, coverage_pct * 0.15,
-                 (100 - coverage_pct) * 0.6, (100 - coverage_pct) * 0.4]
-    elif coverage_pct >= 70:
-        fracs = [coverage_pct * 0.55, coverage_pct * 0.45,
-                 (100 - coverage_pct) * 0.5, (100 - coverage_pct) * 0.5]
-    elif coverage_pct >= 50:
-        fracs = [coverage_pct * 0.1, coverage_pct * 0.3,
-                 coverage_pct * 0.6, 100 - coverage_pct]
-    else:
-        fracs = [0.0, coverage_pct * 0.15,
-                 coverage_pct * 0.85, 100 - coverage_pct]
+    ax.barh(0, covered, height=0.55, color=colors[0],
+            edgecolor='white', linewidth=1.5)
+    ax.barh(0, below, left=covered, height=0.55, color=colors[1],
+            edgecolor='white', linewidth=1.5)
 
-    total = sum(fracs)
-    if total > 0:
-        fracs = [f / total * 100 for f in fracs]
-    else:
-        fracs = [0, 0, 0, 100]
-
-    left = 0.0
-    for (label, color, lo, hi), frac in zip(bins, fracs):
-        if frac < 0.3:
-            left += frac
-            continue
-        ax.barh(0, frac, left=left, height=0.55,
-                color=color, edgecolor='white', linewidth=1.5)
-        if frac >= 3:
-            ax.text(left + frac / 2, 0,
-                    "%.0f%%" % frac,
-                    ha='center', va='center',
-                    fontsize=10, fontweight='bold', color='white',
-                    clip_on=True)
-        left += frac
+    for start, width in ((0.0, covered), (covered, below)):
+        if width >= 3:
+            ax.text(start + width / 2, 0, "%.0f%%" % width,
+                    ha='center', va='center', fontsize=10,
+                    fontweight='bold', color='white', clip_on=True)
 
     ax.axvline(x=70, color='#D32F2F', linestyle='--',
                linewidth=2.0, zorder=5)
-    ax.text(70, 0.38, '70% Threshold',
+    ax.text(70, 0.38, '70% Minimum',
             fontsize=8, color='#D32F2F', va='center',
             ha='center', fontweight='bold',
             bbox=dict(boxstyle='round,pad=0.2', facecolor='white',
                       edgecolor='#D32F2F', alpha=0.9))
 
-    cov_color = '#2E7D32' if coverage_pct >= 70 else '#D32F2F'
-    cov_label = 'SUFFICIENT' if coverage_pct >= 70 else (
-        'MARGINAL' if coverage_pct >= 50 else 'INSUFFICIENT')
-    ax.text(101, 0, '%.1f%%\n%s' % (coverage_pct, cov_label),
+    cov_color = '#2E7D32' if covered >= 70 else '#D32F2F'
+    cov_label = 'SUFFICIENT' if covered >= 70 else 'INSUFFICIENT'
+    ax.text(101, 0, '%.1f%%\n%s' % (covered, cov_label),
             ha='left', va='center', fontsize=9,
             fontweight='bold', color=cov_color,
             linespacing=1.4)
 
     legend_patches = [
-        mpatches.Patch(color=c, label=lbl)
-        for lbl, c, _, _ in bins
+        mpatches.Patch(color=colors[0], label='Residues covered'),
+        mpatches.Patch(color=colors[1], label='Residues below coverage'),
     ]
     ax.legend(handles=legend_patches,
               loc='upper center',
               bbox_to_anchor=(0.42, -0.25),
-              ncol=4, fontsize=8, frameon=False,
+              ncol=2, fontsize=8, frameon=False,
               handlelength=1.5, handletextpad=0.5,
               columnspacing=1.5)
 
@@ -89,7 +69,7 @@ def generate_confidence_bar(coverage_pct: float, det_passed: int, det_total: int
     ax.set_ylim(-0.5, 0.65)
     ax.axis('off')
 
-    plt.title('pLDDT Confidence Distribution',
+    plt.title('Measured Residue Coverage (LAW-105)',
               fontsize=11, fontweight='bold', loc='left', pad=8)
     plt.tight_layout(pad=0.4)
 

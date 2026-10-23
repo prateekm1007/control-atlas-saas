@@ -1,0 +1,17 @@
+97d62a89f0efb2917e80a82808a930d34af7f492	refs/heads/engine/od-scope-v25
+7e0ede94e1e05e4464d0f73f0cb1bee838fa3b65	refs/heads/feature/law-160-sequence-adjacency
+20dc6ecbbc7faf18516f6a066233b803439c2f47	refs/heads/feature/modrs-census-v2
+c78ef15f696a2b1e2658e7ac7b54461f70c6e040	refs/heads/feature/n8-altlocs-per-residue
+c02f7742000be14747af0a0015cd18c82625831f	refs/heads/feature/od07-audit-id
+6ce5ee8503ea40c760239d8b79687966b90afd5c	refs/heads/feature/provenance-v2
+2d4de2fa118bf2d5e69e4fda4f24a119e8ef31a2	refs/heads/fix/c2-api-key-enforcement
+5c216a882972d56f20be5ddae22bf0557465fdbd	refs/heads/fix/law-130-clash-boundary
+f53b3f5647b648f04a4d5f91686a32852ef6c32c	refs/heads/fix/law-160-sequence-adjacency
+51494350e43eac85a00aaba6e84c88cc3d500b46	refs/heads/hygiene/h1-remove-gemini
+63da0e347002ed9b77071ff1ed0cefda7c0ce88a	refs/heads/main
+4993cb3b6954ffb8ecad281817b2c59f1f8fc041	refs/heads/policy/engineering-constitution
+f8e5943d5c594c6fe66441074f12fd5b15343899	refs/heads/repair/round24-claim-head-binding
+9412e943014df6804e34c670d9cc9496e1f34c9c	refs/heads/review/od-scope-v25
+e2cd17d0f9c5231c489c42b8dd90d74055d1f648	refs/heads/review/od-scope-v25-2026-10-22
+296f10c4f2c87df2003c1a9d0150edc0b54a13d9	refs/heads/science/law-validity-wp15
+ebc1fd79f20b9a6b6a262a70ce6942ba069d19e9	refs/heads/science/p0-correctness-2026-10-19

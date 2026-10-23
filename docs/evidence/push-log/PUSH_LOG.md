@@ -583,3 +583,143 @@
   pushed again, P-081-CONFIRM records the remote-verified tip after that
   push returns. Until then the tip pushed by this INTENT is disclosed as
   PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-22T13:43:02Z | P-082 | push-reconcile | branch=review/od-scope-v25 remote_sha=9412e943014df6804e34c670d9cc9496e1f34c9c credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/review/od-scope-v25 -> 9412e943014df6804e34c670d9cc9496e1f34c9c (re-verified 2026-10-22T13:42:16Z; the live ref was also captured in docs/audit-evidence/2026-10-22/od-scope/iteration-3/remote-heads-before-push.txt; main verified untouched at 63da0e347002ed9b77071ff1ed0cefda7c0ce88a; this reconstructs the branch state before the terminal intent because the branch's prior push predates its branch-scoped log records; no INTENT or CI-success claim is manufactured, and no Actions query was performed)"
+
+- Post-hoc reconciliation for the already-existing branch tip. The prior
+  push of 9412e943014df6804e34c670d9cc9496e1f34c9c is established by
+  the fresh live-ref observation above; no attempt is made to claim a
+  pre-push intent that does not exist. This record is the newest
+  CONFIRM/RECONCILE state for `review/od-scope-v25` before P-083-INTENT,
+  so the terminal intent can truthfully declare the same pre-push tip.
+- No run citations are asserted here. The evidence establishes branch
+  state only; CI success on 9412e943014df6804e34c670d9cc9496e1f34c9c is
+  neither claimed nor inferred.
+
+## 2026-10-22T13:43:03Z | P-083-INTENT | push-intent | branch=review/od-scope-v25 head_at_intent=DEFERRED expected_remote_tip_before_push=9412e943014df6804e34c670d9cc9496e1f34c9c credential=OWNER-PAT-1 authorized_by="owner directions recorded 2026-10-22 in docs/audit-evidence/2026-10-22/od-scope/iteration-3/owner-ruling-2026-10-22.md: apply the OD-scope rulings, preserve the reviewed history, produce the exact-base C5 diagnostic archive, verify the final candidate, push only this reviewed branch under the two-phase protocol, perform no merge/deployment/v25 calibration/held-out work, and stop"
+
+- This push carries: P-082 (branch-state reconciliation), this INTENT,
+  the curated C5 diagnostic archive under
+  `docs/audit-evidence/2026-10-22/od-scope/iteration-3/c5/`, and the
+  fresh pre-push remote-head evidence. It introduces no source, test,
+  workflow, or scientific-content changes beyond those evidence
+  documents; the engine candidate remains
+  `3029e21196dedd7cecd3927598639c9bd1a22e6c`.
+- C5 scope disclosure: v24 40/50 acquired and verified, with 1I0T and
+  1DDL held out as the OD-18 separate audit set and 38 used for the
+  primary counts; supplementary current-AlphaFold 9 acquired, with
+  P0DTC2 excluded under OD-11, P62988 unavailable, and 8 analyzed. The
+  archive contains base-vs-candidate data only; no c78 comparison or
+  c78 artifact is included.
+- ID selection: P-082 and P-083 were verified unused across the
+  published log; the highest previously used identifier is P-081.
+- head_at_intent is DEFERRED per the two-phase schema; the introducing
+  commit is the exact archive candidate. If this branch is pushed again,
+  P-083-CONFIRM records the remote-verified tip after that push returns.
+  Until then the tip pushed by this INTENT is disclosed as PENDING by
+  the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-22T19:12:11Z | P-083-CONFIRM | push-confirm | branch=review/od-scope-v25 remote_sha=e71cec36d8189125b74568343a80fff1eb9637cd credential=OWNER-PAT-1 evidence="git ls-remote https://github.com/prateekm1007/control-atlas-saas.git refs/heads/review/od-scope-v25 -> e71cec36d8189125b74568343a80fff1eb9637cd (re-verified 2026-10-22T19:12:11Z; main verified untouched at 63da0e347002ed9b77071ff1ed0cefda7c0ce88a; the push was an ordinary fast-forward 9412e94..e71cec3; no Actions run is asserted for this local confirmation, and CI success is not inferred from this entry)"
+
+- Two-phase completion for the push declared by P-083-INTENT. The remote-verified
+  tip is recorded here after the push returned and is never backdated.
+- This confirmation establishes the current branch state for the next terminal
+  INTENT. The CI status of the pushed candidate is reported separately by the
+  gate records and is not manufactured inside the push confirmation.
+
+## 2026-10-22T19:25:00Z | P-084 | push-not-proven | reclassifies=P-050 branch=repair/round19-mainline-acceptance remote_sha=f44bf4d93f8d69a4bd651396f383e8f3ad2b707a credential=OWNER-PAT-1 review_ref=docs/decisions/OWNER_DECISIONS.md#Part-12 evidence="searched 2026-10-22T19:25:00Z: refs/heads/repair/round19-mainline-acceptance is ABSENT on the live remote (git ls-remote returned no ref); P-050 is the recorded push-reconcile for the Round-19 follow-up push of f44bf4d93f8d69a4bd651396f383e8f3ad2b707a; no surviving push-event run with event=push on the exact head can be re-verified locally (no runs manifest or Actions token in this environment), and the retained Events-API window no longer covers the 2026-10-20T15:58Z reconciliation; commit existence is preserved in the local object store; push provenance is NOT PROVEN and is never counted as evidence for any declaration. Part 12.3 reconciled P-050 as the truthful follow-up-push record, but it does not itself prove branch-push provenance; the reclassification is append-only and does not edit P-050."
+
+- Honest reclassification. The missing remote ref is a fact, not a failure of
+  the original record: P-050 was truthful at its own timestamp. This record
+  discloses that the original push cannot be re-proven from surviving
+  machine-verifiable evidence, per schema v5 direction 3.
+
+## 2026-10-22T19:25:01Z | P-085 | push-not-proven | reclassifies=P-057 branch=docs/owner-decisions-r19 remote_sha=df98f5e3671055d67961d5b9d14495c5b037ce19 credential=OWNER-PAT-1 review_ref=docs/decisions/OWNER_DECISIONS.md#Part-12 evidence="searched 2026-10-22T19:25:01Z: refs/heads/docs/owner-decisions-r19 is ABSENT on the live remote (git ls-remote returned no ref); P-057 is the recorded push-reconcile for the Round-19 register-branch push of df98f5e3671055d67961d5b9d14495c5b037ce19; no surviving push-event run with event=push on the exact head can be re-verified locally, and the retained Events-API window no longer covers the 2026-10-20T15:58Z reconciliation; commit existence is preserved in the local object store; push provenance is NOT PROVEN and is never counted as evidence for any declaration. Part 12.3 reconciled P-057 as the truthful register-branch record, but it does not itself prove branch-push provenance; the reclassification is append-only and does not edit P-057."
+
+- Honest reclassification. The register-branch ref was pruned after its content
+  was carried into the reviewed path; this record discloses that the original
+  ref update cannot be re-proven from surviving machine-verifiable evidence.
+
+## 2026-10-22T19:25:02Z | P-086-INTENT | push-intent | branch=review/od-scope-v25 head_at_intent=DEFERRED expected_remote_tip_before_push=e71cec36d8189125b74568343a80fff1eb9637cd credential=OWNER-PAT-1 authorized_by="owner directions recorded 2026-10-22 for iteration 4 (focused engine/geometry/confidence/evaluator/runner corrections, reproducible C5 provenance, append-only push-log reconciliation, and no merge/deploy/calibration before the full exact-candidate gate loop is complete; OD-16 remains in force)"
+
+- This push carries the iteration-4 corrections, the P-083-CONFIRM completion
+  for the prior archive candidate, the P-084/P-085 push-not-proven records,
+  this INTENT, and the regenerated SHA256SUMS digest rows. The engine under
+  test remains the exact code candidate named in the iteration-4 reading note;
+  no source, test, or workflow content is modified beyond those corrections.
+- ID selection: P-084..P-086 were verified unused across the published log.
+- head_at_intent is DEFERRED per the two-phase schema; if this branch is
+  pushed again, P-086-CONFIRM records the remote-verified tip after that
+  push returns. Until then the tip pushed by this INTENT is disclosed as
+  PENDING by the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-22T19:38:00Z | P-087 | intent-reconcile | voids=P-086-INTENT branch=review/od-scope-v25 credential=OWNER-PAT-1 evidence="the P-086-INTENT resolved to 459dd55 (its introducing commit), which the C5 reproducibility-spec push superseded; redeclared as P-088-INTENT on this exact candidate per the checker's exact-candidate rule"
+
+- Truthful void record: P-086-INTENT's content is preserved unchanged in the
+  log; only its pairing obligation is discharged.
+
+## 2026-10-22T19:38:01Z | P-088-INTENT | push-intent | branch=review/od-scope-v25 head_at_intent=DEFERRED expected_remote_tip_before_push=e71cec36d8189125b74568343a80fff1eb9637cd credential=OWNER-PAT-1 authorized_by="owner directions recorded 2026-10-22 for iteration 4 (focused engine/geometry/confidence/evaluator/runner corrections, reproducible C5 provenance, append-only push-log reconciliation, and no merge/deploy/calibration before the full exact-candidate gate loop is complete; OD-16 remains in force)"
+
+- This push carries the iteration-4 corrections, the P-083-CONFIRM completion,
+  the P-084/P-085 push-not-proven records, the P-086 void and this
+  redeclaration, the C5 reproducibility specification, and the regenerated
+  SHA256SUMS digest rows. The engine under test remains the exact code
+  candidate named in the iteration-4 reading note; no source, test, or
+  workflow content is modified beyond those corrections.
+- ID selection: P-087 and P-088 were verified unused across the published log.
+- head_at_intent is DEFERRED per the two-phase schema; the introducing commit
+  is the exact archive candidate. If this branch is pushed again, P-088-CONFIRM
+  records the remote-verified tip after that push returns. Until then the tip
+  pushed by this INTENT is disclosed as PENDING by the evidence-sequence
+  checker - the designed, truthful state.
+
+## 2026-10-23T02:02:00Z | P-090 | intent-reconcile | voids=P-088-INTENT branch=review/od-scope-v25 credential=OWNER-PAT-1 evidence="the local candidate 01b3d3f0508d00e2b1d638a32d82b9cd7dd1cbe6 was rejected because it replaced the preserved P-087/P-088 bytes with rewritten P-090/P-091 records; that edit is not a byte-prefix of its parent and is excluded from the published lineage; this reconstruction from e71cec36d8189125b74568343a80fff1eb9637cd preserves P-087/P-088 byte-for-byte and redeclares the terminal intent as P-091-INTENT on the reconstructed candidate; the replayed code commit corresponding to original 459dd55 is 7bdb270143a42c3b20f29b09234a9eb3757b166b; no published history is rewritten and no force-push is used"
+
+- Truthful void record: P-088-INTENT's content is preserved unchanged in this
+  reconstructed lineage; only its pairing obligation is discharged.
+- The rejected commit's P-090/P-091 text is not reused. This P-090 and the
+  following P-091 are new records on the reconstructed candidate.
+
+## 2026-10-23T02:02:01Z | P-091-INTENT | push-intent | branch=review/od-scope-v25 head_at_intent=DEFERRED expected_remote_tip_before_push=e71cec36d8189125b74568343a80fff1eb9637cd credential=OWNER-PAT-1 authorized_by="owner directions recorded 2026-10-23: reconstruct the unpublished candidate from the live base, exclude the destructive push-log edit, preserve all legitimate engine/calibration/evidence work, independently audit the reconstructed exact candidate, push only this reviewed branch under the two-phase protocol, and perform no merge/deployment/v25 calibration/held-out work; OD-16 remains in force"
+
+- This push carries the replayed engine/geometry/confidence/evaluator/runner
+  corrections, the preserved P-087/P-088 records, P-090, the iteration-4
+  evidence, and the regenerated manifest. The reconstruction base is
+  e71cec36d8189125b74568343a80fff1eb9637cd; the rejected 01b3d3f is excluded.
+- Post-replay audit corrections: non-finite coverage and coordinates now fail
+  closed; forensic confidence rendering is limited to observed pLDDT and never
+  imputes missing values; the dead `tos.router` package and stale nested
+  duplicate engine tree were removed; the exact 8,364-byte evaluation protocol
+  was recovered with provenance only. OD-16 remains in force.
+- ID selection: P-090 and P-091 were verified unused on the reconstructed
+  published lineage; P-089 remains unused.
+- head_at_intent is DEFERRED per the two-phase schema; the introducing commit
+  is the exact reconstructed candidate. Until P-091-CONFIRM is appended after
+  the push returns, the tip pushed by this INTENT is disclosed as PENDING by
+  the evidence-sequence checker - the designed, truthful state.
+
+## 2026-10-24T00:05:00Z | P-092-INTENT | push-intent | branch=fix/od-scope-residue-coverage-advisory head_at_intent=DEFERRED expected_remote_tip_before_push=ABSENT credential=OWNER-PAT-1 authorized_by="auditor directions 2026-10-24 (P1-P8): implement residue-order fix, source-backed coverage, LAW-130/182/155 advisory/contract work, PDB-mmCIF parity, OD-07 binding, calibration diagnostic-only gates on the integration candidate; push only this reviewed branch under the two-phase protocol; no merge/deployment/v25 calibration/held-out work; OD-16 remains in force"
+
+## 2026-10-24T00:20:00Z | P-092-CONFIRM | push-confirm | branch=fix/od-scope-residue-coverage-advisory remote_sha=8d97729bad07f10c1891569b85ab6866b4282c4c credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/fix/od-scope-residue-coverage-advisory -> 8d97729bad07f10c1891569b85ab6866b4282c4c (recorded 2026-10-24T00:14Z)"
+
+## 2026-10-24T00:20:30Z | P-093-INTENT | push-intent | branch=fix/od-scope-residue-coverage-advisory head_at_intent=DEFERRED expected_remote_tip_before_push=8d97729bad07f10c1891569b85ab6866b4282c4c credential=OWNER-PAT-1 authorized_by="continuation of auditor direction 2026-10-24 (push/publish step): follow-up push carrying the Stability-Gate hash-lock fix (workflow canon hash) and registry canon_hash/doc updates; no merge/deployment/v25 calibration/held-out work; OD-16 remains in force"
+
+## 2026-10-24T00:35:00Z | P-093-CONFIRM | push-confirm | branch=fix/od-scope-residue-coverage-advisory remote_sha=dd422df96f921c09a31333793440ab5b92a8244f credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/fix/od-scope-residue-coverage-advisory -> dd422df96f921c09a31333793440ab5b92a8244f (recorded 2026-10-24T00:26Z)"
+
+## 2026-10-24T00:35:30Z | P-094-INTENT | push-intent | branch=fix/od-scope-residue-coverage-advisory head_at_intent=DEFERRED expected_remote_tip_before_push=dd422df96f921c09a31333793440ab5b92a8244f credential=OWNER-PAT-1 authorized_by="continuation of auditor direction 2026-10-24 (push/publish step): manifest fix for PUSH_LOG.md digest in SHA256SUMS; no merge/deployment/v25 calibration/held-out work; OD-16 remains in force"
+
+## 2026-10-24T01:00:00Z | P-094-CONFIRM | push-confirm | branch=fix/od-scope-residue-coverage-advisory remote_sha=f4485d8badca1756bf010f90b01af479dcb52fe5 credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/fix/od-scope-residue-coverage-advisory -> f4485d8badca1756bf010f90b01af479dcb52fe5 (recorded 2026-10-24T00:48Z)"
+
+## 2026-10-24T01:00:30Z | P-095-INTENT | push-intent | branch=fix/od-scope-residue-coverage-advisory head_at_intent=DEFERRED expected_remote_tip_before_push=f4485d8badca1756bf010f90b01af479dcb52fe5 credential=OWNER-PAT-1 authorized_by="auditor direction 2026-10-24: P2 returned-coverage fail-closed agreement + refreshed reading-note/preflight for f4485d8; no merge/deployment/v25 calibration/held-out work; OD-16 remains in force"
+
+## 2026-10-24T01:30:00Z | P-095-CONFIRM | push-confirm | branch=fix/od-scope-residue-coverage-advisory remote_sha=a0b10e67107e99ba62ac90352498600e2759dd3e credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/fix/od-scope-residue-coverage-advisory -> a0b10e67107e99ba62ac90352498600e2759dd3e (recorded 2026-10-24T01:22Z)"
+
+## 2026-10-24T01:30:30Z | P-096-INTENT | push-intent | branch=fix/od-scope-residue-coverage-advisory head_at_intent=DEFERRED expected_remote_tip_before_push=a0b10e67107e99ba62ac90352498600e2759dd3e credential=OWNER-PAT-1 authorized_by="auditor direction 2026-10-24: P2 API-path fix (serialize unavailable coverage as null), early-return coverage=None, schema Optional[float], PDF None-coverage guard, API regression, calibration preregistration addendum; no merge/deployment/v25 calibration/held-out work; OD-16 remains in force"
+
+## 2026-10-24T01:45:00Z | P-096-CONFIRM | push-confirm | branch=fix/od-scope-residue-coverage-advisory remote_sha=1507d4915ee4c291853ac5d8201cf73b9166ff94 credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/fix/od-scope-residue-coverage-advisory -> 1507d4915ee4c291853ac5d8201cf73b9166ff94 (recorded 2026-10-24T01:38Z)"
+
+## 2026-10-24T01:45:30Z | P-097-INTENT | push-intent | branch=fix/od-scope-residue-coverage-advisory head_at_intent=DEFERRED expected_remote_tip_before_push=1507d4915ee4c291853ac5d8201cf73b9166ff94 credential=OWNER-PAT-1 authorized_by="auditor direction 2026-10-24: strengthen P1 1PPE/5T4O regressions with exact LAW-110/120 measured-pair sample counts; no merge/deployment/v25 calibration/held-out work; OD-16 remains in force"
+
+## 2026-10-24T02:05:00Z | P-097-CONFIRM | push-confirm | branch=fix/od-scope-residue-coverage-advisory remote_sha=9b309bc0bc6ea1c80755273f56bc343078fd3e93 credential=OWNER-PAT-1 evidence="git ls-remote origin refs/heads/fix/od-scope-residue-coverage-advisory -> 9b309bc0bc6ea1c80755273f56bc343078fd3e93 (recorded 2026-10-24T02:00Z)"
+
+## 2026-10-24T02:05:30Z | P-098-INTENT | push-intent | branch=fix/od-scope-residue-coverage-advisory head_at_intent=DEFERRED expected_remote_tip_before_push=9b309bc0bc6ea1c80755273f56bc343078fd3e93 credential=OWNER-PAT-1 authorized_by="auditor direction 2026-10-24: P1 shared residue-adjacency contract (canonical label_seq position; missing-position/mixed-availability fail-closed; author-numbering fallback unchanged); no merge/deployment/v25 calibration/held-out work; OD-16 remains in force"

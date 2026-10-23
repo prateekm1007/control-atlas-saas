@@ -1,1 +1,0 @@
-EXPLANATION = {"title": "Backbone Continuity", "principle": "Backbones must maintain consistent spacing (~3.8A).", "rationale": "Resonance stabilization and planarity constraints fix the Ca-Ca distance. Deviations indicate a torn protein chain physically severed at the peptide bond."}

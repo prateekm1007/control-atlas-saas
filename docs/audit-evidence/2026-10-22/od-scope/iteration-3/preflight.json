@@ -1,0 +1,109 @@
+{
+  "recorded_utc": "2026-10-22T12:41:30Z",
+  "phase": "iteration-3",
+  "objective": "Apply the owner's 2026-10-22 coder directions as a focused follow-up patch on the existing OD-scope review candidate, preserving the delivery commit and evidence while fixing truthful measurement statuses, LAW-100/LAW-120 and confidence contracts, calibration evaluator/runner evidence boundaries, semantic-lock enforcement, and push-log reconciliation.",
+  "repository": {
+    "root": ".",
+    "branch": "review/od-scope-v25",
+    "head": "9412e943014df6804e34c670d9cc9496e1f34c9c",
+    "base": "63da0e347002ed9b77071ff1ed0cefda7c0ce88a",
+    "ahead": 1,
+    "behind": 0
+  },
+  "governing_sources": {
+    "AGENTS.md": {
+      "blob": "85767237399ffb30f3e45894d9dfbe6f4240584f",
+      "sha256": "5e320939a11135a0d8aed5caa231df6aeaf633d724fcb4dba97b5909e51420b4",
+      "bytes": 4021
+    },
+    "constitution.md": {
+      "blob": "211ad2c5d4b40059d9f3f03de12e0701f9235bc7",
+      "sha256": "cfdd5ba3babda31513b55894a49597fbfb18c2e870535a068c8b0ea423c53ce8",
+      "bytes": 622
+    },
+    "ENGINEERING_CONSTITUTION.md": {
+      "blob": "b6bb35e84956d84a8c9d9e65734c212baf3ed075",
+      "sha256": "e0f256f78f2c1256228c4286311cba15800dcd5a6c8005583508ee66d27983f5",
+      "bytes": 20572
+    },
+    "docs/coder/BRIEF.md": {
+      "blob": "052a84ca829d321dc0841a4b1c8702145dcbf6b5",
+      "sha256": "8f07edfbba9d3e57de623e242125e942369bc5d60df5805343b26b9048c52e07",
+      "bytes": 3671
+    },
+    "docs/decisions/OWNER_DECISIONS.md": {
+      "blob": "12906bf5997a3e2c6b5c41e5d5c60fee14613274",
+      "sha256": "59ccd5e84176a8a610c8c234cbb95fec4734478cc1f35668599ad2e3aef3172a",
+      "bytes": 72329
+    },
+    "docs/P0_STATUS.md": {
+      "blob": "a31517abbc046c495930ba19ef7aeaf8bb72f2d0",
+      "sha256": "3f129dd18b9e5cf8888b763158cda42de270a8429a48ed7cc9a3aa675e810e0f",
+      "bytes": 35347
+    }
+  },
+  "reading_timestamps": {
+    "controlled_read_start_utc": "2026-10-22T12:33:57.967Z",
+    "controlled_read_end_utc": "2026-10-22T12:33:59.031Z",
+    "hash_verification_utc": "2026-10-22T12:33:59.270Z",
+    "remote_ref_verification_utc": "2026-10-22T12:40:43Z",
+    "first_edit_utc": "2026-10-22T12:41:30Z"
+  },
+  "active_decisions": [
+    "OD-01",
+    "OD-02",
+    "OD-03",
+    "OD-04",
+    "OD-05",
+    "OD-09",
+    "OD-10",
+    "OD-13",
+    "OD-14",
+    "OD-16",
+    "OD-17",
+    "OD-18",
+    "OD-19",
+    "OD-20",
+    "A-01",
+    "A-04"
+  ],
+  "remote_state": {
+    "heads_observed": 17,
+    "main": "63da0e347002ed9b77071ff1ed0cefda7c0ce88a",
+    "review/od-scope-v25": "9412e943014df6804e34c670d9cc9496e1f34c9c",
+    "review/od-scope-v25-2026-10-22": "e2cd17d0f9c5231c489c42b8dd90d74055d1f648",
+    "docs/owner-decisions": null
+  },
+  "governance_discrepancy": "AGENTS.md names docs/owner-decisions as the canonical register location, but that ref is absent from the live remote. The local docs/decisions/OWNER_DECISIONS.md is available but is not declared canonical; no register edit is authorized.",
+  "working_state": {
+    "head": "9412e943014df6804e34c670d9cc9496e1f34c9c",
+    "worktree_clean_before_evidence": true,
+    "existing_delivery_evidence_preserved": true,
+    "new_evidence_directory": "docs/audit-evidence/2026-10-22/od-scope/iteration-3/"
+  },
+  "authorized_work": [
+    "Preserve the existing full-SHA delivery commit and its evidence; use only a fast-forward follow-up patch on the same review branch.",
+    "Make every measurement state truthful: zero valid observations cannot be converted into observed zero plus PASS.",
+    "Apply the LAW-100 canonical percentage ruling and remove the unregistered 8.0 RMSZ comparison.",
+    "Correct LAW-120 O(i)-C(i)-N(i+1) geometry using the correct sequential residue mapping.",
+    "Replace fabricated confidence metadata with source-backed observations or an explicit versioned unavailable state.",
+    "Harden the calibration evaluator's policy binding, label provenance, missing-evidence metrics, and independence proof.",
+    "Harden the runner's redirect policy, authoritative AFDB pinning, policy-lock verification, and failure statuses.",
+    "Add the semantic-law hash artifact, independent test, and exact-candidate CI enforcement.",
+    "Reconcile the existing pushed tip in the append-only push log and declare the next push with a bound INTENT before it occurs.",
+    "Rerun the full validation loop on the exact final candidate and produce the C5 diagnostic against base 63da0e without any calibration, held-out, merge, or deployment action."
+  ],
+  "constraints": {
+    "od_16_active": true,
+    "no_merge": true,
+    "no_deploy": true,
+    "no_v25_calibration": true,
+    "no_held_out": true,
+    "no_threshold_or_cohort_change": true,
+    "no_golden_artifact_regeneration": true,
+    "no_force_push_or_history_rewrite": true,
+    "no_new_od_ids": true
+  },
+  "law_100_ruling_record": "docs/audit-evidence/2026-10-22/od-scope/iteration-3/owner-ruling-2026-10-22.md",
+  "next_step": "Implement truthful statuses and the LAW-100/LAW-120/confidence corrections with regression tests before touching calibration and evidence tooling."
+}

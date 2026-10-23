@@ -13,6 +13,7 @@ Asserts:
   - the glossary describes the pinned measurements (no stale physics).
 """
 import hashlib
+import json
 import re
 from pathlib import Path
 
@@ -21,17 +22,19 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 REGISTRY = REPO / "governance" / "law_registry.yaml"
 SHA256_FILE = REPO / "governance" / "law_registry.sha256"
+SEMANTIC_SHA256_FILE = REPO / "governance" / "law_semantic.sha256"
 MEASUREMENTS = REPO / "backend" / "tos" / "engine" / "tier1_measurements.py"
 
 # Recorded content hash of governance/law_registry.yaml (WP-8 requirement).
-REGISTRY_SHA256 = "d53a2a506f4ddff8e7210489afc55bea60e137e2f516c3192b1e3fa5ade1d7ae"
+REGISTRY_SHA256 = "d00505a550c2461f729993471a22a77b520f203f0ff5348fcafddbc5b8c79a14"
+LAW_SEMANTIC_SHA256 = "f825f38b9493a9409aa9678c1f98593e7715ba6b9e01aefba808096571a27750"
 
 yaml = pytest.importorskip("yaml", reason="PyYAML comes from requirements-dev.txt")
 
 REGISTRY_DATA = yaml.safe_load(REGISTRY.read_text(encoding="utf-8"))
 ENTRIES = {e["id"]: e for e in REGISTRY_DATA["laws"]}
 
-from tos.governance.station_sop import LAW_CANON, LAW_METHOD_CLASSIFICATIONS
+from tos.governance.station_sop import LAW_CANON, LAW_METHOD_CLASSIFICATIONS, RETIRED_LAWS
 
 # Laws without a DEDICATED test file — the known gap recorded by the brief.
 KNOWN_DEDICATED_GAPS = {"LAW-100", "LAW-105", "LAW-110", "LAW-125", "LAW-130", "LAW-170"}
@@ -48,7 +51,11 @@ class TestRegistryCoversMeasurements:
 
     def test_registry_enforced_set_matches_pinned_canon(self):
         enforced = {k for k, e in ENTRIES.items() if e["status"] == "enforced"}
-        assert enforced == set(LAW_CANON.keys())
+        # Non-enforced laws are exactly the retired set plus LAW-155 (advisory
+        # heuristic). Everything else is enforced.
+        non_enforced = {k for k, e in ENTRIES.items() if e["status"] != "enforced"}
+        assert non_enforced == {"LAW-155", "LAW-190", "LAW-210", "LAW-220", "LAW-230"}
+        assert enforced == set(LAW_CANON.keys()) - non_enforced
 
 
 class TestRegistryMatchesPinnedValues:
@@ -66,12 +73,17 @@ class TestRegistryMatchesPinnedValues:
         assert entry["tier"] == LAW_METHOD_CLASSIFICATIONS[law_id]
 
     def test_retired_laws_exactly_match_decision(self):
-        """Brief §4.2 (owner decision): 190/210/220/230 retired, never renumbered."""
+        """Brief §4.2 (owner decision): 190/210/220/230 retired, never renumbered.
+        LAW-155 is NOT retired (D3 / Part-16: defined and advisory)."""
         retired = {k for k, e in ENTRIES.items() if e["status"] == "retired"}
         assert retired == {"LAW-190", "LAW-210", "LAW-220", "LAW-230"}
         for k in retired:
             assert ENTRIES[k]["implementation"] is None
             assert ENTRIES[k]["test"] is None
+        # LAW-155 is advisory/heuristic, not retired
+        assert ENTRIES["LAW-155"]["status"] == "advisory"
+        assert ENTRIES["LAW-155"]["tier"] == "heuristic"
+        assert ENTRIES["LAW-155"]["implementation"] is not None
 
 
 class TestEnforcedEntriesHaveImplementationAndTests:
@@ -97,6 +109,20 @@ class TestEnforcedEntriesHaveImplementationAndTests:
         assert indirect == KNOWN_DEDICATED_GAPS
 
 
+class TestLaw100CanonicalDescription:
+
+    def test_measures_percentage_only(self):
+        entry = ENTRIES["LAW-100"]
+        assert entry["threshold"] == 5.0
+        assert entry["units"] == "%"
+        assert entry["operator"] == "<="
+        assert entry["type"] == "Percentage"
+        assert "Percentage of covalent bonds" in entry["measures"]
+        assert "RMS z-score" not in entry["measures"]
+        assert "RMSZ" not in entry["measures"]
+        assert "experimental mode" not in entry["measures"]
+
+
 class TestContentHashRecorded:
 
     def test_sha256_file_matches_content(self):
@@ -109,6 +135,38 @@ class TestContentHashRecorded:
         assert REGISTRY_SHA256 == actual
 
 
+class TestLawSemanticHash:
+
+    @staticmethod
+    def _expected_hash():
+        payload = {
+            "laws": {
+                law_id: {
+                    "title": data["title"],
+                    "threshold": data["threshold"],
+                    "unit": data["unit"],
+                    "operator": data["operator"],
+                    "scope": data["scope"],
+                    "type": data["type"],
+                }
+                for law_id, data in sorted(LAW_CANON.items())
+            },
+            "method_classifications": dict(sorted(LAW_METHOD_CLASSIFICATIONS.items())),
+        }
+        return hashlib.sha256(
+            json.dumps(payload, sort_keys=True).encode("utf-8")
+        ).hexdigest()
+
+    def test_semantic_hash_file_matches_independent_computation(self):
+        expected = self._expected_hash()
+        assert LAW_SEMANTIC_SHA256 == expected
+        assert SEMANTIC_SHA256_FILE.read_text(encoding="utf-8").strip() == expected
+
+    def test_runner_semantic_hash_matches_lock(self):
+        from calibration.runner import _law_semantic_hash
+        assert _law_semantic_hash() == self._expected_hash()
+
+
 class TestGlossaryMatchesPinnedPhysics:
 
     def test_glossary_ids_cover_registry(self):
@@ -119,9 +177,10 @@ class TestGlossaryMatchesPinnedPhysics:
         from tos.glossary.law_glossary import get_law_explanation
         exp = get_law_explanation("LAW-155")
         assert exp["title"] == "Voxel Occupancy"
+        assert exp["status"] == "advisory"
+        assert exp["tier"] == "heuristic"
         assert "voxel" in exp["principle"].lower()
         assert "cannot overlap" not in exp["principle"].lower()
-        assert exp["tier"] == "heuristic"
 
     def test_law_170_describes_residue_identity_not_pi(self):
         from tos.glossary.law_glossary import get_law_explanation

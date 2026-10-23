@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # work regardless of the caller's working directory.
 _MATRIX_PATH = Path(__file__).parent / "modality_matrix.json"
 
-MethodClassification = Literal["deterministic", "advisory_experimental", "heuristic"]
+MethodClassification = Literal["deterministic", "advisory_experimental", "heuristic", "retired"]
 
 # The set of method strings that the JSON uses to mean "all experimental"
 _ALL_EXPERIMENTAL_SENTINEL = "all_experimental"

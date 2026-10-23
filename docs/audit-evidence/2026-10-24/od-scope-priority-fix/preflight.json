@@ -1,0 +1,164 @@
+{
+  "phase": "od-scope-priority-fix",
+  "date": "2026-10-23T20:48:52Z",
+  "branch": "fix/od-scope-residue-coverage-advisory",
+  "base_main": "63da0e347002ed9b77071ff1ed0cefda7c0ce88a",
+  "parent_candidate": "8a9a9c9b156f8d05a76cf88550b9a36cfb609786",
+  "engine_reference": "97d62a89f0efb2917e80a82808a930d34af7f492",
+  "priorities": {
+    "P1": {
+      "title": "Residue-order / peptide-adjacency contract",
+      "status": "implemented",
+      "verdict_impact": "Fixes fabricated peptide re-pairing for insertion-coded residues (e.g. 1PPE 184A/184). May change LAW-110/120/125/135/160 observations for such deposits; no threshold definitions changed. No false veto is silenced; the ordering is corrected to source order.",
+      "files_changed": [
+        "backend/tos/ingestion/processor.py",
+        "backend/tos/ingestion/atom_selection.py",
+        "backend/tos/engine/coord_math.py",
+        "backend/tos/engine/tier1_measurements.py",
+        "backend/tests/test_residue_order.py"
+      ],
+      "regression_tests": [
+        "tests/test_residue_order.py::TestGetSequentialResiduesOrder::test_preserves_source_order_for_insertion_coded_residues",
+        "tests/test_residue_order.py::TestGetSequentialResiduesOrder::test_label_seq_id_wins_when_present",
+        "tests/test_residue_order.py::TestGetSequentialResiduesOrder::test_distinct_seq_preserves_order",
+        "tests/test_residue_order.py::TestExtractOrder::test_extract_preserves_source_order_for_insertion_codes",
+        "tests/test_residue_order.py::TestPeptideAdjacencyNoFalseVeto::test_insertion_code_order_does_not_fabricate_peptide_assignment"
+      ],
+      "acceptance": "get_sequential_residues and Tier1Measurements._extract order by authoritative sequence position (label_seq_id when valid else res_seq) with a stable sort; source order preserved for same-position residues; full backend suite green."
+    },
+    "P2": {
+      "title": "Source-backed coverage denominator",
+      "status": "implemented",
+      "verdict_impact": "LAW-105 coverage denominator now uses the authoritative polymer sequence (SEQRES / entity_poly_seq) when available, including positions absent from coordinates. When the source sequence cannot be established, LAW-105 fails closed (MEASUREMENT_FAILED, observed=None) instead of claiming observed-only 100%. The returned coverage (used by adjudicator/API/evaluator/PDF) matches the LAW-105 source-backed value. Structures whose source sequence equals observed coordinates report identical coverage to before; structures with unresolved positions now report reduced coverage. Verdict may change for inputs with missing sequence positions; no threshold changed.",
+      "files_changed": [
+        "backend/tos/ingestion/processor.py",
+        "backend/tos/engine/tier1_measurements.py",
+        "backend/tests/test_coverage_source_backed.py",
+        "backend/tests/test_canonical_ingestion.py",
+        "backend/tests/test_od_scope.py"
+      ],
+      "regression_tests": [
+        "tests/test_coverage_source_backed.py::TestSourceBackedDenominator::test_denominator_uses_source_sequence_not_observed",
+        "tests/test_coverage_source_backed.py::TestSourceBackedDenominator::test_full_coverage_when_source_equals_observed",
+        "tests/test_coverage_source_backed.py::TestSourceBackedDenominator::test_missing_source_sequence_fails_closed",
+        "tests/test_coverage_source_backed.py::TestSourceBackedDenominator::test_explicit_source_and_method_reported"
+      ],
+      "acceptance": "LAW-105 reports coverage_basis (source_polymer_sequence vs source_polymer_sequence_unavailable), numerator, denominator, source_sequence_available, and per-chain source counts. Missing source sequence fails closed. Full backend suite green."
+    },
+    "P3": {
+      "title": "LAW-130 boundary / MEASUREMENT_FAILED tests",
+      "status": "implemented",
+      "verdict_impact": "LAW-130 observation-precision contract fixed: the reported value is round(raw,2) and the canonical '<=' threshold is applied to that same reported value, so displayed value and status can never contradict. On neighbor-search failure, sample is now 0 (a tooling failure is not a measurement) and the input atom count is exposed separately as input_atom_count. Verdict behavior for a pure tooling failure is unchanged (MEASUREMENT_FAILED -> INDETERMINATE); boundary semantics pinned (<10 PASS, =20 PASS, >20 VETO). No threshold changed.",
+      "files_changed": [
+        "backend/tos/engine/tier1_measurements.py",
+        "backend/tests/test_law_130_boundary.py"
+      ],
+      "regression_tests": [
+        "tests/test_law_130_boundary.py::test_below_threshold_passes",
+        "tests/test_law_130_boundary.py::test_exact_boundary_complies_with_canonical_operator",
+        "tests/test_law_130_boundary.py::test_above_threshold_vetoes",
+        "tests/test_law_130_boundary.py::test_neighbor_search_failure_is_measurement_failed_not_pass",
+        "tests/test_law_130_boundary.py::test_observation_precision_contract_status_equals_reported"
+      ],
+      "acceptance": "LAW-130 boundary (<=), MEASUREMENT_FAILED on neighbor-search failure, sample=0 with separate input_atom_count, and reported-value/status consistency all pinned. Full backend suite green."
+    },
+    "P4": {
+      "title": "LAW-182 advisory end-to-end",
+      "status": "implemented",
+      "verdict_impact": "LAW-182 is confirmed heuristic/advisory (non-blocking). Added negative controls proving an adverse LAW-182 alone never vetoes, never enters deterministic blocking laws, and serializes as FAIL (Advisory); deterministic failures still veto. Missing LAW-182 stays NOT_MEASURED (not favorable). API response exposes method=heuristic and advisory status; PDF labels heuristic/advisory (existing PDF logic verified through the API ingest path). No threshold/classification changed; behavior pinned by tests.",
+      "files_changed": [
+        "backend/tests/test_law_182_advisory_e2e.py"
+      ],
+      "regression_tests": [
+        "tests/test_law_182_advisory_e2e.py::TestLAW182AdvisoryOnly::test_law182_adverse_alone_does_not_veto",
+        "tests/test_law_182_advisory_e2e.py::TestLAW182AdvisoryOnly::test_deterministic_failure_still_vetoes",
+        "tests/test_law_182_advisory_e2e.py::TestLAW182AdvisoryOnly::test_missing_law182_is_not_favorable",
+        "tests/test_law_182_advisory_e2e.py::TestLAW182ApiContract::test_api_response_exposes_method_and_status"
+      ],
+      "acceptance": "Adverse LAW-182 alone never vetoes; absent from deterministic blocking; API/PDF label advisory; missing measurement honest; deterministic failures still veto. Full backend suite green."
+    },
+    "P5": {
+      "title": "LAW-155 advisory restoration",
+      "status": "implemented",
+      "verdict_impact": "LAW-155 reclassified from retired to heuristic/advisory (D3/Part-16 D6). It no longer appears in RETIRED_LAWS; adverse LAW-155 now serializes as FAIL (Advisory) and never produces a deterministic VETO; missing measurement stays NOT_MEASURED. Canon hash updated (method classification included in compute_canon_hash) and hash locks re-pinned: law_registry.sha256 old 81b57f4c... -> new 8f21ccb4...; law_semantic.sha256 old d2b3b850... -> new f825f38b...; canon hash old f24ec581b3e04732 -> new 6a9cd4b4349b81de. LAW-155 threshold/meaning unchanged; unrelated law semantics verified unchanged by tests.",
+      "files_changed": [
+        "backend/tos/governance/station_sop.py",
+        "governance/law_registry.yaml",
+        "governance/law_registry.sha256",
+        "governance/law_semantic.sha256",
+        "backend/tos/glossary/tier1/law_155.py",
+        "backend/tos/glossary/tier1/law_155_steric.py",
+        "backend/scripts/sentinel_audit.py",
+        "backend/tests/test_law_registry.py",
+        "backend/tests/test_od_scope.py",
+        "backend/tests/test_od_scope_payload.py",
+        "backend/tests/test_calibration_runner.py",
+        "backend/tests/test_calibration_evaluate.py",
+        "backend/tests/test_batch_processing.py",
+        "backend/tests/test_response_schema.py",
+        "backend/tests/test_usage_logging.py",
+        "backend/tests/test_phase3_hardening.py",
+        "backend/tests/fixtures/sample_response.json",
+        "backend/tests/test_law_155_advisory_e2e.py",
+        "docs/decisions/OWNER_DECISIONS.md"
+      ],
+      "regression_tests": [
+        "tests/test_law_155_advisory_e2e.py::TestLAW155AdvisoryOnly::test_not_retired",
+        "tests/test_law_155_advisory_e2e.py::TestLAW155AdvisoryOnly::test_law155_adverse_alone_does_not_veto",
+        "tests/test_law_155_advisory_e2e.py::TestLAW155AdvisoryOnly::test_deterministic_failure_still_vetoes",
+        "tests/test_law_155_advisory_e2e.py::TestLAW155AdvisoryOnly::test_missing_law155_is_not_favorable",
+        "tests/test_law_155_advisory_e2e.py::TestLAW155ApiContract::test_api_exposes_heuristic_method"
+      ],
+      "acceptance": "LAW-155 advisory-only non-blocking end-to-end (adjudicator + API + PDF); hash locks re-pinned with old/new digests recorded in register Part-16 D6; unrelated law semantics unchanged; full backend suite green."
+    },
+    "P6": {
+      "title": "Gemmi/altloc/HETATM/PDB-mmCIF parity proof",
+      "status": "implemented",
+      "verdict_impact": "None (additive verification). Added PDB/mmCIF parity tests through the Gemmi ingestion path: both formats accepted; residue identity parity; per-law status and observed-value parity against the same structure. Existing altloc/HETATM tests retained. No engine behavior changed.",
+      "files_changed": [
+        "backend/tests/test_pdb_mmcif_parity.py"
+      ],
+      "regression_tests": [
+        "tests/test_pdb_mmcif_parity.py::TestPDBMMcifParity::test_ingestion_accepts_both_formats",
+        "tests/test_pdb_mmcif_parity.py::TestPDBMMcifParity::test_residue_identity_parity",
+        "tests/test_pdb_mmcif_parity.py::TestPDBMMcifParity::test_per_law_output_parity"
+      ],
+      "acceptance": "PDB and mmCIF ingestion of the same structure agree on residue identity, coverage, and per-law statuses/observed values. Full backend suite green."
+    },
+    "P7": {
+      "title": "Canonical OD-07 audit-ID binding",
+      "status": "implemented",
+      "verdict_impact": "None (additive verification). Added API-level tests proving the audit_id in the response equals compute_audit_id(coord_hash, canon_hash, matrix_hash) and that identical structures share an audit id. Existing component-binding tests retained.",
+      "files_changed": [
+        "backend/tests/test_od07_api_binding.py"
+      ],
+      "regression_tests": [
+        "tests/test_od07_api_binding.py::TestOD07ApiBinding::test_audit_id_binds_coord_canon_matrix_in_response",
+        "tests/test_od07_api_binding.py::TestOD07ApiBinding::test_identical_structures_share_audit_id"
+      ],
+      "acceptance": "API response audit_id binds coordinate+canon+matrix via full SHA-256; identical inputs share ID. Full backend suite green."
+    },
+    "P8": {
+      "title": "Calibration diagnostic-only",
+      "status": "implemented",
+      "verdict_impact": "None. Pinned the diagnostic-only gate: evaluation report declares report_type=diagnostic, calibration_status=not_approved, supports_threshold_validation=False; protocol documents v23 as diagnostic-only and the 18-degree threshold as uncorrected-metric. No v25 execution, held-out evaluation, or threshold/cohort change performed.",
+      "files_changed": [
+        "backend/tests/test_calibration_diagnostic_only.py"
+      ],
+      "regression_tests": [
+        "tests/test_calibration_diagnostic_only.py::TestCalibrationDiagnosticOnly::test_evaluate_report_is_diagnostic_not_approved",
+        "tests/test_calibration_diagnostic_only.py::TestCalibrationDiagnosticOnly::test_protocol_documents_v23_as_diagnostic_only"
+      ],
+      "acceptance": "Calibration output is self-declared diagnostic/not_approved; protocol does not claim a validated threshold. Full backend suite green."
+    }
+  },
+  "rollback": "The P1 change is confined to backend/tos/engine/coord_math.py, tier1_measurements.py, ingestion/{processor,atom_selection}.py, and a new test file. Reverting those four source edits restores prior ordering behavior; the new test file can be removed. No data migration, hash-lock change, or law-semantic change is introduced by P1.",
+  "not_authorized": [
+    "merge to main",
+    "deploy",
+    "v25 calibration run",
+    "held-out evaluation",
+    "threshold/cohort change",
+    "golden-artifact regeneration"
+  ]
+}

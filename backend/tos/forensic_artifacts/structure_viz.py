@@ -10,11 +10,16 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 
 
-def generate_structure_render(coords: list, confidences: list, title: str = "Structure") -> bytes:
+def generate_structure_render(coords: list, confidences: list, title: str = "Structure",
+                              metric_label="pLDDT") -> bytes:
     """
-    Generate 3D scatter plot of CA atoms colored by pLDDT/B-factor.
+    Generate 3D scatter plot of CA atoms, optionally colored by pLDDT.
+
     coords: list of (x, y, z) tuples
-    confidences: list of confidence scores (0-100)
+    confidences: list of measured pLDDT values; ``None``/non-finite values
+                 are rendered neutral and are never replaced with a score.
+    metric_label: "pLDDT" enables the pLDDT colour bands. Any other value
+                  renders the trace without a confidence colour scale.
     Returns: PNG bytes
     """
     if not coords or len(coords) < 3:
@@ -29,17 +34,24 @@ def generate_structure_render(coords: list, confidences: list, title: str = "Str
     ys = [c[1] for c in coords]
     zs = [c[2] for c in coords]
     
-    # Color mapping: high confidence = blue, low = red
+    finite = [c for c in confidences
+              if c is not None and np.isfinite(float(c))]
     colors = []
-    for conf in confidences:
-        if conf >= 90:
-            colors.append('#0066CC')  # Dark blue - very high confidence
-        elif conf >= 70:
-            colors.append('#4DA6FF')  # Light blue - high confidence
-        elif conf >= 50:
-            colors.append('#FFB84D')  # Orange - medium confidence
-        else:
-            colors.append('#CC0000')  # Red - low confidence
+    if metric_label != "pLDDT" or not finite:
+        colors = ['#808080'] * len(coords)
+    else:
+        for i in range(len(coords)):
+            conf = confidences[i] if i < len(confidences) else None
+            if conf is None or not np.isfinite(float(conf)):
+                colors.append('#808080')  # missing observation, never fabricated
+            elif conf >= 90:
+                colors.append('#0066CC')  # Dark blue - very high confidence
+            elif conf >= 70:
+                colors.append('#4DA6FF')  # Light blue - high confidence
+            elif conf >= 50:
+                colors.append('#FFB84D')  # Orange - medium confidence
+            else:
+                colors.append('#CC0000')  # Red - low confidence
     
     # Plot atoms as spheres
     ax.scatter(xs, ys, zs, c=colors, s=50, alpha=0.8, edgecolors='white', linewidth=0.5)
@@ -53,15 +65,17 @@ def generate_structure_render(coords: list, confidences: list, title: str = "Str
     ax.set_zlabel('Z (Å)', fontsize=10)
     ax.set_title(title, fontsize=12, fontweight='bold')
     
-    # Legend
-    from matplotlib.patches import Patch
-    legend_elements = [
-        Patch(facecolor='#0066CC', label='Very High (≥90)'),
-        Patch(facecolor='#4DA6FF', label='High (70-90)'),
-        Patch(facecolor='#FFB84D', label='Medium (50-70)'),
-        Patch(facecolor='#CC0000', label='Low (<50)')
-    ]
-    ax.legend(handles=legend_elements, loc='upper right', fontsize=8)
+    # Legend only when the observed metric is pLDDT
+    if metric_label == "pLDDT" and finite:
+        from matplotlib.patches import Patch
+        legend_elements = [
+            Patch(facecolor='#0066CC', label='Very High (≥90)'),
+            Patch(facecolor='#4DA6FF', label='High (70-90)'),
+            Patch(facecolor='#FFB84D', label='Medium (50-70)'),
+            Patch(facecolor='#CC0000', label='Low (<50)'),
+            Patch(facecolor='#808080', label='Unavailable'),
+        ]
+        ax.legend(handles=legend_elements, loc='upper right', fontsize=8)
     
     # Rotate for better view
     ax.view_init(elev=20, azim=45)

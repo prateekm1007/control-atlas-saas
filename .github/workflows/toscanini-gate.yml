@@ -61,3 +61,31 @@ jobs:
           print(f'Matrix: {m[:16]}...')
           print('All hashes verified.')
           "
+
+      - name: Verify law semantic lock
+        run: |
+          cd backend
+          python -c "
+          import hashlib, json, sys
+          from pathlib import Path
+          sys.path.insert(0, '.')
+          from tos.governance.station_sop import LAW_CANON, LAW_METHOD_CLASSIFICATIONS
+          payload = {
+              'laws': {
+                  law_id: {
+                      'title': data['title'],
+                      'threshold': data['threshold'],
+                      'unit': data['unit'],
+                      'operator': data['operator'],
+                      'scope': data['scope'],
+                      'type': data['type'],
+                  }
+                  for law_id, data in sorted(LAW_CANON.items())
+              },
+              'method_classifications': dict(sorted(LAW_METHOD_CLASSIFICATIONS.items())),
+          }
+          actual = hashlib.sha256(json.dumps(payload, sort_keys=True).encode('utf-8')).hexdigest()
+          expected = Path('../governance/law_semantic.sha256').read_text(encoding='utf-8').strip()
+          assert actual == expected, f'Law semantic lock drifted: {actual} != {expected}'
+          print(f'Law semantic lock: {actual}')
+          "

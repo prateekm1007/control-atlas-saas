@@ -14,13 +14,14 @@ The platform is built as a multi-container Docker ecosystem:
 *   `tools/`: Native physics kernels from the research cycles (e.g., `native_audit.py`).
 
 ## 3. Enforced Law Summary (corrected to the pinned registry, WP-8)
-The pinned engine enforces **15 unique forensic laws** (see
+The pinned engine governs **15 unique forensic laws — 14 enforced and LAW-155 retired** (see
 `governance/law_registry.yaml`; runtime source
 `backend/tos/governance/station_sop.py::LAW_CANON`, canon hash
 `6a9cd4b4349b81de`):
 *   **GEOMETRIC:** LAW-100 Bond Integrity, LAW-105 Reliability Coverage, LAW-110 Backbone Gap, LAW-120 Bond Angle, LAW-125 Ramachandran, LAW-130 Clashscore, LAW-135 Omega Planarity.
 *   **CHEMICAL:** LAW-145 Chirality, LAW-150 Rotamer Audit, LAW-170 Residue Identity, LAW-182 Hydrophobic Burial, LAW-195 Disulfide Geometry.
-*   **HEURISTIC:** LAW-155 Voxel Occupancy, LAW-200 Packing Quality (heuristic failures do not by themselves trigger VETO).
+*   **HEURISTIC:** LAW-200 Packing Quality (heuristic failures do not by themselves trigger VETO).
+*   **RETIRED:** LAW-155 Voxel Occupancy (ID retained for traceability; measurement is not enforced), plus LAW-190/210/220/230.
 *   LAW-160 Chain Integrity (deterministic).
 
 > **WP-8 label corrections.** This document previously cited laws that do
@@ -28,7 +29,7 @@ The pinned engine enforces **15 unique forensic laws** (see
 > "Deformation", LAW-151 "Rho", LAW-152 "Ghost Decoupling", LAW-155.1
 > "Retention", LAW-161 "BSA", LAW-171 "Grease Limit", LAW-180 "R/W Tax",
 > and LAW-185 "Self-Healing / 1ns Kinetic Burst" are not enforced laws.
-> LAW-155 is **Voxel Occupancy** (heuristic), not "Steric Clash".
+> LAW-155 is **Voxel Occupancy** (retired from enforced semantics), not "Steric Clash".
 > LAW-170 is **Residue Identity**, not "pI Balance".
 > LAW-190/210/220/230 are **retired** (never measured).
 > IDs are never renumbered or reused.

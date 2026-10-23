@@ -132,12 +132,13 @@ class TestLaw135:
         assert res["observed"] == 0.0
         assert res["sample"] == 2
 
-    def test_sample_equals_sequential_pairs(self, simple_backbone):
-        """Sample should equal number of sequential pairs with required atoms."""
+    def test_sample_counts_only_valid_omega_pairs(self, simple_backbone):
+        """Degenerate simple-backbone torsions are not counted as valid omega pairs."""
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(simple_backbone))
         res = results["LAW-135"]
-        # simple_backbone: 3 residues in chain A = 2 sequential pairs
-        assert res["sample"] == 2
+        assert res["status"] == "NOT_MEASURED"
+        assert res["observed"] is None
+        assert res["sample"] == 0
 
     def test_uses_station_sop_threshold(self):
         """Verify threshold comes from station_sop.py, not hardcoded."""
@@ -179,9 +180,10 @@ class TestLaw135:
         )
         assert abs(abs(omega_twist) - 90.0) < 0.1, f"Expected ~90°, got {omega_twist}"
 
-    def test_simple_backbone_no_crash(self, simple_backbone):
-        """Verify LAW-135 runs on simple_backbone without errors."""
+    def test_simple_backbone_reports_unavailable_not_measured(self, simple_backbone):
+        """Degenerate omega geometry must not be counted as a valid observation."""
         results, _, _ = Tier1Measurements.run_full_audit(_make_struct(simple_backbone))
         assert "LAW-135" in results
-        assert results["LAW-135"]["observed"] >= 0.0
-        assert results["LAW-135"]["sample"] >= 0
+        assert results["LAW-135"]["status"] == "NOT_MEASURED"
+        assert results["LAW-135"]["observed"] is None
+        assert results["LAW-135"]["sample"] == 0
