@@ -437,7 +437,7 @@ def test_evaluate_file_verifies_bound_run_inputs(tmp_path):
             "code_sha": policy["code_sha"],
             "policy_binding": policy,
         },
-        "coordinate_manifest.json": {},
+        "coordinate_manifest.json": {"1ABC": {"status": "acquired"}},
         "run_integrity_manifest.json": {
             "run_status": "complete",
             "run_type": "authoritative",
@@ -445,13 +445,23 @@ def test_evaluate_file_verifies_bound_run_inputs(tmp_path):
             "acquired_count": 1,
             "measured_count": 1,
             "policy_binding": policy,
+            "artifact_digests": {},
         },
         "calibration_results.json": {
             "meta": {
                 "code_sha": policy["code_sha"],
                 "policy_binding": policy,
             },
+            "summary": {
+                "measured": 1,
+                "expected_targets": 1,
+            },
         },
+    }
+    files["run_integrity_manifest.json"]["artifact_digests"] = {
+        "run_manifest.json": hashlib.sha256(json.dumps(files["run_manifest.json"], sort_keys=True).encode()).hexdigest(),
+        "coordinate_manifest.json": hashlib.sha256(json.dumps(files["coordinate_manifest.json"], sort_keys=True).encode()).hexdigest(),
+        "calibration_results.json": hashlib.sha256(json.dumps(files["calibration_results.json"], sort_keys=True).encode()).hexdigest(),
     }
     for field, filename in {
         "run_manifest_sha256": "run_manifest.json",
@@ -463,6 +473,11 @@ def test_evaluate_file_verifies_bound_run_inputs(tmp_path):
         payload["run_inputs"][field] = hashlib.sha256(content).hexdigest()
     integrity_content = json.dumps(files["run_integrity_manifest.json"], sort_keys=True).encode()
     (run_dir / "run_integrity_manifest.json").write_bytes(integrity_content)
+    manifest_lines = []
+    for fname in ["run_manifest.json", "coordinate_manifest.json", "calibration_results.json", "run_integrity_manifest.json"]:
+        fpath = run_dir / fname
+        manifest_lines.append(f"{hashlib.sha256(fpath.read_bytes()).hexdigest()}  {fname}")
+    (run_dir / "MANIFEST.sha256").write_text("\n".join(manifest_lines) + "\n", encoding="utf-8")
     path.write_text(json.dumps(payload), encoding="utf-8")
     report = evaluate_file(path, run_dir=run_dir)
     assert report["run_inputs_verified"] is True
@@ -472,5 +487,5 @@ def test_evaluate_file_verifies_bound_run_inputs(tmp_path):
     (run_dir / "run_manifest.json").write_bytes(content)
     payload["run_inputs"]["run_manifest_sha256"] = hashlib.sha256(content).hexdigest()
     path.write_text(json.dumps(payload), encoding="utf-8")
-    with pytest.raises(EvaluationInputError, match="run manifest code_sha"):
+    with pytest.raises(EvaluationInputError, match="integrity manifest digest mismatch"):
         evaluate_file(path, run_dir=run_dir)

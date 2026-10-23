@@ -802,6 +802,36 @@ def _verify_run_inputs(run_inputs: dict, run_dir: Path,
     _require(integrity.get("run_type") == "authoritative",
              "only authoritative run type is permitted for evaluation")
 
+    # Verify artifact_digests against actual file bytes
+    artifact_digests = integrity.get("artifact_digests")
+    _require(isinstance(artifact_digests, dict),
+             "run integrity manifest artifact_digests is missing")
+    for filename, digest in artifact_digests.items():
+        path = run_dir / filename
+        _require(path.is_file(), f"integrity manifest references missing file: {filename}")
+        _require(_file_sha256(path) == digest,
+                 f"integrity manifest digest mismatch: {filename}")
+
+    # Parse and verify MANIFEST.sha256 against actual file inventory
+    manifest_sha_path = run_dir / "MANIFEST.sha256"
+    _require(manifest_sha_path.is_file(), "MANIFEST.sha256 is required")
+    manifest_lines = manifest_sha_path.read_text(encoding="utf-8").strip().splitlines()
+    manifest_entries = {}
+    for line in manifest_lines:
+        parts = line.strip().split("  ", 1)
+        _require(len(parts) == 2, f"malformed MANIFEST.sha256 entry: {line!r}")
+        digest, name = parts
+        _require(HEX64.fullmatch(digest.lower()), f"invalid digest in MANIFEST.sha256: {digest}")
+        manifest_entries[name] = digest.lower()
+    for name, digest in manifest_entries.items():
+        path = run_dir / name
+        _require(path.is_file(), f"MANIFEST.sha256 references missing file: {name}")
+        _require(_file_sha256(path) == digest,
+                 f"MANIFEST.sha256 digest mismatch: {name}")
+    actual_files = {p.name for p in run_dir.iterdir() if p.is_file() and p.name != "MANIFEST.sha256"}
+    _require(actual_files == set(manifest_entries.keys()),
+             "MANIFEST.sha256 inventory does not match actual files")
+
     manifest = json.loads(
         (run_dir / "run_manifest.json").read_text(encoding="utf-8"))
     _require(isinstance(manifest, dict), "run manifest must be an object")
@@ -823,6 +853,21 @@ def _verify_run_inputs(run_inputs: dict, run_dir: Path,
              "run results code_sha does not match policy_binding.code_sha")
     _require(meta.get("policy_binding") == manifest_policy,
              "run results policy_binding does not match the run manifest")
+
+    # Cross-check integrity manifest counts against calibration results
+    summary = results.get("summary", {}) if isinstance(results, dict) else {}
+    _require(summary.get("measured") == integrity.get("measured_count"),
+             "integrity measured_count does not match calibration results")
+    _require(summary.get("expected_targets") == integrity.get("expected_target_count"),
+             "integrity expected_target_count does not match calibration results")
+
+    # Cross-check integrity manifest against coordinate manifest
+    coord_manifest_path = run_dir / "coordinate_manifest.json"
+    _require(coord_manifest_path.is_file(), "coordinate_manifest.json is missing")
+    coord_manifest = json.loads(coord_manifest_path.read_text(encoding="utf-8"))
+    _require(isinstance(coord_manifest, dict), "coordinate manifest must be an object")
+    _require(len(coord_manifest) == integrity.get("expected_target_count"),
+             "coordinate manifest target count does not match expected")
 
 
 def evaluate_file(path: Path, alpha: float = DEFAULT_ALPHA,
