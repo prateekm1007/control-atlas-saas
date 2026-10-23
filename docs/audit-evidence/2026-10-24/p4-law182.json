@@ -1,0 +1,24 @@
+{
+  "artifact": "p4-closure-note",
+  "generated_at_utc": "2026-10-23T21:05:00Z",
+  "branch": {"name": "fix/residue-order-contract", "base_sha": "8a9a9c9b156f8d05a76cf88550b9a36cfb609786"},
+  "summary": "P4: LAW-182 advisory end-to-end contract tests.",
+  "contract": {
+    "classification": "LAW-182 is heuristic (LAW_METHOD_CLASSIFICATIONS). Adjudicator normalizes a heuristic VETO to 'FAIL (Advisory)' and never includes it in deterministic blocking laws or in the verdict.",
+    "verdict": "Adverse LAW-182 alone cannot produce VETO; deterministic failures still veto.",
+    "missing_failed": "Missing/failed LAW-182 is NOT_MEASURED / MEASUREMENT_FAILED heuristic and never inflates advisory score.",
+    "surfaces": "Response schema accepts 'FAIL (Advisory)'; PDF advisory table selects method != deterministic and labels Heuristic/Advisory."
+  },
+  "tests": [
+    "adverse heuristic LAW-182 -> PASS, FAIL (Advisory), not in failing_deterministic",
+    "missing LAW-182 -> NOT_MEASURED, heur_passed unchanged",
+    "failed LAW-182 -> MEASUREMENT_FAILED, not favorable",
+    "deterministic LAW-130 VETO still vetoes alongside advisory LAW-182",
+    "advisory row is non-deterministic (PDF advisory-table membership)",
+    "response schema accepts FAIL (Advisory)"
+  ],
+  "test_count": {
+    "local": "python -m pytest tests/ --q under PYTHONUTF8=1: 586 passed, 10 pre-existing baseline failures."
+  },
+  "note": "PDF labeling is verified by contract (advisory-table predicate and method class); a full rendered-PDF execution test is not included in this patch."
+}
