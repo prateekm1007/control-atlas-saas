@@ -17,7 +17,7 @@ The platform is built as a multi-container Docker ecosystem:
 The pinned engine governs **15 unique forensic laws — 14 enforced and LAW-155 retired** (see
 `governance/law_registry.yaml`; runtime source
 `backend/tos/governance/station_sop.py::LAW_CANON`, canon hash
-`f24ec581b3e04732`):
+`6a9cd4b4349b81de`):
 *   **GEOMETRIC:** LAW-100 Bond Integrity, LAW-105 Reliability Coverage, LAW-110 Backbone Gap, LAW-120 Bond Angle, LAW-125 Ramachandran, LAW-130 Clashscore, LAW-135 Omega Planarity.
 *   **CHEMICAL:** LAW-145 Chirality, LAW-150 Rotamer Audit, LAW-170 Residue Identity, LAW-182 Hydrophobic Burial, LAW-195 Disulfide Geometry.
 *   **HEURISTIC:** LAW-200 Packing Quality (heuristic failures do not by themselves trigger VETO).

@@ -62,7 +62,7 @@ def _mock_physics(content_bytes, candidate_id, mode, t3_category):
             "station_version": "22.5.3",
             "timestamp_utc": "2026-01-01T00:00:00Z",
             "governance_fingerprint": {
-                "canon_hash": "f24ec581b3e04732",
+                "canon_hash": "6a9cd4b4349b81de",
                 "matrix_hash": "ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4",
                 "matrix_schema_version": "1.0.0",
                 "policy_ref": "PIL-CAL-03",
@@ -228,7 +228,7 @@ class TestBatchProcessing:
         result = process_batch(zip_bytes, _mock_physics)
         for r in result.results:
             fp = r.payload["governance"]["governance_fingerprint"]
-            assert fp["canon_hash"] == "f24ec581b3e04732"
+            assert fp["canon_hash"] == "6a9cd4b4349b81de"
             assert len(fp["matrix_hash"]) == 64
 
     def test_max_structures_enforced(self):

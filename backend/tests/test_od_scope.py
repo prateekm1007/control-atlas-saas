@@ -228,7 +228,7 @@ class TestLaw110Adjacency:
 
 
 class TestRetiredAndAdvisorySemantics:
-    def test_law_155_is_retired_and_cannot_veto(self):
+    def test_law_155_adverse_heuristic_never_vetoes(self):
         measurements = _all_passing()
         measurements["LAW-155"] = {
             "observed": 0.1, "deviation": "999", "sample": 10, "status": "VETO",
@@ -241,14 +241,13 @@ class TestRetiredAndAdvisorySemantics:
             architecture="NONE",
         ))
         row = next(r for r in adjudication.law_rows if r["law_id"] == "LAW-155")
-        assert row["method"] == "retired"
-        assert row["status"] == "RETIRED"
+        assert row["method"] == "heuristic"
+        assert row["status"] == "FAIL (Advisory)"
         assert row["raw_status"] == "VETO"
-        assert row["enforced"] is False
+        assert row["enforced"] is True
         assert adjudication.verdict == "PASS"
-        assert adjudication.advisory_score == 100
 
-    def test_retired_law_is_traceable_when_missing(self):
+    def test_law_155_missing_is_advisory_not_retired(self):
         measurements = _all_passing()
         measurements.pop("LAW-155")
         adjudication = adjudicate_laws(AdjudicationInput(
@@ -259,11 +258,12 @@ class TestRetiredAndAdvisorySemantics:
             architecture="NONE",
         ))
         row = next(r for r in adjudication.law_rows if r["law_id"] == "LAW-155")
-        assert row["status"] == "RETIRED"
+        assert row["method"] == "heuristic"
+        assert row["status"] == "NOT_MEASURED"
         assert row["raw_status"] == "NOT_MEASURED"
         assert adjudication.verdict == "PASS"
 
-    @pytest.mark.parametrize("law_id", ["LAW-182", "LAW-200"])
+    @pytest.mark.parametrize("law_id", ["LAW-155", "LAW-182", "LAW-200"])
     def test_heuristic_veto_is_normalized_not_final(self, law_id):
         measurements = _all_passing()
         measurements[law_id] = {
@@ -298,10 +298,10 @@ class TestRetiredAndAdvisorySemantics:
         assert row["status"] == "VETO"
         assert adjudication.verdict == "VETO"
 
-    def test_counts_keep_all_ids_but_retire_155(self):
+    def test_counts_keep_all_ids_with_law155_advisory(self):
         assert len(LAW_CANON) == 15
-        assert RETIRED_LAWS == {"LAW-155"}
-        assert HEURISTIC_COUNT == 2
+        assert RETIRED_LAWS == set()
+        assert HEURISTIC_COUNT == 3
 
 
 class TestMissingMeasurements:

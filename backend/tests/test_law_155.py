@@ -58,9 +58,9 @@ class TestLaw155:
         assert res["sample"] == 5
 
     def test_sparse_structure_veto(self):
-        """1 atom per residue, all in same voxel → 1 voxel / 3 residues < 2.0 → VETO.
-        Actually: atoms in same 2Å cube, 3 residues → 1/3 = 0.33.
-        """
+        """1 atom per residue, all in same voxel → 1 voxel / 3 residues < 2.0
+        → the measurement reports VETO (advisory normalization happens at the
+        adjudicator/response/PDF layer, not in the measurement itself)."""
         atoms = [
             _make_atom("CA", "C", [0.0, 0.0, 0.0], res_seq=1),
             _make_atom("CA", "C", [0.5, 0.5, 0.5], res_seq=2),  # same voxel

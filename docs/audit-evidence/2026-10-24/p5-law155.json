@@ -1,0 +1,28 @@
+{
+  "artifact": "p5-closure-note",
+  "generated_at_utc": "2026-10-23T21:15:00Z",
+  "branch": {"name": "fix/residue-order-contract", "base_sha": "8a9a9c9b156f8d05a76cf88550b9a36cfb609786"},
+  "decision": "AUDITOR-DECISION-2026-10-24-LAW155 (docs/decisions/AUDITOR-DECISION-2026-10-24-LAW155.md)",
+  "summary": "P5: LAW-155 classification reconciliation from retired -> advisory/heuristic (non-blocking).",
+  "changes": {
+    "station_sop": "LAW-155 removed from RETIRED_LAWS; classified heuristic (LAW-155/182/200 are the three heuristics).",
+    "registry": "law_registry.yaml LAW-155 tier=heuristic, status=advisory, measures updated; recorded canon_hash updated.",
+    "adjudicator": "heuristic VETO -> 'FAIL (Advisory)'; never in deterministic blocking laws; never flips verdict to VETO.",
+    "locks_repinned": "canon f24ec581b3e04732 -> 6a9cd4b4349b81de; semantic d2b3b850... -> f825f38b...; registry lock updated; matrix hash unchanged.",
+    "surfaces": "response schema carries 'FAIL (Advisory)'; PDF advisory table labels Heuristic/Advisory."
+  },
+  "tests": [
+    "adverse heuristic LAW-155 alone -> PASS, FAIL (Advisory), absent from blocking laws",
+    "missing LAW-155 -> NOT_MEASURED heuristic (not RETIRED)",
+    "LAW-155/182/200 heuristic veto normalization",
+    "registry enforced/retired/advisory sets match decision",
+    "semantic-hash lock matches independent computation",
+    "registry content hash locked",
+    "response/PDF label LAW-155 advisory (payload test)",
+    "evaluator: LAW-155 cannot be a deterministic blocking cause"
+  ],
+  "test_count": {
+    "local": "python -m pytest tests/ --q under PYTHONUTF8=1: 594 passed, 4 pre-existing baseline failures (protocol CRLF, one runner, matrix-hash drift x2)."
+  },
+  "note": "Threshold/operator/unit/scope of LAW-155 unchanged. OD-16 preserved; no calibration/cohort/held-out changes."
+}

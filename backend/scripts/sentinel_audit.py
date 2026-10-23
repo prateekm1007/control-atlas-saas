@@ -33,7 +33,7 @@ CACHE_DIR = BACKEND / "invariants" / "benchmarks"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── Locked Hashes ─────────────────────────────────────────────────────────────
-LOCKED_CANON_HASH = "f24ec581b3e04732"
+LOCKED_CANON_HASH = "6a9cd4b4349b81de"
 LOCKED_MATRIX_HASH = "ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4"
 
 # ── API ───────────────────────────────────────────────────────────────────────

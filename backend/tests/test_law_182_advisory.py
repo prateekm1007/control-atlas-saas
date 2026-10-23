@@ -55,9 +55,10 @@ def test_law_182_missing_is_not_favorable_evidence():
     row = next(r for r in res.law_rows if r["law_id"] == "LAW-182")
     assert row["method"] == "heuristic"
     assert row["status"] == "NOT_MEASURED"
-    # Only the other heuristic (LAW-200) still passes; LAW-182 missing adds nothing.
-    assert res.heur_passed == 1
-    assert res.advisory_score == 50
+    # Only the other heuristics (LAW-155, LAW-200) still pass; LAW-182 missing
+    # adds nothing to the advisory pass count.
+    assert res.heur_passed == 2
+    assert res.advisory_score == 66
 
 
 def test_law_182_failed_is_not_favorable_evidence():
@@ -70,7 +71,7 @@ def test_law_182_failed_is_not_favorable_evidence():
     assert res.verdict == "PASS"
     row = next(r for r in res.law_rows if r["law_id"] == "LAW-182")
     assert row["status"] == "MEASUREMENT_FAILED"
-    assert res.heur_passed == 1
+    assert res.heur_passed == 2
 
 
 def test_deterministic_failure_still_vetoes_with_advisory_law182():

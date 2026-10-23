@@ -63,8 +63,8 @@ def test_missing_law_is_honest_in_response_and_pdf(client, monkeypatch):
     assert laws["LAW-130"]["observed"] is None
     assert payload["verdict"]["binary"] == "INDETERMINATE"
     assert "LAW-130" in payload["verdict"]["reason"]
-    assert laws["LAW-155"]["status"] == "RETIRED"
-    assert laws["LAW-155"]["method"] == "retired"
+    assert laws["LAW-155"]["status"] == "PASS"
+    assert laws["LAW-155"]["method"] == "heuristic"
     assert payload["confidence_meta"]["schema_version"] == "confidence-meta/1.0.0"
     assert payload["confidence_meta"]["source_type"] == "B-factor"
     assert payload["confidence_meta"]["data_available"] is False
@@ -81,7 +81,7 @@ def test_missing_law_is_honest_in_response_and_pdf(client, monkeypatch):
     pypdf = pytest.importorskip("pypdf")
     text = "\n".join(page.extract_text() or "" for page in pypdf.PdfReader(io.BytesIO(pdf)).pages)
     assert "NOT_MEASURED" in text
-    assert "RETIRED" in text
+    assert "HEURISTIC" in text
     assert "MEASURED LAW-105 RESIDUE COVERAGE" in text
     assert "EPISTEMIC GAP" in text
     assert "DETERMINISTIC VIOLATION(S)" not in text

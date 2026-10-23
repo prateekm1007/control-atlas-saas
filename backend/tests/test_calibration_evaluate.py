@@ -122,7 +122,7 @@ def test_validation_rejects_duplicate_ids():
 
 def test_validation_rejects_retired_or_heuristic_veto_cause():
     cases = [_case("BAD", "defective", "VETO", blocking_laws=["LAW-155"])]
-    with pytest.raises(EvaluationInputError, match="unknown law"):
+    with pytest.raises(EvaluationInputError, match="not a deterministic law"):
         validate_cases(cases)
     cases = [_case("BAD2", "defective", "VETO", blocking_laws=["LAW-182"])]
     with pytest.raises(EvaluationInputError, match="not a deterministic law"):

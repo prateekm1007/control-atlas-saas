@@ -64,11 +64,11 @@ LAW_CANON = {
     "LAW-200": {"title": "Packing Quality", "threshold": 300.0, "unit": "Å³/atom", "operator": "<=", "scope": "bounding box", "type": "Rate"}
 }
 
-RETIRED_LAWS = {"LAW-155"}
+RETIRED_LAWS: set[str] = set()
 LAW_METHOD_CLASSIFICATIONS = {
     lid: (
         "retired" if lid in RETIRED_LAWS
-        else ("deterministic" if lid not in ["LAW-182", "LAW-200"] else "heuristic")
+        else ("heuristic" if lid in ["LAW-155", "LAW-182", "LAW-200"] else "deterministic")
     )
     for lid in LAW_CANON
 }
@@ -77,7 +77,7 @@ HEURISTIC_LAWS = sorted([l for l, m in LAW_METHOD_CLASSIFICATIONS.items() if m =
 RETIRED_ENFORCED_LAWS = sorted([l for l, m in LAW_METHOD_CLASSIFICATIONS.items() if m == "retired"])
 TOTAL_LAWS, DETERMINISTIC_COUNT, HEURISTIC_COUNT = len(LAW_CANON), len(DETERMINISTIC_LAWS), len(HEURISTIC_LAWS)
 
-LAW_CATEGORIES = {lid: "geometric" if lid not in ["LAW-145", "LAW-150", "LAW-170", "LAW-182", "LAW-195"] else "chemical" for lid in LAW_CANON}
+LAW_CATEGORIES = {lid: "geometric" if lid not in ["LAW-145", "LAW-150", "LAW-155", "LAW-170", "LAW-182", "LAW-195"] else "chemical" for lid in LAW_CANON}
 CATEGORY_DISPLAY = {"geometric": "GEOMETRIC INVARIANTS", "chemical": "CHEMICAL INVARIANTS"}
 
 def get_laws_by_category():
