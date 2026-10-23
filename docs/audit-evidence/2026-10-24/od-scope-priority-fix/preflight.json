@@ -125,8 +125,32 @@
       ],
       "acceptance": "PDB and mmCIF ingestion of the same structure agree on residue identity, coverage, and per-law statuses/observed values. Full backend suite green."
     },
-    "P7": { "title": "Canonical OD-07 audit-ID binding", "status": "pending" },
-    "P8": { "title": "Calibration diagnostic-only", "status": "pending" }
+    "P7": {
+      "title": "Canonical OD-07 audit-ID binding",
+      "status": "implemented",
+      "verdict_impact": "None (additive verification). Added API-level tests proving the audit_id in the response equals compute_audit_id(coord_hash, canon_hash, matrix_hash) and that identical structures share an audit id. Existing component-binding tests retained.",
+      "files_changed": [
+        "backend/tests/test_od07_api_binding.py"
+      ],
+      "regression_tests": [
+        "tests/test_od07_api_binding.py::TestOD07ApiBinding::test_audit_id_binds_coord_canon_matrix_in_response",
+        "tests/test_od07_api_binding.py::TestOD07ApiBinding::test_identical_structures_share_audit_id"
+      ],
+      "acceptance": "API response audit_id binds coordinate+canon+matrix via full SHA-256; identical inputs share ID. Full backend suite green."
+    },
+    "P8": {
+      "title": "Calibration diagnostic-only",
+      "status": "implemented",
+      "verdict_impact": "None. Pinned the diagnostic-only gate: evaluation report declares report_type=diagnostic, calibration_status=not_approved, supports_threshold_validation=False; protocol documents v23 as diagnostic-only and the 18-degree threshold as uncorrected-metric. No v25 execution, held-out evaluation, or threshold/cohort change performed.",
+      "files_changed": [
+        "backend/tests/test_calibration_diagnostic_only.py"
+      ],
+      "regression_tests": [
+        "tests/test_calibration_diagnostic_only.py::TestCalibrationDiagnosticOnly::test_evaluate_report_is_diagnostic_not_approved",
+        "tests/test_calibration_diagnostic_only.py::TestCalibrationDiagnosticOnly::test_protocol_documents_v23_as_diagnostic_only"
+      ],
+      "acceptance": "Calibration output is self-declared diagnostic/not_approved; protocol does not claim a validated threshold. Full backend suite green."
+    }
   },
   "rollback": "The P1 change is confined to backend/tos/engine/coord_math.py, tier1_measurements.py, ingestion/{processor,atom_selection}.py, and a new test file. Reverting those four source edits restores prior ordering behavior; the new test file can be removed. No data migration, hash-lock change, or law-semantic change is introduced by P1.",
   "not_authorized": [
