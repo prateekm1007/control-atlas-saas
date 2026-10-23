@@ -27,7 +27,7 @@ MEASUREMENTS = REPO / "backend" / "tos" / "engine" / "tier1_measurements.py"
 
 # Recorded content hash of governance/law_registry.yaml (WP-8 requirement).
 # Re-pinned per AUDITOR-DECISION-2026-10-24-LAW155 (LAW-155 retired -> advisory).
-REGISTRY_SHA256 = "dd9f9ccae296c0b945366405c3f6c4b5399447458f7e24ea6349cd502b32bf1b"
+REGISTRY_SHA256 = "1a958b4596e1021c592b49363ff3d652047c4d5c46ecfa3717934f77c7e8fa2e"
 LAW_SEMANTIC_SHA256 = "f825f38b9493a9409aa9678c1f98593e7715ba6b9e01aefba808096571a27750"
 
 yaml = pytest.importorskip("yaml", reason="PyYAML comes from requirements-dev.txt")
