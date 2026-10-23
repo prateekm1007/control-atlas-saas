@@ -419,6 +419,75 @@ def test_evaluate_file_requires_bound_run_inputs(tmp_path):
         evaluate_file(path)
 
 
+def _build_run_artifacts(run_dir, policy, target_id="1ABC"):
+    files = {
+        "run_manifest.json": {
+            "code_sha": policy["code_sha"],
+            "policy_binding": policy,
+            "run_type": "authoritative",
+        },
+        "coordinate_manifest.json": {target_id: {"acquisition_status": "acquired"}},
+        "calibration_results.json": {
+            "meta": {
+                "code_sha": policy["code_sha"],
+                "policy_binding": policy,
+            },
+            "summary": {
+                "measured": 1,
+                "expected_targets": 1,
+            },
+            "targets": {
+                target_id: {
+                    "measurement_status": "measured",
+                    "acquisition": {"acquisition_status": "acquired"},
+                },
+            },
+        },
+    }
+    files["run_integrity_manifest.json"] = {
+        "run_status": "complete",
+        "run_type": "authoritative",
+        "expected_target_count": 1,
+        "acquired_count": 1,
+        "measured_count": 1,
+        "policy_binding": policy,
+        "code_sha": policy["code_sha"],
+        "artifact_digests": {
+            name: hashlib.sha256(
+                json.dumps(files[name], sort_keys=True).encode()).hexdigest()
+            for name in ("run_manifest.json", "coordinate_manifest.json",
+                         "calibration_results.json")
+        },
+    }
+    return files
+
+
+def _write_artifact(run_dir, files, name, payload, run_inputs, field=None):
+    content = json.dumps(payload, sort_keys=True).encode()
+    (run_dir / name).write_bytes(content)
+    if field:
+        run_inputs[field] = hashlib.sha256(content).hexdigest()
+
+
+def _make_evidence_files(evidence_dir, cases):
+    for case in cases:
+        sid = case["structure_id"]
+        label_dir = evidence_dir / "labels"
+        label_dir.mkdir(exist_ok=True)
+        label_path = label_dir / f"{sid}.json"
+        label_path.write_bytes(json.dumps({"sid": sid}).encode())
+        case["label_evidence_ref"] = f"labels/{sid}.json"
+        case["label_evidence_sha256"] = hashlib.sha256(label_path.read_bytes()).hexdigest()
+        if case.get("cohort") == "B1":
+            defect_dir = evidence_dir / "defects"
+            defect_dir.mkdir(exist_ok=True)
+            defect_path = defect_dir / f"{sid}.json"
+            defect_path.write_bytes(json.dumps({"sid": sid, "defect": True}).encode())
+            case["defect_manifest_ref"] = f"defects/{sid}.json"
+            case["defect_manifest_sha256"] = (
+                hashlib.sha256(defect_path.read_bytes()).hexdigest())
+
+
 def test_evaluate_file_verifies_bound_run_inputs(tmp_path):
     payload = {
         "policy_binding": _policy_binding(),
@@ -433,57 +502,31 @@ def test_evaluate_file_verifies_bound_run_inputs(tmp_path):
         evaluate_file(path, run_dir=run_dir)
 
     policy = payload["policy_binding"]
-    files = {
-        "run_manifest.json": {
-            "code_sha": policy["code_sha"],
-            "policy_binding": policy,
-            "run_type": "authoritative",
-        },
-        "coordinate_manifest.json": {"1ABC": {"status": "acquired"}},
-        "run_integrity_manifest.json": {
-            "run_status": "complete",
-            "run_type": "authoritative",
-            "expected_target_count": 1,
-            "acquired_count": 1,
-            "measured_count": 1,
-            "policy_binding": policy,
-            "code_sha": policy["code_sha"],
-            "artifact_digests": {},
-        },
-        "calibration_results.json": {
-            "meta": {
-                "code_sha": policy["code_sha"],
-                "policy_binding": policy,
-            },
-            "summary": {
-                "measured": 1,
-                "expected_targets": 1,
-            },
-        },
-    }
-    files["run_integrity_manifest.json"]["artifact_digests"] = {
-        "run_manifest.json": hashlib.sha256(json.dumps(files["run_manifest.json"], sort_keys=True).encode()).hexdigest(),
-        "coordinate_manifest.json": hashlib.sha256(json.dumps(files["coordinate_manifest.json"], sort_keys=True).encode()).hexdigest(),
-        "calibration_results.json": hashlib.sha256(json.dumps(files["calibration_results.json"], sort_keys=True).encode()).hexdigest(),
-    }
+    files = _build_run_artifacts(run_dir, policy)
     for field, filename in {
         "run_manifest_sha256": "run_manifest.json",
         "coordinate_manifest_sha256": "coordinate_manifest.json",
         "calibration_results_sha256": "calibration_results.json",
     }.items():
-        content = json.dumps(files[filename], sort_keys=True).encode()
-        (run_dir / filename).write_bytes(content)
-        payload["run_inputs"][field] = hashlib.sha256(content).hexdigest()
-    integrity_content = json.dumps(files["run_integrity_manifest.json"], sort_keys=True).encode()
-    (run_dir / "run_integrity_manifest.json").write_bytes(integrity_content)
-    payload["run_inputs"]["run_integrity_manifest_sha256"] = hashlib.sha256(integrity_content).hexdigest()
+        _write_artifact(run_dir, files, filename, files[filename],
+                         payload["run_inputs"], field)
+    _write_artifact(
+        run_dir, files, "run_integrity_manifest.json",
+        files["run_integrity_manifest.json"], payload["run_inputs"],
+        "run_integrity_manifest_sha256")
+
+    evidence_dir = tmp_path / "evidence"
+    evidence_dir.mkdir()
+    _make_evidence_files(evidence_dir, payload["cases"])
+
     manifest_lines = []
-    for fname in ["run_manifest.json", "coordinate_manifest.json", "calibration_results.json", "run_integrity_manifest.json"]:
+    for fname in ["run_manifest.json", "coordinate_manifest.json",
+                  "calibration_results.json", "run_integrity_manifest.json"]:
         fpath = run_dir / fname
         manifest_lines.append(f"{hashlib.sha256(fpath.read_bytes()).hexdigest()}  {fname}")
     (run_dir / "MANIFEST.sha256").write_text("\n".join(manifest_lines) + "\n", encoding="utf-8")
     path.write_text(json.dumps(payload), encoding="utf-8")
-    report = evaluate_file(path, run_dir=run_dir)
+    report = evaluate_file(path, run_dir=run_dir, evidence_root=evidence_dir)
     assert report["run_inputs_verified"] is True
 
     files["run_manifest.json"]["code_sha"] = "b" * 40
@@ -493,3 +536,187 @@ def test_evaluate_file_verifies_bound_run_inputs(tmp_path):
     path.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(EvaluationInputError, match="integrity manifest digest mismatch"):
         evaluate_file(path, run_dir=run_dir)
+
+
+def test_evaluate_file_rejects_manifest_traversal_and_absolute_paths(tmp_path):
+    payload = {
+        "policy_binding": _policy_binding(),
+        "run_inputs": _run_inputs(),
+        "cases": _cases(),
+    }
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    policy = payload["policy_binding"]
+    files = _build_run_artifacts(run_dir, policy)
+    for field, filename in {
+        "run_manifest_sha256": "run_manifest.json",
+        "coordinate_manifest_sha256": "coordinate_manifest.json",
+        "calibration_results_sha256": "calibration_results.json",
+    }.items():
+        _write_artifact(run_dir, files, filename, files[filename],
+                         payload["run_inputs"], field)
+    _write_artifact(
+        run_dir, files, "run_integrity_manifest.json",
+        files["run_integrity_manifest.json"], payload["run_inputs"],
+        "run_integrity_manifest_sha256")
+    evidence_dir = tmp_path / "evidence"
+    evidence_dir.mkdir()
+    _make_evidence_files(evidence_dir, payload["cases"])
+    path = tmp_path / "cases.json"
+
+    for malicious_entry in ("../outside.txt", "C:/outside.txt"):
+        other = tmp_path / "outside.txt"
+        other.write_text("secret", encoding="utf-8")
+        lines = []
+        for fname in ["run_manifest.json", "coordinate_manifest.json",
+                      "calibration_results.json", "run_integrity_manifest.json"]:
+            fpath = run_dir / fname
+            lines.append(f"{hashlib.sha256(fpath.read_bytes()).hexdigest()}  {fname}")
+        lines.append(f"{hashlib.sha256(other.read_bytes()).hexdigest()}  {malicious_entry}")
+        (run_dir / "MANIFEST.sha256").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        payload["cases"] = _cases()
+        _make_evidence_files(evidence_dir, payload["cases"])
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        with pytest.raises(EvaluationInputError, match="safe relative path"):
+            evaluate_file(path, run_dir=run_dir, evidence_root=evidence_dir)
+
+
+def test_evaluate_file_rejects_remote_evidence_reference(tmp_path):
+    payload = {
+        "policy_binding": _policy_binding(),
+        "run_inputs": _run_inputs(),
+        "cases": _cases(),
+    }
+    cases = _cases()
+    cases[0]["label_evidence_ref"] = "https://files.rcsb.org/validation/1ABC.json"
+    payload["cases"] = cases
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    policy = payload["policy_binding"]
+    files = _build_run_artifacts(run_dir, policy)
+    for field, filename in {
+        "run_manifest_sha256": "run_manifest.json",
+        "coordinate_manifest_sha256": "coordinate_manifest.json",
+        "calibration_results_sha256": "calibration_results.json",
+    }.items():
+        _write_artifact(run_dir, files, filename, files[filename],
+                         payload["run_inputs"], field)
+    _write_artifact(
+        run_dir, files, "run_integrity_manifest.json",
+        files["run_integrity_manifest.json"], payload["run_inputs"],
+        "run_integrity_manifest_sha256")
+    manifest_lines = []
+    for fname in ["run_manifest.json", "coordinate_manifest.json",
+                  "calibration_results.json", "run_integrity_manifest.json"]:
+        fpath = run_dir / fname
+        manifest_lines.append(f"{hashlib.sha256(fpath.read_bytes()).hexdigest()}  {fname}")
+    (run_dir / "MANIFEST.sha256").write_text("\n".join(manifest_lines) + "\n", encoding="utf-8")
+    path = tmp_path / "cases.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(EvaluationInputError, match="remote URL"):
+        evaluate_file(path, run_dir=run_dir)
+
+
+def test_evaluate_file_rejects_evidence_digest_mismatch(tmp_path):
+    payload = {
+        "policy_binding": _policy_binding(),
+        "run_inputs": _run_inputs(),
+        "cases": _cases(),
+    }
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    policy = payload["policy_binding"]
+    files = _build_run_artifacts(run_dir, policy)
+    for field, filename in {
+        "run_manifest_sha256": "run_manifest.json",
+        "coordinate_manifest_sha256": "coordinate_manifest.json",
+        "calibration_results_sha256": "calibration_results.json",
+    }.items():
+        _write_artifact(run_dir, files, filename, files[filename],
+                         payload["run_inputs"], field)
+    _write_artifact(
+        run_dir, files, "run_integrity_manifest.json",
+        files["run_integrity_manifest.json"], payload["run_inputs"],
+        "run_integrity_manifest_sha256")
+    payload["cases"] = _cases()
+    evidence_dir = tmp_path / "evidence"
+    evidence_dir.mkdir()
+    _make_evidence_files(evidence_dir, payload["cases"])
+    payload["cases"][0]["label_evidence_sha256"] = "0" * 64
+    manifest_lines = []
+    for fname in ["run_manifest.json", "coordinate_manifest.json",
+                  "calibration_results.json", "run_integrity_manifest.json"]:
+        fpath = run_dir / fname
+        manifest_lines.append(f"{hashlib.sha256(fpath.read_bytes()).hexdigest()}  {fname}")
+    (run_dir / "MANIFEST.sha256").write_text("\n".join(manifest_lines) + "\n", encoding="utf-8")
+    path = tmp_path / "cases.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(EvaluationInputError, match="digest mismatch"):
+        evaluate_file(path, run_dir=run_dir, evidence_root=evidence_dir)
+
+
+def test_evaluate_file_rejects_cross_manifest_target_id_mismatch(tmp_path):
+    payload = {
+        "policy_binding": _policy_binding(),
+        "run_inputs": _run_inputs(),
+        "cases": _cases(),
+    }
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    policy = payload["policy_binding"]
+    files = _build_run_artifacts(run_dir, policy)
+    files["coordinate_manifest.json"] = {
+        "2XYZ": {"acquisition_status": "acquired"},
+    }
+    for field, filename in {
+        "run_manifest_sha256": "run_manifest.json",
+        "coordinate_manifest_sha256": "coordinate_manifest.json",
+        "calibration_results_sha256": "calibration_results.json",
+    }.items():
+        _write_artifact(run_dir, files, filename, files[filename],
+                         payload["run_inputs"], field)
+    files["run_integrity_manifest.json"]["artifact_digests"] = {
+        name: hashlib.sha256(
+            json.dumps(files[name], sort_keys=True).encode()).hexdigest()
+        for name in ("run_manifest.json", "coordinate_manifest.json",
+                     "calibration_results.json")
+    }
+    _write_artifact(
+        run_dir, files, "run_integrity_manifest.json",
+        files["run_integrity_manifest.json"], payload["run_inputs"],
+        "run_integrity_manifest_sha256")
+    payload["cases"] = _cases()
+    evidence_dir = tmp_path / "evidence"
+    evidence_dir.mkdir()
+    _make_evidence_files(evidence_dir, payload["cases"])
+    manifest_lines = []
+    for fname in ["run_manifest.json", "coordinate_manifest.json",
+                  "calibration_results.json", "run_integrity_manifest.json"]:
+        fpath = run_dir / fname
+        manifest_lines.append(f"{hashlib.sha256(fpath.read_bytes()).hexdigest()}  {fname}")
+    (run_dir / "MANIFEST.sha256").write_text("\n".join(manifest_lines) + "\n", encoding="utf-8")
+    path = tmp_path / "cases.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(EvaluationInputError, match="disagree on target IDs"):
+        evaluate_file(path, run_dir=run_dir, evidence_root=evidence_dir)
+
+
+def test_validation_rejects_extra_run_inputs_keys():
+    payload = {
+        "policy_binding": _policy_binding(),
+        "run_inputs": {**_run_inputs(), "unexpected_key": "x" * 64},
+        "cases": _cases(),
+    }
+    with pytest.raises(EvaluationInputError, match="run_inputs must contain exactly"):
+        validate_cases(payload["cases"], require_policy=True, payload=payload)
+
+
+def test_validation_rejects_extra_policy_binding_keys():
+    payload = {
+        "policy_binding": {**_policy_binding(), "unexpected_key": "x"},
+        "run_inputs": _run_inputs(),
+        "cases": _cases(),
+    }
+    with pytest.raises(EvaluationInputError, match="policy_binding must contain exactly"):
+        validate_cases(payload["cases"], require_policy=True, payload=payload)

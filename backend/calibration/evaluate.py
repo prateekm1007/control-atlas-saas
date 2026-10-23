@@ -162,6 +162,11 @@ def _validate_policy_binding(payload: dict) -> dict:
     _require(bool(HEX40.fullmatch(code_sha) or HEX64.fullmatch(code_sha)),
              "policy_binding.code_sha must be a full 40- or 64-hex commit")
     binding["code_sha"] = code_sha
+    _require(set(binding.keys()) == {
+        "code_sha", "canon_hash", "law_semantic_hash",
+        "modality_matrix_sha256", "law_registry_sha256"},
+        "policy_binding must contain exactly code_sha, canon_hash, "
+        "law_semantic_hash, modality_matrix_sha256, law_registry_sha256")
     for field, length in (
         ("canon_hash", 16),
         ("law_semantic_hash", 64),
@@ -176,6 +181,9 @@ def _validate_policy_binding(payload: dict) -> dict:
     for field in RUN_INPUT_FILES:
         _hex(run_inputs.get(field), 64, f"run_inputs.{field}")
         run_inputs[field] = run_inputs[field].lower()
+    _require(set(run_inputs.keys()) == set(RUN_INPUT_FILES.keys()),
+             "run_inputs must contain exactly: "
+             + ", ".join(sorted(RUN_INPUT_FILES)))
     return binding
 
 
@@ -767,13 +775,64 @@ def _law_semantic_hash() -> str:
         json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
 
 
+def _resolve_under(root: Path, rel: str, label: str) -> Path:
+    """Resolve a path relative to ``root``, rejecting absolute paths,
+    parent traversal, path separators, NUL bytes, and out-of-root escapes.
+    Symlinked escapes are detected via resolution against the root."""
+    _require(isinstance(rel, str) and rel,
+             f"{label} reference must be a non-empty string")
+    parts = rel.split("/")
+    bad = [
+        p for p in parts
+        if (not p) or p in (".", "..")
+        or any(ch in p for ch in ("\\", "\x00", ":"))
+    ]
+    _require(not bad,
+             f"{label} reference must be a safe relative path: {rel!r}")
+    root_path = Path(root).resolve()
+    resolved = root_path.joinpath(*parts).resolve()
+    _require(resolved.is_relative_to(root_path),
+             f"{label} reference escapes the evidence root: {rel!r}")
+    return resolved
+
+
+def _verify_evidence_ref(evidence_root: Path, ref: str, digest: str,
+                         label: str) -> None:
+    """Byte-verify one locally pinned evidence reference against its digest."""
+    if ref.startswith(("http://", "https://")):
+        _require(False,
+                 f"{label} is a remote URL; authoritative evaluation requires a "
+                 f"locally pinned artifact in the evidence root: {ref!r}")
+    path = _resolve_under(evidence_root, ref, label)
+    _require(path.is_file(), f"{label} references missing file: {ref}")
+    _require(not path.is_symlink(),
+             f"{label} must not reference a symlink: {ref}")
+    _require(_file_sha256(path) == digest.lower(),
+             f"{label} digest mismatch: {ref}")
+
+
+def _verify_case_evidence(case: dict, evidence_root: Path) -> None:
+    sid = case["structure_id"]
+    _verify_evidence_ref(evidence_root, case["label_evidence_ref"],
+                         case["label_evidence_sha256"],
+                         f"{sid}.label_evidence")
+    if case.get("cohort") == "B1":
+        _verify_evidence_ref(evidence_root, case["defect_manifest_ref"],
+                             case["defect_manifest_sha256"],
+                             f"{sid}.defect_manifest")
+
+
 def _verify_run_inputs(run_inputs: dict, run_dir: Path,
-                       policy_binding: dict) -> None:
+                       policy_binding: dict, cases: list[dict],
+                       evidence_root: Path | None = None) -> None:
     run_dir = Path(run_dir)
+    evidence_root = Path(evidence_root) if evidence_root is not None else run_dir
     _require(run_dir.is_dir(), f"run directory does not exist: {run_dir}")
     for field, filename in RUN_INPUT_FILES.items():
         path = run_dir / filename
         _require(path.is_file(), f"run input is missing: {filename}")
+        _require(not path.is_symlink(),
+                 f"run input must not be a symlink: {filename}")
         _require(_file_sha256(path) == run_inputs[field],
                  f"run input digest mismatch: {filename}")
 
@@ -802,7 +861,6 @@ def _verify_run_inputs(run_inputs: dict, run_dir: Path,
              "run integrity manifest: measured != expected")
     _require(integrity.get("run_type") == "authoritative",
              "only authoritative run type is permitted for evaluation")
-    # Bind integrity manifest code_sha to evaluation binding
     _require(integrity.get("code_sha") == policy_binding["code_sha"],
              "integrity manifest code_sha does not match policy_binding.code_sha")
 
@@ -811,29 +869,46 @@ def _verify_run_inputs(run_inputs: dict, run_dir: Path,
     _require(isinstance(artifact_digests, dict),
              "run integrity manifest artifact_digests is missing")
     for filename, digest in artifact_digests.items():
-        path = run_dir / filename
+        path = _resolve_under(run_dir, filename, "integrity artifact")
         _require(path.is_file(), f"integrity manifest references missing file: {filename}")
+        _require(not path.is_symlink(),
+                 f"integrity manifest must not reference a symlink: {filename}")
         _require(_file_sha256(path) == digest,
                  f"integrity manifest digest mismatch: {filename}")
 
-    # Parse and verify MANIFEST.sha256 against actual file inventory
+    # Parse and verify MANIFEST.sha256 against the recursive file inventory.
     manifest_sha_path = run_dir / "MANIFEST.sha256"
     _require(manifest_sha_path.is_file(), "MANIFEST.sha256 is required")
+    _require(not manifest_sha_path.is_symlink(),
+             "MANIFEST.sha256 must not be a symlink")
     manifest_lines = manifest_sha_path.read_text(encoding="utf-8").strip().splitlines()
-    manifest_entries = {}
+    manifest_entries: dict[str, str] = {}
     for line in manifest_lines:
+        if not line.strip():
+            continue
         parts = line.strip().split("  ", 1)
         _require(len(parts) == 2, f"malformed MANIFEST.sha256 entry: {line!r}")
         digest, name = parts
-        _require(HEX64.fullmatch(digest.lower()), f"invalid digest in MANIFEST.sha256: {digest}")
+        _require(name.strip(), f"empty filename in MANIFEST.sha256 entry: {line!r}")
+        _require(HEX64.fullmatch(digest.lower()),
+                 f"invalid digest in MANIFEST.sha256: {digest}")
+        _require(name not in manifest_entries,
+                 f"duplicate MANIFEST.sha256 entry: {name}")
         manifest_entries[name] = digest.lower()
     for name, digest in manifest_entries.items():
-        path = run_dir / name
+        path = _resolve_under(run_dir, name, "MANIFEST.sha256")
         _require(path.is_file(), f"MANIFEST.sha256 references missing file: {name}")
+        _require(not path.is_symlink(),
+                 f"MANIFEST.sha256 references a symlink: {name}")
         _require(_file_sha256(path) == digest,
                  f"MANIFEST.sha256 digest mismatch: {name}")
-    actual_files = {p.name for p in run_dir.iterdir() if p.is_file() and p.name != "MANIFEST.sha256"}
-    _require(actual_files == set(manifest_entries.keys()),
+    actual_entries = set()
+    for path in run_dir.rglob("*"):
+        if path.is_file() and not path.is_symlink():
+            rel = path.relative_to(run_dir).as_posix()
+            if rel != "MANIFEST.sha256":
+                actual_entries.add(rel)
+    _require(actual_entries == set(manifest_entries.keys()),
              "MANIFEST.sha256 inventory does not match actual files")
 
     manifest = json.loads(
@@ -854,7 +929,8 @@ def _verify_run_inputs(run_inputs: dict, run_dir: Path,
 
     results = json.loads(
         (run_dir / "calibration_results.json").read_text(encoding="utf-8"))
-    meta = results.get("meta") if isinstance(results, dict) else None
+    _require(isinstance(results, dict), "calibration results must be an object")
+    meta = results.get("meta")
     _require(isinstance(meta, dict), "calibration results meta is missing")
     _require(meta.get("code_sha") == policy_binding["code_sha"],
              "run results code_sha does not match policy_binding.code_sha")
@@ -862,23 +938,48 @@ def _verify_run_inputs(run_inputs: dict, run_dir: Path,
              "run results policy_binding does not match the run manifest")
 
     # Cross-check integrity manifest counts against calibration results
-    summary = results.get("summary", {}) if isinstance(results, dict) else {}
+    summary = results.get("summary", {})
+    _require(isinstance(summary, dict), "calibration results summary is missing")
     _require(summary.get("measured") == integrity.get("measured_count"),
              "integrity measured_count does not match calibration results")
     _require(summary.get("expected_targets") == integrity.get("expected_target_count"),
              "integrity expected_target_count does not match calibration results")
 
-    # Cross-check integrity manifest against coordinate manifest
+    # Cross-manifest target-level reconciliation (IDs and statuses).
     coord_manifest_path = run_dir / "coordinate_manifest.json"
     _require(coord_manifest_path.is_file(), "coordinate_manifest.json is missing")
     coord_manifest = json.loads(coord_manifest_path.read_text(encoding="utf-8"))
     _require(isinstance(coord_manifest, dict), "coordinate manifest must be an object")
-    _require(len(coord_manifest) == integrity.get("expected_target_count"),
+    coord_ids = set(coord_manifest.keys())
+    _require(len(coord_ids) == expected,
              "coordinate manifest target count does not match expected")
+    targets = results.get("targets")
+    _require(isinstance(targets, dict),
+             "calibration results targets map is required for authoritative evaluation")
+    target_ids = set(targets.keys())
+    _require(target_ids == coord_ids,
+             "coordinate manifest and calibration results disagree on target IDs")
+    _require(len(target_ids) == expected,
+             "calibration results target count does not match expected")
+    reacquired = sum(
+        1 for record in targets.values()
+        if (record.get("acquisition") or {}).get("acquisition_status") == "acquired")
+    remeasured = sum(
+        1 for record in targets.values()
+        if record.get("measurement_status") == "measured")
+    _require(reacquired == acquired,
+             "integrity acquired_count does not match per-target acquisition statuses")
+    _require(remeasured == measured,
+             "integrity measured_count does not match per-target measurement statuses")
+
+    # Byte-verify locally pinned evidence provenance for every case.
+    for case in cases:
+        _verify_case_evidence(case, evidence_root)
 
 
 def evaluate_file(path: Path, alpha: float = DEFAULT_ALPHA,
-                  run_dir: Path | None = None) -> dict:
+                  run_dir: Path | None = None,
+                  evidence_root: Path | None = None) -> dict:
     path = Path(path)
     data = json.loads(path.read_text(encoding="utf-8"))
     _require(isinstance(data, dict), "evaluation file must contain an object")
@@ -887,7 +988,8 @@ def evaluate_file(path: Path, alpha: float = DEFAULT_ALPHA,
         require_label_provenance=True)
     _require(run_dir is not None,
              "file-based evaluation requires a run directory to verify the bound artifacts")
-    _verify_run_inputs(data["run_inputs"], run_dir, data["policy_binding"])
+    _verify_run_inputs(data["run_inputs"], run_dir, data["policy_binding"],
+                       cases, evidence_root)
     report = evaluate(cases, alpha)
     report["policy_binding"] = data["policy_binding"]
     report["run_inputs"] = data["run_inputs"]
@@ -901,7 +1003,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("input", help="labeled cases JSON or split manifest JSON")
     parser.add_argument("--alpha", type=float, default=DEFAULT_ALPHA)
     parser.add_argument("--run-dir", default=None,
-                        help="verify the three bound run-input file digests")
+                        help="verify the bound run-input file digests")
+    parser.add_argument("--evidence-dir", default=None,
+                        help="root for byte-verifying locally pinned evidence references "
+                             "(defaults to the run directory)")
     parser.add_argument("--validate-split", action="store_true",
                         help="validate a frozen split manifest instead of cases")
     args = parser.parse_args(argv)
@@ -914,7 +1019,10 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(summary, indent=2, sort_keys=True))
         return 0
 
-    report = evaluate_file(path, args.alpha, Path(args.run_dir) if args.run_dir else None)
+    report = evaluate_file(
+        path, args.alpha,
+        Path(args.run_dir) if args.run_dir else None,
+        Path(args.evidence_dir) if args.evidence_dir else None)
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0
 
