@@ -18,6 +18,7 @@ from ..ingestion.atom_selection import (
     atom_identity,
     choose_atom,
     normalize_insertion_code,
+    residue_source_order_key,
 )
 
 
@@ -183,8 +184,11 @@ def get_sequential_residues(atoms, chain_id: str) -> List[Tuple[int, str, str]]:
     """
     Return an ordered list of residues in a chain.
 
-    Each entry is (res_seq, insertion_code, res_name).
-    Sorted by (res_seq, insertion_code) to handle insertion codes correctly.
+    Each entry is (res_seq, insertion_code, res_name). Ordering follows the
+    authoritative source order (``residue_source_order_key``) so that
+    insertion-coded residues keep their deposited peptide position instead of
+    being re-ordered alphabetically by insertion code. When source order is
+    unavailable, a deterministic fallback by (res_seq, insertion_code) is used.
 
     Args:
         atoms: list of Atom objects
@@ -194,18 +198,23 @@ def get_sequential_residues(atoms, chain_id: str) -> List[Tuple[int, str, str]]:
         Ordered list of (res_seq, insertion_code, res_name) tuples.
         Duplicates removed (multiple atoms per residue collapsed to one entry).
     """
-    seen = set()
-    residues = []
+    seen = {}
     for atom in atoms:
         if atom.chain_id != chain_id:
             continue
         key = atom_identity(atom)[:4]
         if key not in seen:
-            seen.add(key)
-            residues.append((atom.res_seq, normalize_insertion_code(atom.insertion_code), atom.res_name))
-
-    residues.sort(key=lambda r: (r[0], r[1], r[2]))
-    return residues
+            seen[key] = (
+                atom.res_seq,
+                normalize_insertion_code(atom.insertion_code),
+                atom.res_name,
+                residue_source_order_key(atom),
+            )
+    ordered = sorted(
+        seen.items(),
+        key=lambda item: (item[1][3], item[1][0], item[1][1], item[1][2]),
+    )
+    return [(value[0], value[1], value[2]) for _, value in ordered]
 
 
 def get_residue_atoms(atoms, chain_id: str, res_seq: int,

@@ -24,6 +24,7 @@ from ..ingestion.atom_selection import (
     canonicalize_atoms,
     finite_float,
     normalize_insertion_code,
+    residue_source_order_key,
 )
 import math
 import numpy as np
@@ -132,8 +133,12 @@ class Tier1Measurements:
                 res_map[k] = {
                     "_name": str(a.res_name).strip().upper(), "_chain": a.chain_id,
                     "_seq": int(a.res_seq), "_icode": normalize_insertion_code(a.insertion_code),
+                    "_src": residue_source_order_key(a),
                     "_conf_acc": [], "_atoms": {}
                 }
+            else:
+                res_map[k]["_src"] = min(
+                    res_map[k]["_src"], residue_source_order_key(a))
             res_map[k]["_atoms"][a.atom_name] = a.pos
             b_value = finite_float(getattr(a, "b_iso", None), None)
             if b_value is not None:
@@ -142,7 +147,7 @@ class Tier1Measurements:
             r["_conf"] = float(np.mean(r["_conf_acc"])) if r["_conf_acc"] else None
         return sorted(
             res_map.values(),
-            key=lambda x: (x["_chain"], x["_seq"], x["_icode"], x["_name"]),
+            key=lambda x: (x["_chain"], x["_src"], x["_seq"], x["_icode"], x["_name"]),
         )
 
     @staticmethod

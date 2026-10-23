@@ -79,6 +79,25 @@ def atom_sort_key(atom):
     return atom_identity(atom) + (atom_altloc(atom), 0 if not atom_is_hetatm(atom) else 1)
 
 
+def residue_source_order_key(atom) -> tuple:
+    """Return a comparable ordering key that reflects authoritative source order.
+
+    Priority: explicit source file order (``source_order``), then the mmCIF
+    ``label_seq_id``, then the PDB residue sequence number as a deterministic
+    fallback. This is the single source of truth for residue ordering used by
+    ``Tier1Measurements._extract`` and ``coord_math.get_sequential_residues``
+    so residue identity, order, and adjacency are consistent across laws.
+    """
+    source_order = getattr(atom, "source_order", None)
+    if isinstance(source_order, int) and source_order >= 0:
+        return (2, source_order)
+    label_seq_id = getattr(atom, "label_seq_id", None)
+    seq = int(getattr(atom, "res_seq", 0))
+    if isinstance(label_seq_id, int) and label_seq_id >= 0:
+        return (1, label_seq_id)
+    return (0, seq)
+
+
 def choose_atom(current, candidate):
     if current is None:
         return candidate

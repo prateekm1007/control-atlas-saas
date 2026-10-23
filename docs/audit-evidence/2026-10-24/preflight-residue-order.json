@@ -1,0 +1,67 @@
+{
+  "artifact": "workspace-preflight",
+  "patch": "P1 residue-order contract",
+  "generated_at_utc": "2026-10-23T19:55:00Z",
+  "repository": {
+    "remote_origin": "https://github.com/prateekm1007/control-atlas-saas.git",
+    "intended_repo": "prateekm1007/control-atlas-saas"
+  },
+  "branch": {
+    "name": "fix/residue-order-contract",
+    "based_on": "integration/od-scope-v25-2026-10-23",
+    "base_sha": "8a9a9c9b156f8d05a76cf88550b9a36cfb609786",
+    "base_main_sha": "63da0e347002ed9b77071ff1ed0cefda7c0ce88a"
+  },
+  "governing_docs_read": {
+    "AGENTS.md": "85767237399ffb30f3e45894d9dfbe6f4240584f",
+    "constitution.md": "211ad2c5d4b40059d9f3f03de12e0701f9235bc7",
+    "ENGINEERING_CONSTITUTION.md": "b6bb35e84956d84a8c9d9e65734c212baf3ed075",
+    "docs/coder/BRIEF.md": "052a84ca829d321dc0841a4b1c8702145dcbf6b5",
+    "docs/decisions/OWNER_DECISIONS.md": "12906bf5997a3e2c6b5c41e5d5c60fee14613274",
+    "docs/P0_STATUS.md": "a31517abbc046c495930ba19ef7aeaf8bb72f2d0"
+  },
+  "intended_behavior": {
+    "objective": "Introduce a single residue identity/order/adjacency contract that preserves authoritative source order (source_order / label_seq_id) instead of re-ordering by alphabetical insertion code.",
+    "scope": [
+      "processor.py: Atom gains source_order; assigned monotonic per-residue from file order.",
+      "atom_selection.py: new residue_source_order_key() (source_order > label_seq_id > res_seq).",
+      "coord_math.get_sequential_residues: order by source-order key.",
+      "tier1_measurements._extract: order residues by source-order key."
+    ],
+    "out_of_scope": [
+      "No law threshold/ID/semantics changes.",
+      "No coordinate-hash / OD-07 changes (identity sorting unchanged).",
+      "No runner/calibration changes.",
+      "No ingestion parser replacement (Gemmi path retained)."
+    ]
+  },
+  "security_and_correctness_risks": [
+    "Changing residue order could alter per-law observations; confined to structures whose source order differs from (seq, icode) sort.",
+    "Fallback ordering for atoms lacking source_order is deterministic (seq/icode).",
+    "Real 1PPE/5T4O fixtures are not present; synthetic reproductions are used; real fixtures should be added on top."
+  ],
+  "file_scope": {
+    "modified": [
+      "backend/tos/ingestion/processor.py",
+      "backend/tos/ingestion/atom_selection.py",
+      "backend/tos/engine/coord_math.py",
+      "backend/tos/engine/tier1_measurements.py"
+    ],
+    "added": [
+      "backend/tests/test_residue_order.py"
+    ]
+  },
+  "test_plan": [
+    "backend/tests/test_residue_order.py (insertion source-order reproduction, old-vs-new gap comparison, genuine gap, missing backbone, multi-chain).",
+    "Targeted law/invariance/parity tests (test_invariance, test_engine_correctness_gaps, law-120/125/135/160, coord_math).",
+    "Full backend suite under PYTHONUTF8=1."
+  ],
+  "acceptance_criteria": [
+    "New residue-order tests pass.",
+    "Full suite shows no new regressions beyond the 10 pre-existing baseline failures.",
+    "Coordinate hash / audit identity unchanged for identical inputs."
+  ],
+  "rollback_strategy": "Isolated to fix/residue-order-contract; do not merge; revert forward via reviewed follow-up. No force-push.",
+  "verdict_impact": "Ordering-only. No law thresholds, IDs, operators, semantics, cohorts, or hash locks change. Verdicts may change only for structures whose source order differs from alphabetical insertion-code sorting (the reproduced false-veto class).",
+  "note": "OD-16 preserved: no merge/deploy/v25/held-out. This is a separate engine-correctness patch from the evaluator trust-boundary work."
+}

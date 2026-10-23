@@ -36,6 +36,7 @@ class Atom:
     label_asym_id: str = ""
     label_seq_id: Optional[int] = None
     model_index: int = 1
+    source_order: int = -1
 
 
 @dataclass
@@ -225,6 +226,9 @@ class IngestionProcessor:
         identities = {}
         b_values = []
 
+        source_order_counter = 0
+        residue_orders = {}
+
         for chain in model:
             chain_id = _normalize_chain(chain.name)
             for residue in chain:
@@ -245,6 +249,13 @@ class IngestionProcessor:
                 insertion_code = normalize_insertion_code(residue.seqid.icode)
                 label_seq_id = residue.label_seq if residue.label_seq is not None else None
                 is_hetatm = residue.het_flag == "H"
+
+                residue_key = (chain_id, res_seq, insertion_code, res_name)
+                source_order = residue_orders.get(residue_key)
+                if source_order is None:
+                    source_order = source_order_counter
+                    source_order_counter += 1
+                    residue_orders[residue_key] = source_order
 
                 for atom in atom_records:
                     atom_name = atom.name.strip()
@@ -292,6 +303,7 @@ class IngestionProcessor:
                         label_asym_id=_normalize_chain(getattr(chain, "name", "")),
                         label_seq_id=int(label_seq_id) if label_seq_id is not None else None,
                         model_index=1,
+                        source_order=source_order,
                     )
                     selected.append(atom_obj)
                     if finite_float(b_iso, None) is not None:
