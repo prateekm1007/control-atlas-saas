@@ -16,7 +16,7 @@
 
 ## 1. Engine audit summary
 
-The engine correctness audit (branch `repair/od-scope-v25-engine-audit`, commit `05795f2`) implemented and verified the following:
+The engine correctness audit (branch `integration/od-scope-v25-2026-10-23`, commit `05795f2`) implemented and verified the following:
 
 ### 1.1 Canonical ingestion
 - Gemmi-based PDB and mmCIF parsing with identical coordinate extraction

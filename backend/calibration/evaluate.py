@@ -89,6 +89,7 @@ RUN_INPUT_FILES = {
     "run_manifest_sha256": "run_manifest.json",
     "coordinate_manifest_sha256": "coordinate_manifest.json",
     "calibration_results_sha256": "calibration_results.json",
+    "run_integrity_manifest_sha256": "run_integrity_manifest.json",
 }
 
 
@@ -801,6 +802,9 @@ def _verify_run_inputs(run_inputs: dict, run_dir: Path,
              "run integrity manifest: measured != expected")
     _require(integrity.get("run_type") == "authoritative",
              "only authoritative run type is permitted for evaluation")
+    # Bind integrity manifest code_sha to evaluation binding
+    _require(integrity.get("code_sha") == policy_binding["code_sha"],
+             "integrity manifest code_sha does not match policy_binding.code_sha")
 
     # Verify artifact_digests against actual file bytes
     artifact_digests = integrity.get("artifact_digests")
@@ -837,6 +841,9 @@ def _verify_run_inputs(run_inputs: dict, run_dir: Path,
     _require(isinstance(manifest, dict), "run manifest must be an object")
     _require(manifest.get("code_sha") == policy_binding["code_sha"],
              "run manifest code_sha does not match policy_binding.code_sha")
+    # Run manifest and integrity manifest must agree on run_type
+    _require(manifest.get("run_type") == integrity.get("run_type"),
+             "run manifest run_type does not match integrity manifest run_type")
     manifest_policy = manifest.get("policy_binding")
     _require(isinstance(manifest_policy, dict),
              "run manifest policy_binding is missing")

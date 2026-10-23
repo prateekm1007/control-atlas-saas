@@ -187,6 +187,7 @@ def _run_inputs():
         "run_manifest_sha256": "1" * 64,
         "coordinate_manifest_sha256": "2" * 64,
         "calibration_results_sha256": "3" * 64,
+        "run_integrity_manifest_sha256": "4" * 64,
     }
 
 
@@ -436,6 +437,7 @@ def test_evaluate_file_verifies_bound_run_inputs(tmp_path):
         "run_manifest.json": {
             "code_sha": policy["code_sha"],
             "policy_binding": policy,
+            "run_type": "authoritative",
         },
         "coordinate_manifest.json": {"1ABC": {"status": "acquired"}},
         "run_integrity_manifest.json": {
@@ -445,6 +447,7 @@ def test_evaluate_file_verifies_bound_run_inputs(tmp_path):
             "acquired_count": 1,
             "measured_count": 1,
             "policy_binding": policy,
+            "code_sha": policy["code_sha"],
             "artifact_digests": {},
         },
         "calibration_results.json": {
@@ -473,6 +476,7 @@ def test_evaluate_file_verifies_bound_run_inputs(tmp_path):
         payload["run_inputs"][field] = hashlib.sha256(content).hexdigest()
     integrity_content = json.dumps(files["run_integrity_manifest.json"], sort_keys=True).encode()
     (run_dir / "run_integrity_manifest.json").write_bytes(integrity_content)
+    payload["run_inputs"]["run_integrity_manifest_sha256"] = hashlib.sha256(integrity_content).hexdigest()
     manifest_lines = []
     for fname in ["run_manifest.json", "coordinate_manifest.json", "calibration_results.json", "run_integrity_manifest.json"]:
         fpath = run_dir / fname
