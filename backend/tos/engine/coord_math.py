@@ -14,6 +14,12 @@ References:
 import numpy as np
 from typing import List, Optional, Tuple, Set
 
+from ..ingestion.atom_selection import (
+    atom_identity,
+    choose_atom,
+    normalize_insertion_code,
+)
+
 
 def distance(a: np.ndarray, b: np.ndarray) -> float:
     """
@@ -149,13 +155,15 @@ def get_atom_pos(atoms, chain_id: str, res_seq: int,
     Returns:
         numpy array of shape (3,) with atom position, or None if not found.
     """
+    best = None
+    insertion_code = normalize_insertion_code(insertion_code)
     for atom in atoms:
         if (atom.chain_id == chain_id and
                 atom.res_seq == res_seq and
                 atom.atom_name == atom_name and
-                atom.insertion_code == insertion_code):
-            return atom.pos
-    return None
+                normalize_insertion_code(atom.insertion_code) == insertion_code):
+            best = choose_atom(best, atom)
+    return best.pos if best is not None else None
 
 
 def get_chains(atoms) -> Set[str]:
@@ -191,13 +199,12 @@ def get_sequential_residues(atoms, chain_id: str) -> List[Tuple[int, str, str]]:
     for atom in atoms:
         if atom.chain_id != chain_id:
             continue
-        key = (atom.res_seq, atom.insertion_code)
+        key = atom_identity(atom)[:4]
         if key not in seen:
             seen.add(key)
-            residues.append((atom.res_seq, atom.insertion_code, atom.res_name))
+            residues.append((atom.res_seq, normalize_insertion_code(atom.insertion_code), atom.res_name))
 
-    # Sort by sequence number, then insertion code
-    residues.sort(key=lambda r: (r[0], r[1]))
+    residues.sort(key=lambda r: (r[0], r[1], r[2]))
     return residues
 
 
@@ -216,13 +223,14 @@ def get_residue_atoms(atoms, chain_id: str, res_seq: int,
         dict mapping atom name strings to numpy position arrays.
         Example: {"N": array([1,2,3]), "CA": array([4,5,6]), ...}
     """
-    result = {}
+    selected = {}
+    insertion_code = normalize_insertion_code(insertion_code)
     for atom in atoms:
         if (atom.chain_id == chain_id and
                 atom.res_seq == res_seq and
-                atom.insertion_code == insertion_code):
-            result[atom.atom_name] = atom.pos
-    return result
+                normalize_insertion_code(atom.insertion_code) == insertion_code):
+            selected[atom.atom_name] = choose_atom(selected.get(atom.atom_name), atom)
+    return {name: atom.pos for name, atom in selected.items()}
 
 
 # ═══════════════════════════════════════════════════════════════

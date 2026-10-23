@@ -28,6 +28,7 @@ class GovernanceFingerprint(BaseModel):
 
 class Governance(BaseModel):
     audit_id: str
+    coordinate_hash: Optional[str] = None
     station_version: str
     timestamp_utc: str
     governance_fingerprint: GovernanceFingerprint
@@ -48,6 +49,13 @@ class AdjudicationVerdict(BaseModel):
     heur_passed: int = Field(..., ge=0)
     heur_total: int = Field(..., ge=0)
     coverage_pct: float = Field(..., ge=0, le=100)
+    coverage_numerator: Optional[int] = Field(None, ge=0)
+    coverage_denominator: Optional[int] = Field(None, ge=0)
+    coverage_required_atoms: Optional[str] = None
+    complete_backbone_residues: Optional[int] = Field(None, ge=0)
+    source_atom_records: Optional[int] = Field(None, ge=0)
+    selected_atoms: Optional[int] = Field(None, ge=0)
+    discarded_atoms: Optional[int] = Field(None, ge=0)
     suppression_reason: Optional[str] = None
     primary_cause: Optional[str] = None
     recommended_action: Optional[str] = None
@@ -133,6 +141,28 @@ class StrategicMath(BaseModel):
     architecture: str
 
 
+class IngestionInfo(BaseModel):
+    format: str
+    model_policy: str
+    altloc_policy: str
+    polymer_hetatm_policy: str
+    source_atom_records: int = Field(0, ge=0)
+    selected_atoms: int = Field(0, ge=0)
+    total_residues: int = Field(0, ge=0)
+    complete_backbone_residues: int = Field(0, ge=0)
+    excluded_hydrogens: int = Field(0, ge=0)
+    excluded_waters: int = Field(0, ge=0)
+    excluded_ligands: int = Field(0, ge=0)
+    excluded_other: int = Field(0, ge=0)
+    excluded_models: int = Field(0, ge=0)
+    malformed_records: int = Field(0, ge=0)
+    altloc_conflicts: int = Field(0, ge=0)
+    altloc_selected_atoms: int = Field(0, ge=0)
+    missing_occupancy: int = Field(0, ge=0)
+    missing_b_factor: int = Field(0, ge=0)
+    warnings: list[str] = Field(default_factory=list)
+
+
 class ToscaniniResponse(BaseModel):
     verdict: AdjudicationVerdict
     governance: Governance
@@ -140,6 +170,7 @@ class ToscaniniResponse(BaseModel):
     tier1: Tier1
     tier3: Tier3
     characterization: Characterization
+    ingestion: Optional[IngestionInfo] = None
     confidence_meta: ConfidenceMeta
     strategic_math: StrategicMath
     witness_reports: Optional[dict] = None

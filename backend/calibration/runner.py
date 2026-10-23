@@ -42,7 +42,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import tos  # noqa: E402
 from tos.engine.adjudicator import AdjudicationInput, adjudicate_laws  # noqa: E402
 from tos.engine.tier1_measurements import Tier1Measurements  # noqa: E402
-from tos.ingestion.processor import IngestionProcessor  # noqa: E402
+from tos.ingestion.processor import IngestionError, IngestionProcessor  # noqa: E402
 from tos.governance.station_sop import (  # noqa: E402
     DETERMINISTIC_COUNT,
     LAW_CANON,
@@ -642,7 +642,10 @@ def measure_target(content: bytes, ingest_mode: str) -> dict:
     fmt = detect_structure_format(content)
     if fmt != "pdb":
         raise ValueError(f"unsupported structure format for measurement: {fmt}")
-    structure = IngestionProcessor.run(content, f"structure.{fmt}", "Audit", ingest_mode)
+    try:
+        structure = IngestionProcessor.run(content, f"structure.{fmt}", "Audit", ingest_mode)
+    except IngestionError as exc:
+        raise ValueError(f"no atoms parsed from structure: {exc}") from exc
     if not structure.atoms:
         raise ValueError("no atoms parsed from structure")
 

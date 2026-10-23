@@ -20,6 +20,12 @@ from .coord_math import (
     get_atom_pos, get_chains, get_sequential_residues,
     CHI1_ATOMS, NO_CHI1_RESIDUES
 )
+from ..ingestion.atom_selection import (
+    canonicalize_atoms,
+    finite_float,
+    normalize_insertion_code,
+)
+import math
 import numpy as np
 import logging
 from ..governance.station_sop import (
@@ -37,6 +43,22 @@ logger = logging.getLogger("toscanini.tier1")
 MEASURED_STATUSES = frozenset({"PASS", "FAIL", "VETO"})
 MISSING_STATUSES = frozenset({"NOT_MEASURED", "MEASUREMENT_FAILED", "NOT_APPLICABLE"})
 VALID_MEASUREMENT_STATUSES = MEASURED_STATUSES | MISSING_STATUSES
+
+INSERTION_ALPHABET = (
+    "",
+    *tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+    *tuple("abcdefghijklmnopqrstuvwxyz"),
+)
+INSERTION_RANK = {code: index for index, code in enumerate(INSERTION_ALPHABET)}
+REQUIRED_BACKBONE_ATOMS = frozenset({"N", "CA", "C"})
+PEPTIDE_BOND_MIN = 0.5
+PEPTIDE_BOND_MAX = 2.0
+
+
+def _residue_label_sort_key(label: str):
+    chain_id, _, residue = label.partition(":")
+    digits = "".join(character for character in residue if character.isdigit())
+    return chain_id, int(digits) if digits else 0, residue
 
 
 class Tier1Measurements:
@@ -62,13 +84,25 @@ class Tier1Measurements:
     def _is_sequential(r1, r2):
         if r1["_chain"] != r2["_chain"]:
             return False
-        s1, s2 = r1["_seq"], r2["_seq"]
-        i1, i2 = r1.get("_icode", ""), r2.get("_icode", "")
-        return (
-            (s2 - s1 == 1 and not i1 and not i2) or
-            (s2 == s1 and i2 > i1) or
-            (s2 - s1 == 1 and i1 and not i2)
-        )
+        s1, s2 = int(r1["_seq"]), int(r2["_seq"])
+        i1 = normalize_insertion_code(r1.get("_icode", ""))
+        i2 = normalize_insertion_code(r2.get("_icode", ""))
+        if s2 == s1:
+            rank1 = INSERTION_RANK.get(i1)
+            rank2 = INSERTION_RANK.get(i2)
+            return rank1 is not None and rank2 is not None and rank2 == rank1 + 1
+        if s2 == s1 + 1:
+            return (not i1 and not i2) or (bool(i1) and not i2)
+        return False
+
+    @staticmethod
+    def _has_peptide_bond(r1, r2):
+        if not Tier1Measurements._is_sequential(r1, r2):
+            return False
+        if "C" not in r1["_atoms"] or "N" not in r2["_atoms"]:
+            return False
+        length = distance(r1["_atoms"]["C"], r2["_atoms"]["N"])
+        return math.isfinite(length) and PEPTIDE_BOND_MIN <= length <= PEPTIDE_BOND_MAX
 
     @staticmethod
     def _is_rama_outlier(res_name, phi, psi):
@@ -87,29 +121,42 @@ class Tier1Measurements:
     @staticmethod
     def _extract(structure):
         res_map = {}
-        for a in structure.atoms:
-            k = (a.chain_id, a.res_seq, a.insertion_code)
+        for a in canonicalize_atoms(getattr(structure, "atoms", []) or []):
+            k = (
+                a.chain_id,
+                int(a.res_seq),
+                normalize_insertion_code(a.insertion_code),
+                str(a.res_name).strip().upper(),
+            )
             if k not in res_map:
                 res_map[k] = {
-                    "_name": a.res_name, "_chain": a.chain_id,
-                    "_seq": a.res_seq, "_icode": a.insertion_code,
+                    "_name": str(a.res_name).strip().upper(), "_chain": a.chain_id,
+                    "_seq": int(a.res_seq), "_icode": normalize_insertion_code(a.insertion_code),
                     "_conf_acc": [], "_atoms": {}
                 }
             res_map[k]["_atoms"][a.atom_name] = a.pos
-            res_map[k]["_conf_acc"].append(a.b_iso)
+            b_value = finite_float(getattr(a, "b_iso", None), None)
+            if b_value is not None:
+                res_map[k]["_conf_acc"].append(b_value)
         for r in res_map.values():
-            r["_conf"] = float(np.mean(r["_conf_acc"]))
-        return sorted(res_map.values(), key=lambda x: (x["_chain"], x["_seq"], x["_icode"]))
+            r["_conf"] = float(np.mean(r["_conf_acc"])) if r["_conf_acc"] else None
+        return sorted(
+            res_map.values(),
+            key=lambda x: (x["_chain"], x["_seq"], x["_icode"], x["_name"]),
+        )
 
     @staticmethod
     def _plddt_advisory(residues, is_experimental):
         if is_experimental or not residues:
             return None
-        scores = [r["_conf"] for r in residues]
+        scores = [r["_conf"] for r in residues if r["_conf"] is not None]
+        if not scores:
+            return None
         above = sum(1 for s in scores if s >= 70.0)
         return {
             "mean_plddt": round(float(np.mean(scores)), 2),
             "fraction_at_or_above_70": round(above / len(scores) * 100, 2),
+            "observation_count": len(scores),
             "policy": "advisory only; does not affect status or verdict",
         }
 
@@ -138,10 +185,22 @@ class Tier1Measurements:
 
         residues = Tier1Measurements._extract(structure)
         if not residues:
-            return {}, 0, False
+            return {}, 0, is_experimental
 
-        core = residues if is_experimental else [r for r in residues if r["_conf"] >= 70]
-        coverage = 100.0 if is_experimental else (len(core) / len(residues) * 100)
+        complete = [
+            r for r in residues
+            if REQUIRED_BACKBONE_ATOMS.issubset(r["_atoms"].keys())
+        ]
+        if is_experimental:
+            core = complete
+            coverage_basis = "complete_backbone_residues"
+        else:
+            core = [
+                r for r in complete
+                if r["_conf"] is not None and r["_conf"] >= 70.0
+            ]
+            coverage_basis = "plddt_core_complete_backbone_residues"
+        coverage = (len(core) / len(residues) * 100) if residues else 0.0
 
         results = {}
 
@@ -180,10 +239,19 @@ class Tier1Measurements:
         # ═══════════════════════════════════════════════════════════
         # LAW-105: Reliability Coverage
         # ═══════════════════════════════════════════════════════════
+        metadata = getattr(structure, "metadata", None)
         results["LAW-105"] = {
             "observed": round(coverage, 2),
             "status": "PASS" if coverage >= 70.0 else "FAIL",
-            "sample": len(residues)
+            "sample": len(residues),
+            "coverage_basis": coverage_basis,
+            "coverage_numerator": len(core),
+            "coverage_denominator": len(residues),
+            "required_atoms": "N,CA,C",
+            "complete_backbone_residues": len(complete),
+            "source_atom_records": getattr(metadata, "source_atom_records", None),
+            "selected_atoms": getattr(metadata, "selected_atoms", None),
+            "discarded_atoms": getattr(metadata, "malformed_records", None),
         }
 
         # ═══════════════════════════════════════════════════════════
@@ -232,7 +300,7 @@ class Tier1Measurements:
         # Inter-residue: O(i)-C(i)-N(i+1) and CA-C-N across sequential pairs
         for i in range(len(core) - 1):
             r1, r2 = core[i], core[i + 1]
-            if not Tier1Measurements._is_sequential(r1, r2):
+            if not Tier1Measurements._has_peptide_bond(r1, r2):
                 continue
             if all(a in r1["_atoms"] for a in ["O", "C"]) and "N" in r2["_atoms"]:
                 measured, angle_valid = angle_deg_valid(
@@ -269,8 +337,8 @@ class Tier1Measurements:
         rama_outliers = []  # Phase A.5: inline residue capture
         for i in range(1, len(core) - 1):
             p, c, n = core[i - 1], core[i], core[i + 1]
-            if not (Tier1Measurements._is_sequential(p, c) and
-                    Tier1Measurements._is_sequential(c, n)):
+            if not (Tier1Measurements._has_peptide_bond(p, c) and
+                    Tier1Measurements._has_peptide_bond(c, n)):
                 continue
             if ("C" not in p["_atoms"] or
                     not all(k in c["_atoms"] for k in ["N", "CA", "C"]) or
@@ -316,7 +384,8 @@ class Tier1Measurements:
         # ═══════════════════════════════════════════════════════════
         clash = 0
         clash_pairs = []  # Phase A.5: inline residue-pair capture
-        all_coords = np.array([a.pos for a in structure.atoms])
+        canonical_atoms = canonicalize_atoms(getattr(structure, "atoms", []) or [])
+        all_coords = np.array([a.pos for a in canonical_atoms], dtype=float)
         neighbor_search_error = None
         if len(all_coords) > 1:
             try:
@@ -324,21 +393,50 @@ class Tier1Measurements:
                 tree = cKDTree(all_coords)
                 pairs = tree.query_pairs(r=1.5)
                 for ii, jj in pairs:
-                    ai, aj = structure.atoms[ii], structure.atoms[jj]
-                    if ai.res_seq == aj.res_seq and ai.chain_id == aj.chain_id:
+                    ai, aj = canonical_atoms[ii], canonical_atoms[jj]
+                    same_residue = (
+                        ai.chain_id,
+                        ai.res_seq,
+                        ai.insertion_code,
+                    ) == (
+                        aj.chain_id,
+                        aj.res_seq,
+                        aj.insertion_code,
+                    )
+                    if same_residue:
                         continue
-                    if ai.chain_id == aj.chain_id and abs(ai.res_seq - aj.res_seq) <= 1:
+                    if (
+                        Tier1Measurements._is_sequential(
+                            {
+                                "_chain": ai.chain_id,
+                                "_seq": ai.res_seq,
+                                "_icode": ai.insertion_code,
+                            },
+                            {
+                                "_chain": aj.chain_id,
+                                "_seq": aj.res_seq,
+                                "_icode": aj.insertion_code,
+                            },
+                        )
+                        and ((ai.atom_name, aj.atom_name) == ("C", "N")
+                             or (ai.atom_name, aj.atom_name) == ("N", "C"))
+                    ):
                         continue
                     clash += 1
-                    # Capture as residue pair, deterministic order (lower chain:seq first)
-                    r1 = f"{ai.chain_id}:{ai.res_seq}"
-                    r2 = f"{aj.chain_id}:{aj.res_seq}"
-                    pair = tuple(sorted([r1, r2], key=lambda x: (x.split(":")[0], int(x.split(":")[1]))))
+                    r1 = f"{ai.chain_id}:{ai.res_seq}{normalize_insertion_code(ai.insertion_code)}"
+                    r2 = f"{aj.chain_id}:{aj.res_seq}{normalize_insertion_code(aj.insertion_code)}"
+                    pair = tuple(sorted([r1, r2], key=_residue_label_sort_key))
                     clash_pairs.append(pair)
             except Exception as exc:
                 neighbor_search_error = f"{type(exc).__name__}: {exc}"
         # Deduplicate and sort pairs
-        unique_pairs = sorted(set(clash_pairs), key=lambda p: (p[0].split(":")[0], int(p[0].split(":")[1]), p[1].split(":")[0], int(p[1].split(":")[1])))
+        unique_pairs = sorted(
+            set(clash_pairs),
+            key=lambda pair: (
+                _residue_label_sort_key(pair[0]),
+                _residue_label_sort_key(pair[1]),
+            ),
+        )
         if len(all_coords) < 2:
             results["LAW-130"] = {
                 "observed": None, "status": "NOT_MEASURED", "sample": 0,
@@ -378,10 +476,7 @@ class Tier1Measurements:
         }
 
         # ═══════════════════════════════════════════════════════════
-        # STUBS: Laws awaiting Phase 1 implementation
-        # These return hardcoded PASS values. Each will be replaced
-        # in subsequent modules with real coord_math calculations.
-        # ═══════════════════════════════════════════════════════════
+        # Implemented laws follow.
         # ═══════════════════════════════════════════════════════════
         # LAW-145: Chirality (Module 1.2.3 — uses coord_math.dihedral_deg)
         # Checks Cα chirality via improper dihedral N-CA-C-CB.
@@ -394,6 +489,7 @@ class Tier1Measurements:
         chiral_violations = 0
         chiral_checked = 0
         chiral_candidates = 0
+        chiral_unmeasured = 0
         chiral_outlier_residues = []  # Phase A.5: inline residue capture
         for r in core:
             if r["_name"] == "GLY":
@@ -401,11 +497,13 @@ class Tier1Measurements:
             chiral_candidates += 1
             atoms = r["_atoms"]
             if not all(a in atoms for a in ["N", "CA", "C", "CB"]):
+                chiral_unmeasured += 1
                 continue
             improper, improper_valid = dihedral_deg_valid(
                 atoms["N"], atoms["CA"], atoms["C"], atoms["CB"]
             )
             if not improper_valid:
+                chiral_unmeasured += 1
                 continue
             chiral_checked += 1
             # Improper dihedral: N-CA-C-CB
@@ -423,9 +521,10 @@ class Tier1Measurements:
             results["LAW-145"] = Tier1Measurements._not_applicable(
                 "no chiral residue centres (glycine-only eligible residues)"
             )
-        elif chiral_checked == 0:
+        elif chiral_checked == 0 or chiral_unmeasured > 0:
             results["LAW-145"] = Tier1Measurements._not_measured(
-                "no chiral residue had N, CA, C, and CB coordinates"
+                "chirality is not measurable for every eligible residue "
+                f"({chiral_unmeasured} lacked valid N-CA-C-CB geometry)"
             )
         else:
             results["LAW-145"] = {
@@ -450,7 +549,7 @@ class Tier1Measurements:
         omega_outlier_residues = []  # Phase A.5: inline residue capture
         for i in range(len(core) - 1):
             r1, r2 = core[i], core[i + 1]
-            if not Tier1Measurements._is_sequential(r1, r2):
+            if not Tier1Measurements._has_peptide_bond(r1, r2):
                 continue
             if not all(a in r1["_atoms"] for a in ["CA", "C"]):
                 continue
@@ -503,6 +602,7 @@ class Tier1Measurements:
         # ═══════════════════════════════════════════════════════════
         rot_outliers, rot_total = 0, 0
         chi1_candidates = 0
+        chi1_unmeasured = 0
         rotamer_outliers = []  # Phase A.5: inline residue capture
         for r in core:
             res_name = r["_name"]
@@ -514,6 +614,7 @@ class Tier1Measurements:
             chi1_def = CHI1_ATOMS[res_name]
             atoms = r["_atoms"]
             if not all(a in atoms for a in chi1_def):
+                chi1_unmeasured += 1
                 continue
 
             chi1, chi1_valid = dihedral_deg_valid(
@@ -521,6 +622,7 @@ class Tier1Measurements:
                 atoms[chi1_def[2]], atoms[chi1_def[3]]
             )
             if not chi1_valid:
+                chi1_unmeasured += 1
                 continue
 
             rot_total += 1
@@ -537,9 +639,10 @@ class Tier1Measurements:
             results["LAW-150"] = Tier1Measurements._not_applicable(
                 "no eligible residue types with a chi1 rotamer"
             )
-        elif rot_total == 0:
+        elif rot_total == 0 or chi1_unmeasured > 0:
             results["LAW-150"] = Tier1Measurements._not_measured(
-                "chi1 atom coordinates are unavailable for every eligible residue"
+                "chi1 is not measurable for every eligible residue "
+                f"({chi1_unmeasured} lacked valid chi1 geometry)"
             )
         else:
             rot_pct = rot_outliers / rot_total * 100
@@ -560,36 +663,32 @@ class Tier1Measurements:
         # ═══════════════════════════════════════════════════════════
         max_gap = 0.0
         ca_pairs_checked = 0
-        for chain_id in get_chains(structure.atoms):
-            chain_residues = get_sequential_residues(structure.atoms, chain_id)
+        missing_ca_pairs = 0
+        by_chain = {}
+        for residue in residues:
+            by_chain.setdefault(residue["_chain"], []).append(residue)
+        for chain_id in sorted(by_chain):
+            chain_residues = by_chain[chain_id]
             for i in range(len(chain_residues) - 1):
-                curr_res = chain_residues[i]
-                next_res = chain_residues[i + 1]
-                if not Tier1Measurements._is_sequential(
-                    {
-                        "_chain": chain_id,
-                        "_seq": curr_res[0],
-                        "_icode": curr_res[1],
-                    },
-                    {
-                        "_chain": chain_id,
-                        "_seq": next_res[0],
-                        "_icode": next_res[1],
-                    },
-                ):
+                r1, r2 = chain_residues[i], chain_residues[i + 1]
+                if not Tier1Measurements._is_sequential(r1, r2):
                     continue
-                p1 = get_atom_pos(structure.atoms, chain_id, curr_res[0], "CA", curr_res[1])
-                p2 = get_atom_pos(structure.atoms, chain_id, next_res[0], "CA", next_res[1])
-                if p1 is not None and p2 is not None:
-                    d = distance(p1, p2)
-                    ca_pairs_checked += 1
-                    if d > max_gap:
-                        max_gap = d
+                if "CA" not in r1["_atoms"] or "CA" not in r2["_atoms"]:
+                    missing_ca_pairs += 1
+                    continue
+                d = distance(r1["_atoms"]["CA"], r2["_atoms"]["CA"])
+                ca_pairs_checked += 1
+                if d > max_gap:
+                    max_gap = d
 
         if ca_pairs_checked == 0:
-            results["LAW-160"] = Tier1Measurements._not_measured(
-                "no eligible sequential CA pairs with both coordinates present"
-            )
+            reason = "no eligible sequential CA pairs with both coordinates present"
+            if missing_ca_pairs:
+                reason = (
+                    f"{missing_ca_pairs} sequential pair(s) lack CA coordinates; "
+                    "no measurable CA-CA distance"
+                )
+            results["LAW-160"] = Tier1Measurements._not_measured(reason)
         else:
             results["LAW-160"] = {
                 "observed": round(max_gap, 2),
@@ -597,9 +696,6 @@ class Tier1Measurements:
                 "sample": ca_pairs_checked
             }
 
-        # ═══════════════════════════════════════════════════════════
-        # STUBS: Remaining laws
-        # ═══════════════════════════════════════════════════════════
         # ═══════════════════════════════════════════════════════════
         # LAW-195: Disulfide Geometry (Module 1.2.4 — uses coord_math.distance)
         # Finds CYS pairs with SG-SG distance < 3.0Å (putative disulfides).
@@ -657,18 +753,24 @@ class Tier1Measurements:
         min_burial_ratio = 1.0
         total_hydrophobic = 0
         hydrophobic_residues = 0
+        chains_missing_hydrophobic_ca = []
 
         for chain_id in get_chains(structure.atoms):
             # Collect CA positions of hydrophobic residues in this chain
             hydro_cas = []
+            chain_hydrophobic = 0
             chain_res = get_sequential_residues(structure.atoms, chain_id)
             for res_seq, icode, res_name in chain_res:
                 if res_name in HYDROPHOBIC_RESIDUES:
                     hydrophobic_residues += 1
+                    chain_hydrophobic += 1
                     ca_pos = get_atom_pos(structure.atoms, chain_id, res_seq, "CA", icode)
                     if ca_pos is not None:
                         hydro_cas.append(ca_pos)
 
+            if chain_hydrophobic > 0 and len(hydro_cas) == 0:
+                chains_missing_hydrophobic_ca.append(chain_id)
+                continue
             if len(hydro_cas) == 0:
                 continue
 
@@ -685,9 +787,14 @@ class Tier1Measurements:
             results["LAW-182"] = Tier1Measurements._not_applicable(
                 "no hydrophobic residues are present"
             )
-        elif total_hydrophobic == 0:
+        elif chains_missing_hydrophobic_ca:
             results["LAW-182"] = Tier1Measurements._not_measured(
-                "hydrophobic residues lack measurable CA coordinates"
+                "hydrophobic residues lack CA coordinates on chain(s): "
+                + ", ".join(sorted(chains_missing_hydrophobic_ca))
+            )
+        elif total_hydrophobic != hydrophobic_residues:
+            results["LAW-182"] = Tier1Measurements._not_measured(
+                "hydrophobic residue CA coverage is incomplete"
             )
         else:
             results["LAW-182"] = {
@@ -753,13 +860,14 @@ class Tier1Measurements:
                 "plddt_advisory": Tier1Measurements._plddt_advisory(residues, is_experimental),
             }
 
-        return results, coverage, False
+        return results, coverage, is_experimental
 
     @staticmethod
     def compute_structural_characterization(structure):
+        atoms = canonicalize_atoms(getattr(structure, "atoms", []) or [])
         res = Tier1Measurements._extract(structure)
         return {
-            "total_atoms": len(structure.atoms),
+            "total_atoms": len(atoms),
             "total_residues": len(res),
             "source_type": getattr(structure.confidence, "method", "predicted"),
             "resolution": getattr(structure.confidence, "resolution", None),
@@ -770,17 +878,29 @@ class Tier1Measurements:
     def _plddt_observations(structure):
         profile = getattr(structure, "confidence", None)
         values = list(getattr(profile, "_values", []) or [])
-        return [float(v) for v in values if v is not None]
+        return [
+            number for number in (finite_float(value, None) for value in values)
+            if number is not None
+        ]
 
     @staticmethod
     def _b_factor_observations(structure):
         profile = getattr(structure, "confidence", None)
         values = list(getattr(profile, "_bfactors", []) or [])
         if values:
-            return [float(v) for v in values if v is not None]
+            return [
+                number for number in (finite_float(value, None) for value in values)
+                if number is not None
+            ]
         if getattr(profile, "_values", []):
             return []
-        return [a.b_iso for a in getattr(structure, "atoms", []) if a.b_iso is not None]
+        return [
+            number for number in (
+                finite_float(getattr(atom, "b_iso", None), None)
+                for atom in getattr(structure, "atoms", [])
+            )
+            if number is not None
+        ]
 
     @staticmethod
     def detect_confidence_source(structure):

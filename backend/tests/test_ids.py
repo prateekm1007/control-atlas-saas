@@ -1,8 +1,8 @@
 """
-WP-5 — unique, unguessable IDs.
+WP-5 / OD-07 — deterministic audit identity.
 
-- Audit ID: full SHA-256 of the canonical coordinate hash (64 hex chars),
-  deterministic (identical structures share an ID — owner decision).
+- Audit ID: full SHA-256 binding coordinate identity, canon hash, and matrix hash.
+- Coordinate hash: canonical atom identity and coordinates, atom-order invariant.
 - Job ID: full uuid4().hex (128 bits).
 - Legacy 8-character IDs must still resolve against the audit store.
 """
@@ -17,6 +17,10 @@ os.environ.setdefault("TOSCANINI_API_KEYS", "test-key-xyz")
 
 import main as main_mod
 import tos.security.auth as _auth
+from tos.engine.identity import compute_audit_id, compute_coordinate_hash
+from tos.governance.modality_matrix import compute_matrix_hash
+from tos.governance.station_sop import LAW_CANON_HASH
+from tos.ingestion.processor import IngestionProcessor
 from tos.storage.audit_store import store_audit_result, get_audit_result
 
 if not _auth.ALLOWED_KEYS:
@@ -51,11 +55,43 @@ class TestAuditIds:
         int(audit_id, 16)  # valid hex
         assert audit_id == audit_id.lower()
 
-    def test_audit_id_derives_deterministically_from_coord_hash(self):
+    def test_audit_id_binds_coordinate_canon_and_matrix_hashes(self):
         r = self._ingest_1crn()
         body = r.json()
         coord_hash = body["provenance"]["hash"]
-        assert body["governance"]["audit_id"] == hashlib.sha256(coord_hash.encode()).hexdigest()
+        expected = compute_audit_id(coord_hash, LAW_CANON_HASH, compute_matrix_hash())
+        assert body["governance"]["audit_id"] == expected
+        assert body["governance"]["audit_id"] != hashlib.sha256(coord_hash.encode()).hexdigest()
+        assert body["governance"]["coordinate_hash"] == coord_hash
+
+    def test_component_hashes_change_the_audit_id(self):
+        coord_hash = "a" * 64
+        matrix_hash = "b" * 64
+        canonical = compute_audit_id(coord_hash, LAW_CANON_HASH, matrix_hash)
+        assert canonical != compute_audit_id(coord_hash, "0" * 16, matrix_hash)
+        assert canonical != compute_audit_id(coord_hash, LAW_CANON_HASH, "c" * 64)
+        assert canonical != compute_audit_id("d" * 64, LAW_CANON_HASH, matrix_hash)
+
+    def test_coordinate_hash_is_atom_order_invariant(self):
+        content = FIXTURE.read_bytes()
+        forward = IngestionProcessor.run(content, "forward.pdb", "Audit", "Audit")
+        lines = content.decode("utf-8").splitlines()
+        atom_lines = [line for line in lines if line.startswith(("ATOM  ", "HETATM"))]
+        prefix = [line for line in lines if not line.startswith(("ATOM  ", "HETATM"))]
+        reversed_atoms = atom_lines[::-1]
+        shuffled = ("\n".join(prefix[:1] + reversed_atoms + prefix[1:]) + "\n").encode()
+        reverse = IngestionProcessor.run(shuffled, "reverse.pdb", "Audit", "Audit")
+        assert compute_coordinate_hash(forward) == compute_coordinate_hash(reverse)
+
+    def test_atom_identity_and_coordinate_changes_change_the_hash(self):
+        content = FIXTURE.read_bytes()
+        structure = IngestionProcessor.run(content, "forward.pdb", "Audit", "Audit")
+        baseline = compute_coordinate_hash(structure)
+        structure.atoms[0].pos = structure.atoms[0].pos + 1.0
+        assert compute_coordinate_hash(structure) != baseline
+        structure = IngestionProcessor.run(content, "forward.pdb", "Audit", "Audit")
+        structure.atoms[0].atom_name = "XX"
+        assert compute_coordinate_hash(structure) != baseline
 
     def test_identical_structures_share_one_audit_id(self):
         """Owner decision: deterministic dedup kept (brief §4.4)."""

@@ -1,0 +1,20 @@
+{
+  "timestamp_utc": "2026-10-23T14:34:55.933955+00:00",
+  "base_sha": "ae8a53547a0433f9220ff656fc53a706591c3bd4",
+  "head_sha": "4a7c8d6fc5fba0008109abc814fe48c25422fa6b",
+  "branch": "repair/od-scope-v25-engine-audit",
+  "python_version": "3.12.7 (tags/v3.12.7:0b05ead, Oct  1 2024, 03:06:41) [MSC v.1941 64 bit (AMD64)]",
+  "encoding_mode": "PYTHONUTF8=1",
+  "command": "python -m pytest tests -q -p no:warnings",
+  "results": {
+    "passed": 560,
+    "failed": 0,
+    "skipped": 5,
+    "errors": 0,
+    "total": 565
+  },
+  "roadmap_gate": 548,
+  "gate_met": true,
+  "skipped_justification": "5 tests in test_response_schema.py require /tmp/toscanini_response_sample.json which does not exist in this environment",
+  "cp1252_failures": "21 failures are pre-existing (verified by stashing changes and running on base); they are UnicodeDecodeError on non-ASCII source files under default CP1252 encoding"
+}

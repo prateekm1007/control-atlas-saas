@@ -308,6 +308,21 @@ def generate_v21_dossier(payload):
                      ln=True, align="C")
             pdf.ln(2)
 
+        basis = str(v.get("coverage_basis") or "")
+        if basis:
+            basis_labels = {
+                "complete_backbone_residues": "complete backbone (N, CA, C)",
+                "plddt_core_complete_backbone_residues": "complete backbone with pLDDT >= 70",
+            }
+            numerator = v.get("coverage_numerator")
+            denominator = v.get("coverage_denominator")
+            basis_text = f"Coverage basis: {basis_labels.get(basis, basis)}"
+            if numerator is not None and denominator is not None:
+                basis_text += f" ({numerator}/{denominator} residues)"
+            pdf.set_font("Helvetica", "I", 8)
+            pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])
+            pdf.cell(w, 5, basis_text, border=0, ln=True, align="C")
+
         # Source-backed confidence disclosure (no substituted distribution)
         pdf.set_font("Helvetica", "I", 8)
         pdf.set_text_color(*PDF_COLORS["TEXT_SECONDARY"])

@@ -1,5 +1,7 @@
 import sys, os, base64, json, traceback, logging, asyncio, hashlib, time, hmac
 from pathlib import Path
+
+import gemmi
 from functools import partial
 from datetime import datetime, timezone
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends, Request
@@ -9,7 +11,7 @@ from pydantic import BaseModel, field_validator, ValidationError
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from tos.ingestion.processor import IngestionProcessor
+from tos.ingestion.processor import IngestionError, IngestionProcessor
 from tos.engine.tier1_measurements import Tier1Measurements
 from tos.forensic_artifacts.pdf_generator import generate_v21_dossier
 from tos.governance.station_sop import (
@@ -23,6 +25,7 @@ from tos.utils.type_guards import force_bytes
 from tos.nkg.manager import get_nkg
 from tos.governance.modality_matrix import resolve_method, compute_matrix_hash, get_matrix_meta
 from tos.engine.adjudicator import adjudicate_laws, AdjudicationInput
+from tos.engine.identity import compute_audit_id, compute_coordinate_hash
 from tos.schemas.response_v1 import ToscaniniResponse
 from tos.engine.batch_processor import process_batch
 from tos.schemas.batch_v1 import BatchResponse, BatchStructureResult, BatchSummary, FailingLawCount
@@ -40,10 +43,28 @@ MAX_RESIDUE_COUNT = 1500               # GPU budget cap
 
 
 def _count_residues(pdb_bytes: bytes) -> int:
-    """Count unique (chain_id, resseq) pairs from ATOM/HETATM lines.
-    Pure-Python — no Biopython required in the brain container."""
-    seen: set = set()
-    for line in pdb_bytes.decode("utf-8", errors="replace").splitlines():
+    """Count unique residue records for PDB and mmCIF sources."""
+    text = pdb_bytes.decode("utf-8-sig", errors="replace")
+    stripped = text.lstrip()
+    if stripped.startswith("data_") or "_atom_site." in stripped[:5000]:
+        try:
+            block = gemmi.cif.read_string(text).sole_block()
+            structure = gemmi.make_structure_from_block(block)
+        except Exception:
+            return 0
+        seen = set()
+        for model in structure:
+            for chain in model:
+                for residue in chain:
+                    seen.add((
+                        str(chain.name),
+                        int(residue.seqid.num),
+                        str(residue.seqid.icode).strip("\x00").strip(),
+                        str(residue.name),
+                    ))
+        return len(seen)
+    seen = set()
+    for line in text.splitlines():
         if line.startswith(("ATOM  ", "HETATM")):
             chain  = line[21] if len(line) > 21 else "?"
             resseq = line[22:26].strip() if len(line) > 26 else "0"
@@ -117,28 +138,37 @@ def _sanitize_for_json(obj):
 
 
 def _compute_coord_hash(structure) -> str:
-    """PIL-NOT-18: Coordinate-Only Hashing (Institutional Standard)."""
-    coord_string = "".join(
-        f"{round(a.pos[0],3)}{round(a.pos[1],3)}{round(a.pos[2],3)}"
-        for a in structure.atoms
-    )
-    return hashlib.sha256(coord_string.encode()).hexdigest()
+    """OD-07 canonical coordinate identity."""
+    return compute_coordinate_hash(structure)
 
 
 def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_category: str):
     # 🛡️ PIL-IMM-20: Immutable Ingestion
-    structure = IngestionProcessor.run(force_bytes(content_bytes), "origin.pdb", "Audit", mode)
+    try:
+        structure = IngestionProcessor.run(force_bytes(content_bytes), "origin.pdb", "Audit", mode)
+    except IngestionError as exc:
+        raise HTTPException(status_code=422, detail=f"Ingestion failed: {exc}") from exc
     
-    # 🛡️ PIL-NOT-18: Coordinate-Only Hashing (Institutional Standard)
+    # 🛡️ OD-07: coordinate identity plus governance bindings
     coord_hash = _compute_coord_hash(structure)
+    canon_hash = LAW_CANON_HASH
+    matrix_hash = compute_matrix_hash()
+    audit_id = compute_audit_id(coord_hash, canon_hash, matrix_hash)
 
     full_t1, coverage, _ = Tier1Measurements.run_full_audit(structure, user_intent=t3_category)
+    coverage_details = full_t1.get("LAW-105", {})
+    ingestion = getattr(structure, "metadata", None)
 
 
 
-    # PIL-CAL-02: Detect experimental source
-    _is_exp_source = getattr(structure.confidence, "is_experimental", False) if hasattr(structure, 'confidence') else False
-    _method_type = getattr(structure.confidence, "method", "predicted") if _is_exp_source else "predicted"
+    # PIL-CAL-02: Detect experimental source.
+    # "unknown" acquisition method is treated as experimental (fail-closed):
+    # a structure whose provenance is not declared must not silently receive
+    # the predicted-cohort pLDDT gate, which would lower the bar for a
+    # potentially real crystal structure.
+    _method = getattr(structure.confidence, "method", "predicted")
+    _is_exp_source = _method in ("xray", "nmr", "cryo_em", "unknown")
+    _method_type = _method if _is_exp_source else "predicted"
 
     # Stages 3+4: Adjudication (delegated to pure function)
     adj_result = adjudicate_laws(AdjudicationInput(
@@ -172,19 +202,26 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
             "det_score_normalized": adj_result.det_score_normalized,
             "det_passed_normalized": adj_result.det_passed_normalized, 
             "heur_passed": heur_passed, "heur_total": HEURISTIC_COUNT, 
-            "coverage_pct": round(coverage, 2), "coverage_basis": "residues",
+            "coverage_pct": round(coverage, 2),
+            "coverage_basis": coverage_details.get("coverage_basis", "residues"),
+            "coverage_numerator": coverage_details.get("coverage_numerator"),
+            "coverage_denominator": coverage_details.get("coverage_denominator"),
+            "coverage_required_atoms": coverage_details.get("required_atoms"),
+            "complete_backbone_residues": coverage_details.get("complete_backbone_residues"),
+            "source_atom_records": coverage_details.get("source_atom_records"),
+            "selected_atoms": coverage_details.get("selected_atoms"),
+            "discarded_atoms": coverage_details.get("discarded_atoms"),
             "suppression_reason": suppression
         },
         "governance": {
-            # WP-5: full SHA-256 of the canonical coordinate hash (64 hex chars).
-            # Deterministic — structurally identical submissions share an ID
-            # (owner decision: dedup kept). Replaces collision-prone md5[:8].
-            "audit_id": hashlib.sha256(coord_hash.encode()).hexdigest(),
+            # OD-07: full SHA-256 bound to coordinate, canon, and matrix hashes.
+            "audit_id": audit_id,
+            "coordinate_hash": coord_hash,
             "station_version": STATION_METADATA["version"],
             "timestamp_utc": datetime.now(timezone.utc).isoformat(),
             "governance_fingerprint": {
-                "canon_hash": LAW_CANON_HASH,
-                "matrix_hash": compute_matrix_hash(),
+                "canon_hash": canon_hash,
+                "matrix_hash": matrix_hash,
                 "matrix_schema_version": get_matrix_meta()["schema_version"],
                 "policy_ref": get_matrix_meta()["policy_ref"],
             },
@@ -192,6 +229,27 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
         "provenance": {"source": candidate_id, "hash": coord_hash, "byte_count": len(content_bytes)},
         "tier1": {"laws": res_t1}, "tier3": {"probability": p_score},
         "characterization": Tier1Measurements.compute_structural_characterization(structure),
+        "ingestion": {
+            "format": getattr(ingestion, "format", "unknown"),
+            "model_policy": getattr(ingestion, "model_policy", "unknown"),
+            "altloc_policy": getattr(ingestion, "altloc_policy", "unknown"),
+            "polymer_hetatm_policy": getattr(ingestion, "polymer_hetatm_policy", "unknown"),
+            "source_atom_records": getattr(ingestion, "source_atom_records", 0),
+            "selected_atoms": getattr(ingestion, "selected_atoms", len(structure.atoms)),
+            "total_residues": getattr(ingestion, "total_residues", 0),
+            "complete_backbone_residues": getattr(ingestion, "complete_backbone_residues", 0),
+            "excluded_hydrogens": getattr(ingestion, "excluded_hydrogens", 0),
+            "excluded_waters": getattr(ingestion, "excluded_waters", 0),
+            "excluded_ligands": getattr(ingestion, "excluded_ligands", 0),
+            "excluded_other": getattr(ingestion, "excluded_other", 0),
+            "excluded_models": getattr(ingestion, "excluded_models", 0),
+            "malformed_records": getattr(ingestion, "malformed_records", 0),
+            "altloc_conflicts": getattr(ingestion, "altloc_conflicts", 0),
+            "altloc_selected_atoms": getattr(ingestion, "altloc_selected_atoms", 0),
+            "missing_occupancy": getattr(ingestion, "missing_occupancy", 0),
+            "missing_b_factor": getattr(ingestion, "missing_b_factor", 0),
+            "warnings": list(getattr(ingestion, "warnings", []) or []),
+        },
         "confidence_meta": {
             "source_type": conf_source, "provenance_method": conf_prov,
             **Tier1Measurements.decompose_confidence(structure),
