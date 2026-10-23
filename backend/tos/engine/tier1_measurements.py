@@ -251,7 +251,7 @@ class Tier1Measurements:
             "complete_backbone_residues": len(complete),
             "source_atom_records": getattr(metadata, "source_atom_records", None),
             "selected_atoms": getattr(metadata, "selected_atoms", None),
-            "discarded_atoms": getattr(metadata, "malformed_records", None),
+            "malformed_atom_records": getattr(metadata, "malformed_records", None),
         }
 
         # ═══════════════════════════════════════════════════════════

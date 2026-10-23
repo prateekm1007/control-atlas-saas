@@ -55,7 +55,7 @@ class AdjudicationVerdict(BaseModel):
     complete_backbone_residues: Optional[int] = Field(None, ge=0)
     source_atom_records: Optional[int] = Field(None, ge=0)
     selected_atoms: Optional[int] = Field(None, ge=0)
-    discarded_atoms: Optional[int] = Field(None, ge=0)
+    malformed_atom_records: Optional[int] = Field(None, ge=0)
     suppression_reason: Optional[str] = None
     primary_cause: Optional[str] = None
     recommended_action: Optional[str] = None

@@ -210,7 +210,7 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
             "complete_backbone_residues": coverage_details.get("complete_backbone_residues"),
             "source_atom_records": coverage_details.get("source_atom_records"),
             "selected_atoms": coverage_details.get("selected_atoms"),
-            "discarded_atoms": coverage_details.get("discarded_atoms"),
+            "malformed_atom_records": coverage_details.get("malformed_atom_records"),
             "suppression_reason": suppression
         },
         "governance": {
