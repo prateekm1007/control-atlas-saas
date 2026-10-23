@@ -41,7 +41,11 @@ def main() -> int:
         if not fp.is_file():
             print(f"FAIL: scope file is not a regular file: {rel}")
             return 1
-        digest = hashlib.sha256(fp.read_bytes()).hexdigest()
+        # Hash the canonical LF form of the file so the manifest matches the
+        # committed (LF) blobs independent of local checkout line-ending
+        # conversion on Windows.
+        data = fp.read_bytes().replace(b"\r\n", b"\n")
+        digest = hashlib.sha256(data).hexdigest()
         lines.append(f"{digest}  {rel}")
     mpath = repo / a.manifest
     mpath.write_text("\n".join(lines) + "\n", encoding="utf-8")
