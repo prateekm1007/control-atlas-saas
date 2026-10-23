@@ -1,6 +1,6 @@
 {
   "artifact": "workspace-preflight",
-  "generated_at_utc": "2026-10-23T19:05:02Z",
+  "generated_at_utc": "2026-10-23T19:30:54Z",
   "repository": {
     "remote_origin": "https://github.com/prateekm1007/control-atlas-saas.git",
     "intended_repo": "prateekm1007/control-atlas-saas",
@@ -9,7 +9,7 @@
   "branch": {
     "name": "feature/evaluator-trust-boundary",
     "based_on": "integration/od-scope-v25-2026-10-23",
-    "head_sha": "8a9a9c9b156f8d05a76cf88550b9a36cfb609786",
+    "base_sha": "8a9a9c9b156f8d05a76cf88550b9a36cfb609786",
     "base_main_sha": "63da0e347002ed9b77071ff1ed0cefda7c0ce88a",
     "main_is_ancestor": true,
     "commits_ahead_of_main": 25
@@ -20,31 +20,61 @@
   },
   "identity_checks": {
     "origin_matches_intended": true,
-    "integration_branch_exists_and_sha_matches_expected": true,
     "expected_integration_sha": "8a9a9c9b156f8d05a76cf88550b9a36cfb609786",
     "current_integration_sha": "8a9a9c9b156f8d05a76cf88550b9a36cfb609786",
-    "main_sha_matches_expected": true,
     "expected_main_sha": "63da0e347002ed9b77071ff1ed0cefda7c0ce88a",
+    "current_main_sha": "63da0e347002ed9b77071ff1ed0cefda7c0ce88a",
     "ancestry_verified": true,
     "abort_on_failure": true,
     "all_identity_checks_pass": true
   },
-  "source_paths": {
-    "AGENTS.md": "85767237399ffb30f3e45894d9dfbe6f4240584f",
-    "constitution.md": "211ad2c5d4b40059d9f3f03de12e0701f9235bc7",
-    "ENGINEERING_CONSTITUTION.md": "b6bb35e84956d84a8c9d9e65734c212baf3ed075",
-    "docs/coder/BRIEF.md": "052a84ca829d321dc0841a4b1c8702145dcbf6b5",
-    "docs/decisions/OWNER_DECISIONS.md": "12906bf5997a3e2c6b5c41e5d5c60fee14613274",
-    "docs/P0_STATUS.md": "a31517abbc046c495930ba19ef7aeaf8bb72f2d0",
-    "backend/calibration/evaluate.py": "4ea8ef5e621dbf47606a03b3d4adf0060b58f92f",
-    "backend/calibration/runner.py": "4e0ec1bbec66df95c38876094cfdcba5fb632ae8",
-    "backend/tos/engine/tier1_measurements.py": "1921d107a49ff7aea9fe8e697146b651dd47befc",
-    "backend/tos/engine/tier2_measurements.py": "598e6d110622ec9663ca31961367b97525773b9e",
-    "backend/tos/engine/tier1_laws.py": "92865b9bea8e6b5433eb89b866bb50e5e39e4b37",
-    "backend/tos/ingestion/processor.py": "245ddc6f3f367805cc5d8eab7a89645d3f6d1156",
-    "backend/tests/test_calibration_evaluate.py": "f5c5cbeb02ea3d966c8f9710b755973d4492d41e",
-    "backend/tests/test_calibration_runner.py": "3b6d9ade8b17aaef3160d4073d87d7512074db08",
-    "governance/law_registry.yaml": "af5f98a1e9f411a311b613f4a74e19fc6907a314"
+  "policy_hashes": {
+    "canon_hash": "f24ec581b3e04732",
+    "modality_matrix_sha256": "ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4",
+    "law_semantic_sha256": "d2b3b8501b1c73f67e7839662f70b68596d3c1e25b51d824d6b8a78325816dd5"
   },
-  "note": "All identity checks passed; all expected source paths present at the verified candidate. Per owner direction, this environment is a clean isolated clone; the broken discovery-evidence-fabric workspace was left untouched."
+  "intended_behavior": {
+    "objective": "Harden the calibration evaluator trust boundary and evidence provenance on the focused feature branch.",
+    "deliverables": [
+      "Fail-closed path resolution rejecting traversal, absolute paths, and symlinks in every component before following them.",
+      "Exact integrity-manifest artifact_digests schema (run_manifest.json, coordinate_manifest.json, calibration_results.json; reject missing/extra/malformed/unsafe/symlink).",
+      "Recursive MANIFEST.sha256 verification failing closed on unexpected filesystem objects.",
+      "Cross-manifest consistency across integrity/coordinate/results and per-target records (counts, statuses, IDs; boolean-as-int rejection).",
+      "Update evaluate.py input documentation to list all four bound run_inputs digest fields.",
+      "Adversarial tests: in-root/escaping/parent/root symlinks, exact-schema missing/extra, count/status and cross-manifest mismatches, reachable code-SHA tamper check."
+    ]
+  },
+  "security_risks": [
+    "Path traversal / symlink escape via MANIFEST.sha256 or evidence references (mitigated by fail-closed component-wise symlink and containment checks).",
+    "Artifact/evidence substitution when dependent digests are rewritten together (mitigated by binding run identity and code provenance to a trusted source; evaluator not presented as an approved authoritative path until that binding is trusted).",
+    "Self-reference between MANIFEST.sha256 and the integrity manifest's own digest fields (kept separate).",
+    "Oversights in aggregate-only cross-manifest checks (mitigated by per-target ID/status and counter-consistency reconciliation)."
+  ],
+  "file_scope": {
+    "modified": [
+      "backend/calibration/evaluate.py",
+      "backend/tests/test_calibration_evaluate.py"
+    ],
+    "read_only_context": [
+      "backend/calibration/runner.py"
+    ]
+  },
+  "test_plan": [
+    "Targeted: backend/tests/test_calibration_evaluate.py (including new adversarial cases).",
+    "Full backend suite under PYTHONUTF8=1.",
+    "Policy hash-lock checks (canon/matrix/law-semantic unchanged).",
+    "Package manifest check (scripts/ci/manifest_check.py) after regenerating SHA256SUMS.",
+    "Evidence-sequence checker (scripts/ci/evidence_sequence_check.py) in a clean checkout before pushing.",
+    "Secret scanning of the tree."
+  ],
+  "acceptance_criteria": [
+    "All evaluator tests pass; new adversarial tests assert the intended failure branch/message.",
+    "Full backend suite shows no new regressions attributable to this change.",
+    "Policy hashes unchanged (f24ec581b3e04732 / ed1731ace09a9a3bd24d3659ab6f3fd184da2a2335d935a234fd6a9c14880aa4 / d2b3b8501b1c73f67e7839662f70b68596d3c1e25b51d824d6b8a78325816dd5).",
+    "Package manifest regenerated deterministically; manifest_check passes.",
+    "Push-log records reconciled truthfully; current-tip declared; evidence-sequence checker passes in clean checkout.",
+    "No merge/deploy/calibration (OD-16 preserved)."
+  ],
+  "rollback_strategy": "The change is isolated to feature/evaluator-trust-boundary (append-only commits; no force-push). Rollback = do not merge and close the branch, or revert forward via a reviewed follow-up on the same reviewed path; historical log entries are preserved byte-for-byte.",
+  "note": "This preflight supersedes the earlier 2026-10-23T19:05:02Z record with corrected read/scope and expanded plan fields; it is an append-only evidence addition, not a rewrite of history."
 }
