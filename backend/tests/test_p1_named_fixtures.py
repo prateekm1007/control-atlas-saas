@@ -45,6 +45,18 @@ class Test1PPEInsertionOrder:
         law105 = results["LAW-105"]
         # if source sequence available, denominator is source-backed
         assert law105["coverage_denominator"] > 0
+        # Exact measured-pair bookkeeping: LAW-110 must count real sequential
+        # C-N peptide pairs and report them honestly (not skipped/fabricated).
+        law110 = results["LAW-110"]
+        assert law110.get("status") in ("PASS", "VETO")
+        assert law110.get("sample", 0) > 0
+        # Pinned on this candidate: 1PPE yields 238 measured sequential pairs
+        assert law110["sample"] == 238
+        # LAW-120 must measure backbone angle pairs for the same adjacency
+        law120 = results["LAW-120"]
+        assert law120.get("sample", 0) > 0
+        assert law120.get("status") in ("PASS", "VETO", "NOT_MEASURED",
+                                        "MEASUREMENT_FAILED")
 
 
 class Test5T4OIngestion:
@@ -59,3 +71,10 @@ class Test5T4OIngestion:
         s = results["LAW-120"]["status"]
         assert s in ("PASS", "VETO", "NOT_MEASURED", "MEASUREMENT_FAILED",
                      "NOT_APPLICABLE")
+        # Exact measured-pair bookkeeping for the large deposit.
+        law110 = results["LAW-110"]
+        assert law110.get("sample", 0) > 0
+        assert law110["sample"] == 4755
+        law120 = results["LAW-120"]
+        assert law120.get("sample", 0) > 0
+        assert law120["sample"] == 14288
