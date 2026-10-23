@@ -264,14 +264,51 @@ class Tier1Measurements:
         ]
         if is_experimental:
             core = complete
-            coverage_basis = "complete_backbone_residues"
         else:
             core = [
                 r for r in complete
                 if r["_conf"] is not None and r["_conf"] >= 70.0
             ]
-            coverage_basis = "plddt_core_complete_backbone_residues"
-        coverage = (len(core) / len(residues) * 100) if residues else 0.0
+
+        metadata = getattr(structure, "metadata", None)
+
+        # Source-backed coverage: when an authoritative source polymer sequence
+        # is available (label_seq_id), the denominator is the total number of
+        # source polymer positions and the numerator is the set of eligible core
+        # residues that map to a source position — so positions absent from the
+        # coordinates count against coverage. When the source sequence cannot be
+        # established, coverage is computed from observed residues but is
+        # explicitly marked non-authoritative (source_backed=False) and is never
+        # presented as source-backed.
+        source_seq = getattr(metadata, "source_sequences", {}) if metadata is not None else {}
+        source_available = bool(source_seq) and all(
+            (source_seq.get(r["_chain"]) or {}).get("positions") is not None
+            for r in residues
+        )
+        if source_available:
+            coverage_basis = "source_polymer_positions"
+            source_backed = True
+            denominator_positions = sum(
+                entry["positions"] for entry in source_seq.values()
+                if entry.get("positions") is not None)
+            numerator_positions = sum(
+                1 for r in core if r.get("_lseq") is not None)
+            coverage = (
+                (numerator_positions / denominator_positions * 100)
+                if denominator_positions else 0.0
+            )
+        else:
+            if is_experimental:
+                coverage_basis = "complete_backbone_residues"
+            else:
+                coverage_basis = "plddt_core_complete_backbone_residues"
+            source_backed = False
+            denominator_positions = len(residues)
+            numerator_positions = len(core)
+            coverage = (
+                (numerator_positions / denominator_positions * 100)
+                if denominator_positions else 0.0
+            )
 
         results = {}
 
@@ -311,19 +348,26 @@ class Tier1Measurements:
         # LAW-105: Reliability Coverage
         # ═══════════════════════════════════════════════════════════
         metadata = getattr(structure, "metadata", None)
-        results["LAW-105"] = {
+        law105 = {
             "observed": round(coverage, 2),
             "status": "PASS" if coverage >= 70.0 else "FAIL",
             "sample": len(residues),
             "coverage_basis": coverage_basis,
-            "coverage_numerator": len(core),
-            "coverage_denominator": len(residues),
+            "source_backed": source_backed,
+            "coverage_numerator": numerator_positions,
+            "coverage_denominator": denominator_positions,
             "required_atoms": "N,CA,C",
             "complete_backbone_residues": len(complete),
             "source_atom_records": getattr(metadata, "source_atom_records", None),
             "selected_atoms": getattr(metadata, "selected_atoms", None),
             "malformed_atom_records": getattr(metadata, "malformed_records", None),
         }
+        if not source_backed:
+            law105["note"] = (
+                "source polymer sequence unavailable; coverage is computed from "
+                "observed residues and is not source-backed / not authoritative"
+            )
+        results["LAW-105"] = law105
 
         # ═══════════════════════════════════════════════════════════
         # LAW-110: Backbone Gap (uses coord_math.distance)

@@ -6,6 +6,7 @@ pairing peptide geometry, so deposits such as 1PPE/5T4O with insertion-coded
 residues cannot fabricate backbone gaps or false vetoes.
 """
 import numpy as np
+import pytest
 
 from tos.engine.coord_math import get_sequential_residues
 from tos.engine.tier1_measurements import INSERTION_ALPHABET, Tier1Measurements
@@ -208,11 +209,16 @@ def _ala(chain, seq, icode, x, y, z, label_seq=None, src=None):
     ]
 
 
-def _fake_structure(atoms):
+def _fake_structure(atoms, source_sequences=None):
+    from tos.ingestion.processor import IngestionMetadata
+    meta = IngestionMetadata()
+    if source_sequences:
+        meta.source_sequences = source_sequences
     return Structure(
         atoms=atoms,
         audit_id="",
         confidence=ConfidenceProfile([], True, "xray", None),
+        metadata=meta,
     )
 
 
@@ -262,3 +268,49 @@ def test_chain_boundary_is_not_sequential():
     s = _fake_structure(atoms)
     residues = Tier1Measurements._extract(s)
     assert Tier1Measurements._is_sequential(residues[0], residues[1]) is False
+
+
+def test_p2_source_backed_coverage_counts_absent_positions():
+    """A missing internal source position must count against coverage: two
+    observed complete residues at label_seq_id 1 and 3 of a 3-position polymer
+    give 2/3 = 66.67%, not a fabricated 100%."""
+    atoms = _ala("A", 1, "", 0.0, 0.0, 0.0, label_seq=1, src=0)
+    atoms += _ala("A", 3, "", 3.0, 0.0, 0.0, label_seq=3, src=1)
+    source_sequences = {"A": {"positions": 3, "basis": "label_seq_id"}}
+    s = _fake_structure(atoms, source_sequences=source_sequences)
+    results, coverage, is_exp = Tier1Measurements.run_full_audit(s)
+    law105 = results["LAW-105"]
+    assert law105["source_backed"] is True
+    assert law105["coverage_basis"] == "source_polymer_positions"
+    assert law105["coverage_denominator"] == 3
+    assert law105["coverage_numerator"] == 2
+    assert law105["observed"] == pytest.approx(66.67, abs=0.01)
+    assert coverage == pytest.approx(66.67, abs=0.01)
+    assert law105["status"] == "FAIL"   # below 70 because the absent position counts
+
+
+def test_p2_source_backed_coverage_all_positions_present():
+    atoms = _ala("A", 1, "", 0.0, 0.0, 0.0, label_seq=1, src=0)
+    atoms += _ala("A", 2, "", 3.0, 0.0, 0.0, label_seq=2, src=1)
+    source_sequences = {"A": {"positions": 2, "basis": "label_seq_id"}}
+    s = _fake_structure(atoms, source_sequences=source_sequences)
+    results, coverage, _ = Tier1Measurements.run_full_audit(s)
+    law105 = results["LAW-105"]
+    assert law105["source_backed"] is True
+    assert law105["coverage_denominator"] == 2
+    assert law105["coverage_numerator"] == 2
+    assert law105["observed"] == 100.0
+    assert law105["status"] == "PASS"
+
+
+def test_p2_unavailable_source_is_non_authoritative():
+    """Without authoritative source positions coverage is computed from observed
+    residues but explicitly marked non-authoritative (source_backed=False)."""
+    atoms = _ala("A", 1, "", 0.0, 0.0, 0.0, src=0)
+    atoms += _ala("A", 2, "", 3.0, 0.0, 0.0, src=1)
+    s = _fake_structure(atoms)   # no source_sequences
+    results, _, _ = Tier1Measurements.run_full_audit(s)
+    law105 = results["LAW-105"]
+    assert law105["source_backed"] is False
+    assert law105["coverage_basis"] == "complete_backbone_residues"
+    assert "not source-backed" in law105.get("note", "")

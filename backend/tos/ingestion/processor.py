@@ -63,6 +63,7 @@ class IngestionMetadata:
     missing_occupancy: int = 0
     missing_b_factor: int = 0
     warnings: List[str] = field(default_factory=list)
+    source_sequences: dict = field(default_factory=dict)
 
 
 class ConfidenceProfile:
@@ -199,6 +200,34 @@ def _normalize_chain(value) -> str:
 
 def _select_model(structure):
     return structure[0]
+
+
+def _collect_source_sequences(model) -> dict:
+    """Per-chain source polymer-sequence evidence.
+
+    Basis precedence: valid ``label_seq_id`` across all polymer residues of a
+    chain (authoritative sequence positions, gap-sensitive), else
+    ``unavailable``. The ``positions`` count is the number of source polymer
+    positions for the chain (max label_seq_id when sequential). When no
+    authoritative sequence positions can be established the chain is recorded
+    as unavailable so coverage is never fabricated from observed residues alone.
+    """
+    out = {}
+    for chain in model:
+        chain_id = _normalize_chain(chain.name)
+        polymer = list(chain.get_polymer())
+        label_seqs = [r.label_seq for r in polymer if r.label_seq is not None]
+        if label_seqs and len(label_seqs) == len(polymer) and label_seqs:
+            out[chain_id] = {
+                "positions": max(label_seqs),
+                "basis": "label_seq_id",
+            }
+        else:
+            out[chain_id] = {
+                "positions": None,
+                "basis": "unavailable",
+            }
+    return out
 
 
 class IngestionProcessor:
@@ -338,6 +367,7 @@ class IngestionProcessor:
         metadata.complete_backbone_residues = sum(
             1 for names in residues.values() if {"N", "CA", "C"}.issubset(names)
         )
+        metadata.source_sequences = _collect_source_sequences(model)
         if metadata.malformed_records:
             metadata.warnings.append(
                 f"{metadata.malformed_records} atom record(s) had non-finite coordinates and were discarded"

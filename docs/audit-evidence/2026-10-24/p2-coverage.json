@@ -1,0 +1,29 @@
+{
+  "artifact": "p2-closure-note",
+  "generated_at_utc": "2026-10-23T20:30:00Z",
+  "branch": {"name": "fix/residue-order-contract", "base_sha": "8a9a9c9b156f8d05a76cf88550b9a36cfb609786"},
+  "summary": "P2: source-backed coverage denominator with explicit non-authoritative fallback.",
+  "design": {
+    "source_capture": "IngestionProcessor now records per-chain source polymer-sequence evidence (metadata.source_sequences). Basis precedence: valid label_seq_id across all polymer residues of a chain -> positions = max(label_seq_id), basis=label_seq_id; otherwise unavailable.",
+    "coverage_contract": "When source positions are available: numerator = eligible core residues mapping to a source position (label_seq_id); denominator = total source polymer positions; missing positions therefore count against coverage. Law-105 status remains 70% threshold (unchanged).",
+    "fail_closed": "When no authoritative source sequence can be established, Law-105 is computed from observed residues and is explicitly marked source_backed=False with a note that it is NOT source-backed / not authoritative. It is never presented as authoritative source-backed coverage."
+  },
+  "before_after": {
+    "missing_internal_position_1_3": {
+      "before": "observed-based denominator (2 observed residues) -> coverage could reach 100% excluding the missing position.",
+      "after": "source denominator (3 positions) -> 2/3 = 66.67%, status FAIL; the absent position counts."
+    },
+    "all_positions_present_1_2": {
+      "after": "2/2 = 100%, PASS."
+    },
+    "unavailable_sequence": {
+      "after": "computed from observed residues, source_backed=False, note present; not presented as authoritative."
+    }
+  },
+  "od07_coordinate_identity": "Unchanged (identity.py untouched; atom-identity sort unchanged).",
+  "real_fixtures": "Synthetic label_seq_id reproductions used; real PDB/mmCIF-pinned fixtures for source-sequence alignment remain open (gemmi 0.6.7 entity.full_sequence is unreliable for PDB; label_seq_id path is the implemented authoritative basis).",
+  "test_count": {
+    "local": "python -m pytest tests/ --q under PYTHONUTF8=1 on this candidate: 578 passed, 10 pre-existing baseline failures (9 governance hash-lock drift + 1 CRLF protocol).",
+    "note": "Exact-tip CI records its own count; local and CI counts are not asserted equal."
+  }
+}
