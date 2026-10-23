@@ -1,6 +1,7 @@
 """Calibration evaluator and split-manifest validation tests."""
 import hashlib
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -433,8 +434,15 @@ def _build_run_artifacts(run_dir, policy, target_id="1ABC"):
                 "policy_binding": policy,
             },
             "summary": {
-                "measured": 1,
                 "expected_targets": 1,
+                "acquired": 1,
+                "measured": 1,
+                "not_measured": 0,
+                "measurement_failed": 0,
+                "acquisition_failures": 0,
+                "measurement_failures": 0,
+                "failures": [],
+                "run_status": "complete",
             },
             "targets": {
                 target_id: {
@@ -720,3 +728,226 @@ def test_validation_rejects_extra_policy_binding_keys():
     }
     with pytest.raises(EvaluationInputError, match="policy_binding must contain exactly"):
         validate_cases(payload["cases"], require_policy=True, payload=payload)
+
+
+_ARTIFACT_FIELDS = {
+    "run_manifest.json": "run_manifest_sha256",
+    "coordinate_manifest.json": "coordinate_manifest_sha256",
+    "calibration_results.json": "calibration_results_sha256",
+    "run_integrity_manifest.json": "run_integrity_manifest_sha256",
+}
+
+
+def _build_valid_eval_env(tmp_path, cases=None, tag=""):
+    payload = {
+        "policy_binding": _policy_binding(),
+        "run_inputs": _run_inputs(),
+        "cases": cases if cases is not None else _cases(),
+    }
+    run_dir = tmp_path / f"run{tag}"
+    run_dir.mkdir()
+    policy = payload["policy_binding"]
+    files = _build_run_artifacts(run_dir, policy)
+    for field, filename in {
+        "run_manifest_sha256": "run_manifest.json",
+        "coordinate_manifest_sha256": "coordinate_manifest.json",
+        "calibration_results_sha256": "calibration_results.json",
+    }.items():
+        _write_artifact(run_dir, files, filename, files[filename],
+                         payload["run_inputs"], field)
+    _write_artifact(
+        run_dir, files, "run_integrity_manifest.json",
+        files["run_integrity_manifest.json"], payload["run_inputs"],
+        "run_integrity_manifest_sha256")
+    evidence_dir = tmp_path / f"evidence{tag}"
+    evidence_dir.mkdir()
+    _make_evidence_files(evidence_dir, payload["cases"])
+    _refresh_manifest(run_dir)
+    path = tmp_path / f"cases{tag}.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    return payload, run_dir, evidence_dir, path
+
+
+def _refresh_manifest(run_dir):
+    lines = []
+    for fname in ["run_manifest.json", "coordinate_manifest.json",
+                  "calibration_results.json", "run_integrity_manifest.json"]:
+        fpath = run_dir / fname
+        lines.append(f"{hashlib.sha256(fpath.read_bytes()).hexdigest()}  {fname}")
+    (run_dir / "MANIFEST.sha256").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _rewrite_integrity(run_dir, payload, mutate):
+    integrity_path = run_dir / "run_integrity_manifest.json"
+    integrity = json.loads(integrity_path.read_text(encoding="utf-8"))
+    mutate(integrity)
+    content = json.dumps(integrity, sort_keys=True).encode()
+    integrity_path.write_bytes(content)
+    payload["run_inputs"]["run_integrity_manifest_sha256"] = (
+        hashlib.sha256(content).hexdigest())
+    _refresh_manifest(run_dir)
+
+
+def _rewrite_artifact(run_dir, payload, filename, obj):
+    content = json.dumps(obj, sort_keys=True).encode()
+    (run_dir / filename).write_bytes(content)
+    digest = hashlib.sha256(content).hexdigest()
+    if filename != "run_integrity_manifest.json":
+        payload["run_inputs"][_ARTIFACT_FIELDS[filename]] = digest
+        integrity_path = run_dir / "run_integrity_manifest.json"
+        integrity = json.loads(integrity_path.read_text(encoding="utf-8"))
+        integrity["artifact_digests"][filename] = digest
+        icontent = json.dumps(integrity, sort_keys=True).encode()
+        integrity_path.write_bytes(icontent)
+        payload["run_inputs"]["run_integrity_manifest_sha256"] = (
+            hashlib.sha256(icontent).hexdigest())
+    else:
+        payload["run_inputs"]["run_integrity_manifest_sha256"] = digest
+    _refresh_manifest(run_dir)
+
+
+def _try_os_symlink(target, link):
+    try:
+        os.symlink(str(target), str(link))
+        return True
+    except (OSError, NotImplementedError, PermissionError):
+        return False
+
+
+def test_integrity_manifest_requires_exact_artifact_digests(tmp_path):
+    payload, run_dir, evidence_dir, path = _build_valid_eval_env(tmp_path, tag="0")
+
+    def missing_key(integrity):
+        del integrity["artifact_digests"]["run_manifest.json"]
+    _rewrite_integrity(run_dir, payload, missing_key)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(EvaluationInputError, match="must contain exactly"):
+        evaluate_file(path, run_dir=run_dir, evidence_root=evidence_dir)
+
+    payload, run_dir, evidence_dir, path = _build_valid_eval_env(tmp_path, tag="1")
+
+    def extra_key(integrity):
+        integrity["artifact_digests"]["unexpected.json"] = "0" * 64
+    _rewrite_integrity(run_dir, payload, extra_key)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(EvaluationInputError, match="must contain exactly"):
+        evaluate_file(path, run_dir=run_dir, evidence_root=evidence_dir)
+
+    payload, run_dir, evidence_dir, path = _build_valid_eval_env(tmp_path, tag="2")
+
+    def malformed(integrity):
+        integrity["artifact_digests"]["run_manifest.json"] = "zz"
+    _rewrite_integrity(run_dir, payload, malformed)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(EvaluationInputError, match="artifact digest malformed"):
+        evaluate_file(path, run_dir=run_dir, evidence_root=evidence_dir)
+
+
+def test_integrity_manifest_rejects_boolean_counter(tmp_path):
+    payload, run_dir, evidence_dir, path = _build_valid_eval_env(tmp_path)
+
+    def bool_counter(integrity):
+        integrity["measured_count"] = True
+    _rewrite_integrity(run_dir, payload, bool_counter)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(EvaluationInputError, match="integer counter"):
+        evaluate_file(path, run_dir=run_dir, evidence_root=evidence_dir)
+
+
+def test_summary_acquired_mismatch_rejected(tmp_path):
+    payload, run_dir, evidence_dir, path = _build_valid_eval_env(tmp_path)
+    results_path = run_dir / "calibration_results.json"
+    results = json.loads(results_path.read_text(encoding="utf-8"))
+    results["summary"]["acquired"] = 0
+    _rewrite_artifact(run_dir, payload, "calibration_results.json", results)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(EvaluationInputError, match="summary.acquired does not match"):
+        evaluate_file(path, run_dir=run_dir, evidence_root=evidence_dir)
+
+
+def test_internal_count_inconsistency_rejected(tmp_path):
+    payload, run_dir, evidence_dir, path = _build_valid_eval_env(tmp_path)
+    results_path = run_dir / "calibration_results.json"
+    results = json.loads(results_path.read_text(encoding="utf-8"))
+    results["summary"]["measurement_failed"] = 1
+    _rewrite_artifact(run_dir, payload, "calibration_results.json", results)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(EvaluationInputError, match="measured \\+ measurement_failed"):
+        evaluate_file(path, run_dir=run_dir, evidence_root=evidence_dir)
+
+
+def test_coordinate_acquisition_status_disagreement_rejected(tmp_path):
+    payload, run_dir, evidence_dir, path = _build_valid_eval_env(tmp_path)
+    coord_path = run_dir / "coordinate_manifest.json"
+    coord = json.loads(coord_path.read_text(encoding="utf-8"))
+    coord["1ABC"]["acquisition_status"] = "failed"
+    _rewrite_artifact(run_dir, payload, "coordinate_manifest.json", coord)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(EvaluationInputError, match="acquisition status disagrees"):
+        evaluate_file(path, run_dir=run_dir, evidence_root=evidence_dir)
+
+
+def test_evaluate_file_reaches_code_sha_validation_when_all_digests_refreshed(tmp_path):
+    payload, run_dir, evidence_dir, path = _build_valid_eval_env(tmp_path)
+    policy = payload["policy_binding"]
+    manifest_path = run_dir / "run_manifest.json"
+    run_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    run_manifest["code_sha"] = "b" * 40
+    content = json.dumps(run_manifest, sort_keys=True).encode()
+    manifest_path.write_bytes(content)
+    run_hash = hashlib.sha256(content).hexdigest()
+    payload["run_inputs"]["run_manifest_sha256"] = run_hash
+
+    integrity_path = run_dir / "run_integrity_manifest.json"
+    integrity = json.loads(integrity_path.read_text(encoding="utf-8"))
+    integrity["artifact_digests"]["run_manifest.json"] = run_hash
+    icontent = json.dumps(integrity, sort_keys=True).encode()
+    integrity_path.write_bytes(icontent)
+    payload["run_inputs"]["run_integrity_manifest_sha256"] = (
+        hashlib.sha256(icontent).hexdigest())
+    _refresh_manifest(run_dir)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(EvaluationInputError, match="run manifest code_sha does not match"):
+        evaluate_file(path, run_dir=run_dir, evidence_root=evidence_dir)
+
+
+def test_evaluate_file_rejects_symlink_evidence_ref(tmp_path):
+    payload, run_dir, evidence_dir, path = _build_valid_eval_env(tmp_path)
+    label_path = evidence_dir / "labels" / "TP1.json"
+    label_path.unlink()
+    if not _try_os_symlink(run_dir / "run_manifest.json", label_path):
+        pytest.skip("os.symlink unavailable")
+    with pytest.raises(EvaluationInputError, match="traverses a symlink"):
+        evaluate_file(path, run_dir=run_dir, evidence_root=evidence_dir)
+
+
+def test_evaluate_file_rejects_symlink_parent_dir(tmp_path):
+    import shutil
+    payload, run_dir, evidence_dir, path = _build_valid_eval_env(tmp_path)
+    outside = tmp_path / "outside-ro"
+    outside.mkdir()
+    (outside / "x.json").write_bytes(json.dumps({"a": 1}).encode())
+    link_dir = evidence_dir / "labels"
+    shutil.rmtree(link_dir)
+    if not _try_os_symlink(outside, link_dir):
+        pytest.skip("os.symlink unavailable")
+    with pytest.raises(EvaluationInputError, match="traverses a symlink"):
+        evaluate_file(path, run_dir=run_dir, evidence_root=evidence_dir)
+
+
+def test_evaluate_file_rejects_symlink_in_run_dir_inventory(tmp_path):
+    payload, run_dir, evidence_dir, path = _build_valid_eval_env(tmp_path)
+    link = run_dir / "evil.txt"
+    if not _try_os_symlink(run_dir / "run_manifest.json", link):
+        pytest.skip("os.symlink unavailable")
+    with pytest.raises(EvaluationInputError, match="unexpected symlink"):
+        evaluate_file(path, run_dir=run_dir, evidence_root=evidence_dir)
+
+
+def test_evaluate_file_rejects_symlink_run_root(tmp_path):
+    payload, run_dir, evidence_dir, path = _build_valid_eval_env(tmp_path)
+    link_root = tmp_path / "run-link"
+    if not _try_os_symlink(run_dir, link_root):
+        pytest.skip("os.symlink unavailable")
+    with pytest.raises(EvaluationInputError, match="run directory must not be a symlink"):
+        evaluate_file(path, run_dir=link_root, evidence_root=evidence_dir)
