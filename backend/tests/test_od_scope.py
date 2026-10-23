@@ -168,8 +168,11 @@ class TestLaw105Coverage:
             for i in range(12):
                 atoms.append(_atom("CB", [seq * 20, i * 2, 0], seq, 10.0))
         results, coverage, _ = Tier1Measurements.run_full_audit(_structure(atoms))
-        assert coverage == 75.0
-        assert results["LAW-105"]["observed"] == 75.0
+        # No source sequence is attached -> coverage fails closed.
+        assert coverage is None
+        assert results["LAW-105"]["observed"] is None
+        assert results["LAW-105"]["status"] == "NOT_MEASURED"
+        # The observed-only residue diagnostic is separate and non-authoritative.
         assert "atom_coverage" not in results["LAW-105"]
 
     def test_residue_gate_is_authoritative_over_atom_fraction(self):

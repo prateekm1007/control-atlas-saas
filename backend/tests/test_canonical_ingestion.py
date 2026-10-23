@@ -1,6 +1,7 @@
 import gemmi
 import numpy as np
 import pytest
+import textwrap
 
 from tos.engine.identity import compute_coordinate_hash
 from tos.engine.tier1_measurements import Tier1Measurements
@@ -109,23 +110,27 @@ END
         assert all(a.pos[0] < 9.0 for a in structure.atoms)
 
     def test_experimental_coverage_is_source_backed_not_hardcoded(self):
-        pdb = """\
-HEADER    TEST
-EXPDTA    X-RAY DIFFRACTION
-ATOM      1  N   ALA A   1       0.000   0.000   0.000  1.00 20.00           N
-ATOM      2  CA  ALA A   1       1.458   0.000   0.000  1.00 20.00           C
-ATOM      3  C   ALA A   1       2.004   1.424   0.000  1.00 20.00           C
-ATOM      4  O   ALA A   1       2.445   2.573   0.000  1.00 20.00           O
-ATOM      5  CA  GLY A   2       5.000   0.000   0.000  1.00 20.00           C
-END
-"""
+        pdb = textwrap.dedent("""\
+            HEADER    TEST
+            EXPDTA    X-RAY DIFFRACTION
+            ATOM      1  N   ALA A   1       0.000   0.000   0.000  1.00 20.00           N
+            ATOM      2  CA  ALA A   1       1.458   0.000   0.000  1.00 20.00           C
+            ATOM      3  C   ALA A   1       2.004   1.424   0.000  1.00 20.00           C
+            ATOM      4  O   ALA A   1       2.445   2.573   0.000  1.00 20.00           O
+            ATOM      5  CA  GLY A   2       5.000   0.000   0.000  1.00 20.00           C
+            END
+        """)
         structure = IngestionProcessor.run(pdb.encode(), "input.pdb", "Audit", "Audit")
         results, coverage, is_experimental = Tier1Measurements.run_full_audit(structure)
         assert is_experimental is True
-        assert coverage == 50.0
-        assert results["LAW-105"]["coverage_basis"] == "complete_backbone_residues"
-        assert results["LAW-105"]["coverage_numerator"] == 1
-        assert results["LAW-105"]["coverage_denominator"] == 2
+        # No source sequence is present -> coverage fails closed (NOT_MEASURED).
+        assert coverage is None
+        assert results["LAW-105"]["observed"] is None
+        assert results["LAW-105"]["status"] == "NOT_MEASURED"
+        assert results["LAW-105"]["source_backed"] is False
+        assert results["LAW-105"]["observed_only_diagnostic_pct"] == 50.0
+        assert results["LAW-105"]["coverage_numerator"] is None
+        assert results["LAW-105"]["coverage_denominator"] is None
         assert results["LAW-105"]["source_atom_records"] == 5
 
     def test_unrecognized_source_fails_closed(self):

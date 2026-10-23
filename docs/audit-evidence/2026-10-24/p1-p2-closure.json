@@ -1,0 +1,22 @@
+{
+  "artifact": "p1-p2-closure-note",
+  "generated_at_utc": "2026-10-23T22:15:00Z",
+  "branch": {"name": "fix/residue-order-contract", "base_sha": "8a9a9c9b156f8d05a76cf88550b9a36cfb609786"},
+  "summary": "P1 ordering/adjacency unification and P2 authoritative fail-closed coverage.",
+  "p1": {
+    "basis_contract": "residue_source_order_key() is now the single canonical per-chain basis (label_seq_id > source_order > residue number), shared by tier1_measurements._order_residues and coord_math.get_sequential_residues, so the two consumers cannot order differently.",
+    "insertion_continuity": "_numeric_adjacent() requires consecutive insertion codes (abs(rank diff)==1): 184A->184C rejected (184B missing), 184A->184B accepted, 184A<->blank accepted.",
+    "gap_accounting": "LAW-110 sets unknown_gap_found when a source-consecutive pair is numbering-incompatible (e.g. chain 1,2,4,5), returning NOT_MEASURED instead of an unqualified PASS from the other measured pairs.",
+    "tests": "added: skipped insertion code, label_seq_id/source_order disagreement sharing one order, and 1,2,4,5 gap -> NOT_MEASURED."
+  },
+  "p2": {
+    "fail_closed": "When no authoritative source polymer sequence is mapped, LAW-105 is NOT_MEASURED with observed=None; returned coverage is None so the adjudicator fails closed to INDETERMINATE; the observed-only percentage is exposed only as observed_only_diagnostic_pct (never feeds the authoritative gate).",
+    "downstream": "main.py coverage_pct made None-safe; response schema coverage_pct is optional; runner.py coverage None-safe with source_backed basis.",
+    "tests": "test_missing_source_sequence_never_becomes_authoritative_pass asserts adjudicator INDETERMINATE; source-backed agreement tests preserved."
+  },
+  "test_count": {
+    "local": "python -m pytest tests/ --q under PYTHONUTF8=1: 612 passed, 3 pre-existing baseline failures (protocol CRLF, matrix-hash drift x2).",
+    "note": "Exact-SHA counts recorded here supersede prior stale evidence files (609/3, 605/3, older P1/P2/P5 counts)."
+  },
+  "limitations": "Real 1PPE/5T4O and independent deposited-mmCIF fixtures remain unavailable; P1 regressions are synthetic. Full polymer-sequence alignment (SEQRES/entity-polymer) and one-to-one mapping validation remain open (P2 complete evidence)."
+}

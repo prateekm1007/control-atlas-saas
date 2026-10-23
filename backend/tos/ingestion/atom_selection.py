@@ -82,20 +82,26 @@ def atom_sort_key(atom):
 def residue_source_order_key(atom) -> tuple:
     """Return a comparable ordering key that reflects authoritative source order.
 
-    Priority: explicit source file order (``source_order``), then the mmCIF
-    ``label_seq_id``, then the PDB residue sequence number as a deterministic
-    fallback. This is the single source of truth for residue ordering used by
-    ``Tier1Measurements._extract`` and ``coord_math.get_sequential_residues``
-    so residue identity, order, and adjacency are consistent across laws.
+    Basis precedence (one canonical contract shared by every ordering/adjacency
+    consumer):
+
+    1. valid, gap-sensitive ``label_seq_id`` (authoritative source-polymer
+       position);
+    2. deposited source file order (``source_order``);
+    3. PDB residue number (deterministic fallback).
+
+    ``_order_residues`` (tier1_measurements) and ``get_sequential_residues``
+    (coord_math) both derive from this key so residue identity, order, and
+    adjacency cannot diverge.
     """
-    source_order = getattr(atom, "source_order", None)
-    if isinstance(source_order, int) and source_order >= 0:
-        return (2, source_order)
     label_seq_id = getattr(atom, "label_seq_id", None)
     seq = int(getattr(atom, "res_seq", 0))
     if isinstance(label_seq_id, int) and label_seq_id >= 0:
-        return (1, label_seq_id)
-    return (0, seq)
+        return (0, label_seq_id)
+    source_order = getattr(atom, "source_order", None)
+    if isinstance(source_order, int) and source_order >= 0:
+        return (1, source_order)
+    return (2, seq)
 
 
 def choose_atom(current, candidate):

@@ -167,10 +167,14 @@ def test_missing_backbone_is_excluded_from_core_but_in_denominator():
     s = IngestionProcessor.run(pdb.encode(), "input.pdb", "Audit", "Audit")
     results, _, _ = Tier1Measurements.run_full_audit(s)
     law105 = results["LAW-105"]
-    assert law105["coverage_denominator"] == 2        # includes incomplete residue
-    assert law105["coverage_numerator"] == 1          # only complete backbone
+    # No source sequence is present: coverage fails closed (never an
+    # authoritative numeric percentage). The observed-only incomplete-backbone
+    # diagnostic is exposed separately.
+    assert law105["observed"] is None
+    assert law105["status"] == "NOT_MEASURED"
+    assert law105["source_backed"] is False
     assert law105["complete_backbone_residues"] == 1
-    assert law105["observed"] < 100.0                 # never fabricates 100%
+    assert law105["observed_only_diagnostic_pct"] == 50.0
 
 
 def test_multiple_chains_keep_independent_order():
@@ -282,6 +286,44 @@ def test_insertion_coded_pair_is_sequential_in_source_order():
     assert Tier1Measurements._is_sequential(residues[0], residues[1]) is True
 
 
+def test_skipped_insertion_code_is_not_sequential():
+    """184A -> 184C skips 184B: the pair must NOT be treated as adjacent."""
+    atoms = _ala("A", 184, "A", 0.0, 0.0, 0.0, src=0)
+    atoms += _ala("A", 184, "C", 3.0, 0.0, 0.0, src=1)
+    s = _fake_structure(atoms)
+    residues = Tier1Measurements._extract(s)
+    assert Tier1Measurements._is_sequential(residues[0], residues[1]) is False
+    # Consecutive codes (A,B) are adjacent.
+    atoms2 = _ala("A", 184, "A", 0.0, 0.0, 0.0, src=0)
+    atoms2 += _ala("A", 184, "B", 3.0, 0.0, 0.0, src=1)
+    r2 = Tier1Measurements._extract(_fake_structure(atoms2))
+    assert Tier1Measurements._is_sequential(r2[0], r2[1]) is True
+
+
+def test_label_seq_id_and_source_order_disagree_share_one_order():
+    """Both engine consumers must order by the SAME canonical basis when
+    label_seq_id and source_order disagree (label_seq_id wins)."""
+    atoms = _ala("A", 1, "", 0.0, 0.0, 0.0, label_seq=2, src=0)
+    atoms += _ala("A", 2, "", 3.0, 0.0, 0.0, label_seq=1, src=1)
+    s = _fake_structure(atoms)
+    ext = [(r["_seq"], r["_icode"]) for r in Tier1Measurements._extract(s)]
+    seq = [(rs, ic) for rs, ic, _ in get_sequential_residues(s.atoms, "A")]
+    assert ext == [(2, ""), (1, "")]
+    assert seq == ext
+
+
+def test_skipped_numbering_pair_cannot_pass_law110():
+    """Positions 1,2,4,5: the 2->4 skip is incomplete adjacency accounting and
+    must NOT yield an unqualified PASS from the measured 1->2 and 4->5 pairs."""
+    atoms = _ala("A", 1, "", 0.0, 0.0, 0.0, src=0)
+    atoms += _ala("A", 2, "", 3.0, 0.0, 0.0, src=1)
+    atoms += _ala("A", 4, "", 6.0, 0.0, 0.0, src=2)
+    atoms += _ala("A", 5, "", 9.0, 0.0, 0.0, src=3)
+    s = _fake_structure(atoms)
+    results, _, _ = Tier1Measurements.run_full_audit(s)
+    assert results["LAW-110"]["status"] == "NOT_MEASURED"
+
+
 def test_p2_source_backed_coverage_counts_absent_positions():
     """A missing internal source position must count against coverage: two
     observed complete residues at label_seq_id 1 and 3 of a 3-position polymer
@@ -316,13 +358,15 @@ def test_p2_source_backed_coverage_all_positions_present():
 
 
 def test_p2_unavailable_source_is_non_authoritative():
-    """Without authoritative source positions coverage is computed from observed
-    residues but explicitly marked non-authoritative (source_backed=False)."""
+    """Without authoritative source positions coverage is NOT_MEASURED and
+    fail-closed; no observed-only numeric coverage becomes authoritative."""
     atoms = _ala("A", 1, "", 0.0, 0.0, 0.0, src=0)
     atoms += _ala("A", 2, "", 3.0, 0.0, 0.0, src=1)
     s = _fake_structure(atoms)   # no source_sequences
-    results, _, _ = Tier1Measurements.run_full_audit(s)
+    results, coverage, _ = Tier1Measurements.run_full_audit(s)
     law105 = results["LAW-105"]
     assert law105["source_backed"] is False
-    assert law105["coverage_basis"] == "complete_backbone_residues"
-    assert "not source-backed" in law105.get("note", "")
+    assert law105["coverage_basis"] == "unavailable"
+    assert law105["observed"] is None
+    assert law105["status"] == "NOT_MEASURED"
+    assert coverage is None

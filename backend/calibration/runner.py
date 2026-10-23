@@ -697,8 +697,9 @@ def measure_target(content: bytes, ingest_mode: str) -> dict:
     return {
         "verdict": result.verdict,
         "verdict_reason": result.verdict_reason,
-        "coverage": round(coverage, 2),
-        "coverage_basis": "residues",
+        "coverage": round(coverage, 2) if coverage is not None else None,
+        "coverage_basis": raw.get("LAW-105", {}).get("coverage_basis", "unavailable"),
+        "source_backed": raw.get("LAW-105", {}).get("source_backed", False),
         "is_experimental": is_experimental,
         "method_type": method_type,
         "resolution": getattr(structure.confidence, "resolution", None),

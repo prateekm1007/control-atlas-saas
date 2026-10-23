@@ -202,7 +202,7 @@ def _run_physics_sync(content_bytes: bytes, candidate_id: str, mode: str, t3_cat
             "det_score_normalized": adj_result.det_score_normalized,
             "det_passed_normalized": adj_result.det_passed_normalized, 
             "heur_passed": heur_passed, "heur_total": HEURISTIC_COUNT, 
-            "coverage_pct": round(coverage, 2),
+            "coverage_pct": round(coverage, 2) if coverage is not None else None,
             "coverage_basis": coverage_details.get("coverage_basis", "residues"),
             "coverage_numerator": coverage_details.get("coverage_numerator"),
             "coverage_denominator": coverage_details.get("coverage_denominator"),

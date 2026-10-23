@@ -48,7 +48,7 @@ class AdjudicationVerdict(BaseModel):
     det_total: int = Field(..., ge=0)
     heur_passed: int = Field(..., ge=0)
     heur_total: int = Field(..., ge=0)
-    coverage_pct: float = Field(..., ge=0, le=100)
+    coverage_pct: Optional[float] = Field(None, ge=0, le=100)
     coverage_numerator: Optional[int] = Field(None, ge=0)
     coverage_denominator: Optional[int] = Field(None, ge=0)
     coverage_required_atoms: Optional[str] = None

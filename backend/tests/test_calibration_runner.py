@@ -38,7 +38,7 @@ def test_measure_target_uses_live_engine_and_counts_deterministic_laws():
     measured = runner.measure_target(_pdb_bytes(), "experimental")
     assert measured["verdict"] in {"PASS", "VETO", "INDETERMINATE"}
     assert measured["det_total"] == runner.DETERMINISTIC_COUNT
-    assert measured["coverage"] == 100.0
+    assert measured["coverage"] is None  # source sequence unavailable -> fail-closed
     assert measured["atoms"] > 0
     assert measured["is_experimental"] is True
     assert set(measured["laws"]) == set(runner.LAW_CANON)
@@ -55,7 +55,7 @@ def test_measure_target_forces_predicted_source_regime():
     measured = runner.measure_target(_pdb_bytes(), "predicted")
     assert measured["is_experimental"] is False
     assert measured["method_type"] == "predicted"
-    assert measured["coverage"] < 100.0
+    assert measured["coverage"] is None  # source sequence unavailable -> fail-closed
 
 
 def test_measure_target_rejects_json_and_empty_atoms():

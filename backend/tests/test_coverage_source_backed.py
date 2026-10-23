@@ -48,13 +48,36 @@ def test_returned_coverage_agrees_with_law105_source_backed():
 
 
 def test_missing_source_sequence_never_becomes_authoritative_pass():
+    """Without authoritative source polymer positions, LAW-105 is NOT_MEASURED
+    (observed=None) and the returned coverage is None so the adjudicator fails
+    closed to INDETERMINATE — an observed-only percentage cannot pass."""
+    from tos.engine.adjudicator import AdjudicationInput, adjudicate_laws
+    from tos.governance.station_sop import LAW_CANON
+
     atoms = _ala("A", 1, "", 0.0, None, 0) + _ala("A", 2, "", 3.0, None, 1)
     s = _structure(atoms)   # no source sequence
     results, coverage, _ = Tier1Measurements.run_full_audit(s)
     law105 = results["LAW-105"]
     assert law105["source_backed"] is False
-    assert "not source-backed" in law105.get("note", "")
-    assert coverage == pytest.approx(law105["observed"], abs=0.01)
+    assert law105["observed"] is None
+    assert law105["status"] == "NOT_MEASURED"
+    assert coverage is None
+    assert law105["observed_only_diagnostic_pct"] == 100.0
+
+    # The authoritative verdict fails closed to INDETERMINATE when coverage is
+    # unavailable, even with all other deterministic laws passing.
+    measurements = {
+        lid: {"observed": 0.0, "deviation": "0.0", "sample": 100, "status": "PASS"}
+        for lid in LAW_CANON
+    }
+    res = adjudicate_laws(AdjudicationInput(
+        raw_measurements=measurements,
+        coverage=coverage,          # None
+        is_experimental=True,
+        method_type="xray",
+        architecture="NONE",
+    ))
+    assert res.verdict == "INDETERMINATE"
 
 
 def test_coverage_cannot_exceed_100():

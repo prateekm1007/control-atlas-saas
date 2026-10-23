@@ -94,7 +94,13 @@ class Tier1Measurements:
         i1 = normalize_insertion_code(r1.get("_icode", ""))
         i2 = normalize_insertion_code(r2.get("_icode", ""))
         if s2 == s1:
-            return i1 != i2
+            # Same residue number: adjacent only if the two insertion codes are
+            # CONSECUTIVE in the insertion alphabet (blank < A < B < ...). A
+            # jump (e.g. 184A -> 184C) leaves 184B potentially missing, so the
+            # pair is NOT adjacent regardless of source-order direction.
+            rank1 = INSERTION_RANK.get(i1, -1)
+            rank2 = INSERTION_RANK.get(i2, -1)
+            return rank1 != -1 and rank2 != -1 and abs(rank2 - rank1) == 1
         if s2 == s1 + 1:
             return (not i1 and not i2) or (bool(i1) and not i2)
         return False
@@ -297,17 +303,21 @@ class Tier1Measurements:
                 (numerator_positions / denominator_positions * 100)
                 if denominator_positions else 0.0
             )
+            observed_only_diagnostic_pct = None
         else:
-            if is_experimental:
-                coverage_basis = "complete_backbone_residues"
-            else:
-                coverage_basis = "plddt_core_complete_backbone_residues"
+            # No authoritative source-polymer mapping: coverage cannot be
+            # established. The observed-only percentage is exposed only as a
+            # clearly separate non-authoritative diagnostic and never feeds the
+            # authoritative coverage gate.
+            coverage_basis = "unavailable"
             source_backed = False
-            denominator_positions = len(residues)
-            numerator_positions = len(core)
-            coverage = (
-                (numerator_positions / denominator_positions * 100)
-                if denominator_positions else 0.0
+            denominator_positions = None
+            numerator_positions = None
+            coverage = None
+            diag_denom = len(residues)
+            diag_num = len(core)
+            observed_only_diagnostic_pct = (
+                (diag_num / diag_denom * 100) if diag_denom else 0.0
             )
 
         results = {}
@@ -349,24 +359,33 @@ class Tier1Measurements:
         # ═══════════════════════════════════════════════════════════
         metadata = getattr(structure, "metadata", None)
         law105 = {
-            "observed": round(coverage, 2),
-            "status": "PASS" if coverage >= 70.0 else "FAIL",
-            "sample": len(residues),
             "coverage_basis": coverage_basis,
             "source_backed": source_backed,
             "coverage_numerator": numerator_positions,
             "coverage_denominator": denominator_positions,
+            "observed_only_diagnostic_pct": observed_only_diagnostic_pct,
             "required_atoms": "N,CA,C",
             "complete_backbone_residues": len(complete),
             "source_atom_records": getattr(metadata, "source_atom_records", None),
             "selected_atoms": getattr(metadata, "selected_atoms", None),
             "malformed_atom_records": getattr(metadata, "malformed_records", None),
         }
-        if not source_backed:
-            law105["note"] = (
-                "source polymer sequence unavailable; coverage is computed from "
-                "observed residues and is not source-backed / not authoritative"
-            )
+        if source_backed:
+            law105.update({
+                "observed": round(coverage, 2),
+                "status": "PASS" if coverage >= 70.0 else "FAIL",
+                "sample": len(residues),
+            })
+        else:
+            law105.update({
+                "observed": None,
+                "status": "NOT_MEASURED",
+                "sample": len(residues),
+                "reason": (
+                    "source polymer sequence unavailable; coverage cannot be "
+                    "established authoritatively"
+                ),
+            })
         results["LAW-105"] = law105
 
         # ═══════════════════════════════════════════════════════════
@@ -385,6 +404,11 @@ class Tier1Measurements:
             if gap_known and pos_delta > 1:
                 # A genuine source polymer position lies between observed residues;
                 # peptide-bond accounting cannot be assumed complete.
+                unknown_gap_found = True
+                continue
+            if pos_delta == 1 and not Tier1Measurements._is_sequential(r1, r2):
+                # Source-consecutive but numbering-incompatible: a position is
+                # missing between them; do not silently skip to a favorable PASS.
                 unknown_gap_found = True
                 continue
             if not Tier1Measurements._is_sequential(r1, r2):
