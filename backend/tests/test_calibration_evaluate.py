@@ -438,6 +438,14 @@ def test_evaluate_file_verifies_bound_run_inputs(tmp_path):
             "policy_binding": policy,
         },
         "coordinate_manifest.json": {},
+        "run_integrity_manifest.json": {
+            "run_status": "complete",
+            "run_type": "authoritative",
+            "expected_target_count": 1,
+            "acquired_count": 1,
+            "measured_count": 1,
+            "policy_binding": policy,
+        },
         "calibration_results.json": {
             "meta": {
                 "code_sha": policy["code_sha"],
@@ -453,6 +461,8 @@ def test_evaluate_file_verifies_bound_run_inputs(tmp_path):
         content = json.dumps(files[filename], sort_keys=True).encode()
         (run_dir / filename).write_bytes(content)
         payload["run_inputs"][field] = hashlib.sha256(content).hexdigest()
+    integrity_content = json.dumps(files["run_integrity_manifest.json"], sort_keys=True).encode()
+    (run_dir / "run_integrity_manifest.json").write_bytes(integrity_content)
     path.write_text(json.dumps(payload), encoding="utf-8")
     report = evaluate_file(path, run_dir=run_dir)
     assert report["run_inputs_verified"] is True

@@ -777,16 +777,30 @@ def _verify_run_inputs(run_inputs: dict, run_dir: Path,
                  f"run input digest mismatch: {filename}")
 
     integrity_path = run_dir / "run_integrity_manifest.json"
-    if integrity_path.is_file():
-        integrity = json.loads(integrity_path.read_text(encoding="utf-8"))
-        _require(isinstance(integrity, dict), "run integrity manifest must be an object")
-        integrity_policy = integrity.get("policy_binding")
-        _require(isinstance(integrity_policy, dict),
-                 "run integrity manifest policy_binding is missing")
-        for field in ("canon_hash", "law_semantic_hash",
-                      "modality_matrix_sha256", "law_registry_sha256"):
-            _require(integrity_policy.get(field) == policy_binding[field],
-                     f"run integrity manifest policy_binding.{field} mismatch")
+    _require(integrity_path.is_file(),
+             "run_integrity_manifest.json is required for authoritative evaluation")
+    integrity = json.loads(integrity_path.read_text(encoding="utf-8"))
+    _require(isinstance(integrity, dict), "run integrity manifest must be an object")
+    integrity_policy = integrity.get("policy_binding")
+    _require(isinstance(integrity_policy, dict),
+             "run integrity manifest policy_binding is missing")
+    for field in ("canon_hash", "law_semantic_hash",
+                  "modality_matrix_sha256", "law_registry_sha256"):
+        _require(integrity_policy.get(field) == policy_binding[field],
+                 f"run integrity manifest policy_binding.{field} mismatch")
+    _require(integrity.get("run_status") == "complete",
+             "run integrity manifest requires run_status=complete")
+    expected = integrity.get("expected_target_count")
+    acquired = integrity.get("acquired_count")
+    measured = integrity.get("measured_count")
+    _require(isinstance(expected, int) and expected > 0,
+             "run integrity manifest requires positive expected_target_count")
+    _require(isinstance(acquired, int) and acquired == expected,
+             "run integrity manifest: acquired != expected")
+    _require(isinstance(measured, int) and measured == expected,
+             "run integrity manifest: measured != expected")
+    _require(integrity.get("run_type") != "diagnostic",
+             "diagnostic-only runs cannot be used as authoritative evidence")
 
     manifest = json.loads(
         (run_dir / "run_manifest.json").read_text(encoding="utf-8"))
