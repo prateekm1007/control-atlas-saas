@@ -111,7 +111,20 @@
       ],
       "acceptance": "LAW-155 advisory-only non-blocking end-to-end (adjudicator + API + PDF); hash locks re-pinned with old/new digests recorded in register Part-16 D6; unrelated law semantics unchanged; full backend suite green."
     },
-    "P6": { "title": "Gemmi/altloc/HETATM/PDB-mmCIF parity proof", "status": "pending" },
+    "P6": {
+      "title": "Gemmi/altloc/HETATM/PDB-mmCIF parity proof",
+      "status": "implemented",
+      "verdict_impact": "None (additive verification). Added PDB/mmCIF parity tests through the Gemmi ingestion path: both formats accepted; residue identity parity; per-law status and observed-value parity against the same structure. Existing altloc/HETATM tests retained. No engine behavior changed.",
+      "files_changed": [
+        "backend/tests/test_pdb_mmcif_parity.py"
+      ],
+      "regression_tests": [
+        "tests/test_pdb_mmcif_parity.py::TestPDBMMcifParity::test_ingestion_accepts_both_formats",
+        "tests/test_pdb_mmcif_parity.py::TestPDBMMcifParity::test_residue_identity_parity",
+        "tests/test_pdb_mmcif_parity.py::TestPDBMMcifParity::test_per_law_output_parity"
+      ],
+      "acceptance": "PDB and mmCIF ingestion of the same structure agree on residue identity, coverage, and per-law statuses/observed values. Full backend suite green."
+    },
     "P7": { "title": "Canonical OD-07 audit-ID binding", "status": "pending" },
     "P8": { "title": "Calibration diagnostic-only", "status": "pending" }
   },
