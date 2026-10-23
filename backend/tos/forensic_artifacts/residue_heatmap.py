@@ -21,14 +21,23 @@ CMAP = ListedColormap([
 NORM = BoundaryNorm([0, 50, 70, 90, 100], CMAP.N)
 
 
-def generate_residue_heatmap_png(plddt_scores, title="Per-Residue Confidence (pLDDT)",
+def generate_residue_heatmap_png(plddt_scores, title="Per-Residue Confidence",
+                                  metric_label="pLDDT",
                                   figwidth=7.0, figheight=1.8, dpi=200):
-    """Return PNG bytes of the residue-level confidence heatmap."""
+    """Return PNG bytes of the residue-level pLDDT heatmap.
+
+    ``metric_label`` names the measured statistic in the axis label. Only
+    observation-backed pLDDT values may be passed here; missing values are
+    never imputed.
+    """
     n = len(plddt_scores)
     if n == 0:
         return _empty_png(figwidth, dpi)
 
-    scores = np.clip(np.array(plddt_scores, dtype=np.float64), 0, 100)
+    scores = np.array(plddt_scores, dtype=np.float64)
+    if not np.all(np.isfinite(scores)):
+        return _empty_png(figwidth, dpi)
+    scores = np.clip(scores, 0, 100)
     res_ids = np.arange(1, n + 1)
 
     fig, (ax_t, ax_s) = plt.subplots(
@@ -59,7 +68,7 @@ def generate_residue_heatmap_png(plddt_scores, title="Per-Residue Confidence (pL
         ax_t.text(n + 0.8, th, str(th), fontsize=5, color="#999", va="center")
     ax_t.set_xlim(0.5, n + 0.5)
     ax_t.set_ylim(0, 105)
-    ax_t.set_ylabel("pLDDT", fontsize=7, color="#333")
+    ax_t.set_ylabel(metric_label, fontsize=7, color="#333")
     ax_t.set_title(title, fontsize=9, color="#333", pad=6)
     ax_t.tick_params(axis="both", labelsize=6)
     ax_t.set_xticks([])

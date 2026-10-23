@@ -1,3 +1,4 @@
+import math
 from fpdf import FPDF
 from .confidence_viz import generate_confidence_bar
 from .structure_viz import generate_structure_render
@@ -91,8 +92,13 @@ class ToscaniniDossier(FPDF):
 
 def _extract_ca_atoms(pdb_b64):
     """Extract CA atom coordinates and B-factors from base64-encoded PDB.
-    Used for 3D structure visualization in the forensic dossier.
-    Returns: (list of (x,y,z) tuples, list of confidence floats)"""
+
+    Missing B-factors are returned as ``None``. A value is never fabricated:
+    an absent observation must stay absent so the caller cannot present it as
+    a pLDDT or confidence score.
+
+    Returns: (list of (x,y,z) tuples, list of B-factor floats or None)
+    """
     import base64 as _b64
     coords, confidences = [], []
     try:
@@ -101,15 +107,18 @@ def _extract_ca_atoms(pdb_b64):
             if line.startswith("ATOM") and len(line) >= 54:
                 atom_name = line[12:16].strip()
                 if atom_name == "CA":
-                    x = float(line[30:38])
-                    y = float(line[38:46])
-                    z = float(line[46:54])
+                    try:
+                        x = float(line[30:38])
+                        y = float(line[38:46])
+                        z = float(line[46:54])
+                    except (ValueError, IndexError):
+                        continue
                     coords.append((x, y, z))
                     try:
                         bfactor = float(line[60:66])
-                        confidences.append(bfactor)
                     except (ValueError, IndexError):
-                        confidences.append(50.0)
+                        bfactor = None
+                    confidences.append(bfactor)
     except Exception:
         pass
     return coords, confidences
@@ -128,6 +137,29 @@ def _find_low_regions(confidences, threshold=50.0, min_length=3):
     if in_r and (len(confidences) - start) >= min_length:
         regions.append((start + 1, len(confidences)))
     return regions
+
+
+def _confidence_plot_mode(conf_meta, confidences):
+    """Return the only source-truthful plot mode for confidence data.
+
+    A pLDDT colour scale/heatmap is permitted only when the source really is
+    pLDDT, the payload declares observations, and at least three observed
+    values exist. B-factor and unavailable sources are never plotted as
+    pLDDT.
+    """
+    source = str((conf_meta or {}).get("source_type", "unavailable"))
+    observed = [
+        c for c in confidences
+        if c is not None and isinstance(c, (int, float))
+        and math.isfinite(float(c))
+    ]
+    plot_as_plddt = (
+        source == "pLDDT"
+        and (conf_meta or {}).get("data_available") is True
+        and len(observed) >= 3
+    )
+    all_plddt = plot_as_plddt and len(observed) == len(confidences)
+    return source, observed, plot_as_plddt, all_plddt
 
 def generate_v21_dossier(payload):
     try:
@@ -500,11 +532,18 @@ def generate_v21_dossier(payload):
         # ══════ STRUCTURAL VISUALIZATION PAGE ══════
         pdf.add_page()
         pdf.section_title("Structural Visualization")
-        pdf.section_divider("3D CA-TRACE RENDER (CONFIDENCE-COLORED)", 20, 60, 120)
-        pdf.ln(3)
 
         pdb_b64_data = payload.get("pdb_b64", "")
         ca_coords, ca_confidences = _extract_ca_atoms(pdb_b64_data)
+        conf_source, _observed, _plot_as_plddt, _all_plddt = _confidence_plot_mode(
+            conf_meta, ca_confidences)
+
+        pdf.section_divider(
+            "3D CA-TRACE RENDER (pLDDT-COLORED)" if _plot_as_plddt
+            else "3D CA-TRACE RENDER (COORDINATES ONLY)",
+            20, 60, 120,
+        )
+        pdf.ln(3)
 
         if len(ca_coords) > 500:
             step = max(1, len(ca_coords) // 500)
@@ -517,7 +556,12 @@ def generate_v21_dossier(payload):
         if ca_coords_plot and len(ca_coords_plot) >= 3:
             try:
                 _rtitle = "CA Trace - %s (%d residues)" % (prov.get("source", "Unknown"), len(ca_coords))
-                render_png = generate_structure_render(ca_coords_plot, ca_conf_plot, _rtitle)
+                if _plot_as_plddt:
+                    _rtitle += " - observed pLDDT"
+                render_png = generate_structure_render(
+                    ca_coords_plot, ca_conf_plot, _rtitle,
+                    metric_label="pLDDT" if _plot_as_plddt else None,
+                )
                 import tempfile as _tf
                 with _tf.NamedTemporaryFile(suffix=".png", delete=False) as _tmp:
                     _tmp.write(render_png)
@@ -528,9 +572,26 @@ def generate_v21_dossier(payload):
                 pdf.ln(5)
                 pdf.set_font("Helvetica", "", 8)
                 pdf.set_text_color(*PDF_COLORS["TEXT_MUTED"])
-                _atom_msg = "Atoms plotted: %d CA | Colored by pLDDT/B-factor" % len(ca_coords)
-                pdf.cell(w, 5, _atom_msg, ln=True, align="C")
-                pdf.cell(w, 5, "Blue (>=90) | Light Blue (70-90) | Orange (50-70) | Red (<50)", ln=True, align="C")
+                if _plot_as_plddt:
+                    _missing = len(ca_confidences) - len(_observed)
+                    _atom_msg = (
+                        "Atoms plotted: %d CA | Colored by observed pLDDT (n=%d)"
+                        % (len(ca_coords), len(_observed))
+                    )
+                    if _missing:
+                        _atom_msg += " | %d unavailable shown neutral" % _missing
+                    pdf.cell(w, 5, _atom_msg, ln=True, align="C")
+                    pdf.cell(w, 5, "Blue (>=90) | Light Blue (70-90) | Orange (50-70) | Red (<50) | Grey (unavailable)",
+                             ln=True, align="C")
+                elif conf_source == "B-factor":
+                    pdf.cell(w, 5, "Atoms plotted: %d CA | Coordinates only; B-factor is not pLDDT and is not plotted as confidence"
+                             % len(ca_coords), ln=True, align="C")
+                elif conf_source == "unavailable":
+                    pdf.cell(w, 5, "Atoms plotted: %d CA | Coordinates only; no confidence observation available"
+                             % len(ca_coords), ln=True, align="C")
+                else:
+                    pdf.cell(w, 5, "Atoms plotted: %d CA | Coordinates only; source %s is not plotted as pLDDT"
+                             % (len(ca_coords), conf_source), ln=True, align="C")
                 pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
             except Exception:
                 pdf.set_font("Helvetica", "I", 9)
@@ -539,14 +600,14 @@ def generate_v21_dossier(payload):
             pdf.set_font("Helvetica", "I", 9)
             pdf.cell(w, 8, "[Insufficient CA atoms for 3D visualization]", ln=True, align="C")
 
-        # ── RESIDUE-LEVEL CONFIDENCE HEATMAP (below 3D render) ──
-        if ca_confidences and len(ca_confidences) >= 3:
+        # ── RESIDUE-LEVEL pLDDT HEATMAP (only observed pLDDT) ──
+        if _all_plddt:
             try:
                 import tempfile as _tf_hm
                 import os as _os_hm
-                _hm_title = "Per-Residue Confidence - %d residues" % len(ca_confidences)
+                _hm_title = "Per-Residue pLDDT - %d residues" % len(ca_confidences)
                 heatmap_png = generate_residue_heatmap_png(
-                    ca_confidences, title=_hm_title,
+                    ca_confidences, title=_hm_title, metric_label="pLDDT",
                     figwidth=7.0, figheight=1.8, dpi=200,
                 )
                 with _tf_hm.NamedTemporaryFile(suffix=".png", delete=False) as _tmp_hm:
@@ -554,13 +615,13 @@ def generate_v21_dossier(payload):
                     _hm_path = _tmp_hm.name
                 if pdf.get_y() > 200:
                     pdf.add_page()
-                    pdf.section_divider("RESIDUE-LEVEL CONFIDENCE DISTRIBUTION", 20, 60, 120)
+                    pdf.section_divider("RESIDUE-LEVEL pLDDT DISTRIBUTION", 20, 60, 120)
                     pdf.ln(2)
                 else:
                     pdf.ln(6)
                     pdf.set_font("Helvetica", "B", 9)
                     pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
-                    pdf.cell(w, 6, "RESIDUE-LEVEL CONFIDENCE DISTRIBUTION", ln=True)
+                    pdf.cell(w, 6, "RESIDUE-LEVEL pLDDT DISTRIBUTION", ln=True)
                     pdf.ln(2)
                 pdf.image(_hm_path, x=15, w=180)
                 pdf.set_y(pdf.get_y() + 2)
@@ -580,7 +641,7 @@ def generate_v21_dossier(payload):
                     if low_regions:
                         pdf.set_text_color(*PDF_COLORS["VETO"])
                         pdf.set_font("Helvetica", "B", 7)
-                        pdf.cell(w, 4, "Low-confidence regions: residues %s" % ", ".join(
+                        pdf.cell(w, 4, "Regions with pLDDT below 50: residues %s" % ", ".join(
                             ["%d-%d" % (s, e) for s, e in low_regions]), ln=True, align="C")
                 pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
                 pdf.ln(2)
@@ -588,6 +649,31 @@ def generate_v21_dossier(payload):
                 pdf.set_font("Helvetica", "I", 8)
                 pdf.cell(w, 5, "[Residue heatmap could not be generated]", ln=True, align="C")
                 pdf.ln(2)
+        elif len(ca_coords) >= 3:
+            pdf.ln(4)
+            pdf.set_font("Helvetica", "I", 7)
+            pdf.set_text_color(*PDF_COLORS["TEXT_MUTED"])
+            if conf_source == "B-factor":
+                _omit_msg = (
+                    "Residue heatmap omitted: B-factor observations are not pLDDT; "
+                    "no pLDDT distribution was substituted."
+                )
+            elif conf_source == "unavailable":
+                _omit_msg = "Residue heatmap omitted: no confidence observations are available."
+            elif _plot_as_plddt:
+                _omit_msg = (
+                    "Residue pLDDT heatmap omitted: %d of %d CA atoms have no pLDDT "
+                    "observation; values were not imputed."
+                    % (len(ca_confidences) - len(_observed), len(ca_confidences))
+                )
+            else:
+                _omit_msg = (
+                    "Residue heatmap omitted: source %s is not observation-backed pLDDT."
+                    % conf_source
+                )
+            pdf.multi_cell(w, 4, _omit_msg, align="C")
+            pdf.set_text_color(*PDF_COLORS["TEXT_PRIMARY"])
+            pdf.ln(2)
 
 
         pdf.add_page()
