@@ -95,3 +95,35 @@ This addendum reconciles the v1 protocol with the engine audit by:
 5. Not authorizing any new calibration evidence generation
 
 OD-16 remains in force.
+
+---
+
+## 6. Evaluator trust-boundary reconciliation (2026-10-24, append-only)
+
+This section is a dated, append-only reconciliation added during the evaluator
+hardening session; it does not modify earlier sections. Independent-review
+status remains PENDING until a genuine review occurs.
+
+- The calibration evaluator (`backend/calibration/evaluate.py`) was hardened on
+  `feature/evaluator-trust-boundary` (base `8a9a9c9`): traversal/symlink-safe
+  path validation, exact integrity-manifest artifact schema, recursive
+  `MANIFEST.sha256` verification that fails closed on unexpected filesystem
+  objects, and cross-manifest target/count/status reconciliation.
+- The evaluator's diagnostic-only posture is preserved: `run_type=diagnostic`
+  remains rejected by authoritative evaluation, and runner output is not
+  changed to authoritative. The evaluator carries a explicit trust-boundary
+  caveat: digests are verified, but authenticity depends on a trusted run
+  identity / code-provenance binding that is not yet established.
+- The external validator (`backend/calibration/external_validation.py`) remains
+  a skeleton; no verified 200-structure, four-category validation result
+  exists. It is not presented as executed.
+- CI evidence on the exact candidate tip `87623b3`:
+  - Toscanini Stability Gate run 40013196771: success.
+  - Governance Acceptance run 40013196808: failure, limited to the historical
+    push-log remote-reference set (branches pruned from the remote; a separate
+    reviewed reconciliation is required). Package manifest, acceptance suite,
+    secret scan, and all other governance jobs pass.
+- Policy hashes: canon `f24ec581b3e04732` and law-semantic `d2b3b850…`
+  unchanged. Modality-matrix hash computes as `b1249ced…`, which differs from
+  the locked value `ed1731ace09a…`; this drift is pre-existing and is NOT
+  modified by this session (matrix semantics are OD-frozen).
