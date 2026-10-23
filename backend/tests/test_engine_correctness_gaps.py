@@ -11,7 +11,7 @@ from tos.ingestion.processor import IngestionError, IngestionProcessor
 class TestAltlocEdgeCases:
     """Tied, absent, zero, and malformed occupancies in alternate-conformer selection."""
 
-    def test_tied_occupancy_prefers_blank_altloc(self):
+    def test_tied_occupancy_prefers_lexicographic(self):
         pdb = """\
 ATOM      1  N   ALA A   1       0.000   0.000   0.000  1.00 90.00           N
 ATOM      2  CA AALA A   1       1.458   0.000   0.000  0.50 90.00           C
@@ -84,6 +84,19 @@ END
         assert n.altloc == ""  # universal
         assert ca.altloc == "A"  # dominant conformer (occ 0.6 > 0.4)
 
+
+    def test_blank_altloc_preferred_over_alternate(self):
+        pdb = (
+            "ATOM      1  N   ALA A   1       0.000   0.000   0.000  0.50 90.00           N\n"
+            "ATOM      2  CA  ALA A   1       1.458   0.000   0.000  0.50 90.00           C\n"
+            "ATOM      3  CA AALA A   1       1.500   0.000   0.000  0.50 90.00           C\n"
+            "ATOM      4  C   ALA A   1       2.004   1.424   0.000  1.00 90.00           C\n"
+            "ATOM      5  O   ALA A   1       2.445   2.573   0.000  1.00 90.00           O\n"
+            "END\n"
+        )
+        s = IngestionProcessor.run(pdb.encode(), "input.pdb", "Audit", "Audit")
+        ca = next(a for a in s.atoms if a.atom_name == "CA")
+        assert ca.altloc == ""  # blank preferred over A at equal occupancy
 
 class TestIngestionErrorPropagation:
     """IngestionError must propagate through all entry points."""
