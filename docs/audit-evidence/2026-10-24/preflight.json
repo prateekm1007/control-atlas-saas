@@ -1,0 +1,50 @@
+{
+  "artifact": "workspace-preflight",
+  "generated_at_utc": "2026-10-23T19:05:02Z",
+  "repository": {
+    "remote_origin": "https://github.com/prateekm1007/control-atlas-saas.git",
+    "intended_repo": "prateekm1007/control-atlas-saas",
+    "confirmed": true
+  },
+  "branch": {
+    "name": "feature/evaluator-trust-boundary",
+    "based_on": "integration/od-scope-v25-2026-10-23",
+    "head_sha": "8a9a9c9b156f8d05a76cf88550b9a36cfb609786",
+    "base_main_sha": "63da0e347002ed9b77071ff1ed0cefda7c0ce88a",
+    "main_is_ancestor": true,
+    "commits_ahead_of_main": 25
+  },
+  "git": {
+    "version": "git version 2.56.0.windows.2",
+    "working_tree_clean": true
+  },
+  "identity_checks": {
+    "origin_matches_intended": true,
+    "integration_branch_exists_and_sha_matches_expected": true,
+    "expected_integration_sha": "8a9a9c9b156f8d05a76cf88550b9a36cfb609786",
+    "current_integration_sha": "8a9a9c9b156f8d05a76cf88550b9a36cfb609786",
+    "main_sha_matches_expected": true,
+    "expected_main_sha": "63da0e347002ed9b77071ff1ed0cefda7c0ce88a",
+    "ancestry_verified": true,
+    "abort_on_failure": true,
+    "all_identity_checks_pass": true
+  },
+  "source_paths": {
+    "AGENTS.md": "85767237399ffb30f3e45894d9dfbe6f4240584f",
+    "constitution.md": "211ad2c5d4b40059d9f3f03de12e0701f9235bc7",
+    "ENGINEERING_CONSTITUTION.md": "b6bb35e84956d84a8c9d9e65734c212baf3ed075",
+    "docs/coder/BRIEF.md": "052a84ca829d321dc0841a4b1c8702145dcbf6b5",
+    "docs/decisions/OWNER_DECISIONS.md": "12906bf5997a3e2c6b5c41e5d5c60fee14613274",
+    "docs/P0_STATUS.md": "a31517abbc046c495930ba19ef7aeaf8bb72f2d0",
+    "backend/calibration/evaluate.py": "4ea8ef5e621dbf47606a03b3d4adf0060b58f92f",
+    "backend/calibration/runner.py": "4e0ec1bbec66df95c38876094cfdcba5fb632ae8",
+    "backend/tos/engine/tier1_measurements.py": "1921d107a49ff7aea9fe8e697146b651dd47befc",
+    "backend/tos/engine/tier2_measurements.py": "598e6d110622ec9663ca31961367b97525773b9e",
+    "backend/tos/engine/tier1_laws.py": "92865b9bea8e6b5433eb89b866bb50e5e39e4b37",
+    "backend/tos/ingestion/processor.py": "245ddc6f3f367805cc5d8eab7a89645d3f6d1156",
+    "backend/tests/test_calibration_evaluate.py": "f5c5cbeb02ea3d966c8f9710b755973d4492d41e",
+    "backend/tests/test_calibration_runner.py": "3b6d9ade8b17aaef3160d4073d87d7512074db08",
+    "governance/law_registry.yaml": "af5f98a1e9f411a311b613f4a74e19fc6907a314"
+  },
+  "note": "All identity checks passed; all expected source paths present at the verified candidate. Per owner direction, this environment is a clean isolated clone; the broken discovery-evidence-fabric workspace was left untouched."
+}
