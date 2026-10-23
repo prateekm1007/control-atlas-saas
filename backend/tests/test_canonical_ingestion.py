@@ -112,6 +112,7 @@ END
         pdb = """\
 HEADER    TEST
 EXPDTA    X-RAY DIFFRACTION
+SEQRES   1 A    2  ALA GLY
 ATOM      1  N   ALA A   1       0.000   0.000   0.000  1.00 20.00           N
 ATOM      2  CA  ALA A   1       1.458   0.000   0.000  1.00 20.00           C
 ATOM      3  C   ALA A   1       2.004   1.424   0.000  1.00 20.00           C
@@ -123,9 +124,12 @@ END
         results, coverage, is_experimental = Tier1Measurements.run_full_audit(structure)
         assert is_experimental is True
         assert coverage == 50.0
-        assert results["LAW-105"]["coverage_basis"] == "complete_backbone_residues"
+        # P2: coverage is source-backed from the polymer sequence (SEQRES), not
+        # hardcoded from observed coordinates.
+        assert results["LAW-105"]["coverage_basis"] == "source_polymer_sequence"
         assert results["LAW-105"]["coverage_numerator"] == 1
         assert results["LAW-105"]["coverage_denominator"] == 2
+        assert results["LAW-105"]["source_sequence_available"] is True
         assert results["LAW-105"]["source_atom_records"] == 5
 
     def test_unrecognized_source_fails_closed(self):

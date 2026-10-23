@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Dict, List, Optional
 import math
 import re
 
@@ -66,6 +66,11 @@ class IngestionMetadata:
     altloc_selected_atoms: int = 0
     missing_occupancy: int = 0
     missing_b_factor: int = 0
+    # Source polymer-sequence coverage metadata (P2 source-backed coverage).
+    # per chain id -> number of residues in the authoritative polymer sequence
+    # (PDB SEQRES / mmCIF entity_poly_seq) for that chain's entity.
+    source_polymer_residues_by_chain: Dict[str, int] = field(default_factory=dict)
+    source_sequence_available: bool = False
     warnings: List[str] = field(default_factory=list)
 
 
@@ -201,6 +206,46 @@ def _normalize_chain(value) -> str:
     return "" if text in {"?", "."} else text
 
 
+def _source_polymer_positions(structure, model):
+    """Return (by_chain, available).
+
+    by_chain maps a normalized chain id to the number of residues in the
+    authoritative polymer sequence for that chain's entity (PDB SEQRES or
+    mmCIF entity_poly_seq). This count may exceed the number of residues
+    observed in the coordinate records (unresolved/absent positions), which
+    is exactly the source-backed coverage denominator (P2).
+
+    available is False when a polymer chain's source sequence cannot be
+    established (no entity, unknown polymer type, or empty full_sequence).
+    """
+    by_chain: Dict[str, int] = {}
+    available = True
+    for chain in model:
+        entity = None
+        # Prefer the chain's polymer span (ResidueSpan) for get_entity_of.
+        try:
+            polymer_span = chain.get_polymer()
+        except Exception:
+            polymer_span = None
+        if polymer_span is not None and len(polymer_span) > 0:
+            try:
+                entity = structure.get_entity_of(polymer_span)
+            except Exception:
+                entity = None
+            has_polymer = True
+        else:
+            has_polymer = False
+        if not has_polymer or entity is None:
+            continue
+        seq = getattr(entity, "full_sequence", None)
+        if not seq:
+            available = False
+            continue
+        cid = _normalize_chain(chain.name)
+        by_chain[cid] = len(seq)
+    return by_chain, available
+
+
 def _select_model(structure):
     return structure[0]
 
@@ -334,6 +379,20 @@ class IngestionProcessor:
         metadata.complete_backbone_residues = sum(
             1 for names in residues.values() if {"N", "CA", "C"}.issubset(names)
         )
+        src_by_chain, src_available = _source_polymer_positions(structure, model)
+        metadata.source_polymer_residues_by_chain = src_by_chain
+        metadata.source_sequence_available = src_available
+        if src_available and src_by_chain:
+            metadata.warnings.append(
+                "coverage denominator uses the source polymer sequence "
+                f"({sum(src_by_chain.values())} positions across "
+                f"{len(src_by_chain)} chain(s))"
+            )
+        elif not src_available:
+            metadata.warnings.append(
+                "source polymer sequence metadata unavailable; LAW-105 coverage "
+                "is reported on observed coordinates only (P2)"
+            )
         if metadata.malformed_records:
             metadata.warnings.append(
                 f"{metadata.malformed_records} atom record(s) had non-finite coordinates and were discarded"

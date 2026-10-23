@@ -34,10 +34,19 @@ def _atom(name, pos, seq, b_iso, chain="A", res_name="ALA", icode=""):
 
 
 def _structure(atoms, experimental=False):
+    from tos.ingestion.processor import IngestionMetadata
+    chains = {}
+    for a in atoms:
+        chains.setdefault(a.chain_id, set()).add((a.res_seq, a.insertion_code))
+    md = IngestionMetadata(
+        source_polymer_residues_by_chain={k: len(v) for k, v in chains.items()},
+        source_sequence_available=True,
+    )
     return Structure(
         atoms=atoms,
         audit_id="TEST",
         confidence=ConfidenceProfile([], experimental, "xray" if experimental else "predicted"),
+        metadata=md,
     )
 
 

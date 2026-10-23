@@ -258,13 +258,43 @@ class Tier1Measurements:
         # LAW-105: Reliability Coverage
         # ═══════════════════════════════════════════════════════════
         metadata = getattr(structure, "metadata", None)
+        source_by_chain = getattr(
+            metadata, "source_polymer_residues_by_chain", None
+        ) or {}
+        source_available = bool(getattr(metadata, "source_sequence_available", False))
+        if source_available and source_by_chain:
+            # Source-backed denominator (P2): polymer positions from the
+            # authoritative source sequence (SEQRES / entity_poly_seq),
+            # including positions absent from the observed coordinates.
+            source_chains = set(source_by_chain.keys())
+            denominator = sum(source_by_chain.values())
+            numerator = len([r for r in core if r["_chain"] in source_chains])
+            coverage = (numerator / denominator * 100) if denominator else 0.0
+            coverage_basis = "source_polymer_sequence"
+            source_reported = source_by_chain
+            coverage_available = bool(denominator)
+        else:
+            # The source polymer sequence cannot be established. Do NOT
+            # silently claim 100% coverage on observed coordinates alone;
+            # LAW-105 fails closed as an explicit unknown/unmeasured state.
+            denominator = 0
+            numerator = 0
+            coverage = 0.0
+            coverage_basis = "source_polymer_sequence_unavailable"
+            source_reported = {}
+            coverage_available = False
         results["LAW-105"] = {
-            "observed": round(coverage, 2),
-            "status": "PASS" if coverage >= 70.0 else "FAIL",
-            "sample": len(residues),
+            "observed": round(coverage, 2) if coverage_available else None,
+            "status": (
+                "PASS" if coverage_available and coverage >= 70.0
+                else ("FAIL" if coverage_available else "MEASUREMENT_FAILED")
+            ),
+            "sample": numerator,
             "coverage_basis": coverage_basis,
-            "coverage_numerator": len(core),
-            "coverage_denominator": len(residues),
+            "coverage_numerator": numerator,
+            "coverage_denominator": denominator,
+            "source_sequence_available": source_available,
+            "source_polymer_residues_by_chain": source_reported,
             "required_atoms": "N,CA,C",
             "complete_backbone_residues": len(complete),
             "source_atom_records": getattr(metadata, "source_atom_records", None),

@@ -26,7 +26,25 @@
       ],
       "acceptance": "get_sequential_residues and Tier1Measurements._extract order by authoritative sequence position (label_seq_id when valid else res_seq) with a stable sort; source order preserved for same-position residues; full backend suite green."
     },
-    "P2": { "title": "Source-backed coverage denominator", "status": "pending" },
+    "P2": {
+      "title": "Source-backed coverage denominator",
+      "status": "implemented",
+      "verdict_impact": "LAW-105 coverage denominator now uses the authoritative polymer sequence (SEQRES / entity_poly_seq) when available, including positions absent from coordinates. When the source sequence cannot be established, LAW-105 fails closed (MEASUREMENT_FAILED, observed=None) instead of claiming observed-only 100%. The returned coverage (used by adjudicator/API/evaluator/PDF) matches the LAW-105 source-backed value. Structures whose source sequence equals observed coordinates report identical coverage to before; structures with unresolved positions now report reduced coverage. Verdict may change for inputs with missing sequence positions; no threshold changed.",
+      "files_changed": [
+        "backend/tos/ingestion/processor.py",
+        "backend/tos/engine/tier1_measurements.py",
+        "backend/tests/test_coverage_source_backed.py",
+        "backend/tests/test_canonical_ingestion.py",
+        "backend/tests/test_od_scope.py"
+      ],
+      "regression_tests": [
+        "tests/test_coverage_source_backed.py::TestSourceBackedDenominator::test_denominator_uses_source_sequence_not_observed",
+        "tests/test_coverage_source_backed.py::TestSourceBackedDenominator::test_full_coverage_when_source_equals_observed",
+        "tests/test_coverage_source_backed.py::TestSourceBackedDenominator::test_missing_source_sequence_fails_closed",
+        "tests/test_coverage_source_backed.py::TestSourceBackedDenominator::test_explicit_source_and_method_reported"
+      ],
+      "acceptance": "LAW-105 reports coverage_basis (source_polymer_sequence vs source_polymer_sequence_unavailable), numerator, denominator, source_sequence_available, and per-chain source counts. Missing source sequence fails closed. Full backend suite green."
+    },
     "P3": { "title": "LAW-130 boundary/MEASUREMENT_FAILED tests", "status": "pending" },
     "P4": { "title": "LAW-182 advisory end-to-end", "status": "pending" },
     "P5": { "title": "LAW-155 advisory restoration", "status": "pending" },
